@@ -117,6 +117,8 @@ export function buildOmniRouteResponseMetaHeaders({
   costUsd = 0,
   costSavedUsd = undefined,
   fallbackAttempts = 0,
+  targetAttempts = undefined,
+  failureReason = undefined,
   latencyMs = 0,
   model = null,
   provider = null,
@@ -135,6 +137,8 @@ export function buildOmniRouteResponseMetaHeaders({
    */
   costSavedUsd?: unknown;
   fallbackAttempts?: number;
+  targetAttempts?: number;
+  failureReason?: string | null;
   latencyMs?: unknown;
   model?: string | null;
   provider?: string | null;
@@ -179,6 +183,14 @@ export function buildOmniRouteResponseMetaHeaders({
   const attempts = toNonNegativeInteger(fallbackAttempts);
   if (attempts > 0) {
     headers[OMNIROUTE_RESPONSE_HEADERS.fallbackAttempts] = toHeaderValue(String(attempts));
+  }
+
+  if (typeof targetAttempts === "number" && targetAttempts > 0) {
+    headers[OMNIROUTE_RESPONSE_HEADERS.targetAttempts] = toHeaderValue(String(targetAttempts));
+  }
+
+  if (typeof failureReason === "string" && failureReason.trim().length > 0) {
+    headers[OMNIROUTE_RESPONSE_HEADERS.failureReason] = toHeaderValue(failureReason.trim());
   }
 
   const decisionValue = buildOmniRouteDecisionHeaderValue({ strategy, provider, latencyMs });
