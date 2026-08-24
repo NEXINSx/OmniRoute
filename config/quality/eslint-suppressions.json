@@ -2387,11 +2387,6 @@
       "count": 1
     }
   },
-  "src/lib/memory/embedding/index.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "src/lib/memory/genericBackend.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
