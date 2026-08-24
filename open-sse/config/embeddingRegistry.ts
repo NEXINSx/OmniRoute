@@ -408,6 +408,7 @@ export const EMBEDDING_PROVIDERS: Record<string, EmbeddingProvider> = {
       },
     ],
   },
+
 };
 
 const EMBEDDING_PROVIDER_ALIASES: Record<string, string> = {
@@ -471,6 +472,38 @@ export function getEmbeddingProvider(providerId: string): EmbeddingProvider | nu
 }
 
 /**
+ * Derive an OpenAI-compatible embeddings config for a chat provider that has NO
+ * curated EMBEDDING_PROVIDERS entry. Works for any registry provider whose base
+ * URL ends in /chat/completions by swapping that suffix for /embeddings (groq,
+ * mistral, together, upstage, fireworks, nvidia, vercel-ai-gateway, ...).
+ * Dynamic-URL providers (no usable static base) derive to
+ * null — they need bespoke URL handling, not a bogus endpoint.
+ *
+ * This is a FALLBACK only: callers must check getEmbeddingProvider() first so
+ * curated entries keep their specialized configuration.
+ */
+export function deriveEmbeddingProviderForChatProvider(
+  providerId: string,
+  chatEntry: { id?: string; baseUrl?: string | string[] } | null | undefined
+): EmbeddingProvider | null {
+  if (!chatEntry) return null;
+  const rawBase = Array.isArray(chatEntry.baseUrl)
+    ? chatEntry.baseUrl[0]
+    : chatEntry.baseUrl;
+  if (!rawBase || typeof rawBase !== "string") return null;
+  // stripTrailingSlashes-equivalent without importing open-sse utils here:
+  const base = rawBase.replace(/\/+$/, "");
+  if (!base.endsWith("/chat/completions")) return null;
+  return {
+    id: providerId,
+    baseUrl: `${base.slice(0, -"/chat/completions".length)}/embeddings`,
+    authType: "apikey",
+    authHeader: "bearer",
+    models: [],
+  };
+}
+
+/**
  * Parse embedding model string (format: "provider/model" or just "model")
  * Returns { provider, model }
  */
@@ -485,6 +518,18 @@ export function parseEmbeddingModel(
   const slashIdx = modelStr.indexOf("/");
   if (slashIdx > 0) {
     const rawProvider = modelStr.slice(0, slashIdx);
+
+    // A configured provider_node whose prefix exactly equals the requested
+    // provider segment always wins — even when that segment is also an alias
+    // of a curated provider (a local node must not be hijacked by a registry
+    // alias). Same exact-match precedence documented for
+    // EMBEDDING_MODEL_ALIASES above.
+    const dynamicExact =
+      dynamicProviders && dynamicProviders.find((dp) => dp.id === rawProvider);
+    if (dynamicExact) {
+      return { provider: rawProvider, model: modelStr.slice(slashIdx + 1) };
+    }
+
     const resolvedProvider = resolveEmbeddingProviderId(rawProvider);
 
     if (EMBEDDING_PROVIDERS[resolvedProvider]) {
