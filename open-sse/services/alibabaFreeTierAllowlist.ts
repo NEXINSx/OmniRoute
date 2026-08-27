@@ -156,7 +156,11 @@ export function isAlibabaFreeTierAllowlistPackValid(
   nowMs: number = Date.now()
 ): boolean {
   if (!pack.validUntil) return true;
-  const expiresAt = Date.parse(pack.validUntil);
+  const expiresAt = Date.parse(
+    /^\d{4}-\d{2}-\d{2}$/.test(pack.validUntil)
+      ? `${pack.validUntil}T23:59:59.999Z`
+      : pack.validUntil
+  );
   if (!Number.isFinite(expiresAt)) return true;
   return expiresAt >= nowMs;
 }
