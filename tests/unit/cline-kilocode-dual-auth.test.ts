@@ -1,9 +1,7 @@
 import { test } from "node:test";
 import * as assert from "node:assert";
 import {
-  APIKEY_PROVIDERS,
   FREE_APIKEY_PROVIDER_IDS,
-  OAUTH_PROVIDERS,
   supportsApiKeyOnFreeProvider,
   supportsDualAuthProvider,
   supportsBulkApiKey,
