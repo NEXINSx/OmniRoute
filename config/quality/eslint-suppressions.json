@@ -1281,11 +1281,6 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/settings/components/ModelAliasesTab.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/settings/components/ModelCapabilityOverridesTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -1317,11 +1312,6 @@
     }
   },
   "src/app/(dashboard)/dashboard/settings/components/SystemStorageTab.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/useProxyPoolModal.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
     }
@@ -1381,11 +1371,6 @@
       "count": 2
     }
   },
-  "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/ProviderLimitCard.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 3
-    }
-  },
   "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/index.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -1398,14 +1383,6 @@
   },
   "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/usage/components/RateLimitStatus.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1702,11 +1679,6 @@
     }
   },
   "src/app/api/webhooks/[id]/test/route.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/docs/components/FeedbackWidget.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
     }
@@ -2285,11 +2257,6 @@
       "count": 3
     }
   },
-  "src/shared/components/PricingModal.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/shared/components/ProxyLogDetail.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -2324,26 +2291,6 @@
   "src/shared/components/analytics/rechartsUsageCharts.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    }
-  },
-  "src/shared/components/docs/CodeBlock.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/docs/DocsBreadcrumbs.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/docs/DocsSidebar.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/docs/DocsThemeProvider.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 3
     }
   },
   "src/shared/constants/agentSkills.ts": {

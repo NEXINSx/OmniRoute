@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../../shared/utils/apiAuth", () => ({
+vi.mock("@/shared/utils/apiAuth", () => ({
   isAuthenticated: vi.fn(),
 }));
 
@@ -9,18 +9,19 @@ vi.mock("@/lib/db/settings", () => ({
   updateSettings: vi.fn(),
 }));
 
-vi.mock("../../../../lib/memory/settings", async () => {
-  const actual = await vi.importActual("../../../../lib/memory/settings");
+vi.mock("@/lib/memory/settings", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/memory/settings")>("@/lib/memory/settings");
   return {
     ...actual,
     invalidateMemorySettingsCache: vi.fn(),
   };
 });
 
-import { GET, PUT } from "../memory/route";
-import { isAuthenticated } from "../../../../shared/utils/apiAuth";
+import { GET, PUT } from "@/app/api/settings/memory/route";
 import { getSettings, updateSettings } from "@/lib/db/settings";
-import { invalidateMemorySettingsCache } from "../../../../lib/memory/settings";
+import { DEFAULT_MEMORY_SETTINGS, invalidateMemorySettingsCache } from "@/lib/memory/settings";
+import { isAuthenticated } from "@/shared/utils/apiAuth";
 
 function createRequest(method: "GET" | "PUT", body?: unknown) {
   return new Request("http://localhost/api/settings/memory", {
@@ -33,37 +34,41 @@ function createRequest(method: "GET" | "PUT", body?: unknown) {
 describe("/api/settings/memory", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    (isAuthenticated as any).mockResolvedValue(true);
-    (getSettings as any).mockResolvedValue({
+    vi.mocked(isAuthenticated).mockResolvedValue(true);
+    vi.mocked(getSettings).mockResolvedValue({
       memoryEnabled: true,
       memoryMaxTokens: 2000,
       memoryRetentionDays: 30,
       memoryStrategy: "hybrid",
       skillsEnabled: false,
-    });
-    (updateSettings as any).mockImplementation(async (updates: Record<string, unknown>) => ({
-      memoryEnabled: true,
-      memoryMaxTokens: 2000,
-      memoryRetentionDays: 30,
-      memoryStrategy: "hybrid",
-      skillsEnabled: false,
-      ...updates,
-    }));
+    } as never);
+    vi.mocked(updateSettings).mockImplementation(
+      async (updates) =>
+        ({
+          memoryEnabled: true,
+          memoryMaxTokens: 2000,
+          memoryRetentionDays: 30,
+          memoryStrategy: "hybrid",
+          skillsEnabled: false,
+          ...updates,
+        }) as never
+    );
   });
 
   it("returns normalized memory and skills settings", async () => {
-    (getSettings as any).mockResolvedValue({
+    vi.mocked(getSettings).mockResolvedValue({
       memoryEnabled: false,
       memoryMaxTokens: 3200,
       memoryRetentionDays: 999,
       memoryStrategy: "recent",
       skillsEnabled: true,
-    });
+    } as never);
 
-    const res = await GET(createRequest("GET") as any);
+    const res = await GET(createRequest("GET") as Parameters<typeof GET>[0]);
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
+      ...DEFAULT_MEMORY_SETTINGS,
       enabled: false,
       maxTokens: 3200,
       retentionDays: 365,
@@ -80,7 +85,7 @@ describe("/api/settings/memory", () => {
         retentionDays: 14,
         strategy: "semantic",
         skillsEnabled: true,
-      }) as any
+      }) as Parameters<typeof PUT>[0]
     );
 
     expect(res.status).toBe(200);
@@ -94,6 +99,7 @@ describe("/api/settings/memory", () => {
     });
     expect(invalidateMemorySettingsCache).toHaveBeenCalledOnce();
     await expect(res.json()).resolves.toEqual({
+      ...DEFAULT_MEMORY_SETTINGS,
       enabled: false,
       maxTokens: 0,
       retentionDays: 14,
