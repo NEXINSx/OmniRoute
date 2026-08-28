@@ -37,6 +37,7 @@ type LifecycleHookName = Extract<
   | "onActivate"
   | "onDeactivate"
   | "onUninstall"
+  | "onStreamComplete"
 >;
 
 /**
@@ -222,6 +223,7 @@ class PluginManager {
         manifest.hooks.onActivate && "onActivate",
         manifest.hooks.onDeactivate && "onDeactivate",
         manifest.hooks.onUninstall && "onUninstall",
+        manifest.hooks.onStreamComplete && "onStreamComplete",
       ].filter(Boolean) as string[],
       permissions: manifest.requires.permissions,
       pluginDir: destDir,
@@ -352,6 +354,7 @@ class PluginManager {
         manifest.hooks.onActivate && "onActivate",
         manifest.hooks.onDeactivate && "onDeactivate",
         manifest.hooks.onUninstall && "onUninstall",
+        manifest.hooks.onStreamComplete && "onStreamComplete",
       ].filter(Boolean) as string[],
       permissions: manifest.requires.permissions,
       pluginDir: destDir,
@@ -409,6 +412,7 @@ class PluginManager {
         "onActivate",
         "onDeactivate",
         "onUninstall",
+        "onStreamComplete",
       ];
       for (const hookName of hookNames) {
         const handler = loaded.plugin[hookName];
@@ -529,6 +533,7 @@ class PluginManager {
               discovered.manifest.hooks.onActivate && "onActivate",
               discovered.manifest.hooks.onDeactivate && "onDeactivate",
               discovered.manifest.hooks.onUninstall && "onUninstall",
+              discovered.manifest.hooks.onStreamComplete && "onStreamComplete",
             ].filter(Boolean) as string[],
             permissions: discovered.manifest.requires.permissions,
             pluginDir: discovered.pluginDir,
