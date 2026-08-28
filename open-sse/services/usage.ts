@@ -87,67 +87,16 @@ type UsageProviderConnection = JsonRecord & {
 
 /**
  * Single source of truth for which providers have a `getUsageForProvider`
- * implementation. Consumers like `genericQuotaFetcher.ts` reference this so
- * the registration list can't drift from the switch statement below.
+ * implementation — consumers like `genericQuotaFetcher.ts` reference it so the
+ * registration list can't drift from the switch statement below.
  *
- * If you add a new provider to the switch, add it here too.
+ * If you add a new provider to the switch, add it to the list too. The list now lives in
+ * `./usage/fetcherProviders.ts` (a zero-dependency leaf) so that consumers which only need
+ * to know *whether* a fetcher exists — the provider-plugin manifest — can read it without
+ * importing this dispatcher. Re-exported here so this stays the public import path.
  */
-export const USAGE_FETCHER_PROVIDERS = [
-  "github",
-  "antigravity",
-  "agy",
-  "claude",
-  "codex",
-  "cursor",
-  "kiro",
-  "amazon-q",
-  "kimi-coding",
-  "kimi-coding-apikey",
-  "qoder",
-  "glm",
-  "glm-cn",
-  "zai",
-  "glmt",
-  "opencode-go",
-  "ollama-cloud",
-  "minimax",
-  "minimax-cn",
-  "crof",
-  "bailian-coding-plan",
-  "qwen-cloud-token-plan",
-  "nanogpt",
-  "deepseek",
-  "opencode",
-  "opencode-zen",
-  "xiaomi-mimo",
-  "xai",
-  "xai-oauth",
-  "xao",
-  "grok-cli",
-  "vertex",
-  "vertex-partner",
-  "codebuddy-cn",
-  "openrouter",
-  // PromptQL playground credits (data.pro.ql.app getCreditSummary)
-  "promptql",
-  "pql",
-  // HyperAgent billing usage (creditBlocks USD)
-  "hyperagent",
-  "ha",
-  // Firecrawl team credits (GET /v2/team/credit-usage)
-  "firecrawl",
-  // Volcano Ark Plan subscriptions (agent-plan / coding-plan)
-  "volcengine-agent-plan",
-  "volcengine-coding-plan",
-  // Command Code credits + 5h/weekly windows (GET /alpha/billing/credits)
-  "command-code",
-  "conol-web",
-  "cnl",
-  // AgentRouter (New-API) console balance (GET /api/user/self)
-  "agentrouter",
-] as const;
-
-export type UsageFetcherProvider = (typeof USAGE_FETCHER_PROVIDERS)[number];
+export { USAGE_FETCHER_PROVIDERS } from "./usage/fetcherProviders.ts";
+export type { UsageFetcherProvider } from "./usage/fetcherProviders.ts";
 
 /**
  * Get usage data for a provider connection

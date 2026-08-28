@@ -48,7 +48,7 @@ The manifest contains:
 - JSON-safe model metadata such as context length, vision/reasoning flags, and
   unsupported params
 - capability tags including `apikey`, `oauth`, `custom-executor`,
-  `passthrough-models`, `responses`, and `sidecar-candidate`
+  `passthrough-models`, `responses`, `sidecar-candidate`, and `usage-fetch`
 
 The manifest intentionally excludes:
 
@@ -58,6 +58,33 @@ The manifest intentionally excludes:
 - dynamic URL builders
 - executor functions
 - session pool internals
+
+## Capability Tags
+
+`capabilities` is a sorted array of tags derived from the registry entry. Integrators
+should treat it as the machine-readable answer to "what can this provider do", instead of
+re-reading the TypeScript sources.
+
+| Tag                  | Meaning                                                           |
+| -------------------- | ----------------------------------------------------------------- |
+| `apikey`             | Accepts an API key (`authType` is `apikey` or `optional`).        |
+| `oauth`              | Uses an OAuth or session flow.                                    |
+| `responses`          | Exposes an OpenAI Responses-API base URL.                         |
+| `passthrough-models` | Serves models straight from upstream instead of a static catalog. |
+| `custom-executor`    | Runs a non-default executor, so it stays on the TypeScript path.  |
+| `sidecar-candidate`  | Mirrors `sidecar.eligible` — safe to consider for sidecar import. |
+| `usage-fetch`        | Has a wired usage or quota fetcher (`getUsageForProvider`).       |
+
+`usage-fetch` is discovery only. It reports that OmniRoute knows how to read usage for the
+provider; it does not activate fetching, change quota semantics, or imply that the
+Dashboard quota widget is enabled for the provider — that widget is gated separately by
+`USAGE_SUPPORTED_PROVIDERS`. The source of truth is `USAGE_FETCHER_PROVIDERS` in
+`open-sse/services/usage/fetcherProviders.ts`.
+
+That list is keyed by the strings the usage dispatcher accepts, so it mixes canonical ids
+with aliases and is slightly longer than the number of tagged providers: entries that are
+not chat providers in the manifest registry (for example the `firecrawl` search provider
+and the `amazon-q` ACP provider) have no manifest entry to tag.
 
 ## Sidecar Use
 

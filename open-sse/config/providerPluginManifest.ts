@@ -1,7 +1,14 @@
 import type { RegistryEntry, RegistryModel } from "./providers/shared.ts";
+import { USAGE_FETCHER_PROVIDERS } from "../services/usage/fetcherProviders.ts";
 
 export type ProviderPluginCapability =
-  "apikey" | "custom-executor" | "oauth" | "passthrough-models" | "responses" | "sidecar-candidate";
+  | "apikey"
+  | "custom-executor"
+  | "oauth"
+  | "passthrough-models"
+  | "responses"
+  | "sidecar-candidate"
+  | "usage-fetch";
 
 export interface ProviderPluginModel {
   id: string;
@@ -51,6 +58,13 @@ export interface ProviderPluginManifest {
 }
 
 const SIDECAR_COMPATIBLE_EXECUTORS = new Set(["default"]);
+
+/**
+ * Providers with a wired `getUsageForProvider` implementation (#11722). The list mixes
+ * canonical ids ("hyperagent") with aliases ("ha") because it is keyed by the strings the
+ * usage dispatcher accepts, so `capabilitiesFor` resolves an entry on both.
+ */
+const USAGE_FETCHER_PROVIDER_SET = new Set<string>(USAGE_FETCHER_PROVIDERS);
 
 function compactObject<T extends Record<string, unknown>>(value: T): Partial<T> {
   return Object.fromEntries(
@@ -121,6 +135,12 @@ function capabilitiesFor(entry: RegistryEntry, eligible: boolean): ProviderPlugi
   }
   if (eligible) {
     capabilities.add("sidecar-candidate");
+  }
+  if (
+    USAGE_FETCHER_PROVIDER_SET.has(entry.id) ||
+    (entry.alias !== undefined && USAGE_FETCHER_PROVIDER_SET.has(entry.alias))
+  ) {
+    capabilities.add("usage-fetch");
   }
 
   return [...capabilities].sort();
