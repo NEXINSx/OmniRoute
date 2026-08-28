@@ -307,6 +307,44 @@ test("maybeGenerateHandoff allows a new attempt after a failed in-flight generat
   assert.equal(calls, 2);
 });
 
+test("selectMessagesForSummary handles schema-locked vs standard relayMode", () => {
+  const messages = [
+    { role: "system", content: "System instruction" },
+    { role: "user", content: "Msg 1" },
+    { role: "assistant", content: "Msg 2" },
+    { role: "user", content: "Msg 3" },
+  ];
+
+  // Standard mode includes system message
+  const standard = contextHandoff.selectMessagesForSummary(messages, 2, "standard");
+  assert.equal(standard[0].role, "system");
+  assert.equal(standard.length, 3); // system + last 2
+
+  // Schema-locked mode excludes system message
+  const locked = contextHandoff.selectMessagesForSummary(messages, 2, "schema-locked");
+  assert.equal(locked[0].role, "assistant");
+  assert.equal(locked[0].content, "Msg 2");
+  assert.equal(locked.length, 2); // only non-system slice
+});
+
+test("resolveUniversalHandoffConfig correctly parses relayMode", async () => {
+  const comboSchema = await import("../../src/shared/validation/schemas/combo.ts");
+  const parsedLocked = comboSchema.comboRuntimeConfigSchema.parse({
+    relayMode: "schema-locked",
+  });
+  assert.equal(parsedLocked.relayMode, "schema-locked");
+
+  const parsedStandard = comboSchema.comboRuntimeConfigSchema.parse({
+    relayMode: "standard",
+  });
+  assert.equal(parsedStandard.relayMode, "standard");
+
+  const resolvedConfig = contextHandoff.resolveUniversalHandoffConfig({
+    relayMode: "schema-locked",
+  });
+  assert.equal(resolvedConfig.relayMode, "schema-locked");
+});
+
 test("maybeGenerateHandoff respects explicit empty handoffProviders and skips generation", async () => {
   let called = false;
 
