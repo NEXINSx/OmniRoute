@@ -24,11 +24,11 @@ function makeRequest(query = ""): Request {
   return new Request(`http://localhost/v1/models${query}`);
 }
 
-test("catalog post-filters do not add mirrors when gate off (default)", () => {
+test("catalog post-filters do not add mirrors when gate off (default)", async () => {
   const models = [
     { id: "deepseek/deepseek-v4-flash", owned_by: "deepseek", root: "deepseek-v4-flash" },
   ];
-  const out = applyCatalogPostFilters(makeRequest(), models, {
+  const out = await applyCatalogPostFilters(makeRequest(), models, {
     connections: [],
     prefixMode: "dual",
     aliasToProviderId: {},
@@ -41,7 +41,7 @@ test("final catalog permission filtering does not let a mirror inherit base acce
   setFunctionalGatewayProviderSetting("agentrouter", "on");
 
   const models = [{ id: "kmc/k3", owned_by: "kimi-coding", root: "k3" }];
-  const withMirror = applyCatalogPostFilters(makeRequest(), models, {
+  const withMirror = await applyCatalogPostFilters(makeRequest(), models, {
     connections: [
       {
         id: "conn-1",
@@ -77,14 +77,14 @@ test("final catalog permission filtering does not let a mirror inherit base acce
   );
 });
 
-test("catalog post-filters synthesize a gateway mirror when gate on and gateway has a connection", () => {
+test("catalog post-filters synthesize a gateway mirror when gate on and gateway has a connection", async () => {
   setFeatureFlagOverride(FLAG_KEY, "true");
   setFunctionalGatewayProviderSetting("agentrouter", "on");
 
   const models = [
     { id: "deepseek/deepseek-v4-flash", owned_by: "deepseek", root: "deepseek-v4-flash" },
   ];
-  const out = applyCatalogPostFilters(makeRequest(), models, {
+  const out = await applyCatalogPostFilters(makeRequest(), models, {
     connections: [
       {
         id: "conn-1",

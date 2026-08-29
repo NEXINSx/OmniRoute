@@ -26,6 +26,15 @@ import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
 import * as logger from "@/sse/utils/logger";
 
 /**
+ * Caller-facing shape of handleImageGeneration(). The handler is untyped and
+ * returns a wide inferred union across providers, so we narrow it to the two
+ * discriminated arms this strategy actually consumes.
+ */
+type ImageGenerationResult =
+  | { success: true; data?: unknown; status?: number; error?: string }
+  | { success: false; data?: unknown; status?: number; error?: string };
+
+/**
  * Execute a full combo strategy for an image generation request.
  *
  * 1. Resolve combo targets via resolveComboTargets.
@@ -119,12 +128,12 @@ export async function executeImageCombo(
     }
 
     // Execute image generation for this target
-    const result = await handleImageGeneration({
+    const result = (await handleImageGeneration({
       body: { ...body, model: target.modelStr },
       credentials,
       log,
       signal: auth.request?.signal || null,
-    });
+    })) as ImageGenerationResult;
 
     if (result.success) {
       await clearRecoveredProviderState(credentials);

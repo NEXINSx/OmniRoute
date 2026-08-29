@@ -131,13 +131,24 @@ export function getRank(apiKeyId: string, scope: string): number {
   return rankRow.rank;
 }
 
+export const LEADERBOARD_MAX_LIMIT = 200;
+
 export function getTopN(scope: string, limit: number, offset: number = 0): LeaderboardRow[] {
+  // Guard the SQLite LIMIT/OFFSET bind. A negative LIMIT means "no limit" in
+  // SQLite (returns the whole table), and a non-integer throws a datatype
+  // mismatch, so an unvalidated `?limit` on a caller route (e.g. the leaderboard
+  // endpoints) could read the entire leaderboard or 500. Clamp to a coherent
+  // range here as a defense-in-depth backstop, independent of route validation.
+  const safeLimit = Number.isFinite(limit)
+    ? Math.min(Math.max(Math.trunc(limit), 0), LEADERBOARD_MAX_LIMIT)
+    : 0;
+  const safeOffset = Number.isFinite(offset) ? Math.max(Math.trunc(offset), 0) : 0;
   const rows = db()
     .prepare(
       `SELECT api_key_id, scope, score, updated_at FROM leaderboard
      WHERE scope = ? ORDER BY score DESC LIMIT ? OFFSET ?`
     )
-    .all(scope, limit, offset) as Array<{
+    .all(scope, safeLimit, safeOffset) as Array<{
     api_key_id: string;
     scope: string;
     score: number;
@@ -288,22 +299,22 @@ export function getBadgeDefinitions(category?: string): BadgeDefinition[] {
 
 /**
  * Aggregate XP across every API key (the operator-wide profile view used by the
- * dashboard profile page, which is not scoped to a single key). Sums total XP and
- * takes the highest reached level. (#3484)
+ * dashboard profile page, which is not scoped to a single key). The aggregate
+ * level must be derived from the same summed XP displayed by the profile. (#3484)
  */
 export function getAggregateXp(): UserLevelRow {
   const row = db()
     .prepare(
       `SELECT COALESCE(SUM(total_xp), 0) AS total_xp,
-              COALESCE(MAX(current_level), 1) AS current_level,
               MAX(updated_at) AS updated_at
        FROM user_levels`
     )
-    .get() as { total_xp: number; current_level: number; updated_at: string | null };
+    .get() as { total_xp: number; updated_at: string | null };
+  const totalXp = row?.total_xp ?? 0;
   return {
     apiKeyId: "*",
-    totalXp: row?.total_xp ?? 0,
-    currentLevel: row?.current_level ?? 1,
+    totalXp,
+    currentLevel: calculateLevel(totalXp),
     updatedAt: row?.updated_at ?? "",
   };
 }

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: OmniRoute API
-  version: 3.8.50
+  version: 3.8.51
   description: |
     OmniRoute is a local-first AI API proxy router. It provides an OpenAI-compatible
     endpoint that routes requests to multiple AI providers with load balancing,
@@ -43,6 +43,8 @@ tags:
     description: Content moderation
   - name: Rerank
     description: Document reranking
+  - name: Search
+    description: Unified web, news, and X search
   - name: Models
     description: Available model listing
   - name: Providers
@@ -56,6 +58,8 @@ tags:
       background scheduler tick.
   - name: API Keys
     description: API key management
+  - name: Session Leases
+    description: Client-neutral exclusive managed session connection leases
   - name: Combos
     description: Routing combo management
   - name: Settings
@@ -103,6 +107,76 @@ tags:
       See docs/frameworks/TRAFFIC_INSPECTOR.md.
 
 paths:
+  /api/v1/session-leases:
+    post:
+      tags:
+        - Session Leases
+      summary: Acquire, renew, or release an exclusive managed connection lease
+      description: |
+        Requires an API key with `lease:exclusive` and an explicit non-empty
+        `allowedConnections` policy. The opaque owner is bound to the authenticated API key;
+        the lease owns an eligible connection, not a provider or model. Managed inference
+        requests present the owner and exact generation headers. Temporary foreign occupancy
+        returns 429 `WAITING_FOR_CAPACITY` with `Retry-After`.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-OmniRoute-Lease-Owner
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: ^vlo_[A-Za-z0-9_-]{43}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [action, model]
+                  properties:
+                    action: { type: string, const: acquire }
+                    model: { type: string, minLength: 1, maxLength: 512 }
+                - type: object
+                  required: [action, generation]
+                  properties:
+                    action: { type: string, const: renew }
+                    generation: { type: integer, minimum: 1 }
+                - type: object
+                  required: [action, generation]
+                  properties:
+                    action: { type: string, const: release }
+                    generation: { type: integer, minimum: 1 }
+                    reason:
+                      type: string
+                      enum: [OWNER_EXIT, CLIENT_CANCELLED]
+      responses:
+        "200":
+          description: Lease lifecycle state without connection or credential disclosure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExclusiveConnectionLeaseLifecycle"
+        "400":
+          description: Missing or invalid lease context/action
+        "401":
+          description: Missing or invalid API key
+        "403":
+          description: Managed lease scope or key configuration required
+        "409":
+          description: Stale generation, missing binding, or connection fence rejection
+        "415":
+          description: Lifecycle mutations require application/json
+        "429":
+          description: Eligible managed connections are held by foreign active leases
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 1, maximum: 3600 }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExclusiveConnectionLeaseCapacity"
   # --- Playground + Search Tools (plans 17+18) ---
   /api/playground/improve-prompt:
     post:
@@ -1081,6 +1155,201 @@ paths:
           $ref: "#/components/responses/Unauthorized"
   # ─── Proxy Endpoints ──────────────────────────────────────────
 
+  /api/v1/search:
+    get:
+      tags: [Search]
+      summary: List search providers
+      description: Lists configured search providers and their supported search types.
+      responses:
+        "200":
+          description: Search provider catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data]
+                properties:
+                  object:
+                    type: string
+                    const: list
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, object, created, name, search_types]
+                      properties:
+                        id:
+                          type: string
+                        object:
+                          type: string
+                          const: search_provider
+                        created:
+                          type: integer
+                        name:
+                          type: string
+                        search_types:
+                          type: array
+                          items:
+                            type: string
+                            enum: [web, news, x]
+    post:
+      tags: [Search]
+      summary: Run a unified search
+      description: >-
+        Searches the web, news, or X through a configured provider. Set `provider`
+        to `xquik-search` to use Xquik for X search. The aliases `xquik` and
+        `xquik_search` resolve to the same provider.
+        AnySearch (`anysearch-search`, aliases `anysearch` / `anysearch_search`)
+        provides free fallback-only web search.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                provider:
+                  type: string
+                  minLength: 1
+                  description: A search provider id or registered alias.
+                  examples: [xquik-search]
+                max_results:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 5
+                search_type:
+                  type: string
+                  enum: [web, news, x]
+                  default: web
+                offset:
+                  type: integer
+                  minimum: 0
+                  default: 0
+                country:
+                  type: string
+                  maxLength: 2
+                language:
+                  type: string
+                  minLength: 2
+                  maxLength: 5
+                time_range:
+                  type: string
+                  enum: [any, hour, day, week, month, year]
+                content:
+                  type: object
+                  properties:
+                    snippet: { type: boolean, default: true }
+                    full_page: { type: boolean, default: false }
+                    format: { type: string, enum: [text, markdown], default: text }
+                    max_characters: { type: integer, minimum: 100, maximum: 100000 }
+                filters:
+                  type: object
+                  properties:
+                    include_domains:
+                      type: array
+                      maxItems: 20
+                      items: { type: string, maxLength: 253 }
+                    exclude_domains:
+                      type: array
+                      maxItems: 20
+                      items: { type: string, maxLength: 253 }
+                    safe_search: { type: string, enum: [off, moderate, strict] }
+                provider_options:
+                  type: object
+                  additionalProperties: true
+                strict_filters:
+                  type: boolean
+                  default: false
+              additionalProperties: true
+      responses:
+        "200":
+          description: Normalized search results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, provider, query, results, answer, usage, metrics, errors, cached]
+                properties:
+                  id:
+                    type: string
+                    pattern: ^search-
+                  provider:
+                    type: string
+                  query:
+                    type: string
+                  cached:
+                    type: boolean
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, url, snippet, position, citation]
+                      properties:
+                        title: { type: string }
+                        url: { type: string, format: uri }
+                        display_url: { type: string }
+                        snippet: { type: string }
+                        position: { type: integer, minimum: 1 }
+                        score:
+                          type: [number, "null"]
+                          minimum: 0
+                          maximum: 1
+                        published_at: { type: [string, "null"] }
+                        favicon_url: { type: [string, "null"], format: uri }
+                        citation:
+                          type: object
+                          required: [provider, retrieved_at, rank]
+                          properties:
+                            provider: { type: string }
+                            retrieved_at: { type: string, format: date-time }
+                            rank: { type: integer, minimum: 1 }
+                  answer:
+                    type: [object, "null"]
+                  usage:
+                    type: object
+                    required: [queries_used, search_cost_usd]
+                    properties:
+                      queries_used: { type: integer, minimum: 0 }
+                      search_cost_usd: { type: number, minimum: 0 }
+                      llm_tokens: { type: integer, minimum: 0 }
+                  metrics:
+                    type: object
+                    required: [response_time_ms, upstream_latency_ms, total_results_available]
+                    properties:
+                      response_time_ms: { type: number, minimum: 0 }
+                      upstream_latency_ms: { type: number, minimum: 0 }
+                      gateway_latency_ms: { type: number, minimum: 0 }
+                      total_results_available: { type: [integer, "null"], minimum: 0 }
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      required: [provider, code, message]
+                      properties:
+                        provider: { type: string }
+                        code: { type: string }
+                        message: { type: string }
+        "400":
+          description: Invalid request, provider, credentials, or search type
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Search provider blocked by API key or security policy
+        "429":
+          description: Every eligible provider credential is rate limited
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "502":
+          description: Search provider failed
+
   /api/v1/chat/completions:
     post:
       tags: [Chat]
@@ -1370,6 +1639,38 @@ paths:
             cost-telemetry headers (see `POST /api/v1/chat/completions`); media
             cost is computed per modality when pricing is available, otherwise
             `0` (fail-open).
+
+  /api/v1/multimodal-embeddings:
+    post:
+      tags: [Embeddings]
+      summary: Create embeddings (Jina multimodal-embeddings alias)
+      description: >-
+        Same handler as `POST /api/v1/embeddings`. Provided so Jina-compatible
+        clients that call `/v1/multimodal-embeddings` do not receive HTTP 404
+        `unknown_route`.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [input, model]
+              additionalProperties: true
+      responses:
+        "200":
+          description: Embedding vectors (same contract as POST /api/v1/embeddings).
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    get:
+      tags: [Embeddings]
+      summary: List embedding models (Jina multimodal-embeddings alias)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Embedding model catalog (same as GET /api/v1/embeddings).
 
   /api/v1/providers/{provider}/embeddings:
     post:
@@ -1965,14 +2266,62 @@ paths:
           description: Created combo
 
   /api/combos/{id}:
-    patch:
+    get:
       tags: [Combos]
-      summary: Update combo
+      summary: Get combo by ID
       parameters:
         - $ref: "#/components/parameters/ResourceId"
       responses:
         "200":
+          description: Combo details
+        "404":
+          description: Combo not found
+    put:
+      tags: [Combos]
+      summary: Update combo
+      description: >-
+        Partial update: the body is merged onto the stored combo, so a field left out keeps
+        its current value. An array that IS sent replaces the stored one outright.
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
           description: Updated combo
+        "400":
+          description: Invalid body, or the resulting combo fails validation
+        "404":
+          description: Combo not found
+        "409":
+          description: Name already taken, or the combo is quota-share managed
+    patch:
+      tags: [Combos]
+      summary: Update combo
+      description: >-
+        Partial update: the body is merged onto the stored combo, so a field left out keeps
+        its current value. An array that IS sent replaces the stored one outright.
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Updated combo
+        "400":
+          description: Invalid body, or the resulting combo fails validation
+        "404":
+          description: Combo not found
+        "409":
+          description: Name already taken, or the combo is quota-share managed
     delete:
       tags: [Combos]
       summary: Delete combo
@@ -5425,6 +5774,32 @@ paths:
         "200":
           description: Circuit breakers reset
 
+  /api/health:
+    get:
+      tags: [System]
+      summary: Liveness probe
+      description: >-
+        Unauthenticated liveness probe. Returns `{ status, timestamp }` and nothing
+        else — version, uptime and memory stay behind the authenticated
+        `GET /api/monitoring/health`. Sent with
+        `Cache-Control: no-store, no-cache, must-revalidate`.
+      security: []
+      responses:
+        "200":
+          description: Service is alive.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  timestamp:
+                    type: string
+                    format: date-time
+
   /api/monitoring/health:
     get:
       tags: [System]
@@ -5468,14 +5843,236 @@ paths:
     get:
       tags: [System]
       summary: Get Modality Bridge telemetry
-      description: In-memory per-modality bridge counters (bridged, cacheHits, failures, lastUsedAt). Counters reset on process restart.
+      description: In-memory per-modality bridge counters (attempts, successes, bridged, cacheHits, failures, totalLatencyMs, latencySamples, averageLatencyMs, lastUsedAt). The bridged field is the backward-compatible success count. Latency averages include sampled operations only; an unsampled Vision or Audio operation does not fabricate a zero-millisecond sample. Counters reset on process restart.
       security:
         - ManagementSessionAuth: []
       responses:
         "200":
-          description: Per-modality bridge stats (vision, audio)
+          description: Per-modality bridge stats (vision, audio, video)
         "401":
           description: Unauthorized
+
+  /api/modality-bridge/video/runtime:
+    get:
+      x-loopback-only: true
+      tags: [System]
+      summary: Get Video Bridge runtime status
+      description: Requires trusted loopback locality before authentication or probing, then management authentication. Returns sanitized FFmpeg and ffprobe availability and versions. The response never contains commands, paths, or stderr.
+      security:
+        - ManagementSessionAuth: []
+      responses:
+        "200":
+          description: Video Bridge runtime availability
+        "401":
+          description: Unauthorized
+        "403":
+          description: Localhost access required
+
+  /api/modality-bridge/video/extract:
+    post:
+      x-loopback-only: true
+      tags: [System]
+      summary: Extract bounded Video Bridge frames through the internal broker
+      description: Internal per-process-authenticated trusted-loopback broker. Accepts at most 50 MiB of video bytes; URLs, paths, executable names, and command arguments are not part of the contract. The body pipeline and streamed handler reader both enforce the input cap. The broker applies fixed FFmpeg/ffprobe confinement, a single extraction slot with four pending jobs/100 MiB queued input, a 4 MiB per-frame cap, and a 32 MiB total response cap. Optional focus bounds and scene-aware sampling are deterministic and bounded. Transcript provenance is a metadata contract on the parent video part, not an instruction to run speech-to-text. This is not a public upload API.
+      security: []
+      parameters:
+        - in: query
+          name: frames
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 16
+        - in: query
+          name: samplingPolicy
+          required: false
+          description: Optional deterministic sampling policy. Scene-aware detection falls back to uniform sampling on detector failure.
+          schema:
+            type: string
+            enum: [uniform, scene_aware, segment_aware]
+            default: uniform
+        - in: query
+          name: start
+          required: false
+          description: Optional focus-window start in seconds. The broker clamps it to the media duration.
+          schema:
+            type: number
+            minimum: 0
+        - in: query
+          name: end
+          required: false
+          description: Optional focus-window end in seconds. It must be greater than the normalized start.
+          schema:
+            type: number
+            minimum: 0
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+              maxLength: 52428800
+      responses:
+        "200":
+          description: Sanitized duration and bounded JPEG data-URI frames
+        "400":
+          description: Invalid fixed broker contract
+        "403":
+          description: Authenticated trusted-loopback broker identity required
+        "413":
+          description: Input exceeds the 50 MiB byte limit
+        "422":
+          description: Media rejected or extraction failed
+        "499":
+          description: Client request aborted
+        "503":
+          description: Queue capacity is exhausted, or FFmpeg/ffprobe is unavailable on PATH
+          headers:
+            Retry-After:
+              description: Present with value 1 when queue capacity is exhausted
+              schema:
+                type: integer
+                minimum: 1
+        "504":
+          description: Fixed 120-second broker extraction deadline exceeded
+
+  /api/modality-bridge/video/drilldown:
+    get:
+      x-loopback-only: true
+      tags: [System]
+      summary: Read a bounded Video Bridge drill-down slice
+      description: Internal loopback/token-authenticated lookup into a short-lived cache isolated by an opaque principal, session, and media reference. It never downloads media or starts a subprocess; start/end and frame count only select already materialized, canonicalized JPEG frames whose dimensions were derived from their bytes. This cache substrate is not yet wired to the transparent Video Bridge request path and does not yet expose multi-resolution selection.
+      security: []
+      parameters:
+        - in: header
+          name: x-omniroute-video-bridge-principal
+          required: true
+          description: Canonical visible-ASCII, opaque non-secret principal ID; production tenant derivation is required before enabling a caller
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+            pattern: "^[!-~]{1,256}$"
+        - in: query
+          name: sessionId
+          required: true
+          description: Canonical opaque ID without surrounding whitespace
+          schema: { type: string, minLength: 1, maxLength: 128 }
+        - in: query
+          name: videoRef
+          required: true
+          description: Canonical opaque reference without surrounding whitespace
+          schema: { type: string, minLength: 1, maxLength: 4096 }
+        - in: query
+          name: start
+          required: false
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: end
+          required: false
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: frames
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 16 }
+      responses:
+        "200": { description: Bounded cached frame slice with derivation audit metadata }
+        "403": { description: Trusted loopback/token identity and principal required }
+        "404": { description: Drill-down session or media key was not found }
+    post:
+      x-loopback-only: true
+      tags: [System]
+      summary: Store a bounded Video Bridge drill-down result
+      description: Internal lifecycle operation for explicitly authorized callers. The short-lived cache is isolated by principal, session, and media reference; enforces independent per-principal and global retained-byte quotas; accepts canonical Base64 only after a warning-sensitive bounded full JPEG decode/re-encode; strips trailing polyglot bytes; retains and charges only the canonical JPEG output; derives resolution from decoded bytes; and does not alter the primary request cost. The JSON wire budget includes Base64 overhead for the 32 MiB decoded-input ceiling.
+      security: []
+      parameters:
+        - in: header
+          name: x-omniroute-video-bridge-principal
+          required: true
+          description: Canonical visible-ASCII, opaque non-secret principal ID; production tenant derivation is required before enabling a caller
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+            pattern: "^[!-~]{1,256}$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sessionId, videoRef, derivation, durationSeconds, frames]
+              properties:
+                sessionId:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  description: Canonical opaque ID without surrounding whitespace
+                videoRef:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+                  description: Canonical opaque reference without surrounding whitespace
+                derivation:
+                  type: object
+                  additionalProperties: false
+                  required: [parentContentHash, policy, version]
+                  properties:
+                    parentContentHash:
+                      type: string
+                      pattern: "^sha256:[a-f0-9]{64}$"
+                    policy:
+                      type: string
+                      pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$"
+                    version:
+                      type: string
+                      pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$"
+                durationSeconds: { type: number, exclusiveMinimum: 0, maximum: 600 }
+                frames:
+                  type: array
+                  minItems: 1
+                  maxItems: 16
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [timestampSeconds, dataUri]
+                    properties:
+                      timestampSeconds: { type: number, minimum: 0 }
+                      dataUri:
+                        type: string
+                        minLength: 27
+                        maxLength: 5592431
+                        description: Canonical Base64 data URI whose decoded bytes pass a warning-sensitive bounded full JPEG decode/re-encode; trailing bytes are discarded and width and height are derived server-side
+      responses:
+        "201": { description: Drill-down result stored }
+        "403": { description: Trusted loopback/token identity and principal required }
+        "413": { description: Payload exceeds the bounded session budget }
+        "499": { description: Caller cancelled before the derivation was committed }
+    delete:
+      x-loopback-only: true
+      tags: [System]
+      summary: Delete a Video Bridge drill-down session
+      security: []
+      parameters:
+        - in: header
+          name: x-omniroute-video-bridge-principal
+          required: true
+          description: Canonical visible-ASCII, opaque non-secret principal ID; production tenant derivation is required before enabling a caller
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+            pattern: "^[!-~]{1,256}$"
+        - in: query
+          name: sessionId
+          required: true
+          description: Canonical opaque ID without surrounding whitespace
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        "200": { description: Session entries removed }
+        "403": { description: Trusted loopback/token identity and principal required }
 
   /api/cache/stats:
     get:
@@ -6552,7 +7149,11 @@ paths:
         Returns a structured JSON catalog parsed from this `openapi.yaml`,
         including info, servers, tags, schemas, and a flat list of endpoints
         (method, path, tags, summary, security, parameters, responses).
-        Used by the in-app API explorer.
+        Used by the in-app API explorer. When `requireLogin` is enabled, this
+        management endpoint requires an authenticated dashboard session;
+        otherwise it is available without authentication.
+      security:
+        - ManagementSessionAuth: []
       responses:
         "200":
           description: Parsed OpenAPI catalog
@@ -6606,8 +7207,110 @@ paths:
                       type: string
         "404":
           description: openapi.yaml file not found on disk
+        "401":
+          $ref: "#/components/responses/ManagementAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/ManagementInvalidToken"
         "500":
           description: Failed to parse OpenAPI spec
+
+  /api/openapi/try:
+    post:
+      tags: [System]
+      summary: Proxy an API Explorer request to an OmniRoute endpoint
+      description: >-
+        Executes an API Explorer request through a server-side, same-origin proxy. The target
+        must start with `/api/`, `/v1/`, `/v1beta/`, `/a2a`, or
+        `/.well-known/agent.json`; protocol-relative and cross-origin targets are rejected.
+        Hop-by-hop, proxy, host, cookie, and forwarding headers supplied in `headers` are
+        stripped, while any dashboard cookie on the original request is forwarded separately.
+        When `requireLogin` is disabled, the management-auth bypass mirrors the runtime setting;
+        otherwise a management Bearer credential or dashboard session is required. Failures
+        caught after authentication, including request JSON parsing, fetch, and response-body
+        parsing failures, are returned in the normal HTTP 200 result envelope so the Explorer
+        can display them; `status: 0` identifies that caught-failure path.
+      security:
+        - BearerAuth: []
+        - ManagementSessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path]
+              properties:
+                method:
+                  type: string
+                  enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
+                  default: GET
+                path:
+                  type: string
+                  minLength: 1
+                  pattern: "^/(?:api/|v1/|v1beta/|a2a|\\.well-known/agent\\.json)"
+                  description: Same-origin OmniRoute API path, optionally including a query string.
+                headers:
+                  type: object
+                  default: {}
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Headers to forward after removing connection, content-length, cookie, host,
+                    keep-alive, proxy-authenticate, proxy-authorization, te, trailer,
+                    transfer-encoding, upgrade, x-forwarded-for, x-forwarded-host, and
+                    x-forwarded-proto headers.
+                body:
+                  description: >-
+                    Optional JSON value. A truthy value is serialized unless it is already a
+                    string, and is not forwarded when `method` is `GET`.
+      responses:
+        "200":
+          description: Upstream response or displayable caught-failure envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status, statusText, headers, body, latencyMs, contentType]
+                properties:
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: Upstream HTTP status, or 0 when request processing throws.
+                  statusText:
+                    type: string
+                  headers:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  body:
+                    description: >-
+                      Parsed JSON, response text truncated after 10,000 characters, or a sanitized
+                      caught-error object.
+                  latencyMs:
+                    type: integer
+                    minimum: 0
+                  contentType:
+                    type: string
+        "400":
+          description: Invalid request body or non-same-origin path
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                        example: Path must be same-origin
+        "401":
+          $ref: "#/components/responses/ManagementAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/ManagementInvalidToken"
+        "503":
+          $ref: "#/components/responses/InternalError"
 
   # ─── Agent Skills Catalog ────────────────────────────────────────────────────
 
@@ -6840,9 +7543,18 @@ paths:
         - Images
       summary: Document OCR
       description: >-
-        Mistral OCR–compatible document OCR endpoint. Accepts a JSON body
-        referencing a document/image and returns extracted text. Success
-        responses carry the `X-OmniRoute-*` cost-telemetry headers.
+        Multi-provider document OCR endpoint (Mistral OCR–compatible request
+        and response shape). Accepts a JSON body referencing a document/image
+        and returns extracted text. `model` selects the provider via a
+        `provider/model` prefix (e.g. `mistral/mistral-ocr-latest`,
+        `azure-document-intelligence/prebuilt-read`,
+        `vertex-deepseek-ocr/deepseek-ocr-maas`); a bare model id (e.g.
+        `mistral-ocr-latest`) resolves to its registered provider, and an
+        omitted `model` defaults to Mistral. Azure Document Intelligence is
+        asynchronous upstream — the handler polls the returned operation
+        until it succeeds or fails before responding, so this endpoint can
+        take longer to return for that provider. Success responses carry the
+        `X-OmniRoute-*` cost-telemetry headers.
       security:
         - BearerAuth: []
       requestBody:
@@ -6854,6 +7566,12 @@ paths:
               properties:
                 model:
                   type: string
+                  description: >-
+                    `provider/model` id or bare model id. Registered ids:
+                    `mistral/mistral-ocr-latest`,
+                    `azure-document-intelligence/prebuilt-read`,
+                    `vertex-deepseek-ocr/deepseek-ocr-maas`. Defaults to
+                    `mistral-ocr-latest` when omitted.
                 document:
                   type: object
       responses:
@@ -6896,6 +7614,145 @@ paths:
           description: English translation of the audio.
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/voices:
+    get:
+      tags: [Audio]
+      summary: List ElevenLabs voices
+      description: >-
+        Proxies `GET https://api.elevenlabs.io/v1/voices` using the stored
+        `elevenlabs` provider credentials (the caller never sends `xi-api-key`).
+        The incoming query string is forwarded unchanged.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: ElevenLabs voice list, relayed verbatim.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/speech-to-text:
+    post:
+      tags: [Audio]
+      summary: ElevenLabs speech-to-text
+      description: >-
+        Streams the request body to `POST https://api.elevenlabs.io/v1/speech-to-text`
+        using the stored `elevenlabs` provider credentials. `content-type` and
+        `accept` are forwarded; the upstream body is relayed unchanged.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Transcription payload, relayed verbatim from ElevenLabs.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/text-to-speech/{voiceId}:
+    post:
+      tags: [Audio]
+      summary: ElevenLabs text-to-speech
+      description: >-
+        Streams the request body to
+        `POST https://api.elevenlabs.io/v1/text-to-speech/{voiceId}` using the stored
+        `elevenlabs` provider credentials. `voiceId` must match `^[A-Za-z0-9_-]+$`
+        or the request is rejected with 400 before any upstream call.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: voiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]+$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+      responses:
+        "200":
+          description: Audio stream, relayed verbatim from ElevenLabs.
+        "400":
+          description: Invalid ElevenLabs voice ID.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/explain/routing:
+    get:
+      tags: [Telemetry]
+      summary: Routing explainability snapshot
+      description: >-
+        Returns the most recent routing events (bounded in-memory ring buffer) plus
+        the per-provider/model quality snapshot from `open-sse/services/routing`.
+        Routing metadata only — never prompts, bodies, headers or credentials.
+        Auth mirrors `/api/v1/combos`: a valid Bearer API key or a dashboard
+        session; with `REQUIRE_API_KEY=false` anonymous reads are allowed.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Events/quality rows to return; clamped to 1–500 (default 50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+      responses:
+        "200":
+          description: Routing explain payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    enum: [routing_explain]
+                  sinks:
+                    type: array
+                    items:
+                      type: string
+                  otelEnabled:
+                    type: boolean
+                  events:
+                    type: array
+                    items:
+                      type: object
+                  quality:
+                    type: array
+                    items:
+                      type: object
+                  otel:
+                    type: object
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -7048,12 +7905,18 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-      description: API key obtained from the OmniRoute dashboard
+      description: >
+        Two bearer families are accepted. Inference API keys (typically `sk-…`)
+        authorize `/v1/*`. Management routes also accept `oma_live_…` Access Tokens
+        (Settings → Access Tokens / `omniroute connect`) and API keys whose metadata
+        includes `manage` or `admin` scope. See docs/guides/MANAGEMENT-AUTH.md.
+        Bearer credentials are accepted on management routes that use this scheme;
+        they are not rejected solely for being Bearer.
     ManagementSessionAuth:
       type: apiKey
       in: cookie
       name: auth_token
-      description: Dashboard management session cookie for protected management routes
+      description: Dashboard management session cookie (auth_token) for protected management routes. Distinct from Bearer Access Tokens and API keys. See docs/guides/MANAGEMENT-AUTH.md.
 
   parameters:
     ResourceId:
@@ -7137,6 +8000,31 @@ components:
             requestId: 0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d
 
   schemas:
+    ExclusiveConnectionLeaseLifecycle:
+      type: object
+      required: [state, generation, acquiredAt, renewedAt, expiresAt]
+      properties:
+        state: { type: string, enum: [ACTIVE, RELEASED] }
+        generation: { type: integer, minimum: 1 }
+        acquiredAt: { type: string, format: date-time }
+        renewedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    ExclusiveConnectionLeaseCapacity:
+      type: object
+      required: [state, error, reason, retryAfter, eligibleCount, freeCount]
+      properties:
+        state: { type: string, const: WAITING_FOR_CAPACITY }
+        error:
+          type: object
+          required: [type, code, message]
+          properties:
+            type: { type: string, const: lease_error }
+            code: { type: string, const: LEASE_CAPACITY_UNAVAILABLE }
+            message: { type: string }
+        reason: { type: string, const: NO_FREE_ELIGIBLE_CONNECTION }
+        retryAfter: { type: integer, minimum: 1, maximum: 3600 }
+        eligibleCount: { type: integer, minimum: 0 }
+        freeCount: { type: integer, minimum: 0 }
     EmbeddingMultimodalItem:
       oneOf:
         - type: object
@@ -8420,7 +9308,12 @@ components:
           type: string
         url:
           type: string
-          description: Redacted subscription URL.
+          description: >-
+            Redacted subscription URL. May be a local/loopback address
+            (e.g. `http://127.0.0.1:8080/list`) — local-first fetch targets
+            are allowed by default (`OMNIROUTE_ALLOW_LOCAL_PROVIDER_URLS`);
+            cloud-metadata / link-local endpoints (169.254.0.0/16) are always
+            blocked.
         enabled:
           type: boolean
         mode:
@@ -8528,12 +9421,20 @@ components:
 
     ComboCreate:
       type: object
-      required: [name, model]
+      required: [name, models]
       properties:
         name:
           type: string
-        model:
-          type: string
+        models:
+          type: array
+          minItems: 1
+          items:
+            oneOf:
+              - type: string
+                description: "provider/model reference"
+              - type: object
+                description: "structured combo step (provider, model, weight, ...)"
+                additionalProperties: true
         strategy:
           type: string
           enum:
@@ -8555,14 +9456,3 @@ components:
             - context-optimized
             - fusion
           default: priority
-        nodes:
-          type: array
-          items:
-            type: object
-            properties:
-              connectionId:
-                type: string
-              weight:
-                type: integer
-              priority:
-                type: integer

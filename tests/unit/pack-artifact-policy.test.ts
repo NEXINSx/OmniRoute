@@ -11,6 +11,8 @@ import {
   findMissingArtifactPaths,
   findUnexpectedArtifactPaths,
   normalizeArtifactPath,
+  parseJsonArrayOutput,
+  parseJsonValuesOutput,
 } from "../../scripts/build/pack-artifact-policy.ts";
 
 test("normalizeArtifactPath normalizes slashes and leading relative markers", () => {
@@ -18,6 +20,39 @@ test("normalizeArtifactPath normalizes slashes and leading relative markers", ()
     normalizeArtifactPath("./app\\scripts\\ad-hoc\\test.js"),
     "app/scripts/ad-hoc/test.js"
   );
+});
+
+test("parseJsonArrayOutput extracts the first valid array from mixed command output", () => {
+  const output = [
+    "notice [not-json]",
+    '[{"path":"src/[literal].ts","files":[["nested"]]}]',
+    "notice [second-array]",
+  ].join("\n");
+  assert.deepEqual(parseJsonArrayOutput(output), [
+    { path: "src/[literal].ts", files: [["nested"]] },
+  ]);
+});
+
+test("parseJsonArrayOutput can skip valid arrays that are not the target payload", () => {
+  const output = `[]
+[{"filename":"omniroute.tgz","files":[{"path":"src/index.ts"}]}]`;
+  assert.deepEqual(
+    parseJsonArrayOutput(output, (candidate) =>
+      candidate.some(
+        (entry) =>
+          typeof entry === "object" &&
+          entry !== null &&
+          Array.isArray((entry as { files?: unknown }).files)
+      )
+    ),
+    [{ filename: "omniroute.tgz", files: [{ path: "src/index.ts" }] }]
+  );
+});
+
+test("parseJsonValuesOutput extracts object reports as well as arrays", () => {
+  assert.deepEqual(parseJsonValuesOutput('notice\n{"files":[{"path":"src/index.ts"}]}'), [
+    { files: [{ path: "src/index.ts" }] },
+  ]);
 });
 
 test("findUnexpectedArtifactPaths flags staged app files outside the allowlist", () => {
@@ -82,6 +117,45 @@ test("findUnexpectedArtifactPaths flags node_modules even inside an allowed pref
   ]);
 });
 
+test("staging mode (neverAllowedSegments: []) keeps runtime node_modules under allowed prefixes (#11317)", () => {
+  // #9985/#11300-class regression: the app-STAGING prune reused the npm-pack
+  // never-allowed "node_modules" segment, deleting the standalone server's
+  // runtime deps — Turbopack-hashed sql.js (sql-wasm.wasm!) and transformers
+  // ort-wasm — so every packaged boot 500'd on all DB-backed routes while
+  // /api/monitoring/health stayed green. Staging allowlist prefixes are the
+  // runtime contract; the node_modules segment ban is a PUBLISH-tarball rule.
+  const unexpectedPaths = findUnexpectedArtifactPaths(
+    [
+      ".build/next/node_modules/sql.js-59d66b30daa0a8d2/dist/sql-wasm.wasm",
+      ".build/next/node_modules/@huggingface/transformers-31f28a0eb9b916d1/dist/transformers.js",
+      ".build/next/node_modules/@huggingface/transformers-31f28a0eb9b916d1/node_modules/tsup/package.json",
+      "node_modules/sql.js/dist/sql-wasm.wasm",
+      "package-lock.json",
+    ],
+    {
+      exactPaths: APP_STAGING_ALLOWED_EXACT_PATHS,
+      prefixPaths: APP_STAGING_ALLOWED_PATH_PREFIXES,
+      neverAllowedSegments: [],
+    }
+  );
+
+  assert.deepEqual(unexpectedPaths, ["package-lock.json"]);
+});
+
+test("default pack mode still rejects node_modules under .build/next (tarball guard intact)", () => {
+  const unexpectedPaths = findUnexpectedArtifactPaths(
+    [".build/next/node_modules/sql.js-59d66b30daa0a8d2/dist/sql-wasm.wasm"],
+    {
+      exactPaths: PACK_ARTIFACT_ALLOWED_EXACT_PATHS,
+      prefixPaths: PACK_ARTIFACT_ALLOWED_PATH_PREFIXES,
+    }
+  );
+
+  assert.deepEqual(unexpectedPaths, [
+    ".build/next/node_modules/sql.js-59d66b30daa0a8d2/dist/sql-wasm.wasm",
+  ]);
+});
+
 test("package.json files[] excludes nested node_modules from the published package", () => {
   // The gate above is defence-in-depth; this pins the actual fix. Without the
   // "!**/node_modules/**" negation the tarball was 99.4 MB unpacked (31.3 MB
@@ -128,6 +202,12 @@ test("tls-options.mjs is allowed in staging dist/ (server-ws.mjs dependency, mis
   assert.deepEqual(unexpectedPaths, []);
 });
 
+test("call-log artifact worker is kept and required in packaged runtimes", () => {
+  const workerPath = "src/lib/usage/callLogArtifactWorker.js";
+  assert.ok(APP_STAGING_ALLOWED_EXACT_PATHS.includes(workerPath));
+  assert.ok(PACK_ARTIFACT_REQUIRED_PATHS.includes(`dist/${workerPath}`));
+});
+
 test("dist/tls-options.mjs is a required tarball path (regression guard for #5452)", () => {
   const missingPaths = findMissingArtifactPaths([], PACK_ARTIFACT_REQUIRED_PATHS);
   assert.ok(
@@ -166,8 +246,10 @@ test("findMissingArtifactPaths flags missing root runtime files in the tarball",
     "bin/cli/data-dir.mjs",
     "bin/cli/program.mjs",
     "bin/cli/utils/ensureAndroidCacheDir.mjs",
+    "bin/cli/utils/parseEnvValue.mjs",
     "bin/cli/utils/storageKeyProvision.mjs",
     "bin/cli/utils/versionFastPath.mjs",
+    "bin/cli/utils/volatileEnvPath.mjs",
     "bin/mcp-server.mjs",
     "bin/mcpStdioConsoleGuard.mjs",
     "bin/nodeRuntimeSupport.mjs",
@@ -180,12 +262,16 @@ test("findMissingArtifactPaths flags missing root runtime files in the tarball",
     "dist/peer-stamp.mjs",
     "dist/responses-ws-proxy.mjs",
     "dist/server-ws.mjs",
+    "dist/src/lib/usage/callLogArtifactWorker.js",
+    "dist/systemd-notify.mjs",
     "dist/tls-options.mjs",
     "dist/webdav-handler.mjs",
     "scripts/build/colocateOptionals.mjs",
     "scripts/build/fixTlsClientNodeBinary.mjs",
     "scripts/build/native-binary-compat.mjs",
     "scripts/build/runtime-env.mjs",
+    "scripts/packs/optionalPackInstaller.mjs",
+    "scripts/packs/optionalPackManifest.mjs",
     "src/shared/utils/nodeRuntimeSupport.ts",
   ]);
 });

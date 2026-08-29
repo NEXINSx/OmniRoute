@@ -1,1 +1,0 @@
-- **fix(executors):** preserve non-strict function-tool semantics when translating Chat Completions requests to Codex Responses, avoiding intermittent streamed failures without rewriting tool schemas or dropping branch-level descriptions and annotations. ([#9931](https://github.com/diegosouzapw/OmniRoute/pull/9931))

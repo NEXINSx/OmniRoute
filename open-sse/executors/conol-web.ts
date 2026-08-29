@@ -512,7 +512,8 @@ async function uploadConolImages(
   signal?: AbortSignal | null,
   sessionId?: string
 ): Promise<ConolMessagePart[]> {
-  const images = await resolveCursorImages(imageUrls);
+  // Conol's asset endpoint stores the original bytes (no Cursor wire prep).
+  const images = await resolveCursorImages(imageUrls, { prepareForWire: false });
   const parts: ConolMessagePart[] = [];
   for (const image of images) {
     const response = await fetch(`${CONOL_ORIGIN}/api/assets`, {
@@ -525,7 +526,7 @@ async function uploadConolImages(
         },
         sessionId
       ),
-      body: image.data,
+      body: new Uint8Array(image.data),
       signal: signal ?? undefined,
     });
     if (!response.ok) {
@@ -683,8 +684,7 @@ export class ConolWebExecutor extends BaseExecutor {
         const timezone = safeTimezone(requestBody.timezone);
         // Sticky: once a session has carried an image, Conol keeps treating it as
         // multimodal, which drives preset text/multimodal model resolution.
-        const hasImageHistory =
-          (cachedBinding?.hasImageHistory ?? false) || imageParts.length > 0;
+        const hasImageHistory = (cachedBinding?.hasImageHistory ?? false) || imageParts.length > 0;
 
         // Conol ignores agentModel/agentEffort on session creation, so create the
         // session empty and configure it before any turn is submitted. Otherwise the

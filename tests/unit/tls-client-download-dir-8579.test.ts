@@ -10,8 +10,7 @@ import { dirname } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
 
-const TLS_CLIENT_MODULES = [
-  "open-sse/services/chatgptTlsClient.ts",
+const TLS_CLIENT_WRAPPERS = [
   "open-sse/services/claudeTlsClient.ts",
   "open-sse/services/grokTlsClient.ts",
   "open-sse/services/perplexityTlsClient.ts",
@@ -33,9 +32,8 @@ test("resolveTlsClientDownloadDir caches native binary under DATA_DIR/tls-client
   const dataDir = mkdtempSync(join(tmpdir(), "omniroute-tls-client-8579-"));
   process.env.DATA_DIR = dataDir;
 
-  const { resolveTlsClientDownloadDir } = await import(
-    "../../open-sse/services/tlsClientDownloadDir.ts"
-  );
+  const { resolveTlsClientDownloadDir } =
+    await import("../../open-sse/services/tlsClientDownloadDir.ts");
 
   assert.equal(resolveTlsClientDownloadDir(), join(dataDir, "tls-client", "bin"));
 });
@@ -44,9 +42,8 @@ test("buildNativeTlsClientOptions passes downloadDir to tls-client-node (#8579)"
   const dataDir = mkdtempSync(join(tmpdir(), "omniroute-tls-client-opts-8579-"));
   process.env.DATA_DIR = dataDir;
 
-  const { buildNativeTlsClientOptions } = await import(
-    "../../open-sse/services/tlsClientDownloadDir.ts"
-  );
+  const { buildNativeTlsClientOptions } =
+    await import("../../open-sse/services/tlsClientDownloadDir.ts");
 
   const options = buildNativeTlsClientOptions();
 
@@ -54,13 +51,25 @@ test("buildNativeTlsClientOptions passes downloadDir to tls-client-node (#8579)"
   assert.equal(options.downloadDir, join(dataDir, "tls-client", "bin"));
 });
 
-test("all web-provider tls clients wire downloadDir through buildNativeTlsClientOptions (#8579)", () => {
-  for (const relPath of TLS_CLIENT_MODULES) {
+test("all remaining web-provider tls clients wire downloadDir through buildNativeTlsClientOptions (#8579)", () => {
+  const base = readFileSync(join(ROOT, "open-sse/services/tlsClientBase.ts"), "utf8");
+  assert.match(
+    base,
+    /buildNativeTlsClientOptions\(\)/,
+    "tlsClientBase.ts must pass buildNativeTlsClientOptions() to TLSClient"
+  );
+  assert.doesNotMatch(
+    base,
+    /new TLSClient\(\{\s*runtimeMode:\s*"native"\s*\}\)/,
+    "tlsClientBase.ts must not construct TLSClient without downloadDir"
+  );
+
+  for (const relPath of TLS_CLIENT_WRAPPERS) {
     const source = readFileSync(join(ROOT, relPath), "utf8");
     assert.match(
       source,
-      /buildNativeTlsClientOptions\(\)/,
-      `${relPath} must pass buildNativeTlsClientOptions() to TLSClient`
+      /createTlsClientModule\(/,
+      `${relPath} must go through createTlsClientModule so downloadDir is inherited`
     );
     assert.doesNotMatch(
       source,

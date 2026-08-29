@@ -109,6 +109,12 @@ export interface PoolUpdate {
   connectionIds?: string[];
 }
 
+export interface EnsurePoolResult {
+  pool: QuotaPool;
+  created: boolean;
+  updated: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -425,6 +431,50 @@ export function createPool(input: PoolCreate): QuotaPool {
   invalidateModelCatalogCache();
 
   return result;
+}
+
+function allocationFingerprint(allocations: PoolAllocation[] = []): string {
+  return JSON.stringify(
+    allocations
+      .map((allocation) => ({
+        apiKeyId: allocation.apiKeyId,
+        weight: allocation.weight,
+        capValue: allocation.capValue ?? null,
+        capUnit: allocation.capUnit ?? null,
+        policy: allocation.policy,
+      }))
+      .sort((left, right) => left.apiKeyId.localeCompare(right.apiKeyId))
+  );
+}
+
+/** Idempotent pool management for automation and bounded CLI callers. */
+export function ensurePool(input: PoolCreate): EnsurePoolResult {
+  const members = input.connectionIds && input.connectionIds.length > 0
+    ? input.connectionIds
+    : [input.connectionId];
+  const groupId = input.groupId || "group-demo";
+  const existing = listPools().items.find((pool) => {
+    return pool.name === input.name && pool.groupId === groupId;
+  });
+
+  if (!existing) return { pool: createPool(input), created: true, updated: false };
+
+  const allocationsChanged =
+    input.allocations !== undefined &&
+    allocationFingerprint(existing.allocations) !== allocationFingerprint(input.allocations);
+  const membersChanged =
+    existing.connectionIds.length !== members.length ||
+    existing.connectionIds.some((id) => !members.includes(id));
+  if (!allocationsChanged && !membersChanged) {
+    return { pool: existing, created: false, updated: false };
+  }
+
+  const update: PoolUpdate = { connectionIds: members };
+  if (input.allocations !== undefined) update.allocations = input.allocations;
+  if (input.groupId !== undefined) update.groupId = input.groupId;
+  const updated = updatePool(existing.id, update);
+  if (!updated) throw new Error(`Quota pool disappeared during ensure: ${existing.id}`);
+  return { pool: updated, created: false, updated: true };
 }
 
 /**

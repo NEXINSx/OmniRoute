@@ -26,7 +26,17 @@ import {
   getLatestQuotaSnapshotsForConnection,
 } from "@/lib/db/quotaSnapshots";
 import { recordProviderQuotaResetEventIfChanged } from "@/lib/db/quotaResetEvents";
-import { getCodexQuotaWindowFilterForModel } from "@omniroute/open-sse/config/codexQuotaScopes.ts";
+import {
+  CODEX_SPARK_QUOTA_SESSION,
+  CODEX_SPARK_QUOTA_WEEKLY,
+  getCodexQuotaWindowFilterForModel,
+} from "@omniroute/open-sse/config/codexQuotaScopes.ts";
+import {
+  createCodexAccountPool,
+  getCodexChildQuotaHydration,
+  resolveCodexAccount,
+  type CodexPersistedQuotaState,
+} from "@omniroute/open-sse/services/codexAccount/index.ts";
 import { getAntigravityQuotaFamily } from "@omniroute/open-sse/services/antigravityQuotaFamily.ts";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -34,6 +44,13 @@ import { getAntigravityQuotaFamily } from "@omniroute/open-sse/services/antigrav
 interface QuotaInfo {
   remainingPercentage: number;
   resetAt: string | null;
+  // #10095 — upstream explicitly told us it did NOT report this window's
+  // fraction (e.g. a fresh Antigravity account or a newly-launched
+  // -tiered model id Google hasn't wired quota telemetry for yet).
+  // `undefined`/`true` means the value is a real, upstream-reported
+  // percentage; `false` means "unknown", so callers must not treat the
+  // defaulted-to-0 `remainingPercentage` as genuine exhaustion.
+  fractionReported?: boolean;
 }
 
 interface QuotaCacheEntry {
@@ -51,6 +68,12 @@ interface QuotaWindowStatus {
   usedPercentage: number;
   resetAt: string | null;
   reachedThreshold: boolean;
+}
+
+export interface QuotaWindowObservation {
+  usedPercentage: number;
+  resetAt: string | null;
+  observedAt: string | null;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -103,7 +126,10 @@ const MAX_CONCURRENT_REFRESHES = 5;
 function isExhausted(quotas: Record<string, QuotaInfo>): boolean {
   const entries = Object.values(quotas);
   if (entries.length === 0) return false;
-  return entries.every((q) => q.remainingPercentage <= 0);
+  // #10095 — a window whose fraction was never reported by upstream must
+  // never single-handedly flip the whole connection to exhausted; treat it
+  // as available (mirrors the guard in genericQuotaFetcher.ts).
+  return entries.every((q) => q.fractionReported !== false && q.remainingPercentage <= 0);
 }
 
 /**
@@ -227,6 +253,9 @@ function normalizeQuotas(rawQuotas: Record<string, any>): Record<string, QuotaIn
           safePercentage(q.remainingPercentage) ??
           (q.total > 0 ? Math.round(((q.total - (q.used || 0)) / q.total) * 100) : 0),
         resetAt: q.resetAt || null,
+        // #10095 — thread through the "did upstream actually report this
+        // window's fraction" signal (see UsageQuota in usage/quota.ts).
+        fractionReported: q.fractionReported === false ? false : undefined,
       };
     }
   }
@@ -293,6 +322,88 @@ function isAntigravityQuotaExhausted(
           ?.reachedThreshold
     )
   );
+}
+
+function remainingPercent(usage: unknown, limit: unknown): number | null {
+  const used = Number(usage);
+  const total = Number(limit);
+  if (!Number.isFinite(used) || !Number.isFinite(total) || total <= 0) return null;
+  return clampPercent(((total - used) / total) * 100);
+}
+
+function mergeCodexPersistedQuota(
+  entry: QuotaCacheEntry,
+  scope: "codex" | "spark",
+  quotaState: CodexPersistedQuotaState
+): void {
+  const sessionKey = scope === "spark" ? CODEX_SPARK_QUOTA_SESSION : "session";
+  const weeklyKey = scope === "spark" ? CODEX_SPARK_QUOTA_WEEKLY : "weekly";
+  const sessionRemaining = remainingPercent(quotaState.usage5h, quotaState.limit5h);
+  const weeklyRemaining = remainingPercent(quotaState.usage7d, quotaState.limit7d);
+  if (sessionRemaining !== null) {
+    entry.quotas[sessionKey] = {
+      remainingPercentage: sessionRemaining,
+      resetAt: quotaState.resetAt5h ?? null,
+    };
+  }
+  if (weeklyRemaining !== null) {
+    entry.quotas[weeklyKey] = {
+      remainingPercentage: weeklyRemaining,
+      resetAt: quotaState.resetAt7d ?? null,
+    };
+  }
+}
+
+/** Overlay one Codex child's persisted quota facts into the existing request cache. */
+export function hydrateCodexQuotaCacheForRequest(
+  connection: {
+    id: string;
+    provider: string;
+    providerSpecificData?: Readonly<Record<string, unknown>> | null;
+  },
+  requestedModel: string | null
+): void {
+  if (connection.provider !== "codex" || !requestedModel?.trim()) return;
+  const pool = createCodexAccountPool({
+    id: connection.id,
+    provider: connection.provider,
+    providerSpecificData: connection.providerSpecificData ?? {},
+  });
+  const account = resolveCodexAccount(pool, requestedModel);
+  if (account.kind !== "child") return;
+  const hydration = getCodexChildQuotaHydration(account);
+  if (!hydration.quotaState) return;
+
+  const { cache } = getState();
+  const entry = cache.get(connection.id) ||
+    hydrateQuotaCacheFromSnapshots(connection.id) || {
+      connectionId: connection.id,
+      provider: connection.provider,
+      quotas: {},
+      fetchedAt: Date.now(),
+      exhausted: false,
+      nextResetAt: null,
+    };
+  mergeCodexPersistedQuota(entry, hydration.scope, hydration.quotaState);
+  let exhaustedResetAt: string | null = null;
+  if (hydration.exhaustedWindow) {
+    const windowName =
+      hydration.scope === "spark"
+        ? hydration.exhaustedWindow === "5h"
+          ? CODEX_SPARK_QUOTA_SESSION
+          : CODEX_SPARK_QUOTA_WEEKLY
+        : hydration.exhaustedWindow === "5h"
+          ? "session"
+          : "weekly";
+    const window = entry.quotas[windowName];
+    if (window) {
+      entry.quotas[windowName] = { ...window, remainingPercentage: 0 };
+      exhaustedResetAt = window.resetAt;
+    }
+  }
+  entry.exhausted = isExhausted(entry.quotas);
+  if (exhaustedResetAt) entry.nextResetAt = exhaustedResetAt;
+  cache.set(connection.id, entry);
 }
 
 function isCodexQuotaExhausted(
@@ -549,11 +660,36 @@ export function getQuotaWindowStatus(
     usedPercentage,
     resetAt,
     // If reset time has already passed, avoid stale cached percentages blocking selection.
-    reachedThreshold: windowExpired
-      ? false
-      : remainingPercentage <= 0
-        ? true
-        : usedPercentage >= thresholdPercent,
+    // #10095 — a window whose fraction upstream never reported is "unknown",
+    // not "0% remaining"; never let it reach the exhaustion threshold.
+    reachedThreshold:
+      windowExpired || window.fractionReported === false
+        ? false
+        : remainingPercentage <= 0
+          ? true
+          : usedPercentage >= thresholdPercent,
+  };
+}
+
+/** Return the display-safe observation behind the routing decision for one quota window. */
+export function getQuotaWindowObservation(
+  connectionId: string,
+  windowName: string
+): QuotaWindowObservation | null {
+  const entry = getState().cache.get(connectionId) || hydrateQuotaCacheFromSnapshots(connectionId);
+  if (!entry) return null;
+
+  const window = resolveQuotaWindow(entry.quotas, windowName);
+  if (!window || window.fractionReported === false) return null;
+
+  const status = getQuotaWindowStatus(connectionId, windowName);
+  if (!status) return null;
+  const observedDate = new Date(entry.fetchedAt);
+
+  return {
+    usedPercentage: status.usedPercentage,
+    resetAt: status.resetAt,
+    observedAt: Number.isFinite(observedDate.getTime()) ? observedDate.toISOString() : null,
   };
 }
 

@@ -358,17 +358,6 @@ function decodeText(ptr, len) {
 
 const cachedTextEncoder = new TextEncoder();
 
-if (!('encodeInto' in cachedTextEncoder)) {
-    cachedTextEncoder.encodeInto = function (arg, view) {
-        const buf = cachedTextEncoder.encode(arg);
-        view.set(buf);
-        return {
-            read: arg.length,
-            written: buf.length
-        };
-    };
-}
-
 let WASM_VECTOR_LEN = 0;
 
 let wasmModule, wasm;
@@ -449,7 +438,14 @@ async function __wbg_init(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('wasm_signer_bg.wasm', import.meta.url);
+        // Upstream wasm-bindgen glue defaults to a sidecar binary resolved via
+        // `new URL(<sidecar>, import.meta.url)`. OmniRoute ships the module inlined as
+        // WASM_BASE64 instead — no sidecar exists in the repo — and the only caller,
+        // initTinyCmsWasm(), always passes that decoded Buffer explicitly, so this
+        // branch is unreachable. The literal URL still had to go: Turbopack resolves
+        // `new URL(<literal>, import.meta.url)` statically, so keeping it failed
+        // `next build` with a "Module not found" for the missing sidecar.
+        throw new Error('TinyCMS WASM module must be supplied explicitly (see initTinyCmsWasm)');
     }
     const imports = __wbg_get_imports();
 

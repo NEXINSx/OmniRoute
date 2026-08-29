@@ -3,7 +3,7 @@
 Thank you for your interest in contributing! This guide covers everything you need to get started.
 
 For the official per-change workflow, start with the
-[Contribution Golden Path](docs/dev/CONTRIBUTION_GOLDEN_PATH.md). It maps provider, routing,
+[Contribution Golden Path](docs/ops/CONTRIBUTION_GOLDEN_PATH.md). It maps provider, routing,
 UI/UX, i18n, CLI, database, and build/deploy changes to their contracts, focused tests, CI
 coverage, and reconciliation steps.
 
@@ -210,7 +210,7 @@ Coverage notes:
 ### Pull Request Requirements
 
 Before opening a PR, use the
-[Contribution Golden Path](docs/dev/CONTRIBUTION_GOLDEN_PATH.md) to run the focused loop for
+[Contribution Golden Path](docs/ops/CONTRIBUTION_GOLDEN_PATH.md) to run the focused loop for
 what you changed. The full unit suite (4 CI shards), Vitest, the **60%+** coverage gate, and
 the production build are CI's responsibility — running them locally adds no signal the PR
 checks will not already give you, and on smaller machines it can saturate the host (#8084):
@@ -293,16 +293,16 @@ src/                        # TypeScript (.ts / .tsx)
 ├── mitm/                   # MITM proxy (cert, DNS, target routing)
 ├── shared/
 │   ├── components/         # React components (.tsx)
-│   ├── constants/          # Provider definitions (290), MCP scopes, 19 routing strategies
+│   ├── constants/          # Provider definitions (329), MCP scopes, 19 routing strategies
 │   ├── utils/              # Circuit breaker, sanitizer, auth helpers
 │   └── validation/         # Zod v4 schemas
 └── sse/                    # SSE proxy pipeline
 
 open-sse/                   # @omniroute/open-sse workspace
-├── executors/              # 14 provider-specific request executors
+├── executors/              # 89 executor implementation modules
 ├── handlers/               # 11 request handlers (chat, responses, embeddings, images, etc.)
-├── mcp-server/             # MCP server (104 tools, 3 transports, 31 scopes)
-├── services/               # 36+ services (combo, autoCombo, rateLimitManager, etc.)
+├── mcp-server/             # MCP server (107 unique tools, 3 transports, 32 scopes)
+├── services/               # 178 top-level services (combo, autoCombo, rateLimitManager, etc.)
 ├── translator/             # Format translators (OpenAI ↔ Claude ↔ Gemini ↔ Responses ↔ Ollama)
 ├── transformer/            # Responses API transformer
 └── utils/                  # 22 utility modules (stream, TLS, proxy, logging)

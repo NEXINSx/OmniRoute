@@ -1,1 +1,0 @@
-- **fix(api):** Let image and video providers enforce their own request-size limits instead of rejecting media payloads at OmniRoute's 10 MB global default ([#8843](https://github.com/diegosouzapw/OmniRoute/pull/8843)) — thanks @artickc

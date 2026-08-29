@@ -1,1 +1,0 @@
-- Replaced hand-rolled body type checks with Zod validation in the plugins marketplace install route and the three Dario admin routes, restoring the `t06:route-validation` gate (Hard Rule #7).

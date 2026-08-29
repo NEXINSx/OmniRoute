@@ -32,9 +32,20 @@ import { stripTrailingSlashes } from "../utils/urlSanitize.ts";
 import { fetchRemoteImage } from "@/shared/network/remoteImageFetch";
 import {
   hasStructuredEmbeddingInput,
+  prepareJinaMixedEmbeddingInput,
   prepareStructuredEmbeddingRequest,
 } from "./embeddingStructuredInput.ts";
 import { MAX_EMBEDDING_INLINE_ITEM_BYTES } from "@/shared/validation/schemas/apiV1";
+import { markAccountUnavailable } from "../../src/sse/services/auth.ts";
+import {
+  collectJinaNativeModalities,
+  isJinaNativeEmbeddingInput,
+} from "@/shared/validation/jinaNativeEmbeddingInput";
+import {
+  collectGeminiNativeModalities,
+  isGeminiEmbedding2Family,
+  isGeminiNativeEmbeddingInput,
+} from "@/shared/validation/geminiNativeEmbeddingInput";
 
 interface ClientRawRequest {
   endpoint: string;
@@ -170,7 +181,11 @@ export async function handleEmbedding({
           typeof item === "object" && item !== null && "type" in item
       )
     : [];
-  if (structuredItems.length > 0) {
+  const nativeModalities = [
+    ...(isJinaNativeEmbeddingInput(body.input) ? collectJinaNativeModalities(body.input) : []),
+    ...(isGeminiNativeEmbeddingInput(body.input) ? collectGeminiNativeModalities(body.input) : []),
+  ].filter((modality) => modality !== "text");
+  if (structuredItems.length > 0 || nativeModalities.length > 0) {
     const supportedModalities = getEmbeddingModelModalities(providerConfig, model);
     if (!supportedModalities) {
       return {
@@ -179,12 +194,24 @@ export async function handleEmbedding({
         error: `Embedding model ${body.model} does not advertise structured embedding input support`,
       };
     }
-    const unsupported = structuredItems.find((item) => !supportedModalities.includes(item.type));
-    if (unsupported) {
+    const unsupportedCanonical = structuredItems.find(
+      (item) => !supportedModalities.includes(item.type)
+    );
+    if (unsupportedCanonical) {
       return {
         success: false,
         status: 400,
-        error: `Embedding model ${body.model} does not support ${unsupported.type} input`,
+        error: `Embedding model ${body.model} does not support ${unsupportedCanonical.type} input`,
+      };
+    }
+    const unsupportedNative = nativeModalities.find(
+      (modality) => !supportedModalities.includes(modality)
+    );
+    if (unsupportedNative) {
+      return {
+        success: false,
+        status: 400,
+        error: `Embedding model ${body.model} does not support ${unsupportedNative} input`,
       };
     }
   }
@@ -235,7 +262,10 @@ export async function handleEmbedding({
   }
 
   let upstreamUrl = providerConfig.baseUrl;
-  if (provider === "ollama-local") {
+  if (provider === "ollama-local" || provider === "lmstudio") {
+    // Keyless local servers (#2824 ollama-local, #11233 lmstudio): honor the
+    // configured connection's baseUrl when one was hydrated, and fall back to
+    // the static localhost registry default otherwise.
     const configuredBaseUrl = credentials?.providerSpecificData?.baseUrl;
     const rawBaseUrl =
       typeof configuredBaseUrl === "string" && configuredBaseUrl.trim().length > 0
@@ -246,11 +276,11 @@ export async function handleEmbedding({
     // (CodeQL js/polynomial-redos) since baseUrl is operator-configured
     // per-connection data. See open-sse/utils/urlSanitize.ts.
     const normalizedBaseUrl = stripTrailingSlashes(rawBaseUrl.trim());
-    const ollamaHost = normalizedBaseUrl
+    const localServerHost = normalizedBaseUrl
       .replace(/\/v1\/(?:chat\/completions|embeddings)$/i, "")
       .replace(/\/api\/chat$/i, "")
       .replace(/\/v1$/i, "");
-    upstreamUrl = `${ollamaHost}/v1/embeddings`;
+    upstreamUrl = `${localServerHost}/v1/embeddings`;
   }
   let normalizeProviderResponse:
     ((data: Record<string, unknown>) => Record<string, unknown>) | null = null;
@@ -277,7 +307,36 @@ export async function handleEmbedding({
     };
   }
 
-  if (hasStructuredEmbeddingInput(body.input)) {
+  // Jina v5 Omni native docs ({ text }, { image: url|base64 }, { content: [...] })
+  // must reach api.jina.ai unchanged. Do not fetch those image URLs or collapse
+  // to string[]. Canonical { type, source } items still go through the translator.
+  const jinaNative = isJinaNativeEmbeddingInput(body.input);
+  const geminiNative = isGeminiNativeEmbeddingInput(body.input);
+  const canonicalStructured = hasStructuredEmbeddingInput(body.input);
+  const passThroughJinaNative =
+    providerConfig.structuredInputProtocol === "jina-v1" && jinaNative && !canonicalStructured;
+  // gemini-embedding-2 aggregates a string[] on Google's OpenAI shim into one
+  // vector. Always use embedContent / batchEmbedContents so N input items
+  // become N embeddings. Native multimodal parts take the same path.
+  const useGeminiNativeTransport =
+    providerConfig.structuredInputProtocol === "gemini-embed-content" &&
+    (isGeminiEmbedding2Family(model) || canonicalStructured || geminiNative || jinaNative);
+
+  if (providerConfig.structuredInputProtocol === "jina-v1" && jinaNative && canonicalStructured) {
+    try {
+      const mixed = Array.isArray(body.input) ? body.input : [body.input];
+      upstreamBody.input = await prepareJinaMixedEmbeddingInput(mixed, async (url) => {
+        const result = await fetchRemoteImage(url, {
+          guard: "public-only",
+          maxBytes: MAX_EMBEDDING_INLINE_ITEM_BYTES,
+          pinDns: true,
+        });
+        return { buffer: result.buffer, contentType: result.contentType || null };
+      });
+    } catch (error) {
+      return { success: false, status: 400, error: sanitizeErrorMessage(error) };
+    }
+  } else if (useGeminiNativeTransport || (!passThroughJinaNative && canonicalStructured)) {
     if (!model) {
       return {
         success: false,
@@ -388,6 +447,22 @@ export async function handleEmbedding({
         apiKeyName,
         connectionId,
       }).catch(() => {});
+
+      // #10347 — persist a connection-level failure marker on a hard upstream failure so
+      // the dead account is not re-selected and re-hit on the next embed request (chat
+      // parity). markAccountUnavailable classifies the status via checkFallbackError: a
+      // payment-required 402 becomes the TERMINAL state credits_exhausted (the terminal
+      // marker excludes the account from selection until an operator resets it), benign
+      // 4xx are a no-op, and terminal statuses are never overwritten. honors per-connection
+      // disableCooling. The write must never break the error response path, so it is
+      // best-effort.
+      if (connectionId) {
+        try {
+          await markAccountUnavailable(connectionId, response.status, errorText, provider, model);
+        } catch {
+          // swallow — the upstream error response takes priority
+        }
+      }
 
       return {
         success: false,

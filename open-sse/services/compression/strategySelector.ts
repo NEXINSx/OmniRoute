@@ -7,7 +7,12 @@ import type {
 import { applyHardBudget } from "./hardBudget.ts";
 import { type FidelityGateConfig } from "./fidelityGate.ts";
 import { gateAdvance } from "./fidelityGateStep.ts";
-import type { CompressionEngineApplyOptions } from "./engines/types.ts";
+import type {
+  CompressionEngineApplyOptions,
+  CompressionStage,
+  CompressionWireFormat,
+  ImageTransportFidelity,
+} from "./engines/types.ts";
 import { applyLiteCompression } from "./lite.ts";
 import { cavemanCompress } from "./caveman.ts";
 import { compressAggressive } from "./aggressive.ts";
@@ -262,6 +267,10 @@ export function applyCompression(
   options?: {
     model?: string;
     supportsVision?: boolean | null;
+    imageTransportFidelity?: ImageTransportFidelity;
+    sourceFormat?: CompressionWireFormat;
+    targetFormat?: CompressionWireFormat;
+    compressionStage?: CompressionStage;
     config?: CompressionConfig;
     principalId?: string;
     /**
@@ -285,6 +294,10 @@ function runCompression(
   options?: {
     model?: string;
     supportsVision?: boolean | null;
+    imageTransportFidelity?: ImageTransportFidelity;
+    sourceFormat?: CompressionWireFormat;
+    targetFormat?: CompressionWireFormat;
+    compressionStage?: CompressionStage;
     config?: CompressionConfig;
     principalId?: string;
     bailout?: BailoutConfig;
@@ -319,7 +332,7 @@ function runCompression(
       config: { ...options.config, memoizeCompressionResults: false },
     });
     memoStore(key, result);
-    return memoLookup(key)!;
+    return result;
   }
   if (mode === "rtk") {
     return applyRtkCompression(body, {
@@ -469,6 +482,12 @@ export async function applyCompressionAsync(
     supportsVision?: boolean | null;
     /** Direct-to-provider vs. aggregator transport (gates transport-sensitive engines like omniglyph). */
     providerTransport?: "direct" | "aggregator";
+    /** Provider resolvido — a contabilidade do omniglyph depende dele. */
+    provider?: string;
+    imageTransportFidelity?: ImageTransportFidelity;
+    sourceFormat?: CompressionWireFormat;
+    targetFormat?: CompressionWireFormat;
+    compressionStage?: CompressionStage;
     config?: CompressionConfig;
     principalId?: string;
     onEngineStep?: (step: StackedCompressionStep) => void;
@@ -488,12 +507,40 @@ async function runCompressionAsync(
     supportsVision?: boolean | null;
     /** Direct-to-provider vs. aggregator transport (gates transport-sensitive engines like omniglyph). */
     providerTransport?: "direct" | "aggregator";
+    /** Provider resolvido — a contabilidade do omniglyph depende dele. */
+    provider?: string;
+    imageTransportFidelity?: ImageTransportFidelity;
+    sourceFormat?: CompressionWireFormat;
+    targetFormat?: CompressionWireFormat;
+    compressionStage?: CompressionStage;
     config?: CompressionConfig;
     principalId?: string;
     onEngineStep?: (step: StackedCompressionStep) => void;
     cachingContext?: CachingDetectionContext;
   }
 ): Promise<CompressionResult> {
+  const workerOptions = options
+    ? {
+        model: options.model,
+        supportsVision: options.supportsVision,
+        providerTransport: options.providerTransport,
+        provider: options.provider,
+        imageTransportFidelity: options.imageTransportFidelity,
+        sourceFormat: options.sourceFormat,
+        targetFormat: options.targetFormat,
+        compressionStage: options.compressionStage,
+        config: options.config,
+      }
+    : undefined;
+  const { isCompressionWorkerEligible } = await import("./compressionWorkerProtocol.ts");
+  if (isCompressionWorkerEligible(body, mode, workerOptions)) {
+    try {
+      const { runCompressionInWorker } = await import("./compressionWorkerPool.ts");
+      return await runCompressionInWorker(body, mode, workerOptions, options?.onEngineStep);
+    } catch {
+      return { body, compressed: false, stats: null };
+    }
+  }
   if (
     options?.config?.memoizeCompressionResults === true &&
     // Only memoize for an explicit principal — a missing principalId would collapse
@@ -518,15 +565,20 @@ async function runCompressionAsync(
       config: { ...options.config, memoizeCompressionResults: false },
     });
     memoStore(key, result);
-    return memoLookup(key)!;
+    return result;
   }
   // Single-mode omniglyph (async-only) — resolution lives in engines/omniglyphSingleMode.ts.
   if (mode === "omniglyph") return applyOmniglyphSingleMode(body, options);
   if (mode === "stacked") {
-    const adapter = adaptBodyForCompression(
-      body,
-      options?.config?.codexResponsesConfig?.preserveToolNames
-    );
+    // Post-translation format-sensitive engines (currently OmniGlyph) must see
+    // the native provider wire shape. The generic adapter would turn Responses
+    // `input[]` into Chat `messages[]` before the engine gets a chance to use its
+    // native Responses transformer. Pre-translation callers retain the legacy
+    // adapter path for the text engines.
+    const adapter =
+      options?.compressionStage === "post-translation"
+        ? { body, adapted: false, restore: (next: Record<string, unknown>) => next }
+        : adaptBodyForCompression(body, options?.config?.codexResponsesConfig?.preserveToolNames);
     const result = await applyStackedCompressionAsync(
       adapter.body,
       options?.config?.stackedPipeline,
@@ -672,6 +724,12 @@ interface StackOptions {
   supportsVision?: boolean | null;
   /** Direct-to-provider vs. aggregator transport (gates transport-sensitive engines like omniglyph). */
   providerTransport?: "direct" | "aggregator";
+  /** Provider resolvido — a contabilidade do omniglyph depende dele. */
+  provider?: string;
+  imageTransportFidelity?: ImageTransportFidelity;
+  sourceFormat?: CompressionWireFormat;
+  targetFormat?: CompressionWireFormat;
+  compressionStage?: CompressionStage;
   config?: CompressionConfig;
   compressionComboId?: string | null;
   /** TV1 bail-out discipline (opt-in, default disabled). */
@@ -764,6 +822,24 @@ function buildStepOptions(
     principalId: options?.principalId,
     stepConfig,
   };
+}
+
+/**
+ * Engines that were not authored for the provider-shaped post-translation body
+ * stay in the legacy pre-translation lane. Format-sensitive engines opt into
+ * both lanes explicitly and perform their own wire-format gate.
+ */
+function canRunAtCompressionStage(
+  engine: NonNullable<ReturnType<typeof getCompressionEngine>>,
+  stage: CompressionStage | undefined
+): boolean {
+  const effectiveStage = stage ?? "pre-translation";
+  // `assertValidEngine` não exige `metadata`, então uma engine registrada sem
+  // esse campo é legal — e sem a guarda derrubava o pipeline inteiro com
+  // TypeError em vez de falhar aberto. Metadata ausente é o mesmo caso de "não
+  // declarou estágio" e cai no mesmo fallback: só pre-translation.
+  const stages = engine.metadata?.executionStages;
+  return stages ? stages.includes(effectiveStage) : effectiveStage === "pre-translation";
 }
 
 function finalizeStackedResult(
@@ -894,6 +970,12 @@ function runStackedCompression(
       acc.validationErrors.add(`Unknown compression engine: "${step.engine}"`);
       continue;
     }
+    if (!canRunAtCompressionStage(engine, options?.compressionStage)) {
+      acc.validationWarnings.add(
+        `${step.engine}: skipped (stage ${options?.compressionStage ?? "pre-translation"})`
+      );
+      continue;
+    }
     // Respect the registry enabled flag: a step naming a disabled engine is skipped, so an
     // operator can turn an engine off (setEngineEnabled) without editing every pipeline.
     if (getEngineEntry(step.engine)?.enabled === false) {
@@ -998,6 +1080,12 @@ async function runStackedCompressionAsync(
     const engine = getCompressionEngine(step.engine);
     if (!engine) {
       acc.validationErrors.add(`Unknown compression engine: "${step.engine}"`);
+      continue;
+    }
+    if (!canRunAtCompressionStage(engine, options?.compressionStage)) {
+      acc.validationWarnings.add(
+        `${step.engine}: skipped (stage ${options?.compressionStage ?? "pre-translation"})`
+      );
       continue;
     }
     // Respect the registry enabled flag (same as the sync loop) — keep both in lockstep.

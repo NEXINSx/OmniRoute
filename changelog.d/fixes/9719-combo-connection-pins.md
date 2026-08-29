@@ -1,1 +1,0 @@
-- fix(db): clear stale combo connection pins when provider connections are deleted (#9719)

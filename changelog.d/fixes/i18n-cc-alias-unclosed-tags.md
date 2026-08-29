@@ -1,1 +1,0 @@
-- fix(i18n): re-escape CC discovery-alias `claude/<provider>/<model>` to HTML entities so next-intl stops logging INVALID_MESSAGE: UNCLOSED_TAG on provider detail pages (#8747 regression)

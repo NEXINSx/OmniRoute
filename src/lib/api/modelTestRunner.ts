@@ -8,7 +8,7 @@ import {
   extractComboTestResponseText,
   extractComboTestStreamResult,
 } from "@/lib/combos/testHealth";
-import { getCustomModels } from "@/lib/localDb";
+import { getCustomModels } from "@/lib/db/models";
 import { getProviderNodeById } from "@/lib/db/providers";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import { withRateLimit } from "@omniroute/open-sse/services/rateLimitManager";
@@ -18,11 +18,15 @@ import {
 } from "@omniroute/open-sse/services/accountFallback";
 import { looksLikeQuotaExhausted } from "@/shared/utils/classify429";
 import { getTrustedLocalRateLimitError } from "@omniroute/open-sse/services/rateLimitManager/errors";
+import { runAsProbe } from "@/shared/utils/probeOrigin";
+import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 
 const INTERNAL_ORIGIN = "http://omniroute.internal";
 export const DEFAULT_MODEL_TEST_TIMEOUT_MS = 30_000;
 const DOLA_PRO_TEST_TIMEOUT_MS = 90_000;
 const DOUBAO_WEB_PROVIDER_ID = "doubao-web";
+const ZAI_WEB_PROVIDER_ID = "zai-web";
+const ZAI_WEB_TEST_TIMEOUT_MS = 60_000;
 const SLOW_WEB_TEST_MODELS = new Set(["dola-pro"]);
 const STREAMING_CHAT_TEST_MAX_TOKENS = 64;
 
@@ -38,6 +42,12 @@ function getErrorMessage(error: unknown): string {
 
 function getErrorName(error: unknown): string {
   return error instanceof Error ? error.name : "";
+}
+
+export function createModelTestTimeoutError(timeoutMs: number): Error {
+  const error = new Error(`Model test deadline exceeded after ${timeoutMs}ms`);
+  error.name = "TimeoutError";
+  return error;
 }
 
 function extractUpstreamDetailMessage(value: unknown): string | null {
@@ -101,6 +111,10 @@ export function resolveModelTestTimeoutMs(
 
   if (normalizedProviderId === DOUBAO_WEB_PROVIDER_ID && SLOW_WEB_TEST_MODELS.has(modelLeafId)) {
     return Math.max(requestedTimeoutMs, DOLA_PRO_TEST_TIMEOUT_MS);
+  }
+
+  if (normalizedProviderId === ZAI_WEB_PROVIDER_ID) {
+    return Math.max(requestedTimeoutMs, ZAI_WEB_TEST_TIMEOUT_MS);
   }
 
   return requestedTimeoutMs;
@@ -304,6 +318,16 @@ export type ModelTestResponseText = {
   error?: { message: string; statusCode?: number };
 };
 
+export function classifyModelTestOutput(
+  timedOut: boolean,
+  responseText: string,
+  allowsEmptyOutput: boolean
+): "ok" | "empty" | "timeout" {
+  if (timedOut) return "timeout";
+  if (!responseText && !allowsEmptyOutput) return "empty";
+  return "ok";
+}
+
 export async function extractModelTestResponseText(
   response: Response,
   streamChat: boolean
@@ -334,9 +358,10 @@ function isBotBlockMessage(message: string): boolean {
  * Reuses the routing path's existing quota vocabulary from accountFallback.ts
  * and classify429.ts instead of inventing a new vocabulary.
  */
-export function classifyTestErrorQuota(
-  errorText: string
-): { isQuota?: boolean; isTransient?: boolean } {
+export function classifyTestErrorQuota(errorText: string): {
+  isQuota?: boolean;
+  isTransient?: boolean;
+} {
   const trimmed = typeof errorText === "string" ? errorText.trim() : "";
   if (!trimmed) return {};
 
@@ -376,6 +401,17 @@ export async function runSingleModelTest(
     timeoutMs = DEFAULT_MODEL_TEST_TIMEOUT_MS,
     streamChat = true,
   } = options;
+
+  if (connectionId && (await isConnectionUnavailableToAuxiliaryActivity(connectionId))) {
+    const fullModelId = modelId.includes("/") ? modelId : `${providerId}/${modelId}`;
+    return {
+      modelId: fullModelId,
+      status: "error",
+      latencyMs: 0,
+      httpStatus: 409,
+      error: "Model tests are unavailable for managed lease connections",
+    };
+  }
 
   let fullModelStr = modelId;
   if (!fullModelStr.includes("/")) {
@@ -419,7 +455,7 @@ export async function runSingleModelTest(
   let timedOut = false;
   const timeoutHandle = setTimeout(() => {
     timedOut = true;
-    controller.abort();
+    controller.abort(createModelTestTimeoutError(effectiveTimeoutMs));
   }, effectiveTimeoutMs);
 
   const runInner = async (signal: AbortSignal): Promise<Response> => {
@@ -447,27 +483,30 @@ export async function runSingleModelTest(
         providerId,
         connectionId,
         fullModelStr,
-        (signal) => runInner(signal),
+        // T-PROBE: wrap the scheduled fn, not the withRateLimit call — a
+        // queued Bottleneck job executes from its own async resource and
+        // would otherwise run outside the probe context below.
+        (signal) => runAsProbe(() => runInner(signal)),
         controller.signal
       );
     } else {
-      res = await runInner(controller.signal);
+      res = await runAsProbe(() => runInner(controller.signal));
     }
   } catch (error: unknown) {
     clearTimeout(timeoutHandle);
     const latencyMs = Date.now() - startTime;
     const errorName = getErrorName(error);
+    if (timedOut) {
+      return {
+        modelId: fullModelStr,
+        status: "slow",
+        latencyMs,
+        httpStatus: 504,
+        error: `No model output within ${Math.round(effectiveTimeoutMs / 1000)}s`,
+        isTimeout: true,
+      };
+    }
     if (errorName === "AbortError") {
-      if (timedOut) {
-        return {
-          modelId: fullModelStr,
-          status: "slow",
-          latencyMs,
-          httpStatus: 504,
-          error: `No model output within ${Math.round(effectiveTimeoutMs / 1000)}s`,
-          isTimeout: true,
-        };
-      }
       // AbortError without timeout = withRateLimit queue rejection / abort.
       // Surface as rate_limited so the batch endpoint can stop the loop.
       return {
@@ -531,9 +570,14 @@ export async function runSingleModelTest(
     let responseText = "";
     let streamError: ModelTestResponseText["error"];
     try {
-      const parsedResponse = await extractModelTestResponseText(
-        res,
-        !isEmbedding && !isRerank && streamChat
+      // T-PROBE: consume the stream inside the probe context too — the SSE
+      // body is transformed by chatCore/chatHelpers generator code that
+      // resumes in the CONSUMER's async context. Without this wrapper, an
+      // error frame inside a 200 stream (Sentinel blocks, "account
+      // deactivated") would run outside runAsProbe and could still reach
+      // markAccountUnavailable (#9817).
+      const parsedResponse = await runAsProbe(() =>
+        extractModelTestResponseText(res, !isEmbedding && !isRerank && streamChat)
       );
       responseText = parsedResponse.text;
       streamError = parsedResponse.error;
@@ -550,7 +594,8 @@ export async function runSingleModelTest(
       // error, not a bot-block. A bare 403 status without quota/bot wording still
       // falls through to the generic error branch.
       const quotaFlags = classifyTestErrorQuota(error);
-      const isBotBlock = !quotaFlags.isQuota && (streamError.statusCode === 403 || isBotBlockMessage(error));
+      const isBotBlock =
+        !quotaFlags.isQuota && (streamError.statusCode === 403 || isBotBlockMessage(error));
       return {
         modelId: fullModelStr,
         status: rateLimited ? "rate_limited" : "error",
@@ -563,7 +608,12 @@ export async function runSingleModelTest(
         ...(quotaFlags.isQuota ? { isQuota: true } : {}),
       };
     }
-    if (timedOut && !responseText) {
+    const outputState = classifyModelTestOutput(timedOut, responseText, isEmbedding || isRerank);
+    // A streaming response can yield partial text just as the test timeout
+    // aborts the underlying request. Partial output does not make an aborted
+    // request healthy: the call log correctly records that race as 499, so
+    // the model-test result must remain a timeout instead of turning green.
+    if (outputState === "timeout") {
       return {
         modelId: fullModelStr,
         status: "slow",
@@ -582,7 +632,7 @@ export async function runSingleModelTest(
         responseText: "[Rerank completed successfully]",
       };
     }
-    if (!responseText && !isEmbedding) {
+    if (outputState === "empty") {
       return {
         modelId: fullModelStr,
         status: "error",

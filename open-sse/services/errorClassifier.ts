@@ -28,13 +28,17 @@ export function isEmptyContentResponse(responseBody: unknown): boolean {
 
     const content = message?.content ?? delta?.content;
     const reasoningContent = message?.reasoning_content ?? delta?.reasoning_content;
+    // opencode-routed gateways (e.g. opencode/mimo-v2.5-free) name the reasoning
+    // field `reasoning` instead of `reasoning_content` (#6623).
+    const reasoningAlt = message?.reasoning ?? delta?.reasoning;
     const hasToolCalls =
       (Array.isArray(message?.tool_calls) && (message.tool_calls as unknown[]).length > 0) ||
       (Array.isArray(delta?.tool_calls) && (delta.tool_calls as unknown[]).length > 0);
 
     const hasContent = content !== null && content !== undefined && content !== "";
     const hasReasoning =
-      reasoningContent !== null && reasoningContent !== undefined && reasoningContent !== "";
+      (reasoningContent !== null && reasoningContent !== undefined && reasoningContent !== "") ||
+      (reasoningAlt !== null && reasoningAlt !== undefined && reasoningAlt !== "");
 
     // A response truncated at the token limit (finish_reason "length") is a valid,
     // successful completion even with empty text — do not flag it as a fake success.
@@ -79,6 +83,11 @@ export const PROVIDER_ERROR_TYPES = {
   EMPTY_CONTENT: "empty_content",
   MODEL_NOT_FOUND: "model_not_found",
   FINGERPRINT_REJECTION: "fingerprint_rejection",
+  GEO_BLOCKED: "geo_blocked",
+  // Antigravity BYOP fast-fail (executor 422, code gcp_project_required): the
+  // Google account must Bring Its Own GCP Project. Account-specific and
+  // fixable by entering a Project ID — never a model lockout and never a ban.
+  GCP_PROJECT_REQUIRED: "gcp_project_required",
 };
 
 export const CONTEXT_OVERFLOW_SIGNALS = [
@@ -112,6 +121,61 @@ const MODEL_NAMED_UNSUPPORTED_REGEX = /\bmodel\b[^\n]{0,80}\bis not supported\b/
 
 export function containsModelUnavailableMessage(errorMessage: string): boolean {
   return MODEL_NAMED_UNSUPPORTED_REGEX.test(String(errorMessage || "").toLowerCase());
+}
+
+// Google regional-availability rejection: the Cloud Code / Gemini Code Assist
+// API is not offered from every country, and the upstream answers with a 400
+// FAILED_PRECONDITION like "User location is not supported for the API use."
+// This is an ACCOUNT-INDEPENDENT, location-scoped refusal: every account on
+// this server egresses from the same region, so retrying another credential
+// cannot help — but routing egress through a proxy in a supported region can.
+// Detected here so routing treats it as a non-terminal, cached-per-connection
+// exclusion instead of a generic 400 (which would keep re-selecting the same
+// account and surface a cryptic "upstream error (400)").
+const GEO_BLOCK_SIGNALS = [
+  "user location is not supported",
+  "location is not supported",
+  "not supported for the api use",
+  "region is not supported",
+  "unsupported location",
+  "not available in your location",
+  "not available in your region",
+];
+
+export function isGeoBlockedError(errorMessage: string): boolean {
+  const lower = String(errorMessage || "").toLowerCase();
+  return GEO_BLOCK_SIGNALS.some((signal) => lower.includes(signal));
+}
+
+// Providers whose upstream surface emits Google's regional-availability
+// refusal (GEO_BLOCK_SIGNALS above): Cloud Code / Gemini Code Assist — the
+// antigravity executor (antigravity, agy) — and the Gemini Developer API
+// (generativelanguage.googleapis.com; gemini, vertex). The gate matters
+// because classifyProviderError is shared across every provider: an unrelated
+// upstream returning a lookalike "not available in your region" must NOT be
+// classified as an egress-fixable geo block, or it would get the non-terminal
+// 24h exclusion treatment instead of that provider's own (possibly terminal)
+// path.
+function isGeoBlockEligibleProvider(provider?: string | null): boolean {
+  const p = (provider || "").toLowerCase();
+  if (
+    p === "antigravity" ||
+    p === "agy" ||
+    p === "gemini" ||
+    p === "gemini-cli" ||
+    p === "vertex"
+  ) {
+    return true;
+  }
+  if (p.includes("cloudcode") || p.includes("cloud-code")) return true;
+  // Registry-driven fallback: any provider whose upstream surface is the Cloud
+  // Code API (executor/format "antigravity") or the Gemini API (format
+  // "gemini") stays eligible even when a new provider id is added later.
+  if (!provider) return false;
+  const entry = getRegistryEntry(provider);
+  if (!entry) return false;
+  const surface = `${entry.executor || ""} ${entry.format || ""}`.toLowerCase();
+  return surface.includes("antigravity") || surface.includes("gemini");
 }
 
 // Cloudflare 1010 "Access denied ... blocked based on your browser's signature" —
@@ -242,6 +306,24 @@ export function classifyProviderError(
   }
 
   if (statusCode === 402) return PROVIDER_ERROR_TYPES.QUOTA_EXHAUSTED;
+
+  // Google regional-availability refusal (400 FAILED_PRECONDITION "... location
+  // is not supported ..."), scoped to the Google AI surfaces that emit it
+  // (Cloud Code / Gemini Code Assist + Gemini Developer API — see
+  // isGeoBlockEligibleProvider). Account-independent: every credential egresses
+  // from the same server region, so fallback to another account cannot succeed
+  // — but the connection must be cached as excluded so routing does not
+  // re-select it on every request and surface a cryptic generic 400.
+  // Non-terminal, like PROJECT_ROUTE_ERROR: the account becomes usable again
+  // once egress is routed through a supported-region proxy.
+  if (
+    (statusCode === 400 || statusCode === 403) &&
+    isGeoBlockEligibleProvider(provider) &&
+    isGeoBlockedError(bodyStr)
+  ) {
+    return PROVIDER_ERROR_TYPES.GEO_BLOCKED;
+  }
+
   if (statusCode === 403 && isCloudflareFingerprintRejection(bodyStr)) {
     // Cloudflare 1010 / error_name "browser_signature_banned": the CDN in front of the
     // upstream (e.g. opencode.ai/zen/v1) rejected the CLIENT's TLS/UA signature, not the
@@ -281,8 +363,8 @@ export function classifyProviderError(
     if (recoverableProject403) {
       return PROVIDER_ERROR_TYPES.PROJECT_ROUTE_ERROR;
     }
-    // #8813 — ChatGPT Web's Cloudflare Sentinel/Turnstile 403 is a TERMINAL
-    // block: the user's IP/session needs a browser Turnstile challenge, and
+    // A Cloudflare Sentinel/Turnstile 403 is a TERMINAL block for browser-session
+    // providers: the user's IP/session needs a browser Turnstile challenge, and
     // retrying the same connection will keep 403ing. Classify as FORBIDDEN so
     // the connection gets banned and combo routing falls back to other providers.
     // Must be checked BEFORE the generic apikey-403→null return below, which
@@ -310,6 +392,15 @@ export function classifyProviderError(
     return PROVIDER_ERROR_TYPES.FORBIDDEN;
   }
   if (statusCode >= 500) return PROVIDER_ERROR_TYPES.SERVER_ERROR;
+
+  // Antigravity BYOP fast-fail (executor emits 422 with code
+  // gcp_project_required when the Google account must Bring Its Own GCP
+  // Project). Account-specific and fixable by entering a Project ID in the
+  // dashboard — classified separately so chatCore rotates to sibling accounts
+  // and excludes the connection instead of locking the model or banning it.
+  if (statusCode === 422 && bodyStr.includes("gcp_project_required")) {
+    return PROVIDER_ERROR_TYPES.GCP_PROJECT_REQUIRED;
+  }
 
   if (statusCode === 400) {
     if (isContextOverflow(bodyStr)) {

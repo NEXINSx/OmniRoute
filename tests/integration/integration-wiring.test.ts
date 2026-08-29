@@ -46,36 +46,12 @@ function listProjectFiles(relPath: string): string[] {
 }
 
 // ─── Pipeline Wiring ─────────────────────────────────
-
-describe("Pipeline Wiring — server-init.ts", () => {
-  const src = readProjectFile("src/server-init.ts");
-
-  it("should initialize compliance audit log", () => {
-    assert.ok(src, "src/server-init.ts should exist");
-    assert.match(src, /initAuditLog/);
-  });
-
-  it("should cleanup expired logs", () => {
-    assert.match(src, /cleanupExpiredLogs/);
-  });
-
-  it("should enforce secrets before startup", () => {
-    assert.match(src, /enforceSecrets/);
-  });
-
-  it("should enforce web runtime env before startup", () => {
-    assert.match(src, /enforceWebRuntimeEnv/);
-  });
-
-  it("should log server.start audit event", () => {
-    assert.match(src, /server\.start/);
-  });
-
-  it("should use the structured startup logger instead of direct console calls", () => {
-    assert.match(src, /createLogger\("server-init"\)/);
-    assert.doesNotMatch(src, /console\.(log|warn|error|info|debug)\(/);
-  });
-});
+//
+// src/server-init.ts was removed: it was never imported anywhere and duplicated
+// the wiring below, which is the boot path that actually runs (Next.js
+// instrumentation hook). See tests/unit/credential-health-boot-wiring.test.ts and
+// tests/unit/thinking-budget-boot-wiring-5312.test.ts for the incidents that
+// wiring into the dead module caused.
 
 describe("Pipeline Wiring — instrumentation-node.ts", () => {
   const src = readProjectFile("src/instrumentation-node.ts");

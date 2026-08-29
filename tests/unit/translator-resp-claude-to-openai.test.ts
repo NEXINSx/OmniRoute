@@ -403,6 +403,40 @@ test("Claude stream: message_stop falls back to tool_calls when tool use already
   assert.equal(result[0].choices[0].finish_reason, "tool_calls");
 });
 
+test("Claude stream: message_stop includes prompt_tokens_details when usage arrived on an earlier message_delta without stop_reason (#10535)", () => {
+  const state = createState();
+  claudeToOpenAIResponse(
+    { type: "message_start", message: { id: "msg1", model: "claude-sonnet-4-6" } },
+    state
+  );
+
+  // Usage lands on a message_delta that carries no stop_reason (e.g. an
+  // upstream that reports usage and the finish signal in separate events),
+  // so the finalChunk branch in the message_delta case never runs and
+  // finishReasonSent stays false.
+  const deltaResult = claudeToOpenAIResponse(
+    {
+      type: "message_delta",
+      delta: {},
+      usage: {
+        input_tokens: 8,
+        output_tokens: 5,
+        cache_read_input_tokens: 2000,
+        cache_creation_input_tokens: 0,
+      },
+    },
+    state
+  );
+  assert.equal(deltaResult, null);
+
+  const result = claudeToOpenAIResponse({ type: "message_stop" }, state);
+
+  assert.equal(result[0].usage.prompt_tokens, 2008);
+  assert.equal(result[0].usage.completion_tokens, 5);
+  assert.equal(result[0].usage.total_tokens, 2013);
+  assert.equal(result[0].usage.prompt_tokens_details.cached_tokens, 2000);
+});
+
 test("Claude stream: unsupported events return null", () => {
   assert.equal(claudeToOpenAIResponse({ type: "error" }, createState()), null);
 });

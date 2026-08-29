@@ -18,6 +18,7 @@ import {
   coerceToolSchemas,
   injectEmptyReasoningContentForToolCalls,
   injectOptionalEnumOmissionForTools,
+  injectOptionalStringOmissionForTools,
   sanitizeToolDescriptions,
 } from "./helpers/schemaCoercion.ts";
 import { getRequestTranslator, getResponseTranslator } from "./registry.ts";
@@ -30,11 +31,15 @@ import { getResolvedModelCapabilities, supportsReasoning } from "../services/mod
 import { normalizeRoles } from "../services/roleNormalizer.ts";
 import { hoistLeadingSystemMessage } from "./helpers/strictSystemHoist.ts";
 import {
+  buildAssistantMessageCacheKey,
   lookupReasoning,
   recordReplay,
   requiresReasoningReplay,
 } from "../services/reasoningCache.ts";
-import { normalizeResponsesReasoningEffort } from "./request/openai-responses/helpers.ts";
+import {
+  normalizeResponsesReasoningEffort,
+  RESPONSES_STORE_MARKER,
+} from "./request/openai-responses/helpers.ts";
 
 bootstrapTranslatorRegistry();
 export { register } from "./registry.ts";
@@ -97,6 +102,31 @@ function normalizeOpenAIResponsesRequest(body) {
 
   const normalized = promoteStrayReasoningEffort({ ...body });
 
+  // #10165 safety net: if a chat-shaped body reached Responses normalization
+  // without input, promote messages → input and map token/format fields.
+  if (normalized.input == null && Array.isArray(normalized.messages)) {
+    normalized.input = normalized.messages;
+    delete normalized.messages;
+  }
+  if (normalized.max_output_tokens == null) {
+    if (normalized.max_completion_tokens != null) {
+      normalized.max_output_tokens = normalized.max_completion_tokens;
+      delete normalized.max_completion_tokens;
+    } else if (normalized.max_tokens != null) {
+      normalized.max_output_tokens = normalized.max_tokens;
+      delete normalized.max_tokens;
+    }
+  } else {
+    delete normalized.max_tokens;
+    delete normalized.max_completion_tokens;
+  }
+  if (normalized.response_format != null && normalized.text == null) {
+    normalized.text = { format: normalized.response_format };
+    delete normalized.response_format;
+  } else if (normalized.response_format != null) {
+    delete normalized.response_format;
+  }
+
   if (typeof normalized.input === "string") {
     normalized.input = [
       {
@@ -119,25 +149,6 @@ function normalizeOpenAIResponsesRequest(body) {
   }
 
   return normalized;
-}
-
-function getReasoningCacheRequestId(body: Record<string, unknown> | null | undefined): string {
-  if (!body || typeof body !== "object") return "";
-
-  const requestId =
-    body._reasoningCacheRequestId ??
-    body.reasoningCacheRequestId ??
-    body.request_id ??
-    body.requestId;
-  return typeof requestId === "string" ? requestId.trim() : "";
-}
-
-function getAssistantMessageCacheKey(
-  body: Record<string, unknown> | null | undefined,
-  messageIndex: number
-): string {
-  const requestId = getReasoningCacheRequestId(body);
-  return requestId ? `request:${requestId}:message:${messageIndex}` : "";
 }
 
 function hasNonEmptyReasoningContent(message: Record<string, unknown>): boolean {
@@ -192,6 +203,88 @@ function requiresReasoningContentPresence(provider: unknown, model: unknown): bo
   return normalizedProvider === "xiaomi-mimo" || /(^|\/)mimo/i.test(normalizedModel);
 }
 
+type OpenAIReplayOptions = {
+  canReplayReasoningOnly: boolean;
+  requiresExplicitReasoningReplay: boolean;
+  provider: string;
+  model: string;
+  reasoningCacheScope?: string | null;
+};
+
+function replayOpenAIReasoningMessage(
+  messages: Array<Record<string, unknown>>,
+  messageIndex: number,
+  options: OpenAIReplayOptions
+): void {
+  const message = messages[messageIndex];
+  if (!message || message.role !== "assistant") return;
+
+  // Moonshot `partial` messages are output prefixes, not completed prior turns.
+  if (message.partial === true) {
+    if (message.reasoning_content === "") delete message.reasoning_content;
+    return;
+  }
+
+  if (
+    !hasNonEmptyReasoningContent(message) &&
+    typeof message.reasoning === "string" &&
+    message.reasoning.trim().length > 0
+  ) {
+    message.reasoning_content = message.reasoning;
+  }
+
+  const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  const hasToolCalls = toolCalls.length > 0;
+  const shouldReplayReasoningOnly =
+    !hasToolCalls && options.canReplayReasoningOnly && !hasNonEmptyReasoningContent(message);
+
+  if (!hasToolCalls && !shouldReplayReasoningOnly) {
+    if (
+      message.reasoning_content === "" ||
+      isInternalReasoningPlaceholder(message.reasoning_content)
+    ) {
+      delete message.reasoning_content;
+    }
+    return;
+  }
+
+  if (hasNonEmptyReasoningContent(message)) {
+    if (!isInternalReasoningPlaceholder(message.reasoning_content)) return;
+    delete message.reasoning_content;
+  }
+
+  const firstToolCall =
+    toolCalls[0] && typeof toolCalls[0] === "object" && !Array.isArray(toolCalls[0])
+      ? (toolCalls[0] as Record<string, unknown>)
+      : null;
+  const cacheKey = hasToolCalls
+    ? typeof firstToolCall?.id === "string"
+      ? firstToolCall.id
+      : ""
+    : buildAssistantMessageCacheKey(options.reasoningCacheScope, messages, messageIndex);
+  if (cacheKey) {
+    const cached = lookupReasoning(cacheKey);
+    if (cached) {
+      message.reasoning_content = cached;
+      recordReplay();
+      return;
+    }
+  }
+
+  if (options.requiresExplicitReasoningReplay) {
+    if (message.reasoning_content === "") delete message.reasoning_content;
+    return;
+  }
+
+  if ((hasToolCalls || shouldReplayReasoningOnly) && !message.reasoning_content) {
+    if (requiresReasoningContentPresence(options.provider, options.model)) {
+      message.reasoning_content = NON_ANTHROPIC_THINKING_PLACEHOLDER;
+    } else {
+      delete message.reasoning_content;
+    }
+  }
+}
+
 /** @param options.normalizeToolCallId - When true, use 9-char tool call ids (e.g. Mistral); when false, leave ids as-is */
 /** @param options.preserveDeveloperRole - undefined/true: keep developer for OpenAI format (default); false: map to system */
 /** @param options.preserveCacheControl - When true, preserve client-side cache_control markers (for Claude Code, etc.) */
@@ -225,6 +318,7 @@ export function translateRequest(
     preserveCacheControl?: boolean;
     signatureNamespace?: string | null;
     preCompressionBody?: Record<string, unknown> | null;
+    reasoningCacheScope?: string | null;
     /** UA-detected GitHub Copilot client. Forwarded to translators via the
      *  transient `_copilotClient` credential flag (see openai-responses → openai). */
     copilotClient?: boolean;
@@ -240,13 +334,15 @@ export function translateRequest(
   const normalizedModel = String(model ?? "");
   const isKimiCoding =
     normalizedProvider === "kimi-coding" || normalizedProvider === "kimi-coding-apikey";
-  const requiresExplicitReasoningReplay = requiresReasoningReplay({
-    provider: normalizedProvider,
-    model: normalizedModel,
-    allowLegacyFallback: false,
-  });
-  const preserveResponsesReasoning =
-    sourceFormat === FORMATS.OPENAI_RESPONSES && requiresExplicitReasoningReplay;
+
+  // GLM-family upstreams (Z.AI / Zhipu console gateways) reject messages arrays
+  // with no role:"user" turn (400 [1214] "The messages parameter is illegal").
+  // Pure tool-loop continuations from coding agents produce exactly that shape
+  // after Claude→OpenAI conversion, so flag those providers to have the source→
+  // openai translator append a synthetic user turn when none survives.
+  const isGlmFamilyUpstream =
+    ["opencode-go", "opencode-zen"].includes(normalizedProvider) ||
+    /glm|zhipu|z-ai/i.test(normalizedModel);
 
   // Phase 2: Apply thinking budget control before normalization
   result = applyThinkingBudget(result);
@@ -256,6 +352,29 @@ export function translateRequest(
 
   // Normalize thinking config: remove if lastMessage is not user
   normalizeThinkingConfig(result);
+
+  // Resolve the replay contract before Responses input is converted: conversion
+  // must know whether reasoning items are protocol history rather than display metadata.
+  const resolvedCapabilities = getResolvedModelCapabilities({
+    provider: normalizedProvider,
+    model: normalizedModel,
+  });
+  const replayRequirements = {
+    provider: normalizedProvider,
+    model: normalizedModel,
+    thinkingEnabled: hasThinkingConfig(result),
+    supportsReasoning: supportsReasoning({
+      provider: normalizedProvider,
+      model: normalizedModel,
+    }),
+    interleavedField: resolvedCapabilities?.interleavedField ?? null,
+  };
+  const isReasoner = requiresReasoningReplay(replayRequirements);
+  const requiresExplicitReasoningReplay = requiresReasoningReplay({
+    ...replayRequirements,
+    allowLegacyFallback: false,
+  });
+  const preserveResponsesReasoning = sourceFormat === FORMATS.OPENAI_RESPONSES && isReasoner;
 
   // Ensure tool_calls have id; optionally normalize to 9-char for providers like Mistral
   ensureToolCallIds(result, { use9CharId });
@@ -292,6 +411,25 @@ export function translateRequest(
   // providers and for already-compliant requests (prompt-cache prefix stability).
   if (targetFormat === FORMATS.OPENAI && result.messages && Array.isArray(result.messages)) {
     result.messages = hoistLeadingSystemMessage(result.messages, provider);
+  }
+
+  if (
+    sourceFormat === FORMATS.OPENAI &&
+    targetFormat === FORMATS.OPENAI_RESPONSES &&
+    isReasoner &&
+    Array.isArray(result.messages)
+  ) {
+    const messages = result.messages as Array<Record<string, unknown>>;
+    const replayOptions: OpenAIReplayOptions = {
+      canReplayReasoningOnly: isReasoningOnlyReplayTarget(normalizedProvider, normalizedModel),
+      requiresExplicitReasoningReplay,
+      provider: normalizedProvider,
+      model: normalizedModel,
+      reasoningCacheScope: options?.reasoningCacheScope,
+    };
+    for (let messageIndex = 0; messageIndex < messages.length; messageIndex += 1) {
+      replayOpenAIReasoningMessage(messages, messageIndex, replayOptions);
+    }
   }
 
   // If same format, skip translation steps
@@ -335,13 +473,15 @@ export function translateRequest(
             options?.copilotClient ||
             hasTargetHint ||
             preserveCacheControl ||
-            preserveResponsesReasoning
+            preserveResponsesReasoning ||
+            isGlmFamilyUpstream
               ? {
                   ...(credentials && typeof credentials === "object" ? credentials : {}),
                   ...(options?.copilotClient ? { _copilotClient: true } : {}),
                   ...(hasTargetHint ? { _targetFormat: targetFormat } : {}),
                   ...(preserveCacheControl ? { _preserveCacheControl: true } : {}),
                   ...(preserveResponsesReasoning ? { _preserveReasoningContent: true } : {}),
+                  ...(isGlmFamilyUpstream ? { _ensureUserTurn: true } : {}),
                 }
               : credentials;
           result = toOpenAI(model, result, stream, step1Credentials);
@@ -395,24 +535,6 @@ export function translateRequest(
       }
     }
   }
-
-  // Resolve reasoning-replay status up-front: it gates both the reasoning_content
-  // strip in filterToOpenAIFormat below (#4849 must NOT strip client reasoning for
-  // replay providers) and the cache re-injection further down.
-  const resolvedCapabilities = getResolvedModelCapabilities({
-    provider: normalizedProvider,
-    model: normalizedModel,
-  });
-  const isReasoner = requiresReasoningReplay({
-    provider: normalizedProvider,
-    model: normalizedModel,
-    thinkingEnabled: hasThinkingConfig(result),
-    supportsReasoning: supportsReasoning({
-      provider: normalizedProvider,
-      model: normalizedModel,
-    }),
-    interleavedField: resolvedCapabilities?.interleavedField ?? null,
-  });
 
   // Always normalize to clean OpenAI format when target is OpenAI
   // This handles hybrid requests (e.g., OpenAI messages + Claude tools)
@@ -474,6 +596,12 @@ export function translateRequest(
   }
 
   if (result.tools !== undefined) {
+    // Plain-string omission must run before coerceToolSchemas() strips `default`,
+    // so defaulted optional strings stay unsentinelled. Enum injection stays after
+    // coercion to preserve the #7023 pipeline.
+    if (targetFormat === FORMATS.OPENAI_RESPONSES) {
+      result.tools = injectOptionalStringOmissionForTools(result.tools);
+    }
     result.tools = coerceToolSchemas(result.tools);
     result.tools = sanitizeToolDescriptions(result.tools);
     if (targetFormat === FORMATS.OPENAI_RESPONSES) {
@@ -610,55 +738,13 @@ export function translateRequest(
       }
 
       // ── OpenAI-format message ──
-      // Skip if client already provided real reasoning_content. The internal
-      // replay placeholder is NOT real reasoning: drop it and fall through to
-      // the cache lookup so it can be replaced with genuine cached reasoning.
-      // Forwarding it makes the model continue its chain of thought from that
-      // text (echo → empty stop), and the echo re-poisons cache + client
-      // history (#9573).
-      if (hasNonEmptyReasoningContent(msg)) {
-        if (!isInternalReasoningPlaceholder(msg.reasoning_content)) {
-          continue;
-        }
-        delete msg.reasoning_content;
-      }
-
-      const cacheKey = hasToolCalls
-        ? msg.tool_calls[0]?.id
-        : getAssistantMessageCacheKey(result, messageIndex);
-      if (cacheKey) {
-        const cached = lookupReasoning(cacheKey);
-        if (cached) {
-          msg.reasoning_content = cached;
-          recordReplay();
-          continue;
-        }
-      }
-
-      // Native Moonshot K3/K2.7 accepts only the real prior reasoning. If it
-      // was not supplied and the cache missed, leave it absent so upstream can
-      // enforce its contract instead of corrupting history with a placeholder.
-      if (requiresExplicitReasoningReplay) {
-        if (msg.reasoning_content === "") delete msg.reasoning_content;
-        continue;
-      }
-
-      // Cache miss fallback — previously injected a non-empty placeholder
-      // (NON_ANTHROPIC_THINKING_PLACEHOLDER) to dodge an alleged DeepSeek V4 400
-      // on missing reasoning_content. The placeholder is the root cause of this
-      // bug: the model echoes it as its own reasoning and stops (empty turns),
-      // and the echo re-poisons the cache + client history (#9573). Empirically,
-      // deepseek-v4-flash accepts an ABSENT reasoning_content field (the 400 is
-      // specific to empty-string, and even that is endpoint-dependent). Omit
-      // the field instead; providers that genuinely enforce the contract
-      // (kimi-coding, moonshot reasoning replay) have their own paths above.
-      if ((hasToolCalls || shouldReplayReasoningOnly) && !msg.reasoning_content) {
-        if (requiresReasoningContentPresence(normalizedProvider, normalizedModel)) {
-          msg.reasoning_content = NON_ANTHROPIC_THINKING_PLACEHOLDER;
-        } else {
-          delete msg.reasoning_content;
-        }
-      }
+      replayOpenAIReasoningMessage(result.messages, messageIndex, {
+        canReplayReasoningOnly,
+        requiresExplicitReasoningReplay,
+        provider: normalizedProvider,
+        model: normalizedModel,
+        reasoningCacheScope: options?.reasoningCacheScope,
+      });
     }
   } else if (
     !isReasoner &&
@@ -673,6 +759,32 @@ export function translateRequest(
         }
       }
     }
+  }
+
+  // #<store-marker-leak>: a Responses-source request stashes the client's
+  // `store` intent under this internal marker (see the Responses -> OpenAI
+  // step above) so a later OpenAI -> Responses re-conversion can restore it
+  // as `store`. When the destination stays in Chat Completions shape (no
+  // such re-conversion happens), nothing else consumes the marker, and it
+  // was leaking verbatim into the real upstream request body — e.g. OpenAI
+  // itself rejects it with "Unknown parameter: '_omnirouteResponsesStore'".
+  // Always drop it here: any handler that still needs the client's original
+  // `store` value would have already read the marker before this point.
+  if (RESPONSES_STORE_MARKER in result) {
+    delete result[RESPONSES_STORE_MARKER];
+  }
+
+  // #7293 follow-up: the pre-translation hoist above normalizes the *source*
+  // message array, which a target translator can then undo. `claudeToOpenAI`
+  // pushes `body.system` as a fresh leading system message before appending the
+  // converted messages, so an already-hoisted system lands at index 1 again;
+  // a Responses-source request has no `messages` at all until translation, so
+  // the earlier call is a no-op for it. Re-run on the final outbound array —
+  // it is the only shape the upstream actually sees. Idempotent: same array
+  // reference for non-strict providers and already-compliant requests, so
+  // prompt-cache prefixes stay stable.
+  if (targetFormat === FORMATS.OPENAI && result.messages && Array.isArray(result.messages)) {
+    result.messages = hoistLeadingSystemMessage(result.messages, provider);
   }
 
   return result;

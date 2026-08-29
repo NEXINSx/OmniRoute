@@ -23,6 +23,7 @@ export const NAMED_OPENAI_STYLE_PROVIDERS = new Set([
   "openadapter",
   "dit",
   "tokenrouter",
+  "token-kiosk",
   // provider-model-sweep (2026-06-19): same class as #3976/#4202/#4249 — keyed
   // openai-style providers with a real live `<baseUrl>/models` catalog, served
   // their small hardcoded seed because unclassified. Seed stays as offline fallback.
@@ -94,6 +95,11 @@ export const NAMED_OPENAI_STYLE_PROVIDERS = new Set([
   "internlm",
   "ant-ling",
   "nanogpt",
+  // Logfare (https://logfare.ai) — free OpenAI-compatible gateway live-verified
+  // 2026-08-21: GET https://logfare.ai/v1/models returns a real 20-model catalog
+  // (11 chat-capable). Live fetch keeps it fresh; the registry seed stays as the
+  // offline fallback.
+  "logfare",
 ]);
 
 export function isNamedOpenAIStyleProvider(provider: string): boolean {

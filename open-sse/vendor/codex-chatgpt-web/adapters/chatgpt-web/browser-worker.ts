@@ -426,8 +426,17 @@ export class ChatGptBrowserWorker {
     if (this.page && !this.page.isClosed()) return this.page;
     if (
       !browserLoginStateExists({
+        mode: "browser-only",
+        appName: this.config.appName,
         storageStatePath: this.config.storageStatePath,
-        chromeExecutablePath: this.config.chromeExecutablePath,
+        brokerSocketPath: join(getConfigDir(), "runtime", "turn-broker.sock"),
+        headed: this.config.headed,
+        proAvailable: false,
+        autoApproveToolCalls: this.config.autoApproveToolCalls,
+        ...(this.config.chromeExecutablePath
+          ? { chromeExecutablePath: this.config.chromeExecutablePath }
+          : {}),
+        ...(this.config.cdpEndpoint ? { cdpEndpoint: this.config.cdpEndpoint } : {}),
       })
     ) {
       throw new Error(`ChatGPT web login state is missing: ${this.config.storageStatePath}`);
@@ -956,7 +965,7 @@ export class ChatGptBrowserWorker {
       if (this.context) {
         const state = await this.context.storageState();
         atomicWriteFile(this.config.storageStatePath, `${JSON.stringify(state)}\n`);
-        writeVerificationMarker(this.config.storageStatePath, capabilities.proAvailable);
+        writeVerificationMarker(this.config.storageStatePath, turn.capabilities.proAvailable);
       }
       console.info(
         `[chatgpt-web] browser turn ${turn.traceId} completed (markdownChars=${finalText.length})`

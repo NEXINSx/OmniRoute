@@ -2,8 +2,14 @@ import createNextIntlPlugin from "next-intl/plugin";
 import { createMDX } from "fumadocs-mdx/next";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { betterSqlite3AliasFor } from "./scripts/build/better-sqlite3-stub-flag.mjs";
 import { mitmManagerAliasFor } from "./scripts/build/mitm-stub-flag.mjs";
 import { normalizeBasePath } from "./scripts/build/normalizeBasePath.mjs";
+import {
+  buildSecurityHeaderRules,
+  nonPageRoutePrefixes,
+  resolveDashboardEmbedMode,
+} from "./scripts/build/dashboardEmbed.mjs";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const distDir = process.env.NEXT_DIST_DIR || ".build/next";
@@ -75,6 +81,11 @@ function isNextIntlExtractorDynamicImportWarning(warning) {
 // for security-sensitive environments. See docs/security/SOCKET_DEV_FINDINGS.md.
 const isMinimalBuild = process.env.OMNIROUTE_BUILD_PROFILE === "minimal";
 
+// #10273: `null` unless the operator opts in with DASHBOARD_ALLOW_EMBED=vscode. Read at build
+// time like every other knob in this file (OMNIROUTE_BASE_PATH, OMNIROUTE_BUILD_PROFILE, …),
+// so changing it requires a rebuild. See scripts/build/dashboardEmbed.mjs.
+const dashboardEmbedMode = resolveDashboardEmbedMode(process.env);
+
 const minimalBuildAliases = isMinimalBuild
   ? {
       "@/mitm/cert/install": "./src/mitm/cert/install.stub.ts",
@@ -103,12 +114,27 @@ const nextConfig = {
   // keeps operating on un-prefixed paths — see src/server/authz/pipeline.ts for
   // the two redirect call sites that re-add it via `request.nextUrl.basePath`.
   basePath: normalizeBasePath(process.env.OMNIROUTE_BASE_PATH),
+  // Next 16 (both webpack and Turbopack) app-router renders SSR asset URLs from
+  // `assetPrefix` ALONE — basePath only affects routing/links. Without mirroring
+  // it here, a subpath build emits /_next/static shell references that 404
+  // behind a reverse proxy. The Docker runtime patcher (ensure-docker-base-path)
+  // rewrites the same knob for prebuilt root-path images.
+  assetPrefix: normalizeBasePath(process.env.OMNIROUTE_BASE_PATH) || undefined,
   // Client-visible mirror of basePath for fetch/EventSource rewriting under reverse
   // proxies (installBasePathFetch), and for client display helpers (useDisplayBaseUrl)
   // that append the subpath to window.location.origin when building curl/endpoint
   // examples. Empty by default (root deploys unchanged).
   env: {
     NEXT_PUBLIC_OMNIROUTE_BASE_PATH: normalizeBasePath(process.env.OMNIROUTE_BASE_PATH),
+    // Deployment identity for the PWA service worker URL (PwaRegister):
+    // a browser holding a worker from an older deployment must see a
+    // different /sw.js?v=<id> URL so the browser treats it as an update
+    // instead of keeping the old generation in control. Falls back to a
+    // value that is unique per build run when git is absent (CI tarball).
+    NEXT_PUBLIC_SW_BUILD_ID:
+      process.env.OMNIROUTE_SW_BUILD_ID ||
+      process.env.SOURCE_VERSION ||
+      `${Date.now()}`,
   },
   distDir,
   // Turbopack config: redirect native modules to stubs at build time
@@ -122,6 +148,14 @@ const nextConfig = {
       // the stub to every npm/Electron/VPS artifact and broke Agent Bridge
       // start for all non-Docker users (#6344). See scripts/build/mitm-stub-flag.mjs.
       ...mitmManagerAliasFor(process.env),
+      // better-sqlite3 → build-time stub ONLY where the build worker actually
+      // aborts while tracing the native addon (SIGABRT at worker teardown,
+      // #10060); opt in with OMNIROUTE_BETTER_SQLITE3_STUB=1. The alias used to
+      // be unconditional on the premise that serverExternalPackages still won
+      // at runtime — it does not: resolveAlias rewrites the request before the
+      // externals check, so the stub was bundled and EVERY route answered 500
+      // (#11343). See scripts/build/better-sqlite3-stub-flag.mjs.
+      ...betterSqlite3AliasFor(process.env),
       ...minimalBuildAliases,
     },
     // src/lib/agentSkills/generator.ts builds its fs base path from a runtime
@@ -219,8 +253,8 @@ const nextConfig = {
       "./src/mitm/server.cjs",
       "./open-sse/services/compression/engines/rtk/filters/**/*.json",
       "./open-sse/services/compression/rules/**/*.json",
-      "./open-sse/lib/sha3_wasm_bg.wasm",
-      "./open-sse/lib/deepseek-pow-solver.cjs",
+      "./open-sse/lib/deepseek-pow-hash.js",
+      "./open-sse/lib/deepseek-pow-worker.mjs",
       // sql.js WASM is loaded at runtime by the sqljsAdapter fallback tier
       // (better-sqlite3 → node:sqlite → sql.js). Next traces sql-wasm.js but can
       // omit the runtime sql-wasm.wasm asset from the standalone bundle.
@@ -389,11 +423,21 @@ const nextConfig = {
   },
 
   async headers() {
+    // #10273: opt-in embedding for the VS Code Simple Browser (OmniCopilot). Off by default —
+    // `securityHeaders` then applies to `/:path*` exactly as it always has. When the operator
+    // sets DASHBOARD_ALLOW_EMBED=vscode, buildSecurityHeaderRules() splits that catch-all into
+    // two complementary rules: the API surface keeps `frame-ancestors 'none'` + X-Frame-Options,
+    // the HTML pages get `frame-ancestors 'self' vscode-webview:` and no X-Frame-Options.
+    // The exclusion list is DERIVED from the rewrite table below (self-reference is safe — the
+    // config object is fully built by the time Next calls headers()), so a future root-level API
+    // alias is excluded automatically instead of silently becoming framable.
+    const embedRules = buildSecurityHeaderRules({
+      mode: dashboardEmbedMode,
+      securityHeaders,
+      prefixes: dashboardEmbedMode ? nonPageRoutePrefixes(await nextConfig.rewrites()) : [],
+    });
     return [
-      {
-        source: "/:path*",
-        headers: securityHeaders,
-      },
+      ...embedRules,
       // G-10: allow OmniRoute's own dashboard to embed the 9Router UI via our reverse proxy.
       // `frame-ancestors 'self'` overrides the global `frame-ancestors 'none'` only for this
       // path. The route is already LOCAL_ONLY (routeGuard.ts) so remote origins cannot reach it.
@@ -410,6 +454,11 @@ const nextConfig = {
       {
         source: "/dashboard/skills",
         destination: "/dashboard/omni-skills",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/providers/freepik",
+        destination: "/dashboard/providers/magnific",
         permanent: true,
       },
       // Architecture

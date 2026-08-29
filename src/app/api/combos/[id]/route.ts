@@ -265,6 +265,12 @@ export async function PUT(request, { params }) {
   }
 }
 
+// PATCH /api/combos/[id] - partial update. PUT merges the body onto the stored
+// combo, so both verbs share one handler (same shape as /api/providers/[id]).
+export async function PATCH(request, ctx) {
+  return PUT(request, ctx);
+}
+
 // DELETE /api/combos/[id] - Delete combo
 export async function DELETE(request, { params }) {
   const authError = await requireManagementAuth(request);

@@ -241,6 +241,16 @@ export const EMBEDDING_PROVIDERS: Record<string, EmbeddingProvider> = {
         name: "Gemini Embedding 001 (OpenRouter)",
         dimensions: 768,
       },
+      {
+        id: "google/gemini-embedding-2",
+        name: "Gemini Embedding 2 (OpenRouter)",
+        dimensions: 3072,
+      },
+      {
+        id: "google/gemini-embedding-2-preview",
+        name: "Gemini Embedding 2 Preview (OpenRouter)",
+        dimensions: 3072,
+      },
     ],
   },
 
@@ -254,13 +264,13 @@ export const EMBEDDING_PROVIDERS: Record<string, EmbeddingProvider> = {
       {
         id: "gemini-embedding-2",
         name: "Gemini Embedding 2",
-        dimensions: 768,
+        dimensions: 3072,
         modalities: ["text", "image", "audio", "video", "document"],
       },
       {
         id: "gemini-embedding-2-preview",
         name: "Gemini Embedding 2 Preview",
-        dimensions: 768,
+        dimensions: 3072,
         modalities: ["text", "image", "audio", "video", "document"],
       },
       { id: "gemini-embedding-001", name: "Gemini Embedding 001", dimensions: 768 },
@@ -403,7 +413,34 @@ export const EMBEDDING_PROVIDERS: Record<string, EmbeddingProvider> = {
 const EMBEDDING_PROVIDER_ALIASES: Record<string, string> = {
   jina: "jina-ai",
   voyage: "voyage-ai",
+  // The dashboard stores LM Studio connections under the hyphenated provider
+  // id "lm-studio" while the embedding registry keys the provider "lmstudio"
+  // (#11233). Alias the dashboard id so "lm-studio/<model>" resolves instead
+  // of failing with an unknown-provider 400.
+  "lm-studio": "lmstudio",
 };
+
+/** Family name used by clients; Jina's public SKU is omni-small. */
+const EMBEDDING_MODEL_ALIASES: Record<string, string> = {
+  "jina-embeddings-v5-omni": "jina-embeddings-v5-omni-small",
+  // Live native catalog is gemini/gemini-embedding-2. Clients that send the
+  // OpenRouter-style google/ prefix still resolve to the Gemini provider —
+  // do not steal a custom provider_node whose prefix is `google`.
+  "google/gemini-embedding-2": "gemini/gemini-embedding-2",
+  "google/gemini-embedding-2-preview": "gemini/gemini-embedding-2-preview",
+};
+
+function applyEmbeddingModelAliases(modelStr: string): string {
+  for (const [alias, canonical] of Object.entries(EMBEDDING_MODEL_ALIASES)) {
+    if (modelStr === alias) return canonical;
+    // Slash-containing aliases are exact-match only so
+    // openrouter/google/gemini-embedding-2 stays on OpenRouter.
+    if (!alias.includes("/") && modelStr.endsWith(`/${alias}`)) {
+      return `${modelStr.slice(0, -alias.length)}${canonical}`;
+    }
+  }
+  return modelStr;
+}
 
 function resolveEmbeddingProviderId(providerId: string): string {
   return EMBEDDING_PROVIDER_ALIASES[providerId] || providerId;
@@ -442,6 +479,7 @@ export function parseEmbeddingModel(
   dynamicProviders?: EmbeddingProvider[]
 ): { provider: string | null; model: string | null } {
   if (!modelStr) return { provider: null, model: null };
+  modelStr = applyEmbeddingModelAliases(modelStr);
 
   // Check for "provider/model" format
   const slashIdx = modelStr.indexOf("/");

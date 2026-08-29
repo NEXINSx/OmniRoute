@@ -12,13 +12,14 @@ import {
   GROK_BUILD_DEFAULT_REASONING_EFFORT,
   GROK_BUILD_REASONING_INCLUDE,
   GROK_BUILD_RESPONSES_URL,
+  GROK_BUILD_SUPPORTED_REASONING_EFFORTS,
   GROK_BUILD_TOKEN_URL,
 } from "../config/grokBuild.ts";
 import { resolvePublicCred } from "../utils/publicCreds.ts";
 import { BaseExecutor, type ExecutorLog, type ProviderCredentials } from "./base.ts";
 
 const GROK_BUILD_MAX_TOOLS = 200;
-const GROK_BUILD_SUPPORTED_REASONING_EFFORTS = new Set(["low", "medium", "high"]);
+const GROK_BUILD_REASONING_EFFORT_SET = new Set(GROK_BUILD_SUPPORTED_REASONING_EFFORTS);
 const GROK_BUILD_REFRESH_MAX_ATTEMPTS = 3;
 const GROK_BUILD_REFRESH_MIN_DELAY_MS = 200;
 const GROK_BUILD_TERMINAL_REFRESH_ERRORS = new Set(["invalid_grant", "invalid_client"]);
@@ -32,7 +33,6 @@ const GROK_BUILD_UNSUPPORTED_PARAMS = [
   "top_logprobs",
   "reasoning_effort",
 ];
-
 
 /**
  * Grok Build's cli-chat-proxy is stricter about Responses `function_call_output.output`
@@ -128,7 +128,7 @@ function normalizeGrokBuildReasoning(
 ): Record<string, unknown> | null {
   const reasoning = asRequestRecord(value);
   const hasExplicitEffort = Object.prototype.hasOwnProperty.call(reasoning, "effort");
-  if (!GROK_BUILD_SUPPORTED_REASONING_EFFORTS.has(String(reasoning.effort))) {
+  if (!GROK_BUILD_REASONING_EFFORT_SET.has(String(reasoning.effort))) {
     delete reasoning.effort;
   }
   if (model === "grok-composer-2.5-fast") {

@@ -22,10 +22,9 @@ import { gitlabDuo } from "./gitlab-duo";
 import { kiro } from "./kiro";
 import { cursor } from "./cursor";
 import { trae } from "./trae";
-import { raycast } from "./raycast";
 import { kilocode } from "./kilocode";
 import { cline } from "./cline";
-import { windsurf } from "./windsurf";
+import { devinDesktop } from "./devin-desktop";
 import { grokCli } from "./grok-cli";
 import { xaiOauth } from "./xai-oauth";
 import { openference } from "./openference";
@@ -47,16 +46,15 @@ export const PROVIDERS = {
   "amazon-q": kiro,
   cursor,
   trae,
-  raycast,
   kilocode,
   cline,
   // clinepass reuses the Cline WorkOS OAuth flow 1:1 (same api.cline.bot host, same token
   // type) — it is a separate catalog entry advertising the cline-pass/* (ClinePass
   // subscription) models. See registry/clinepass/index.ts.
   clinepass: cline,
-  windsurf,
-  // devin-cli shares the same token format as windsurf (WINDSURF_API_KEY / devin auth login)
-  "devin-cli": windsurf,
+  "devin-desktop": devinDesktop,
+  // Devin CLI shares the same imported token format and upstream credential contract.
+  "devin-cli": devinDesktop,
   // grok-cli carries BOTH the browser PKCE flow and the paste-token import flow
   // under this one entry (#7013) — see grok-cli.ts's mapTokens for the dispatch.
   "grok-cli": grokCli,

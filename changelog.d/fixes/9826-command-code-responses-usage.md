@@ -1,1 +1,0 @@
-- **fix(executors):** preserve Command Code usage in `/v1/responses` streams so Codex clients receive real input, output, cache, and reasoning token counts ([#9826](https://github.com/diegosouzapw/OmniRoute/pull/9826)) — thanks @MrShitFox

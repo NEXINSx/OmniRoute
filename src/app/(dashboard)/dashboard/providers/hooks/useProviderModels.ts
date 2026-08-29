@@ -69,14 +69,26 @@ export function useProviderModels(providerId: string): UseProviderModelsResult {
               const connRes = await fetch("/api/providers");
               if (!connRes.ok || cancelled) return;
               const connData = (await connRes.json()) as {
-                connections?: Array<{ id: string; provider: string; isActive?: boolean }>;
+                connections?: Array<{
+                  id: string;
+                  provider: string;
+                  isActive?: boolean;
+                  providerSpecificData?: { autoFetchModels?: boolean };
+                }>;
               };
               if (cancelled) return;
-              const providerConn = connData.connections?.find(
+              const providerConnections = connData.connections?.filter(
                 (c) => (c.provider === providerId || c.id === providerId) && c.isActive !== false
               );
+              const providerConn = providerConnections?.[0];
 
-              if (providerConn && !cancelled) {
+              if (
+                providerConn &&
+                providerConnections.every(
+                  (connection) => connection.providerSpecificData?.autoFetchModels === true
+                ) &&
+                !cancelled
+              ) {
                 const syncRes = await fetch(
                   `/api/providers/${encodeURIComponent(providerConn.id)}/sync-models?mode=sync`,
                   { method: "POST" }

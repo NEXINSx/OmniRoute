@@ -34,7 +34,7 @@ export const ENDPOINT_CATEGORIES: readonly EndpointCategory[] = [
     id: "embeddings",
     label: "Embeddings",
     description: "Text embeddings generation",
-    prefixes: ["/v1/embeddings"],
+    prefixes: ["/v1/embeddings", "/v1/multimodal-embeddings"],
   },
   {
     id: "images",

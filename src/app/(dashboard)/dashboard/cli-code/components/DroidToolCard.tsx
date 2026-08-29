@@ -102,7 +102,9 @@ export default function DroidToolCard({
       if (existing.length > 0) {
         setModelList(existing.map((m) => m.model).filter(Boolean));
         const first = existing[0];
-        if (first?.apiKey) {
+        // apiKey may be a structured secret reference (object) rather than a
+        // plaintext string. Only match on strings.
+        if (typeof first?.apiKey === "string" && first.apiKey) {
           // (#523) Keys from /api/keys are masked. Match by prefix/suffix.
           const fileKeyPrefix = first.apiKey.slice(0, 8);
           const fileKeySuffix = first.apiKey.slice(-4);

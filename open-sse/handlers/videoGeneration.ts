@@ -18,7 +18,6 @@ import { handleNovitaVideoGeneration } from "./videoGeneration/novitaHandler.ts"
 import { handleXaiVideoGeneration } from "./videoGeneration/xaiGrokImagineHandler.ts";
 import { handleSegmindVideoGeneration } from "./videoGeneration/providers/segmind.ts";
 import { handleAdobeFireflyVideoGeneration } from "./videoGeneration/adobeFireflyHandler.ts";
-import { handleFalVideoGeneration } from "./videoGeneration/falHandler.ts";
 import { handleOpenAIVideoGeneration } from "./videoGeneration/openai.ts";
 import { getVideoJobPreset, handleVideoJobGeneration } from "./videoGeneration/job.ts";
 import {
@@ -375,7 +374,7 @@ async function handleVertexVeoGeneration({ model, body, credentials, log }) {
  * Submits an AnimateDiff or SVD workflow, polls for completion, fetches output video
  */
 async function handleVeoAiFreeVideoGeneration({ model, provider, body, credentials, log }) {
-  const executor = getExecutor(provider);
+  const executor = await getExecutor(provider);
   if (!executor) {
     return { success: false, status: 400, error: `Unknown video provider: ${provider}` };
   }

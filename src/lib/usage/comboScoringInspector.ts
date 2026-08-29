@@ -12,6 +12,7 @@ import {
   calculateFactors,
   calculateScore,
   DEFAULT_WEIGHTS,
+  normalizeScoringWeights,
   type ProviderCandidate,
   type ScoringFactors,
   type ScoringWeights,
@@ -80,7 +81,11 @@ const FACTOR_KEYS: ComboScoringInspectorFactorKey[] = [
   "tierAffinity",
   "specificityMatch",
   "contextAffinity",
+  "cacheAffinity",
+  "sessionAvailability",
   "resetWindowAffinity",
+  "connectionDensity",
+  "quality",
 ];
 
 function roundNumber(value: number, digits = 4): number {
@@ -118,8 +123,11 @@ function resolveModePackName(config: Record<string, unknown>): string | null {
 
 /** Resolves an explicit, validated `weights` object from the config, if present. */
 function resolveExplicitWeights(config: Record<string, unknown>): ScoringWeights | undefined {
-  const explicitWeights = isRecord(config.weights) ? (config.weights as ScoringWeights) : undefined;
-  return explicitWeights && validateWeights(explicitWeights) ? explicitWeights : undefined;
+  if (!isRecord(config.weights)) return undefined;
+  const explicitWeights = config.weights as ScoringWeights;
+  if (validateWeights(explicitWeights)) return explicitWeights;
+  const normalized = normalizeScoringWeights(config.weights as Partial<ScoringWeights>);
+  return validateWeights(normalized) ? normalized : undefined;
 }
 
 function resolveInspectorWeights(combo: ComboRecord | undefined): InspectorWeights {
@@ -312,14 +320,21 @@ function factorBreakdown(
   weights: ScoringWeights,
   context: CandidateContext
 ): ComboScoringInspectorFactor[] {
-  return FACTOR_KEYS.map((key) => ({
-    key,
-    value: roundNumber(factors[key]),
-    weight: roundNumber(weights[key]),
-    contribution: roundNumber(factors[key] * weights[key]),
-    source: context.sources[key] ?? "default",
-    note: context.notes[key],
-  })).sort((left, right) => Math.abs(right.contribution) - Math.abs(left.contribution));
+  return FACTOR_KEYS.map((key) => {
+    // Optional factors (cacheAffinity/sessionAvailability/quality) default to
+    // their scoring neutral (1 for a factor, 0 for a weight) so the contribution
+    // sum stays consistent with calculateScore.
+    const value = factors[key] ?? 1;
+    const weight = weights[key] ?? 0;
+    return {
+      key,
+      value: roundNumber(value),
+      weight: roundNumber(weight),
+      contribution: roundNumber(value * weight),
+      source: context.sources[key] ?? "default",
+      note: context.notes[key],
+    };
+  }).sort((left, right) => Math.abs(right.contribution) - Math.abs(left.contribution));
 }
 
 function targetForecastMap(targets: ComboForecastTarget[]): Map<string, ComboForecastTarget> {

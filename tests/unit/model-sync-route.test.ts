@@ -34,7 +34,7 @@ async function resetStorage() {
   modelSyncRoute.__resetLoopbackReadinessForTests();
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -42,7 +42,7 @@ test.after(() => {
   globalThis.fetch = originalFetch;
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 async function enableAuth() {
@@ -471,6 +471,10 @@ test("model sync route writes synced available models for non-Gemini providers t
   ]);
 });
 
+// #10603 ("make upstream model sync opt-in and preserve manual overrides") also applies to
+// import/merge mode: a manual custom-model row sharing an id with a discovered model is kept
+// as the user-owned overlay instead of being demoted/removed. See the comment above the
+// "reports synced managed models separately from preserved manual models" test.
 test("model sync route import mode merges discovered models without deleting manual models", async () => {
   await resetStorage();
 
@@ -512,10 +516,13 @@ test("model sync route import mode merges discovered models without deleting man
   assert.equal(body.updatedCount, 0);
   assert.equal(body.syncedAliases, 1);
   assert.deepEqual(body.modelChanges, { added: 1, removed: 0, updated: 0, total: 1 });
-  assert.deepEqual(body.customModelChanges, { added: 0, removed: 1, updated: 0, total: 1 });
+  assert.deepEqual(body.customModelChanges, { added: 0, removed: 0, updated: 0, total: 0 });
   assert.deepEqual(
     body.models.map((model) => ({ id: model.id, source: model.source })),
-    [{ id: "manual-only", source: "manual" }]
+    [
+      { id: "manual-only", source: "manual" },
+      { id: "router-v4", source: "manual" },
+    ]
   );
   assert.deepEqual(
     body.importedModels.map((model) => ({ id: model.id, source: model.source })),
@@ -820,6 +827,13 @@ test("model sync route forwards cookies, filters built-ins, and syncs aliases fo
   assert.equal(logs[0].account, "External Sync");
 });
 
+// #10603 ("make upstream model sync opt-in and preserve manual overrides") changed
+// importManagedModels() so a manually configured custom-model row that shares an id with
+// a synced upstream model is no longer demoted/removed — it stays as the user-owned
+// metadata overlay and is merged over the synced base at read time (see the comment in
+// src/lib/providerModels/managedModelImport.ts). Only rows already tagged as an
+// imported/auto-sync source get pruned. This test predates that change; its expectations
+// below reflect the current preserve-manual-overrides behavior.
 test("model sync route reports synced managed models separately from preserved manual models", async () => {
   await resetStorage();
 
@@ -858,10 +872,13 @@ test("model sync route reports synced managed models separately from preserved m
   assert.equal(body.availableModelsCount, 2);
   assert.equal(body.importedCount, 1);
   assert.equal(body.updatedCount, 0);
-  assert.deepEqual(body.customModelChanges, { added: 0, removed: 1, updated: 0, total: 1 });
+  assert.deepEqual(body.customModelChanges, { added: 0, removed: 0, updated: 0, total: 0 });
   assert.deepEqual(
     body.models.map((model) => ({ id: model.id, source: model.source })),
-    [{ id: "manual-only", source: "manual" }]
+    [
+      { id: "manual-only", source: "manual" },
+      { id: "router-v4", source: "manual" },
+    ]
   );
   assert.deepEqual(
     (await modelsDb.getSyncedAvailableModels("openrouter")).map((model) => ({

@@ -8,6 +8,11 @@
 import { VISION_BRIDGE_DEFAULTS } from "./visionBridgeDefaults";
 
 export type VisionBridgeMode = "auto" | "describe" | "reroute";
+export type VideoAnalysisMode = "full" | "focused";
+export type VideoSamplingPolicy = "uniform" | "scene_aware" | "segment_aware";
+
+export const VIDEO_BRIDGE_TIMEOUT_MIN_MS = 1_000;
+export const VIDEO_BRIDGE_TIMEOUT_MAX_MS = 120_000;
 
 export const MODALITY_BRIDGE_DEFAULTS = {
   visionMode: "auto" as VisionBridgeMode,
@@ -15,10 +20,19 @@ export const MODALITY_BRIDGE_DEFAULTS = {
   cacheEnabled: true,
   cacheTtlMinutes: 60,
   cacheMaxEntries: 200,
+  // 0 = no cap (existing behavior, description is passed through in full).
+  visionMaxChars: 0,
   audioEnabled: true,
   audioModel: "",
   audioTimeoutMs: 60000,
   audioMaxClips: 3,
+  videoEnabled: false,
+  videoModel: "",
+  videoAnalysisMode: "full" as VideoAnalysisMode,
+  videoFrameCount: 8,
+  videoSamplingPolicy: "uniform" as VideoSamplingPolicy,
+  videoMaxVideos: 1,
+  videoTimeoutMs: 120000,
 } as const;
 
 export interface VisionBridgeRuntimeSettings {
@@ -29,6 +43,7 @@ export interface VisionBridgeRuntimeSettings {
   prompt: string;
   timeoutMs: number;
   maxImages: number;
+  maxChars: number;
   cacheEnabled: boolean;
   cacheTtlMinutes: number;
   cacheMaxEntries: number;
@@ -39,6 +54,19 @@ export interface AudioBridgeRuntimeSettings {
   model: string;
   timeoutMs: number;
   maxClips: number;
+  cacheEnabled: boolean;
+  cacheTtlMinutes: number;
+  cacheMaxEntries: number;
+}
+
+export interface VideoBridgeRuntimeSettings {
+  enabled: boolean;
+  model: string;
+  analysisMode: VideoAnalysisMode;
+  frameCount: number;
+  samplingPolicy: VideoSamplingPolicy;
+  maxVideos: number;
+  timeoutMs: number;
   cacheEnabled: boolean;
   cacheTtlMinutes: number;
   cacheMaxEntries: number;
@@ -85,6 +113,7 @@ export function resolveVisionBridgeRuntimeSettings(
     maxImages:
       pickNumber(s.modalityBridgeVisionMaxImages, s.visionBridgeMaxImages) ??
       VISION_BRIDGE_DEFAULTS.maxImagesPerRequest,
+    maxChars: pickNumber(s.modalityBridgeVisionMaxChars) ?? MODALITY_BRIDGE_DEFAULTS.visionMaxChars,
     cacheEnabled:
       pickBoolean(s.modalityBridgeCacheEnabled) ?? MODALITY_BRIDGE_DEFAULTS.cacheEnabled,
     cacheTtlMinutes:
@@ -104,6 +133,42 @@ export function resolveAudioBridgeRuntimeSettings(
     model: pickString(s.modalityBridgeAudioModel) ?? MODALITY_BRIDGE_DEFAULTS.audioModel,
     timeoutMs: pickNumber(s.modalityBridgeAudioTimeout) ?? MODALITY_BRIDGE_DEFAULTS.audioTimeoutMs,
     maxClips: pickNumber(s.modalityBridgeAudioMaxClips) ?? MODALITY_BRIDGE_DEFAULTS.audioMaxClips,
+    cacheEnabled:
+      pickBoolean(s.modalityBridgeCacheEnabled) ?? MODALITY_BRIDGE_DEFAULTS.cacheEnabled,
+    cacheTtlMinutes:
+      pickNumber(s.modalityBridgeCacheTtlMinutes) ?? MODALITY_BRIDGE_DEFAULTS.cacheTtlMinutes,
+    cacheMaxEntries:
+      pickNumber(s.modalityBridgeCacheMaxEntries) ?? MODALITY_BRIDGE_DEFAULTS.cacheMaxEntries,
+  };
+}
+
+/** Resolve persisted Video Bridge settings with safe, bounded defaults. */
+export function resolveVideoBridgeRuntimeSettings(
+  settings: Record<string, unknown> | null | undefined
+): VideoBridgeRuntimeSettings {
+  const s = settings ?? {};
+  const analysisMode = pickString(s.modalityBridgeVideoAnalysisMode);
+  return {
+    enabled: pickBoolean(s.modalityBridgeVideoEnabled) ?? MODALITY_BRIDGE_DEFAULTS.videoEnabled,
+    model: pickString(s.modalityBridgeVideoModel) ?? MODALITY_BRIDGE_DEFAULTS.videoModel,
+    analysisMode:
+      analysisMode === "focused" ? analysisMode : MODALITY_BRIDGE_DEFAULTS.videoAnalysisMode,
+    frameCount:
+      pickNumber(s.modalityBridgeVideoFrameCount) ?? MODALITY_BRIDGE_DEFAULTS.videoFrameCount,
+    samplingPolicy:
+      pickString(s.modalityBridgeVideoSamplingPolicy) === "scene_aware" ||
+      pickString(s.modalityBridgeVideoSamplingPolicy) === "segment_aware"
+        ? (pickString(s.modalityBridgeVideoSamplingPolicy) as VideoSamplingPolicy)
+        : MODALITY_BRIDGE_DEFAULTS.videoSamplingPolicy,
+    maxVideos:
+      pickNumber(s.modalityBridgeVideoMaxVideos) ?? MODALITY_BRIDGE_DEFAULTS.videoMaxVideos,
+    timeoutMs: Math.min(
+      VIDEO_BRIDGE_TIMEOUT_MAX_MS,
+      Math.max(
+        VIDEO_BRIDGE_TIMEOUT_MIN_MS,
+        pickNumber(s.modalityBridgeVideoTimeout) ?? MODALITY_BRIDGE_DEFAULTS.videoTimeoutMs
+      )
+    ),
     cacheEnabled:
       pickBoolean(s.modalityBridgeCacheEnabled) ?? MODALITY_BRIDGE_DEFAULTS.cacheEnabled,
     cacheTtlMinutes:

@@ -1,4 +1,5 @@
 import type { RequestPipelinePayloads } from "@omniroute/open-sse/utils/requestLogger.ts";
+import { classifyProviderError } from "@omniroute/open-sse/services/errorClassifier.ts";
 import { sanitizePII } from "../../piiSanitizer";
 import { omitEncryptedReasoningFromLogChunks, protectPayloadForLog } from "../../logPayloads";
 import type { CallLogDetailState } from "../callLogArtifacts";
@@ -123,4 +124,23 @@ export function buildRequestSummary(
 
   if (Object.keys(summary).length === 0) return null;
   return JSON.stringify(summary);
+}
+
+// #10670: per-call error family at the single write point. Reuses the
+// production classifier (chatCore.ts:3974, auth.ts:2598) so the persisted
+// vocabulary is exactly PROVIDER_ERROR_TYPES. Successes (status < 400 with no
+// error text) short-circuit to null — the classifier never returns a family
+// for them anyway, this only skips the call.
+// Normalization: strings pass through, Error objects yield .message, any other
+// object yields "" (no caller passes plain objects — verified: 35 callers use
+// strings and Error only). Deliberate deviation from design §4 ("objet →
+// JSON.stringify"): a stringified object carries no classifier signal.
+export function classifyCallLogError(
+  status: number,
+  error: unknown,
+  provider?: string | null
+): string | null {
+  const errorText = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+  if (status < 400 && errorText.length === 0) return null;
+  return classifyProviderError(status, errorText, provider);
 }

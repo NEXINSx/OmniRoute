@@ -172,6 +172,7 @@ export const oauthPasteCredentialsSchema = z.object({
 export const cursorImportSchema = z.object({
   accessToken: z.string().trim().min(1, "Access token is required"),
   machineId: z.string().trim().optional(),
+  refreshToken: z.string().trim().min(1).optional(),
 });
 
 export const traeImportSchema = z.object({
@@ -182,14 +183,6 @@ export const traeImportSchema = z.object({
   scope: z.string().trim().optional(),
   tenant: z.string().trim().optional(),
   region: z.string().trim().optional(),
-});
-
-export const raycastImportSchema = z.object({
-  accessToken: z.string().trim().min(1, "Raycast bearer token is required"),
-  deviceId: z.string().trim().min(1, "Raycast device ID is required"),
-  aid: z.string().trim().optional(),
-  signatureJwt: z.string().trim().optional(),
-  sigSecret: z.string().trim().optional(),
 });
 
 export const kiroImportSchema = z.object({

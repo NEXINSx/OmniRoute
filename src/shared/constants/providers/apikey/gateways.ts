@@ -3,6 +3,22 @@
  * Pure data; merged by apikey/index.ts via spread (god-file decomposition; semantic split).
  */
 export const APIKEY_PROVIDERS_GATEWAYS = {
+  // 1min.ai (https://docs.1min.ai) — multi-model chat aggregator with its own
+  // custom API (single `prompt` string + real SSE, not OpenAI-compatible).
+  // OmniRoute's oneminai executor translates both directions.
+  oneminai: {
+    id: "oneminai",
+    alias: "1min",
+    name: "1min.AI",
+    icon: "hub",
+    color: "#6366F1",
+    textIcon: "1M",
+    website: "https://1min.ai",
+    authHint: "Create an API key at https://docs.1min.ai/docs/api/create-api-key, then paste it here.",
+    apiHint:
+      "1min.ai uses a proprietary chat API (single prompt string + SSE) instead of OpenAI chat/completions. OmniRoute flattens OpenAI messages into a labeled prompt and translates the SSE stream.",
+    passthroughModels: true,
+  },
   // Cheaper Inference (https://cheaperinference.com) — OSS-sponsor gateway.
   // Cost-ranked reseller of 42 upstream models (Anthropic/OpenAI/Google/Moonshot/
   // xAI/Z.AI/DeepSeek/MiniMax) behind one OpenAI-compatible surface, with a native
@@ -17,6 +33,21 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://cheaperinference.com/?utm_source=omniroute",
     apiHint:
       "Create an API key at https://cheaperinference.com/?utm_source=omniroute (needs the `inference` scope), then paste the ir_live_… token here.",
+    passthroughModels: true,
+  },
+  freebuff: {
+    id: "freebuff",
+    alias: "freebuff",
+    name: "Freebuff",
+    icon: "terminal",
+    color: "#10B981",
+    textIcon: "FB",
+    website: "https://freebuff.com",
+    hasFree: true,
+    serviceKinds: ["llm"],
+    authHint: "Enter Freebuff / Codebuff Auth Token (obtained via CLI login or automated harvester).",
+    freeNote: "Free Codebuff / Freebuff AI models.",
+    apiHint: "Token is authenticated against Codebuff upstream session pool.",
     passthroughModels: true,
   },
   "charm-hyper": {
@@ -68,7 +99,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     textIcon: "CC",
     website: "https://commandcode.ai/",
     authHint:
-      "Use a Command Code API key. Requests are sent to Command Code's /alpha/generate endpoint.",
+      "Use a Command Code API key. Requests are sent to Command Code's /provider/v1/chat/completions endpoint.",
     apiHint: "Create or copy an API key from Command Code, then paste it here as a Bearer token.",
   },
   openrouter: {
@@ -82,6 +113,21 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://openrouter.ai",
     hasFree: true,
     freeNote: "Free models at $0/token with :free suffix - 20 RPM / 200 RPD",
+    serviceKinds: ["llm", "imageToText"],
+  },
+  opper: {
+    id: "opper",
+    alias: "opper",
+    name: "Opper",
+    icon: "router",
+    color: "#6366F1",
+    textIcon: "OP",
+    passthroughModels: true,
+    website: "https://opper.ai",
+    apiHint:
+      "Create an API key at https://platform.opper.ai, then paste it here as a Bearer token. " +
+      "OpenAI-compatible endpoint at https://api.opper.ai/v3/compat, with a live /v3/compat/models catalog. " +
+      "Model ids use provider/model format, e.g. anthropic/claude-sonnet-4-6 or openai/gpt-5.",
   },
   requesty: {
     id: "requesty",
@@ -612,7 +658,8 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     textIcon: "DA",
     website: "https://inference.dahl.global",
     hasFree: true,
-    freeNote: "Free — MiniMax M2.7, Kimi K2.6. Click 'Add Account' to auto-generate a token, or add your own API key.",
+    freeNote:
+      "Free — MiniMax M2.7, Kimi K2.6. Click 'Add Account' to auto-generate a token, or add your own API key.",
     authHint: "Click 'Add Account' to auto-generate a token, or add a manual API key.",
     apiHint: "Auto-generate a token or paste your own API key.",
     apiKeyUrl: "https://inference.dahl.global/tokens",
@@ -621,47 +668,6 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     notice: {
       text: "Dahl auto-generates tokens via https://inference.dahl.global/tokens. No signup needed. Rate limits apply. You can also add your own API key.",
     },
-  },
-  puter: {
-    id: "puter",
-    alias: "pu",
-    name: "Puter AI",
-    icon: "cloud_circle",
-    color: "#6366F1",
-    textIcon: "PU",
-    website: "https://puter.com",
-    hasFree: true,
-    freeNote:
-      "500+ models (GPT-5, Claude Opus 4, Gemini 3 Pro, Grok 4, DeepSeek V3...) — Users pay via free Puter account",
-    passthroughModels: true,
-    authHint: "Get token at puter.com/dashboard → Copy Auth Token",
-  },
-  uncloseai: {
-    id: "uncloseai",
-    alias: "unc",
-    name: "UncloseAI",
-    icon: "auto_awesome",
-    color: "#8B5CF6",
-    textIcon: "UN",
-    website: "https://uncloseai.com",
-    hasFree: true,
-    freeNote: "Free forever — no signup, no credit card. OpenAI-compatible endpoints.",
-    passthroughModels: true,
-    authHint:
-      "No auth required. API accepts any non-empty string as key for identification. If older built-in models return 404, use Available Models → Import from /models or Auto-Sync; verified live model: solidrust/Hermes-3-Llama-3.1-8B-AWQ.",
-  },
-  hackclub: {
-    id: "hackclub",
-    alias: "hc",
-    name: "Hackclub AI",
-    icon: "auto_awesome",
-    color: "#FF6B00",
-    textIcon: "HC",
-    website: "https://ai.hackclub.com",
-    hasFree: true,
-    freeNote: "Free AI for Hack Club members — 30+ models, no credit card.",
-    passthroughModels: true,
-    authHint: "Sign in with your Hack Club account at ai.hackclub.com.",
   },
   freetheai: {
     id: "freetheai",
@@ -684,11 +690,16 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
-    freeNote: "Free no-key reverse proxy to Groq (gpt4free project) — rate-limited to 5 req/min.",
+    hasFree: false,
+    freeNote:
+      "Anonymous access to Groq requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-gemini": {
     id: "g4f-gemini",
@@ -698,11 +709,16 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
-    freeNote: "Free no-key reverse proxy to Gemini (gpt4free project) — rate-limited to 5 req/min.",
+    hasFree: false,
+    freeNote:
+      "Anonymous access to Gemini requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-pollinations": {
     id: "g4f-pollinations",
@@ -712,12 +728,16 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
+    hasFree: false,
     freeNote:
-      "Free no-key reverse proxy to Pollinations (gpt4free project) — rate-limited to 5 req/min.",
+      "Anonymous access to Pollinations requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-ollama": {
     id: "g4f-ollama",
@@ -727,11 +747,16 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
-    freeNote: "Free no-key hosted Ollama gateway (gpt4free project) — rate-limited to 5 req/min.",
+    hasFree: false,
+    freeNote:
+      "Anonymous access to hosted Ollama requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-nvidia": {
     id: "g4f-nvidia",
@@ -741,12 +766,16 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
+    hasFree: false,
     freeNote:
-      "Free no-key reverse proxy to NVIDIA NIM (gpt4free project) — rate-limited to 5 req/min.",
+      "Anonymous access to NVIDIA NIM requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "vercel-ai-gateway": {
     id: "vercel-ai-gateway",
@@ -945,6 +974,10 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "No free tier as of 2026 — Chutes moved to pay-as-you-go (free Early Access ended 2026-03).",
     authHint: "Bearer API key for the Chutes OpenAI-compatible gateway.",
     passthroughModels: true,
+    // dots.ocr (rednote-hilab/dots.ocr) is served via Chutes discovery — no static
+    // model entry needed (passthroughModels). Declare imageToText alongside llm
+    // (declaring serviceKinds means "llm" must be explicit too, see #10275).
+    serviceKinds: ["llm", "imageToText"],
   },
   // Factory AI ("Factory Droids") subscription gateway — the same backend the
   // local `droid` CLI shells into, exposed here as an OpenAI-compatible HTTP
@@ -1062,6 +1095,19 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Use your TokenRouter API key in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://api.tokenrouter.com/v1.",
     apiHint:
       "TokenRouter exposes an OpenAI-compatible chat completions endpoint at https://api.tokenrouter.com/v1/chat/completions, plus a working /v1/models catalog. OmniRoute uses the OpenAI protocol.",
+  },
+  "token-kiosk": {
+    id: "token-kiosk",
+    alias: "tk",
+    name: "Token Kiosk",
+    icon: "hub",
+    color: "#6366F1",
+    textIcon: "TKI",
+    website: "https://agent-router.gaib.ai",
+    authHint:
+      "Use your Token Kiosk API key in Authorization: Bearer <key>. Fully OpenAI-compatible gateway. API base URL: https://agent-router.gaib.ai/v1.",
+    apiHint:
+      "Token Kiosk is a multi-provider agent LLM routing infrastructure exposing an OpenAI-compatible endpoint at https://agent-router.gaib.ai/v1/chat/completions with auto-fallback and latency routing.",
   },
   sumopod: {
     id: "sumopod",
@@ -1227,7 +1273,74 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     freeNote:
       "Free models include Nemotron 3 Ultra (free) and Llama 3.3 70B Instruct (Free). Paid models require credits. Google/GitHub/Discord signup.",
     passthroughModels: true,
+    authHint: "Get API key at naga.ac — Google/GitHub/Discord signup available.",
+  },
+  "void-ai": {
+    id: "void-ai",
+    alias: "void-ai",
+    name: "Void AI",
+    icon: "science",
+    color: "#111827",
+    textIcon: "VA",
+    passthroughModels: true,
+    website: "https://voidai.app",
+    hasFree: true,
+    freeNote:
+      "The public model catalog marks some models with a free plan requirement, but access is conditional and no numeric quota is confirmed.",
+    apiHint:
+      "Use https://api.voidai.app/v1 only after confirming authentication, account eligibility and terms. Treat this integration as experimental until the blocked documentation becomes public.",
+  },
+  helixmind: {
+    id: "helixmind",
+    alias: "helixmind",
+    name: "HelixMind",
+    icon: "hub",
+    color: "#4F46E5",
+    textIcon: "HM",
+    passthroughModels: true,
+    website: "https://helixmind.online",
+    hasFree: false,
+    freeNote:
+      "Previously circulated 3 RPM/50 RPD and no-card claims were not confirmed during the 2026-08-02 audit; current quota and billing require account verification.",
+    apiHint:
+      "Create a helix- key and use https://helixmind.online/v1. OpenAI requests use Bearer authentication; the Anthropic-compatible messages endpoint accepts x-api-key.",
+  },
+  // Logfare (https://logfare.ai) — free OpenAI-compatible inference, live-verified
+  // 2026-08-21 (real /v1/models catalog; 11 chat-capable models incl. kimi-k3,
+  // deepseek-v4-pro, glm-5.2, gpt-5.6-luna). Key issued instantly at /register
+  // (username/password, no email). ⚠️ Logfare logs every request in exchange for
+  // free inference (opt out at /consent) — surfaced in freeNote per the catalog
+  // convention for data-collecting free providers.
+  logfare: {
+    id: "logfare",
+    alias: "logfare",
+    name: "Logfare",
+    icon: "auto_awesome",
+    color: "#22C55E",
+    textIcon: "LF",
+    website: "https://logfare.ai",
+    hasFree: true,
+    freeNote:
+      "Free OpenAI-compatible inference — no rate limits, no card. Logfare logs every request (prompts, completions, metadata) for internal research; opt out at /consent. Read https://logfare.ai/tos and https://logfare.ai/privacy before use.",
     authHint:
-      "Get API key at naga.ac — Google/GitHub/Discord signup available.",
+      "Create a free account at https://logfare.ai/register (username/password, no email verification) to get an instant API key, then paste it here as a Bearer token.",
+    apiHint:
+      "Create a free API key at https://logfare.ai/register, then use https://logfare.ai/v1 as the OpenAI-compatible base URL. Note the request-logging policy: prompts, completions and metadata are logged for research (opt out at https://logfare.ai/consent).",
+    passthroughModels: true,
+  },
+  // TabiToken (https://tabitoken.com) — NewAPI-based Claude gateway. Its public pricing
+  // endpoint lists a Claude-only catalog (Opus 5 / 4.8, each with a -thinking variant),
+  // every model accepting the Anthropic and OpenAI protocols.
+  tabitoken: {
+    id: "tabitoken",
+    alias: "tabitoken",
+    name: "TabiToken",
+    icon: "hub",
+    color: "#F97316",
+    textIcon: "TT",
+    passthroughModels: true,
+    website: "https://tabitoken.com",
+    apiHint:
+      "Create an sk- key at https://tabitoken.com and use https://tabitoken.com. The Anthropic-compatible /v1/messages endpoint (default) takes x-api-key; /v1/chat/completions takes Bearer.",
   },
 };

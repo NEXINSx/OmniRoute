@@ -14,7 +14,7 @@
  */
 
 import React, { useState } from "react";
-import type { ProviderMessageTranslator } from "../providerPageHelpers";
+import { providerText, type ProviderMessageTranslator } from "../providerPageHelpers";
 import { extractImportWarning } from "./modelImportWarning";
 
 interface NotifyStore {
@@ -61,13 +61,16 @@ export interface UseModelImportHandlersReturn {
   showImportModal: boolean;
   importProgress: ImportProgress;
   togglingAutoSync: boolean;
+  togglingAutoFetchModels: boolean;
   canImportModels: boolean;
   isAutoSyncEnabled: boolean;
+  isAutoFetchModelsEnabled: boolean;
   setShowImportModal: (v: boolean) => void;
   setImportProgress: React.Dispatch<React.SetStateAction<ImportProgress>>;
   handleImportModels: () => Promise<void>;
   handleCompatibleImportWithProgress: (connectionId: string) => Promise<void>;
   handleToggleAutoSync: () => Promise<void>;
+  handleToggleAutoFetchModels: () => Promise<void>;
 }
 
 // ──── hook ───────────────────────────────────────────────────────────────────
@@ -99,6 +102,7 @@ export function useModelImportHandlers({
     importedCount: 0,
   });
   const [togglingAutoSync, setTogglingAutoSync] = useState(false);
+  const [togglingAutoFetchModels, setTogglingAutoFetchModels] = useState(false);
 
   // Derived
   const canImportModels = isFreeNoAuth || connections.some((conn) => conn.isActive !== false);
@@ -109,6 +113,11 @@ export function useModelImportHandlers({
   const isAutoSyncEnabled =
     activeConnections.length > 0 &&
     activeConnections.every((conn) => !!conn.providerSpecificData?.autoSync);
+  // Discovery persists its response in the synced-model cache, so opt in on every
+  // active connection before treating the provider-level control as enabled.
+  const isAutoFetchModelsEnabled =
+    activeConnections.length > 0 &&
+    activeConnections.every((conn) => conn.providerSpecificData?.autoFetchModels === true);
 
   const handleImportModels = async () => {
     if (importingModels) return;
@@ -129,7 +138,7 @@ export function useModelImportHandlers({
     });
 
     try {
-      const res = await fetch(`/api/providers/${importTargetId}/models?refresh=true`);
+      const res = await fetch(`/api/providers/${importTargetId}/models?refresh=true&chatOnly=true`);
       const data = await res.json();
       if (!res.ok) {
         setImportProgress((prev) => ({
@@ -422,17 +431,79 @@ export function useModelImportHandlers({
     }
   };
 
+  const handleToggleAutoFetchModels = async () => {
+    if (togglingAutoFetchModels) return;
+    const activeWithId = activeConnections.filter((conn) => conn.id);
+    if (activeWithId.length === 0) return;
+
+    setTogglingAutoFetchModels(true);
+    try {
+      const newValue = !isAutoFetchModelsEnabled;
+      const results = await Promise.allSettled(
+        activeWithId.map((conn) =>
+          fetch(`/api/providers/${conn.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              providerSpecificData: {
+                ...(conn.providerSpecificData || {}),
+                autoFetchModels: newValue,
+              },
+            }),
+          })
+        )
+      );
+      await fetchConnections();
+      const fulfilled = results.filter((result) => {
+        return result.status === "fulfilled" && result.value.ok;
+      }).length;
+      if (fulfilled === results.length) {
+        notify[newValue ? "success" : "info"](
+          newValue
+            ? providerText(t, "autoFetchModelsEnabled", "Upstream model auto-fetch enabled")
+            : providerText(t, "autoFetchModelsDisabled", "Upstream model auto-fetch disabled")
+        );
+      } else if (fulfilled === 0) {
+        notify.error(
+          providerText(
+            t,
+            "autoFetchModelsToggleFailed",
+            "Failed to toggle upstream model auto-fetch"
+          )
+        );
+      } else {
+        notify.warning(
+          providerText(
+            t,
+            "autoFetchModelsPartialFailure",
+            "Some connections updated, but upstream model auto-fetch was not changed everywhere"
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling upstream model auto-fetch:", error);
+      notify.error(
+        providerText(t, "autoFetchModelsToggleFailed", "Failed to toggle upstream model auto-fetch")
+      );
+    } finally {
+      setTogglingAutoFetchModels(false);
+    }
+  };
+
   return {
     importingModels,
     showImportModal,
     importProgress,
     togglingAutoSync,
+    togglingAutoFetchModels,
     canImportModels,
     isAutoSyncEnabled,
+    isAutoFetchModelsEnabled,
     setShowImportModal,
     setImportProgress,
     handleImportModels,
     handleCompatibleImportWithProgress,
     handleToggleAutoSync,
+    handleToggleAutoFetchModels,
   };
 }

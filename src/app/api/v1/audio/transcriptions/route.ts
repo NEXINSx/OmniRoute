@@ -8,6 +8,11 @@ import {
 import {
   parseTranscriptionModel,
   getTranscriptionProvider,
+  audioModelAliasCandidates,
+  findAlternateAudioProvider,
+  listAlternateAudioModelIds,
+  missingAudioProviderCredentialsMessage,
+  AUDIO_TRANSCRIPTION_PROVIDERS,
 } from "@omniroute/open-sse/config/audioRegistry.ts";
 import { resolveDynamicAudioProviders } from "@/app/api/v1/_shared/audioProviderNodes";
 import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
@@ -66,7 +71,9 @@ async function transcribeWithModel(
     "audio-transcriptions"
   );
 
-  const { provider, model: resolvedModel } = parseTranscriptionModel(modelStr, dynamicProviders);
+  const parsed = parseTranscriptionModel(modelStr, dynamicProviders);
+  let provider = parsed.provider;
+  let resolvedModel = parsed.model;
   if (!provider) {
     return errorResponse(
       HTTP_STATUS.BAD_REQUEST,
@@ -75,7 +82,7 @@ async function transcribeWithModel(
   }
 
   // Check provider config — hardcoded first, then dynamic
-  const providerConfig =
+  let providerConfig =
     getTranscriptionProvider(provider) || dynamicProviders.find((dp) => dp.id === provider) || null;
 
   // Get credentials — skip for local providers (authType: "none").
@@ -87,8 +94,37 @@ async function transcribeWithModel(
     // NOTE: the 2nd arg of this helper is `excludeConnectionId`, not "use this
     // connection" — a combo target's connectionId must never be passed here.
     credentials = await getProviderCredentialsWithQuotaPreflight(credentialKey);
+    // Prefix match wins (`deepgram/nova-3` → native Deepgram). If that
+    // provider has no credentials, retry gateways that list the same nested
+    // model id (e.g. OpenRouter's `deepgram/nova-3`).
     if (!credentials) {
-      return errorResponse(HTTP_STATUS.BAD_REQUEST, `No credentials for provider: ${provider}`);
+      const candidates = audioModelAliasCandidates(modelStr, provider, resolvedModel);
+      const alternate = findAlternateAudioProvider(
+        AUDIO_TRANSCRIPTION_PROVIDERS,
+        provider,
+        candidates
+      );
+      if (alternate) {
+        const alternateCredentials = await getProviderCredentialsWithQuotaPreflight(
+          alternate.provider
+        );
+        if (alternateCredentials && !isAllRateLimitedCredentials(alternateCredentials)) {
+          provider = alternate.provider;
+          resolvedModel = alternate.model;
+          providerConfig = alternate.config;
+          credentials = alternateCredentials;
+        }
+      }
+    }
+    if (!credentials) {
+      const candidates = audioModelAliasCandidates(modelStr, provider, resolvedModel);
+      return errorResponse(
+        HTTP_STATUS.BAD_REQUEST,
+        missingAudioProviderCredentialsMessage(
+          provider,
+          listAlternateAudioModelIds(AUDIO_TRANSCRIPTION_PROVIDERS, provider, candidates)
+        )
+      );
     }
     if (isAllRateLimitedCredentials(credentials)) {
       return rateLimitedProviderResponse(provider, credentials);

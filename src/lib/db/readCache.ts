@@ -212,7 +212,10 @@ export async function setCachedLKGP(
 
 /**
  * Invalidate one persisted LKGP pin by its `${comboName}:${modelId}` storage key,
- * or every cached LKGP pin when no key is provided.
+ * or every cached LKGP pin when no key is provided. Used both when a target
+ * fails (`clearLKGP`) and when its provider connection is deleted (#8887,
+ * `deleteLKGPByConnectionIds`), so a stale pin cannot be served from memory
+ * for the rest of the TTL window.
  */
 export function invalidateCachedLKGP(pinKey?: string): void {
   lkgpCache.invalidate(pinKey ? `lkgp:${pinKey}` : undefined);

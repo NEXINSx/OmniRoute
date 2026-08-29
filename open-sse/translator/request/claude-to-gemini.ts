@@ -2,7 +2,6 @@ import { register } from "../registry.ts";
 import { FORMATS } from "../formats.ts";
 import {
   DEFAULT_SAFETY_SETTINGS,
-  tryParseJSON,
   cleanJSONSchemaForAntigravity,
 } from "../helpers/geminiHelper.ts";
 import { buildGeminiTools, sanitizeGeminiToolName } from "../helpers/geminiToolsSanitizer.ts";
@@ -15,6 +14,8 @@ import { getModelSpec } from "../../../src/shared/constants/modelSpecs.ts";
 import {
   buildChangedToolNameMap,
   buildHistoricalToolResultContext,
+  mergeConsecutiveSameRoleContents,
+  type GeminiContent,
 } from "./openai-to-gemini/helpers.ts";
 
 /**
@@ -45,7 +46,7 @@ export function claudeToGeminiRequest(model, body, stream, credentials = null) {
       : null;
   const result: {
     model: string;
-    contents: Array<Record<string, unknown>>;
+    contents: GeminiContent[];
     generationConfig: Record<string, unknown>;
     safetySettings: unknown;
     systemInstruction?: { role: string; parts: Array<{ text: string }> };
@@ -135,7 +136,6 @@ export function claudeToGeminiRequest(model, body, stream, credentials = null) {
     const omittedToolCallIds = new Set<string>();
     for (const msg of body.messages) {
       const parts = [];
-      let shouldUseEmbeddedSignature = true;
 
       if (Array.isArray(msg.content)) {
         for (const block of msg.content) {
@@ -159,15 +159,15 @@ export function claudeToGeminiRequest(model, body, stream, credentials = null) {
                 break;
               }
 
-              const embeddedThoughtSignature = shouldUseEmbeddedSignature
-                ? signatureForToolCall
-                : undefined;
-              if (embeddedThoughtSignature) {
-                shouldUseEmbeddedSignature = false;
-              }
-
+              // #11510: each functionCall part carries its OWN resolved
+              // thoughtSignature — a parallel (multi tool_use) turn can have a
+              // real, individually-valid signature per tool call, and Gemini
+              // 3.x rejects the request if any functionCall in the turn is
+              // missing one. Previously only the first functionCall of the
+              // message kept its signature; this dropped valid signatures for
+              // every subsequent parallel tool call in the same turn.
               parts.push({
-                ...(embeddedThoughtSignature ? { thoughtSignature: embeddedThoughtSignature } : {}),
+                ...(signatureForToolCall ? { thoughtSignature: signatureForToolCall } : {}),
                 functionCall: {
                   ...(stripFunctionCallId ? {} : { id: block.id }),
                   name: sanitizeToolName(block.name),
@@ -184,13 +184,6 @@ export function claudeToGeminiRequest(model, body, stream, credentials = null) {
                   .map((c) => (c.type === "text" ? c.text : JSON.stringify(c)))
                   .join("\n");
               }
-              let parsedContent = tryParseJSON(content);
-              if (parsedContent === null) {
-                parsedContent = { result: content };
-              } else if (typeof parsedContent !== "object") {
-                parsedContent = { result: parsedContent };
-              }
-
               const toolUseId = block.tool_use_id;
               const name = toolUseNames[toolUseId] || "unknown";
 
@@ -208,7 +201,7 @@ export function claudeToGeminiRequest(model, body, stream, credentials = null) {
                 functionResponse: {
                   ...(stripFunctionCallId ? {} : { id: toolUseId }),
                   name,
-                  response: { result: parsedContent },
+                  response: { result: content },
                 },
               });
               break;
@@ -313,6 +306,11 @@ export function claudeToGeminiRequest(model, body, stream, credentials = null) {
   if (changedToolNameMap) {
     result._toolNameMap = changedToolNameMap;
   }
+
+  // Gemini strictly rejects requests containing consecutive messages with the same role
+  // (400 INVALID_ARGUMENT: "Request contains consecutive messages with the same role").
+  // Normalize adjacent same-role messages by concatenating their parts.
+  result.contents = mergeConsecutiveSameRoleContents(result.contents);
 
   return result;
 }

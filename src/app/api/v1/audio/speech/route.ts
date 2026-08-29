@@ -18,7 +18,6 @@ import {
 import { attachOmniRouteMetaToResponse } from "@/domain/omnirouteResponseMeta";
 import { calculateModalCost } from "@/lib/usage/costCalculator";
 import { generateRequestId } from "@/shared/utils/requestId";
-import { getClientIpFromRequest } from "@/lib/ipUtils";
 
 /**
  * Handle CORS preflight
@@ -55,6 +54,19 @@ async function postHandler(request, context) {
   const policy = await enforceApiKeyPolicy(request, body.model);
   if (policy.rejection) return policy.rejection;
 
+  // Detect a combo name and divert to full speech combo execution, mirroring
+  // the images route. Checks before parseSpeechModel so a combo name is never
+  // rejected as an invalid `provider/model` id — /v1/models advertises these
+  // names, so refusing them here made the catalogue dishonest.
+  if (body.model && typeof body.model === "string" && !body.model.includes("/")) {
+    const { getComboByName } = await import("@/lib/db/combos");
+    const combo = await getComboByName(body.model);
+    if (combo) {
+      const { executeSpeechCombo } = await import("@omniroute/open-sse/services/speechCombo");
+      return executeSpeechCombo(body.model, body, startTime);
+    }
+  }
+
   // Provider nodes eligible for speech: this route's own audio type plus general
   // chat/responses gateways. Remote hosts are opt-in (default OFF).
   const dynamicProviders = await resolveDynamicAudioProviders("/audio/speech", "audio-speech");
@@ -89,7 +101,6 @@ async function postHandler(request, context) {
     credentials,
     resolvedProvider: providerConfig,
     resolvedModel,
-    clientIp: getClientIpFromRequest(request),
   });
   if (response?.ok) {
     await clearRecoveredProviderState(credentials);

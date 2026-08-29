@@ -102,7 +102,7 @@ export async function waitForServer(port, timeout = 60000) {
 // - "not-listening": nothing is accepting connections on the port at all.
 async function pollHealthOnce(port) {
   try {
-    const res = await fetch(`http://localhost:${port}/api/monitoring/health`, {
+    const res = await fetch(`http://127.0.0.1:${port}/api/monitoring/health`, {
       signal: AbortSignal.timeout(2000),
     });
     return res.ok ? "ready" : "fast-reject";

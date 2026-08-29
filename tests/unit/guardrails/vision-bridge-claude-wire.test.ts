@@ -13,7 +13,6 @@ const {
 
 test("isClaudeWireFormatModel: true for anthropic and claude-format registry providers", () => {
   assert.strictEqual(isClaudeWireFormatModel("anthropic/claude-sonnet-4"), true);
-  assert.strictEqual(isClaudeWireFormatModel("minimax/MiniMax-M3"), true);
   assert.strictEqual(isClaudeWireFormatModel("zai/glm-5"), true);
   assert.strictEqual(isClaudeWireFormatModel("claude/claude-opus"), true);
   assert.strictEqual(isClaudeWireFormatModel("wafer/wafer-model"), true);
@@ -21,6 +20,8 @@ test("isClaudeWireFormatModel: true for anthropic and claude-format registry pro
 
 test("isClaudeWireFormatModel: false for openai-format providers", () => {
   assert.strictEqual(isClaudeWireFormatModel("openai/gpt-4o-mini"), false);
+  // minimax deliberately moved claude→openai format so images work (#9463).
+  assert.strictEqual(isClaudeWireFormatModel("minimax/MiniMax-M3"), false);
   assert.strictEqual(isClaudeWireFormatModel("kiro/minimax-m2.5"), false);
   assert.strictEqual(isClaudeWireFormatModel("auto/best-vision"), false);
   assert.strictEqual(isClaudeWireFormatModel(null), false);
@@ -46,7 +47,7 @@ test("ensureBase64ImagesForClaudeWire: passthrough for non-claude-wire models", 
 test("ensureBase64ImagesForClaudeWire: keeps data-URI images as-is", async () => {
   const dataUri = "data:image/png;base64,iVBORw0KGgo=";
   const body = {
-    model: "minimax/MiniMax-M3",
+    model: "zai/glm-5",
     messages: [
       {
         role: "user",
@@ -54,7 +55,7 @@ test("ensureBase64ImagesForClaudeWire: keeps data-URI images as-is", async () =>
       },
     ],
   };
-  const out = await ensureBase64ImagesForClaudeWire(body, "minimax/MiniMax-M3");
+  const out = await ensureBase64ImagesForClaudeWire(body, "zai/glm-5");
   const part = out.messages[0].content[0];
   assert.strictEqual(part.image_url.url, dataUri);
 });
@@ -70,7 +71,7 @@ test("ensureBase64ImagesForClaudeWire: resolves remote URLs to base64 for claude
 
   try {
     const body = {
-      model: "minimax/MiniMax-M3",
+      model: "zai/glm-5",
       messages: [
         {
           role: "user",
@@ -83,7 +84,7 @@ test("ensureBase64ImagesForClaudeWire: resolves remote URLs to base64 for claude
     };
     const out = await ensureBase64ImagesForClaudeWire(
       body,
-      "minimax/MiniMax-M3",
+      "zai/glm-5",
       async () =>
         new Response(new Uint8Array(Buffer.from(pngBase64, "base64")), {
           status: 200,
@@ -109,7 +110,7 @@ test("ensureBase64ImagesForClaudeWire: fail-open when the remote fetch fails", a
 
   try {
     const body = {
-      model: "minimax/MiniMax-M3",
+      model: "zai/glm-5",
       messages: [
         {
           role: "user",
@@ -117,7 +118,9 @@ test("ensureBase64ImagesForClaudeWire: fail-open when the remote fetch fails", a
         },
       ],
     };
-    const out = await ensureBase64ImagesForClaudeWire(body, "minimax/MiniMax-M3");
+    const out = await ensureBase64ImagesForClaudeWire(body, "zai/glm-5", async () => {
+      throw new Error("network down");
+    });
     const part = out.messages[0].content[0];
     assert.strictEqual(part.image_url.url, "https://example.com/cat.png");
   } finally {

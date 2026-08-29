@@ -17,12 +17,19 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import updateNotifier from "update-notifier";
+let updateNotifier = null;
+try {
+  updateNotifier = (await import("update-notifier")).default;
+} catch {
+  // update-notifier is optional in pruned standalone environments
+}
 import { isNativeBinaryCompatible } from "../scripts/build/native-binary-compat.mjs";
 import { getNodeRuntimeSupport, getNodeRuntimeWarning } from "./nodeRuntimeSupport.mjs";
 import { getDefaultDataDir } from "./cli/data-dir.mjs";
 import { shouldProvisionStorageKey } from "./cli/utils/storageKeyProvision.mjs";
 import { isVersionFastPath } from "./cli/utils/versionFastPath.mjs";
+import { parseEnvValue } from "./cli/utils/parseEnvValue.mjs";
+import { describeVolatileEnvWarning } from "./cli/utils/volatileEnvPath.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -85,9 +92,7 @@ function migrateElectronServerEnv(dataDir) {
     const serverEnvPath = join(dataDir, "server.env");
     if (existsSync(envPath) || !existsSync(serverEnvPath)) return;
     writeFileSync(envPath, readFileSync(serverEnvPath, "utf-8"), "utf-8");
-    console.log(
-      `  \x1b[2m♻ Migrated Electron secrets from ${serverEnvPath} to ${envPath}\x1b[0m`
-    );
+    console.log(`  \x1b[2m♻ Migrated Electron secrets from ${serverEnvPath} to ${envPath}\x1b[0m`);
   } catch {
     // Ignore errors migrating server.env — fall back to normal env loading below.
   }
@@ -118,6 +123,9 @@ function loadEnvFile() {
     addEnvPath(join(ROOT, ".env"));
   }
 
+  const keyOrigin = new Map();
+  const shadowed = new Map();
+
   for (const envPath of envPaths) {
     try {
       if (existsSync(envPath)) {
@@ -128,21 +136,47 @@ function loadEnvFile() {
           const eqIdx = trimmed.indexOf("=");
           if (eqIdx > 0) {
             const key = trimmed.slice(0, eqIdx).trim();
-            const value = trimmed.slice(eqIdx + 1).trim();
             if (process.env[key] === undefined) {
-              process.env[key] = value.replace(/^["']|["']$/g, "");
+              process.env[key] = parseEnvValue(trimmed.slice(eqIdx + 1));
+              keyOrigin.set(key, envPath);
+            } else if (!shadowed.has(key)) {
+              // The line is inert: something set this key first. Report it once
+              // per key, whether the winner was an earlier file or the process
+              // environment (#6194: a shell's own HOSTNAME beat the .env and the
+              // server bound to the wrong address in silence).
+              shadowed.set(key, { winner: keyOrigin.get(key) ?? null, loser: envPath });
             }
           }
         }
         loadedEnvPaths.push(envPath);
       }
-    } catch {
-      // Ignore errors reading env files.
+    } catch (err) {
+      console.warn(`  \x1b[33m⚠ Could not read ${envPath}: ${err?.message ?? err}\x1b[0m`);
     }
   }
 
   for (const envPath of loadedEnvPaths) {
     console.log(`  \x1b[2m📋 Loaded env from ${envPath}\x1b[0m`);
+  }
+
+  for (const [key, { winner, loser }] of shadowed) {
+    const setter = winner ? winner : "the environment";
+    console.warn(`  \x1b[33m⚠ ${key} in ${loser} is ignored, ${setter} set it first\x1b[0m`);
+  }
+
+  // The package directory is replaced by the next `npm i -g`, so a .env kept
+  // there is silently lost. Say so once, and only when that file actually
+  // supplied something.
+  const durableEnvPath = join(process.env.DATA_DIR || getDefaultDataDir(), ".env");
+  const suppliedKeys = [...keyOrigin.values()].some((origin) => origin === join(ROOT, ".env"));
+  const volatileWarning = describeVolatileEnvWarning({
+    envPath: join(ROOT, ".env"),
+    packageRoot: ROOT,
+    durableEnvPath,
+    suppliedKeys,
+  });
+  if (volatileWarning && loadedEnvPaths.includes(join(ROOT, ".env"))) {
+    console.warn(`  \x1b[33m⚠ ${volatileWarning}\x1b[0m`);
   }
 }
 
@@ -227,24 +261,33 @@ if (shouldProvisionStorageKey(process.argv)) {
   const langEnv = process.env.OMNIROUTE_LANG;
   const chosen = langArg || langEnv;
   if (chosen) {
-    const { setLocale } = await import(
-      pathToFileURL(join(ROOT, "bin", "cli", "i18n.mjs")).href
-    );
+    const { setLocale } = await import(pathToFileURL(join(ROOT, "bin", "cli", "i18n.mjs")).href);
     setLocale(chosen);
   }
 }
 
 // Register update notifier — checks npm once per 24h, notifies on exit via stderr.
 const _pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-const _notifier = updateNotifier({ pkg: _pkg, updateCheckInterval: 1000 * 60 * 60 * 24 });
+const _notifier = updateNotifier
+  ? updateNotifier({ pkg: _pkg, updateCheckInterval: 1000 * 60 * 60 * 24 })
+  : null;
 process.on("exit", () => {
+  if (!_notifier || !_notifier.update) return;
   if (process.env.OMNIROUTE_NO_UPDATE_NOTIFIER) return;
   if (process.env.CI) return;
   if (process.argv.includes("--quiet") || process.argv.includes("-q")) return;
   const outputIdx = process.argv.indexOf("--output");
   const outputVal = outputIdx >= 0 ? process.argv[outputIdx + 1] : null;
   if (outputVal === "json" || outputVal === "jsonl" || outputVal === "csv") return;
-  if (process.argv.some((a) => a.startsWith("--output=json") || a.startsWith("--output=jsonl") || a.startsWith("--output=csv"))) return;
+  if (
+    process.argv.some(
+      (a) =>
+        a.startsWith("--output=json") ||
+        a.startsWith("--output=jsonl") ||
+        a.startsWith("--output=csv")
+    )
+  )
+    return;
   if (_notifier.update) {
     _notifier.notify({
       defer: false,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { getProviderById } from "@/shared/constants/providers";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getApiKeys } from "@/lib/db/apiKeys";
@@ -21,7 +22,7 @@ import {
   getWeeklyPatternRows,
   getPresetCostModelRows,
 } from "@/lib/db/usageAnalytics";
-import { getFallbackStats } from "@/lib/db/callLogStats";
+import { getFallbackStats, getErrorTypeBreakdown } from "@/lib/db/callLogStats";
 import { buildByProviderRows } from "@/lib/usage/providerDisplayNames";
 import { toNumber } from "@/shared/utils/numeric";
 
@@ -481,6 +482,7 @@ export async function GET(request: Request) {
     const weeklyRows = getWeeklyPatternRows(unifiedSource, unifiedParams) as UsageRows;
 
     const fallbackRow = getFallbackStats(whereClause, params) as Record<string, unknown>;
+    const errorBreakdown = getErrorTypeBreakdown(whereClause, params);
 
     const summary = {
       totalRequests: Number(summaryRow?.totalRequests || 0),
@@ -869,6 +871,7 @@ export async function GET(request: Request) {
       weeklyCounts,
       dailyByModel,
       modelNames,
+      errorBreakdown,
       range,
     } as any;
 

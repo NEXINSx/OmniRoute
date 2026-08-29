@@ -12,6 +12,7 @@ declare const EdgeRuntime: string | undefined;
 
 import { BaseExecutor, mergeUpstreamExtraHeaders } from "./base.ts";
 import { PROVIDERS, HTTP_STATUS } from "../config/constants.ts";
+import { getAccessToken } from "../services/tokenRefresh.ts";
 import {
   buildAgentRequestBody,
   decodeAgentServerMessage,
@@ -57,6 +58,13 @@ import {
   type StreamingState as ComposerStreamingState,
 } from "../utils/composerToolCalls.ts";
 import { cursorSessionManager, type CursorSession } from "../services/cursorSessionManager.ts";
+import {
+  CursorApiKeyExchangeError,
+  invalidateCursorSessionToken,
+  isCursorApiKey,
+  resolveCursorBearerToken,
+  stripCursorOAuthTokenPrefix,
+} from "../services/cursorApiKeyAuth.ts";
 import crypto from "crypto";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
@@ -75,6 +83,13 @@ import {
   visibleComposerContentFromThinking,
   composerReasoningRemainder,
 } from "./cursor/composer.ts";
+import { CursorServerConfigError, resolveCursorAgentUrl } from "./cursor/agentEndpoint.ts";
+import {
+  classifyCursorError,
+  isCursorBenignCancelError,
+  resolveCursorEmptyTurnError,
+  type ClassifiedCursorError,
+} from "./cursor/cursorErrors.ts";
 import { getActiveSyncedCatalog } from "../../src/lib/db/models/activeSyncedCatalog.ts";
 // Composer helpers re-exported for external importers (tests).
 export {
@@ -186,10 +201,6 @@ function buildExecRejection(event: ExecServerEvent): Buffer | null {
   }
 }
 
-const CURSOR_AGENT_HOST = "agentn.global.api5.cursor.sh";
-const CURSOR_AGENT_PATH = "/agent.v1.AgentService/Run";
-const CURSOR_AGENT_URL = `https://${CURSOR_AGENT_HOST}${CURSOR_AGENT_PATH}`;
-
 // Detect cloud environment (Edge runtime, Cloudflare Workers, etc.)
 const isCloudEnv = () => {
   if (typeof caches !== "undefined" && typeof caches === "object") return true;
@@ -246,17 +257,31 @@ function tryParseJsonError(payload: Buffer): { message: string; status: number }
     if (!text.includes('"error"')) return null;
     const parsed = JSON.parse(text);
     const err = parsed?.error || {};
-    const message =
+    const rawMessage =
       err?.details?.[0]?.debug?.details?.title ||
       err?.details?.[0]?.debug?.details?.detail ||
       err?.message ||
-      text;
-    const status =
-      err?.code === "resource_exhausted" ? HTTP_STATUS.RATE_LIMITED : HTTP_STATUS.BAD_REQUEST;
-    return { message, status };
+      (typeof err?.code === "string" ? `${err.code}: ${text}` : text);
+    const codeHint =
+      typeof err?.code === "string" &&
+      !String(rawMessage).toLowerCase().includes(err.code.toLowerCase())
+        ? `${err.code}: ${rawMessage}`
+        : String(rawMessage);
+    const classified = classifyCursorError(codeHint);
+    return { message: classified.message, status: classified.status };
   } catch {
     return null;
   }
+}
+
+/** True when the turn produced no client-visible assistant payload. */
+function isCursorEmptyTurn(ctx: StreamCtx): boolean {
+  return (
+    ctx.totalText.length === 0 &&
+    ctx.thinkingText.length === 0 &&
+    ctx.toolCalls.length === 0 &&
+    !ctx.composerInlineToolCallsEmitted
+  );
 }
 
 // ─── Phase 4: streaming dispatch context ───────────────────────────────────
@@ -349,6 +374,27 @@ function emitChunk(ctx: StreamCtx, delta: object, finishReason: string | null = 
     choices: [{ index: 0, delta, finish_reason: finishReason }],
   };
   ctx.emit(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+/**
+ * Emit a terminal OpenAI SSE error matching `buildStreamErrorChunks` shape
+ * (`finish_reason: "error"` + `error.message`) so #8649 sawError stands down
+ * and Model Test All keeps the classified Cursor message.
+ */
+export function emitCursorSseError(ctx: StreamCtx, classified: ClassifiedCursorError): void {
+  const payload = {
+    id: ctx.responseId,
+    object: "chat.completion.chunk",
+    created: ctx.created,
+    model: ctx.model,
+    choices: [{ index: 0, delta: {}, finish_reason: "error" }],
+    error: {
+      message: classified.message,
+      type: classified.type,
+    },
+  };
+  ctx.emit(`data: ${JSON.stringify(payload)}\n\n`);
+  ctx.emit("data: [DONE]\n\n");
 }
 
 export function buildCursorUsage(ctx: StreamCtx, body: { messages?: ChatMessage[] }) {
@@ -681,30 +727,69 @@ export function processFrame(
       // after text means the model finished and the server is saving the
       // turn. Phase 8 keeps both signals as defense-in-depth.
       //
-      // Safe vs tool calls: when the model invokes a tool, the exec_mcp event
-      // always arrives at or before this kv checkpoint (verified across many
-      // live composer-2.5 trials — a tool call never follows kv_after_text), so
-      // endReason is already "tool_calls" by the time we get here. Ending on
-      // kv_after_text therefore never truncates a pending tool call.
+      // Safe vs tool calls (composer family only): when the model invokes a
+      // tool, the exec_mcp event always arrives at or before this kv
+      // checkpoint (verified across many live composer-2.5 trials — a tool call
+      // never follows kv_after_text), so endReason is already "tool_calls" by
+      // the time we get here. Ending on kv_after_text therefore never truncates
+      // a pending tool call on composer.
+      //
+      // Non-composer models (cursor/grok-4.5-high, auto, ...) emit the KV
+      // checkpoint as a blob-store side-channel frame (envelope field 4,
+      // kv_get_blob/kv_set_blob) with NO turn-completion semantics, and it can
+      // arrive while the model is still streaming a long preamble BEFORE a
+      // pending exec_mcp. Ending the turn there drops that exec_mcp, leaving a
+      // narration-only finish_reason "stop" with zero tool_calls (#10215). On
+      // this family only the real terminal signals (turn_ended,
+      // tool_call_completed, server_end) decide — kvAfterTextSeen is kept purely
+      // as an observational flag, never as the turn terminator.
       ctx.kvAfterTextSeen = true;
-      ctx.endReason = "kv_after_text";
+      if (isComposerModel(ctx.model)) {
+        ctx.endReason = "kv_after_text";
+      }
     }
   }
 }
 
 export class CursorExecutor extends BaseExecutor {
-  constructor() {
-    super("cursor", PROVIDERS.cursor);
+  constructor(provider: "cursor" | "cursor-api" = "cursor") {
+    super(provider, PROVIDERS[provider]);
   }
 
   buildUrl() {
-    return CURSOR_AGENT_URL;
+    return PROVIDERS.cursor.baseUrl;
+  }
+
+  /**
+   * API-key connections carry a `crsr_…` key that api2.cursor.sh does not
+   * accept as a Bearer; swap it for the exchanged session token before the
+   * h2 stream is opened. OAuth/IDE-session connections pass through untouched.
+   */
+  async resolveExecutionCredentials(credentials) {
+    if (!isCursorApiKey(credentials?.apiKey)) return credentials;
+    try {
+      const accessToken = await resolveCursorBearerToken(credentials);
+      return { ...credentials, accessToken };
+    } catch (err) {
+      const status =
+        err instanceof CursorApiKeyExchangeError ? err.status : HTTP_STATUS.SERVER_ERROR;
+      const message = err instanceof Error ? err.message : String(err);
+      return new Response(
+        JSON.stringify({
+          error: {
+            message: sanitizeErrorMessage(message),
+            type: status === HTTP_STATUS.UNAUTHORIZED ? "authentication_error" : "connection_error",
+            code: "",
+          },
+        }),
+        { status, headers: { "Content-Type": "application/json" } }
+      );
+    }
   }
 
   buildHeaders(credentials) {
-    const accessToken = credentials.accessToken;
     const ghostMode = credentials.providerSpecificData?.ghostMode !== false;
-    const cleanToken = accessToken.includes("::") ? accessToken.split("::")[1] : accessToken;
+    const cleanToken = stripCursorOAuthTokenPrefix(credentials.accessToken ?? "");
     const requestId = crypto.randomUUID();
     const traceParent = `00-${crypto.randomBytes(16).toString("hex")}-${crypto.randomBytes(8).toString("hex")}-01`;
 
@@ -812,7 +897,7 @@ export class CursorExecutor extends BaseExecutor {
    */
   private async loadLiveCatalogIds(): Promise<ReadonlySet<string> | undefined> {
     try {
-      const catalog = await getActiveSyncedCatalog("cursor");
+      const catalog = await getActiveSyncedCatalog(this.provider);
       if (!catalog.models.length) return undefined;
       return new Set(catalog.models.map((model) => model.id));
     } catch {
@@ -1165,8 +1250,42 @@ export class CursorExecutor extends BaseExecutor {
   }
 
   async execute({ model, body, stream, credentials, signal, log, upstreamExtraHeaders }) {
-    const url = this.buildUrl();
-    const headers = this.buildHeaders(credentials);
+    const fallbackUrl = this.buildUrl();
+    const executionCredentials = await this.resolveExecutionCredentials(credentials);
+    if (executionCredentials instanceof Response) {
+      return {
+        response: executionCredentials,
+        url: fallbackUrl,
+        headers: {},
+        transformedBody: body,
+      };
+    }
+    let url: string;
+    try {
+      url = await resolveCursorAgentUrl(executionCredentials, signal);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const headers = this.buildHeaders(executionCredentials);
+      return {
+        response: new Response(
+          JSON.stringify({
+            error: {
+              message: sanitizeErrorMessage(message),
+              type: "connection_error",
+              code: "",
+            },
+          }),
+          {
+            status: err instanceof CursorServerConfigError ? err.status : HTTP_STATUS.SERVER_ERROR,
+            headers: { "Content-Type": "application/json" },
+          }
+        ),
+        url: fallbackUrl,
+        headers,
+        transformedBody: body,
+      };
+    }
+    const headers = this.buildHeaders(executionCredentials);
     mergeUpstreamExtraHeaders(headers, upstreamExtraHeaders);
 
     const messages: ChatMessage[] = body.messages || [];
@@ -1239,8 +1358,10 @@ export class CursorExecutor extends BaseExecutor {
     if (isToolFollowUp) {
       session = cursorSessionManager.acquire(conversationId);
       // #9029: content-based session match when client lacks conversation_id.
-      if (!session && !body.conversation_id) session = cursorSessionManager.findByToolCallIds(
-        messages.filter(m => m.role === "tool" && m.tool_call_id).map(m => m.tool_call_id!));
+      if (!session && !body.conversation_id)
+        session = cursorSessionManager.findByToolCallIds(
+          messages.filter((m) => m.role === "tool" && m.tool_call_id).map((m) => m.tool_call_id!)
+        );
     }
 
     if (session) {
@@ -1321,6 +1442,9 @@ export class CursorExecutor extends BaseExecutor {
       if (opened.status !== 200) {
         const errBuf = await opened.consumeError();
         const errText = errBuf.toString("utf8") || "Unknown error";
+        if (opened.status === HTTP_STATUS.UNAUTHORIZED && isCursorApiKey(credentials.apiKey)) {
+          invalidateCursorSessionToken(credentials.apiKey);
+        }
         return {
           response: buildErrorResponse(opened.status, `[${opened.status}]: ${errText}`),
           url,
@@ -1359,6 +1483,17 @@ export class CursorExecutor extends BaseExecutor {
               finishLifecycle(ctx, false);
               controller.close();
             } catch (err) {
+              // OpenCodex: NGHTTP2_CANCEL after client-tool suspend is expected — finish
+              // the SSE turn instead of surfacing a transport failure.
+              if (
+                isCursorBenignCancelError(err) &&
+                (ctx.totalText.length > 0 || ctx.pendingToolCalls.size > 0)
+              ) {
+                this.finalizeSseStream(ctx, body);
+                finishLifecycle(ctx, false);
+                controller.close();
+                return;
+              }
               finishLifecycle(ctx, true);
               controller.error(err);
             }
@@ -1386,10 +1521,23 @@ export class CursorExecutor extends BaseExecutor {
     try {
       await this.driveH2(h2, ctx, mcpTools, blobStore, clientPlatform, todoHistory, signal);
     } catch (err) {
+      if (
+        isCursorBenignCancelError(err) &&
+        (ctx.totalText.length > 0 || ctx.pendingToolCalls.size > 0)
+      ) {
+        finishLifecycle(ctx, false);
+        return {
+          response: this.buildResponseFromCtx(ctx, body),
+          url,
+          headers,
+          transformedBody: body,
+        };
+      }
       finishLifecycle(ctx, true);
       const message = err instanceof Error ? err.message : String(err);
+      const classified = classifyCursorError(message);
       return {
-        response: buildErrorResponse(HTTP_STATUS.SERVER_ERROR, message, "connection_error"),
+        response: buildErrorResponse(classified.status, classified.message, classified.type),
         url,
         headers,
         transformedBody: body,
@@ -1411,24 +1559,22 @@ export class CursorExecutor extends BaseExecutor {
    */
   private finalizeSseStream(ctx: StreamCtx, body: { messages?: ChatMessage[] }) {
     if (ctx.midStreamError && ctx.totalText.length === 0) {
-      const payload = {
-        id: ctx.responseId,
-        object: "chat.completion.chunk",
-        created: ctx.created,
-        model: ctx.model,
-        choices: [],
-        error: {
-          message: ctx.midStreamError.message,
-          type:
-            ctx.midStreamError.status === HTTP_STATUS.RATE_LIMITED
-              ? "rate_limit_error"
-              : "api_error",
-        },
-      };
-      ctx.emit(`data: ${JSON.stringify(payload)}\n\n`);
-      ctx.emit("data: [DONE]\n\n");
+      emitCursorSseError(ctx, classifyCursorError(ctx.midStreamError.message));
       return;
     }
+
+    // Silent empty turn (auth accepted, no text) — surface actionable error instead of
+    // an empty assistant completion that chatCore maps to opaque "empty content" 502.
+    if (isCursorEmptyTurn(ctx) && ctx.endReason && ctx.endReason !== "tool_calls") {
+      emitCursorSseError(
+        ctx,
+        resolveCursorEmptyTurnError({
+          upstreamMessage: ctx.midStreamError?.message,
+        })
+      );
+      return;
+    }
+
     if (!ctx.emittedRoleChunk) {
       // Edge case: empty response. Emit a role chunk so clients see at least
       // one delta before finish.
@@ -1483,18 +1629,34 @@ export class CursorExecutor extends BaseExecutor {
    */
   private buildResponseFromCtx(ctx: StreamCtx, body: { messages?: ChatMessage[] }): Response {
     if (ctx.midStreamError && ctx.totalText.length === 0) {
+      const classified = classifyCursorError(ctx.midStreamError.message);
       return new Response(
         JSON.stringify({
           error: {
-            message: ctx.midStreamError.message,
-            type:
-              ctx.midStreamError.status === HTTP_STATUS.RATE_LIMITED
-                ? "rate_limit_error"
-                : "api_error",
+            message: classified.message,
+            type: classified.type,
           },
         }),
         {
-          status: ctx.midStreamError.status,
+          status: classified.status,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (isCursorEmptyTurn(ctx) && ctx.endReason && ctx.endReason !== "tool_calls") {
+      const empty = resolveCursorEmptyTurnError({
+        upstreamMessage: ctx.midStreamError?.message,
+      });
+      return new Response(
+        JSON.stringify({
+          error: {
+            message: empty.message,
+            type: empty.type,
+          },
+        }),
+        {
+          status: empty.status,
           headers: { "Content-Type": "application/json" },
         }
       );
@@ -1573,8 +1735,23 @@ export class CursorExecutor extends BaseExecutor {
     );
   }
 
-  async refreshCredentials() {
-    return null;
+  async refreshCredentials(credentials, log) {
+    if (!credentials?.refreshToken) {
+      log?.warn?.(
+        "TOKEN_REFRESH",
+        "Cursor: no refresh token available, re-authentication required"
+      );
+      return null;
+    }
+    const result = await getAccessToken("cursor", credentials, log);
+    if (!result || result.error) {
+      log?.warn?.(
+        "TOKEN_REFRESH",
+        `Cursor: token refresh failed${result?.error ? ` (${result.error})` : ""} — re-authentication required`
+      );
+      return null;
+    }
+    return result;
   }
 }
 

@@ -81,8 +81,6 @@ const DEFAULT_OBFUSCATE_WORDS = [
   "codecompanion",
   "openwebui",
   "open-webui",
-  "hermes-agent",
-  "hermes",
 ];
 
 // Mirror of DEFAULT_SYSTEM_TRANSFORMS_CONFIG from open-sse/services/systemTransforms.ts.

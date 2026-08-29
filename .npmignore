@@ -94,6 +94,10 @@ vscode-extension/
 /_*/
 
 # Consistent with .gitignore and .dockerignore
+.claude/
+.fakebin-*
+.eslintcache*
+_tasks/
 .DS_Store
 .idea/
 .config/

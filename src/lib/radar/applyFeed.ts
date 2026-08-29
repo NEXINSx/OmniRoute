@@ -27,6 +27,8 @@ export interface MergedEntry {
   provider: string;
   modelId: string;
   displayName: string;
+  /** Curated cross-provider model family used for Radar combo suggestions. */
+  familyId?: string | null;
   monthlyTokens: number;
   creditTokens: number;
   freeType:
@@ -62,10 +64,12 @@ export interface MergedEntry {
   contextWindow?: number | null;
   /** Capability flags reported by the feed. Undefined for baseline-only entries. */
   capabilities?: {
-    tools: boolean;
-    vision: boolean;
-    thinking: boolean;
+    tools: boolean | null;
+    vision: boolean | null;
+    thinking: boolean | null;
   };
+  /** Credential-free HTTPS evidence for non-null context/capability facts. */
+  metadataEvidenceUrls?: string[];
   /** Rate/quota limits reported by the feed. Undefined for baseline-only entries. */
   limits?: {
     rpm: number | null;
@@ -102,10 +106,11 @@ export interface FeedModel {
   };
   contextWindow: number | null;
   capabilities: {
-    tools: boolean;
-    vision: boolean;
-    thinking: boolean;
+    tools: boolean | null;
+    vision: boolean | null;
+    thinking: boolean | null;
   };
+  metadataEvidenceUrls?: string[];
   trainsOnPrompts: boolean | null;
   tosRisk: MergedEntry["tos"];
   setup: {
@@ -259,6 +264,9 @@ function mergeOne(
   if (!overriddenKeys.has("displayName")) {
     result.displayName = feed.displayName;
   }
+  if (!overriddenKeys.has("familyId")) {
+    result.familyId = feed.familyId;
+  }
   if (!overriddenKeys.has("monthlyTokens")) {
     result.monthlyTokens = feedBudgetToMonthlyTokens(feed.budget);
   }
@@ -283,6 +291,10 @@ function mergeOne(
   if (!overriddenKeys.has("capabilities")) {
     result.capabilities = feed.capabilities;
   }
+  result.metadataEvidenceUrls =
+    overriddenKeys.has("contextWindow") || overriddenKeys.has("capabilities")
+      ? []
+      : (feed.metadataEvidenceUrls ?? []);
   if (!overriddenKeys.has("limits")) {
     result.limits = feed.limits;
   }
@@ -293,6 +305,7 @@ function mergeOne(
   // Apply local overrides (rule 1: they win)
   if (overrides) {
     if (overrides.displayName !== undefined) result.displayName = overrides.displayName;
+    if (overrides.familyId !== undefined) result.familyId = overrides.familyId;
     if (overrides.monthlyTokens !== undefined) result.monthlyTokens = overrides.monthlyTokens;
     if (overrides.creditTokens !== undefined) result.creditTokens = overrides.creditTokens;
     if (overrides.freeType !== undefined) result.freeType = overrides.freeType;
@@ -326,10 +339,14 @@ function feedModelToMerged(
   feed: FeedModel,
   overrides: Partial<MergedEntry> | undefined
 ): MergedEntry {
+  const metadataOverridden =
+    overrides !== undefined &&
+    (Object.hasOwn(overrides, "contextWindow") || Object.hasOwn(overrides, "capabilities"));
   const entry: MergedEntry = {
     provider: feed.provider,
     modelId: feed.modelId,
     displayName: overrides?.displayName ?? feed.displayName,
+    familyId: overrides?.familyId ?? feed.familyId,
     monthlyTokens: overrides?.monthlyTokens ?? feedBudgetToMonthlyTokens(feed.budget),
     creditTokens: overrides?.creditTokens ?? 0,
     freeType: overrides?.freeType ?? feed.freeType,
@@ -338,8 +355,15 @@ function feedModelToMerged(
     trainsOnPrompts: overrides?.trainsOnPrompts ?? feed.trainsOnPrompts ?? undefined,
     enabled: feed.enabled ? (overrides?.enabled ?? true) : false,
     origin: overrides ? "local" : "radar",
-    contextWindow: overrides?.contextWindow ?? feed.contextWindow,
-    capabilities: overrides?.capabilities ?? feed.capabilities,
+    contextWindow:
+      overrides !== undefined && Object.hasOwn(overrides, "contextWindow")
+        ? (overrides.contextWindow ?? null)
+        : feed.contextWindow,
+    capabilities:
+      overrides !== undefined && Object.hasOwn(overrides, "capabilities")
+        ? (overrides.capabilities ?? feed.capabilities)
+        : feed.capabilities,
+    metadataEvidenceUrls: metadataOverridden ? [] : (feed.metadataEvidenceUrls ?? []),
     limits: overrides?.limits ?? feed.limits,
     setup: overrides?.setup ?? feed.setup,
   };

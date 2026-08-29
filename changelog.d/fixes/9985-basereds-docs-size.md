@@ -1,1 +1,0 @@
-- fix(quality): green release/v3.8.50 base-reds — sync 4 env vars into .env.example/ENVIRONMENT.md and freeze the new proxied-TLS proxyFetch helper in the file-size baseline (#9985)

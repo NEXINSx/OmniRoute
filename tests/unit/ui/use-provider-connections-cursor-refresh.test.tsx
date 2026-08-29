@@ -74,7 +74,7 @@ function installFetchMock(
     const method = (init?.method || "GET").toUpperCase();
     calls.push({ url, method });
 
-    if (url === "/api/providers" && method === "GET") {
+    if ((url === "/api/providers" || url.startsWith("/api/providers?")) && method === "GET") {
       return jsonResponse(200, { connections: connectionsFixture });
     }
     if (url === "/api/provider-nodes" && method === "GET") {
@@ -88,6 +88,17 @@ function installFetchMock(
   vi.stubGlobal("fetch", fn);
   return { fn, calls };
 }
+
+// The hook's module tree is heavy — importing it inside the first test's body
+// takes several seconds on a slow/loaded host, blowing vitest's default 5s
+// per-test timeout and making this file flaky (the first test would time out,
+// leaving a stale fetch stub that pollutes its siblings). Import it once at
+// module scope so the cost is paid during collection, not inside a test.
+// (Static import can't be used: the hook must load only AFTER the mocks above
+// are registered, and top-level `await import` guarantees that ordering.)
+const { useProviderConnections } =
+  await import("@/app/(dashboard)/dashboard/providers/[id]/hooks/useProviderConnections");
+type HookResult = ReturnType<typeof useProviderConnections>;
 
 describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6)", () => {
   let container: HTMLElement;
@@ -115,9 +126,6 @@ describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6
   });
 
   async function mountHook(providerId: string) {
-    const { useProviderConnections } =
-      await import("@/app/(dashboard)/dashboard/providers/[id]/hooks/useProviderConnections");
-    type HookResult = ReturnType<typeof useProviderConnections>;
     let result: HookResult | null = null;
 
     function TestWrapper() {
@@ -187,7 +195,7 @@ describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6
     });
     const getResult = await mountHook("cursor");
     const getCallsBefore = calls.filter(
-      (c) => c.url === "/api/providers" && c.method === "GET"
+      (c) => (c.url === "/api/providers" || c.url.startsWith("/api/providers?")) && c.method === "GET"
     ).length;
 
     await act(async () => {
@@ -198,7 +206,7 @@ describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6
     expect(notify.info).not.toHaveBeenCalled();
     expect(notify.error).not.toHaveBeenCalled();
     const getCallsAfter = calls.filter(
-      (c) => c.url === "/api/providers" && c.method === "GET"
+      (c) => (c.url === "/api/providers" || c.url.startsWith("/api/providers?")) && c.method === "GET"
     ).length;
     expect(getCallsAfter).toBeGreaterThan(getCallsBefore); // fetchConnections() re-ran
   });
@@ -216,7 +224,7 @@ describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6
     });
     const getResult = await mountHook("cursor");
     const getCallsBefore = calls.filter(
-      (c) => c.url === "/api/providers" && c.method === "GET"
+      (c) => (c.url === "/api/providers" || c.url.startsWith("/api/providers?")) && c.method === "GET"
     ).length;
 
     await act(async () => {
@@ -227,7 +235,7 @@ describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6
     expect(notify.success).not.toHaveBeenCalled();
     expect(notify.error).not.toHaveBeenCalled();
     const getCallsAfter = calls.filter(
-      (c) => c.url === "/api/providers" && c.method === "GET"
+      (c) => (c.url === "/api/providers" || c.url.startsWith("/api/providers?")) && c.method === "GET"
     ).length;
     expect(getCallsAfter).toBe(getCallsBefore); // fetchConnections() must NOT re-run
   });
@@ -242,7 +250,7 @@ describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6
     });
     const getResult = await mountHook("cursor");
     const getCallsBefore = calls.filter(
-      (c) => c.url === "/api/providers" && c.method === "GET"
+      (c) => (c.url === "/api/providers" || c.url.startsWith("/api/providers?")) && c.method === "GET"
     ).length;
 
     await act(async () => {
@@ -255,7 +263,7 @@ describe("useProviderConnections — handleRefreshToken Cursor branching (Task 6
     expect(notify.success).not.toHaveBeenCalled();
     expect(notify.info).not.toHaveBeenCalled();
     const getCallsAfter = calls.filter(
-      (c) => c.url === "/api/providers" && c.method === "GET"
+      (c) => (c.url === "/api/providers" || c.url.startsWith("/api/providers?")) && c.method === "GET"
     ).length;
     expect(getCallsAfter).toBe(getCallsBefore); // fetchConnections() must NOT re-run
   });

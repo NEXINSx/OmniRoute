@@ -14,12 +14,22 @@ export const grok_cliProvider: RegistryEntry = {
   // Keep the generic translate-path contract stable. GrokCliExecutor owns the
   // official Grok Build upstream URL and always dispatches to /v1/responses.
   baseUrl: "https://cli-chat-proxy.grok.com/v1/chat/completions",
+  reasoningTransport: "opaque",
   modelsUrl: GROK_BUILD_MODELS_URL,
   clientVersion: getGrokBuildClientVersion(),
   authType: "oauth",
   authHeader: "bearer",
   passthroughModels: true,
   models: [
+    {
+      id: "grok-4.6",
+      name: "Grok 4.6",
+      contextLength: 500000,
+      supportsReasoning: true,
+      toolCalling: true,
+      targetFormat: "openai-responses",
+      unsupportedParams: ["presencePenalty", "frequencyPenalty", "logprobs", "topLogprobs"],
+    },
     {
       id: "grok-4.5",
       name: "Grok 4.5",

@@ -1,1 +1,0 @@
-- Fixed `GET`/`PUT`/`DELETE /api/memory/[id]` always failing with a 500 (`Primary backend "sqlite" not registered`) when the route was reached before any other memory endpoint in the same process.

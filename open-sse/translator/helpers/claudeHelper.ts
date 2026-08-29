@@ -3,6 +3,7 @@ import { DEFAULT_THINKING_CLAUDE_SIGNATURE } from "../../config/defaultThinkingS
 import { lookupReasoning, recordReplay } from "../../services/reasoningCache.ts";
 import { getModelTargetFormat } from "../../config/providerModels.ts";
 import { NON_ANTHROPIC_THINKING_PLACEHOLDER } from "../../utils/reasoningPlaceholder.ts";
+import { sanitizeToolId } from "./schemaCoercion.ts";
 
 export { NON_ANTHROPIC_THINKING_PLACEHOLDER } from "../../utils/reasoningPlaceholder.ts";
 
@@ -429,6 +430,22 @@ export function prepareClaudeRequest(
         msg.content = msg.content.filter(
           (block) => block.type !== "tool_result" || block.tool_use_id
         );
+        // Anthropic-shape upstreams enforce `^[a-zA-Z0-9_-]+$` on tool ids. Client
+        // histories can carry ids with `.`/`:`/`#` (e.g. replayed from another
+        // provider), which 400s as TOOL_SCHEMA_INVALID. Rewrite both sides with the
+        // same function so tool_use/tool_result pairing survives — the later
+        // ordering passes match on these ids.
+        for (const block of msg.content) {
+          if (block.type === "tool_use" && typeof block.id === "string" && block.id) {
+            block.id = sanitizeToolId(block.id);
+          } else if (
+            block.type === "tool_result" &&
+            typeof block.tool_use_id === "string" &&
+            block.tool_use_id
+          ) {
+            block.tool_use_id = sanitizeToolId(block.tool_use_id);
+          }
+        }
       }
     }
 

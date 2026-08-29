@@ -1,1 +1,0 @@
-- feat(a2a): Conductor bridge — long-lived SSE consumer that mirrors OmniConductor hub tasks into the A2A TaskManager (explicit `canceled→cancelled` mapping with tests, persisted `last_event_id` cursor in the `key_value` table, exponential-backoff reconnection; opt-in via `CONDUCTOR_HUB_URL`/`CONDUCTOR_HUB_TOKEN`)

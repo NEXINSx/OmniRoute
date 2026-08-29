@@ -1,1 +1,0 @@
-- **Translator**: keep the Responses namespace identity map across the hub-and-spoke pivot — namespace sub-tool calls routed to non-OpenAI targets (Kiro, Cursor) no longer come back flattened (`unsupported call: functions__exec` in Codex CLI) (#9783 — thanks @VXNCXNX)

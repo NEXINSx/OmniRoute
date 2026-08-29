@@ -171,13 +171,33 @@ export const HTTP_STATUS = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   NOT_ACCEPTABLE: 406,
+  UNPROCESSABLE_ENTITY: 422,
   REQUEST_TIMEOUT: 408,
+  GONE: 410,
   RATE_LIMITED: 429,
   SERVER_ERROR: 500,
   BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
   GATEWAY_TIMEOUT: 504,
 };
+
+/**
+ * #10360 — stable error code for an INTERNAL violation of the executor
+ * `execute()` result contract (`normalizeExecutorResult` received something
+ * that is neither a Response nor `{ response: Response }`).
+ *
+ * This is our own bug, never a provider/account health signal, so every
+ * resilience layer must treat it as request-scoped and terminal: no connection
+ * cooldown, no provider circuit-breaker trip, no retry. It rides on the error's
+ * `.code` (read by `getUpstreamErrorIdentifier`) and therefore reaches
+ * `checkFallbackError` as `structuredError.code` and the chat/combo predicates
+ * as `result.errorCode`.
+ *
+ * Lives here (leaf config module) so both `open-sse/handlers/` and
+ * `open-sse/services/` can import it without creating a cycle.
+ */
+export const EXECUTOR_CONTRACT_VIOLATION_CODE = "executor_contract_violation";
+
 export {
   BACKOFF_CONFIG,
   COOLDOWN_MS,
@@ -228,13 +248,13 @@ export const PROVIDER_PROFILES = {
     circuitBreakerThreshold: envInt("OMNIROUTE_CIRCUIT_BREAKER_OAUTH_THRESHOLD", 8),
     circuitBreakerReset: envInt("OMNIROUTE_CIRCUIT_BREAKER_OAUTH_RESET_MS", 60000),
     // Provider-level circuit breaker (entire provider cooldown after repeated failures)
-    providerFailureThreshold: 10, // Scaled for 500+ connections (was 3)
-    providerFailureWindowMs: 900000, // 15min window (was 10min)
-    providerCooldownMs: 300000, // 5min cooldown when threshold reached
+    providerFailureThreshold: envInt("OMNIROUTE_PROVIDER_BREAKER_OAUTH_FAILURE_THRESHOLD", 10), // Scaled for 500+ connections (was 3)
+    providerFailureWindowMs: envInt("OMNIROUTE_PROVIDER_BREAKER_OAUTH_FAILURE_WINDOW_MS", 900000), // 15min window (was 10min)
+    providerCooldownMs: envInt("OMNIROUTE_PROVIDER_BREAKER_OAUTH_COOLDOWN_MS", 300000), // 5min cooldown when threshold reached
     // Adaptive circuit breaker v2 settings
-    degradationThreshold: 5, // Enter DEGRADED at this many failures
-    maxBackoffMultiplier: 8, // Max 8x resetTimeout escalation
-    backoffEscalationCount: 2, // Escalate after 2 open cycles
+    degradationThreshold: envInt("OMNIROUTE_PROVIDER_BREAKER_OAUTH_DEGRADATION_THRESHOLD", 5), // Enter DEGRADED at this many failures
+    maxBackoffMultiplier: envInt("OMNIROUTE_PROVIDER_BREAKER_OAUTH_MAX_BACKOFF_MULTIPLIER", 8), // Max 8x resetTimeout escalation
+    backoffEscalationCount: envInt("OMNIROUTE_PROVIDER_BREAKER_OAUTH_BACKOFF_ESCALATION_COUNT", 2), // Escalate after 2 open cycles
   },
   apikey: {
     transientCooldown: 3000, // 3s (API providers recover faster)
@@ -243,12 +263,18 @@ export const PROVIDER_PROFILES = {
     circuitBreakerThreshold: envInt("OMNIROUTE_CIRCUIT_BREAKER_API_KEY_THRESHOLD", 12),
     circuitBreakerReset: envInt("OMNIROUTE_CIRCUIT_BREAKER_API_KEY_RESET_MS", 30000),
     // Provider-level circuit breaker (entire provider cooldown after repeated failures)
-    providerFailureThreshold: 15, // Scaled for 500+ connections (was 5)
-    providerFailureWindowMs: 1800000, // 30min window (was 20min)
-    providerCooldownMs: 600000, // 10min cooldown when threshold reached
-    degradationThreshold: 7,
-    maxBackoffMultiplier: 4,
-    backoffEscalationCount: 3,
+    providerFailureThreshold: envInt("OMNIROUTE_PROVIDER_BREAKER_API_KEY_FAILURE_THRESHOLD", 15), // Scaled for 500+ connections (was 5)
+    providerFailureWindowMs: envInt(
+      "OMNIROUTE_PROVIDER_BREAKER_API_KEY_FAILURE_WINDOW_MS",
+      1800000
+    ), // 30min window (was 20min)
+    providerCooldownMs: envInt("OMNIROUTE_PROVIDER_BREAKER_API_KEY_COOLDOWN_MS", 600000), // 10min cooldown when threshold reached
+    degradationThreshold: envInt("OMNIROUTE_PROVIDER_BREAKER_API_KEY_DEGRADATION_THRESHOLD", 7),
+    maxBackoffMultiplier: envInt("OMNIROUTE_PROVIDER_BREAKER_API_KEY_MAX_BACKOFF_MULTIPLIER", 4),
+    backoffEscalationCount: envInt(
+      "OMNIROUTE_PROVIDER_BREAKER_API_KEY_BACKOFF_ESCALATION_COUNT",
+      3
+    ),
   },
   // Local providers (localhost inference backends like Ollama, LM Studio, oMLX).
   // Not yet wired into getProviderProfile() — will be used when local provider_nodes
@@ -260,9 +286,9 @@ export const PROVIDER_PROFILES = {
     circuitBreakerThreshold: envInt("OMNIROUTE_CIRCUIT_BREAKER_LOCAL_THRESHOLD", 2),
     circuitBreakerReset: envInt("OMNIROUTE_CIRCUIT_BREAKER_LOCAL_RESET_MS", 15000),
     // Provider-level circuit breaker (entire provider cooldown after repeated failures)
-    providerFailureThreshold: 2, // 2 failures trigger provider cooldown
-    providerFailureWindowMs: 300000, // 5min window for counting failures
-    providerCooldownMs: 60000, // 1min cooldown when threshold reached
+    providerFailureThreshold: envInt("OMNIROUTE_PROVIDER_BREAKER_LOCAL_FAILURE_THRESHOLD", 2), // 2 failures trigger provider cooldown
+    providerFailureWindowMs: envInt("OMNIROUTE_PROVIDER_BREAKER_LOCAL_FAILURE_WINDOW_MS", 300000), // 5min window for counting failures
+    providerCooldownMs: envInt("OMNIROUTE_PROVIDER_BREAKER_LOCAL_COOLDOWN_MS", 60000), // 1min cooldown when threshold reached
   },
 };
 
@@ -329,6 +355,23 @@ export const STREAM_RECOVERY = {
   HOLDBACK_MS: 750,
   BUFFER_MAX_BYTES: 65536,
   EARLY_RETRY_MAX: 4,
+  /**
+   * Minimum character overlap `trimContinuationOverlap` must find between the
+   * already-emitted text and a mid-stream continuation for the continuation to be
+   * accepted as a real resume, rather than an unrelated restart the model produced after
+   * ignoring the assistant-prefill.
+   *
+   * This is a DOCUMENTED TRADE-OFF, not a solved distinction: a model that continues
+   * cleanly with fewer than this many echoed characters (a legitimate, even preferred,
+   * outcome — there was nothing to de-duplicate) is indistinguishable, from string data
+   * alone, from a model that silently restarted on an unrelated sentence. Both produce a
+   * low/zero overlap. Rejecting below this threshold trades some false-positive rejections
+   * of legitimate low-overlap continuations (bounded retry, then a clean close — no data
+   * loss beyond that retry) against not silently gluing two unrelated fragments into one
+   * corrupted, unrecoverable answer. It does not eliminate the residual false negative
+   * either (an accidental coincidence at or above this many characters is still accepted).
+   */
+  MIN_CONTINUATION_OVERLAP_CHARS: 8,
 } as const;
 
 /**

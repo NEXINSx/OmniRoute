@@ -1,6 +1,65 @@
+import {
+  createCodexAccountPool,
+  getCodexParentAccountDiagnostic,
+} from "@omniroute/open-sse/services/codexAccount/index.ts";
 import type { AdaptiveAdmissionPublicSnapshot } from "@omniroute/open-sse/services/admission/runtime.ts";
+import type { PerConnectionAdmissionController } from "@/shared/middleware/chatBodyAdmission";
 
 type JsonRecord = Record<string, unknown>;
+
+/** Process-wide structural chat-admission snapshot type (chatBodyAdmission.ts). */
+export type ChatAdmissionSnapshot = ReturnType<PerConnectionAdmissionController["snapshot"]>;
+
+/**
+ * Low-card structural chat-admission health summary (#11244) — the bounded
+ * heavyweight-lease gate from chatBodyAdmission.ts (#10110/#10437), NOT the
+ * adaptive shadow-mode layer above. Lane keys are opaque HMAC fairness
+ * fingerprints (resolveSessionId), never raw credentials.
+ */
+export type ChatAdmissionHealthSummary = {
+  activeHeavy: number;
+  activeHealthyHeadroom: number;
+  waiting: number;
+  queuedBytes: number;
+  shedTotal: number;
+  shedsByReason: Record<string, number>;
+  lanes: Array<{ key: string; waiting: number }>;
+  /** #503-fanout: live ingest bytes reserved through the byte-budget gate. */
+  inflightBytes: number;
+  /** #503-fanout: the auto-derived (or overridden) budget ceiling. */
+  maxInflightBytes: number;
+  /** #503-fanout: which signal the budget was derived from. */
+  budgetSource: string;
+  /** #503-fanout: live multi-signal resource-pressure severity. */
+  pressureSeverity: string;
+  /** #503-fanout: false on a default deployment — proves the byte-budget
+   * gate, not the legacy request-count cap, is what is actually binding. */
+  countCapEnabled: boolean;
+};
+
+/**
+ * Explicit allowlisted projection of the structural admission snapshot.
+ * Never spreads the snapshot — only the documented low-cardinality fields pass.
+ */
+export function projectChatAdmissionSummary(
+  snapshot: ChatAdmissionSnapshot | null | undefined
+): ChatAdmissionHealthSummary | null {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  return {
+    activeHeavy: snapshot.activeHeavy,
+    activeHealthyHeadroom: snapshot.activeHealthyHeadroom,
+    waiting: snapshot.waiting,
+    queuedBytes: snapshot.queuedBytes,
+    shedTotal: snapshot.shedTotal,
+    shedsByReason: { ...(snapshot.shedsByReason ?? {}) },
+    lanes: (snapshot.lanes ?? []).map((lane) => ({ key: lane.key, waiting: lane.waiting })),
+    inflightBytes: snapshot.inflightBytes,
+    maxInflightBytes: snapshot.maxInflightBytes,
+    budgetSource: snapshot.budgetSource,
+    pressureSeverity: snapshot.pressureSeverity,
+    countCapEnabled: snapshot.countCapEnabled,
+  };
+}
 
 /** Low-card adaptive-admission health summary — no tenant/request/body/queue details. */
 export type AdaptiveAdmissionHealthSummary = {
@@ -126,9 +185,17 @@ interface BuildTelemetryPayloadOptions {
 
 interface BuildHealthPayloadOptions {
   appVersion: string;
+  /** #10427: git SHA the running artifact was built from, so a deploy is auditable over HTTP. */
+  buildSha?: string | null;
   catalogCount?: number;
   settings: { setupComplete?: boolean } | null | undefined;
-  connections: Array<{ provider?: string; isActive?: boolean | null; rateLimitedUntil?: unknown }>;
+  connections: Array<{
+    id?: string;
+    provider?: string;
+    isActive?: boolean | null;
+    rateLimitedUntil?: unknown;
+    providerSpecificData?: Readonly<Record<string, unknown>> | null;
+  }>;
   circuitBreakers: CircuitBreakerStatus[];
   rateLimitStatus: JsonRecord;
   learnedLimits: JsonRecord;
@@ -148,6 +215,8 @@ interface BuildHealthPayloadOptions {
   };
   /** Optional injected public adaptive-admission snapshot; projected, never raw-spread. */
   adaptiveAdmission?: AdaptiveAdmissionPublicSnapshot | null;
+  /** #11244: optional structural chat-admission snapshot; projected, never raw-spread. */
+  chatAdmission?: ChatAdmissionSnapshot | null;
 }
 
 function limitMonitors(monitors: QuotaMonitorSnapshot[], maxItems = 8): QuotaMonitorSnapshot[] {
@@ -271,6 +340,53 @@ export function summarizeConnectionCooldown(
   return summary;
 }
 
+export interface CodexAccountPoolsSummary {
+  total: number;
+  available: number;
+  partiallyLimited: number;
+  fullyLimited: number;
+  quotaObserved: number;
+  soonestRetryAfterMs: number;
+}
+
+export function summarizeCodexAccountPools(
+  connections: BuildHealthPayloadOptions["connections"],
+  nowMs: number
+): CodexAccountPoolsSummary {
+  const summary: CodexAccountPoolsSummary = {
+    total: 0,
+    available: 0,
+    partiallyLimited: 0,
+    fullyLimited: 0,
+    quotaObserved: 0,
+    soonestRetryAfterMs: 0,
+  };
+  for (const connection of connections) {
+    if (connection.provider !== "codex" || !connection.id) continue;
+    const diagnostic = getCodexParentAccountDiagnostic(
+      createCodexAccountPool({
+        id: connection.id,
+        provider: connection.provider,
+        providerSpecificData: connection.providerSpecificData ?? {},
+      }),
+      nowMs
+    );
+    summary.total += 1;
+    if (diagnostic.status === "available") summary.available += 1;
+    else if (diagnostic.status === "partially_limited") summary.partiallyLimited += 1;
+    else summary.fullyLimited += 1;
+    if (diagnostic.quota.observedScopeCount > 0) summary.quotaObserved += 1;
+    if (
+      diagnostic.cooldown.soonestRetryAfterMs > 0 &&
+      (summary.soonestRetryAfterMs === 0 ||
+        diagnostic.cooldown.soonestRetryAfterMs < summary.soonestRetryAfterMs)
+    ) {
+      summary.soonestRetryAfterMs = diagnostic.cooldown.soonestRetryAfterMs;
+    }
+  }
+  return summary;
+}
+
 export function buildHealthPayload({
   appVersion,
   catalogCount = 0,
@@ -288,10 +404,15 @@ export function buildHealthPayload({
   activeSessionsByKey = {},
   credentialHealth,
   adaptiveAdmission = null,
+  chatAdmission = null,
+  buildSha = null,
 }: BuildHealthPayloadOptions) {
   const timestamp = new Date().toISOString();
   const system = {
     version: appVersion,
+    // #10427: identifying a bad deploy previously required SSH + grepping compiled chunks.
+    // Absent/empty when unknown (dev runs) — never a fabricated value.
+    ...(buildSha ? { buildSha } : {}),
     nodeVersion: process.version,
     uptime: process.uptime(),
     memoryUsage: process.memoryUsage(),
@@ -327,7 +448,9 @@ export function buildHealthPayload({
     };
   }
 
-  const connectionHealth = summarizeConnectionCooldown(connections, Date.now());
+  const nowMs = Date.now();
+  const connectionHealth = summarizeConnectionCooldown(connections, nowMs);
+  const codexAccountPools = summarizeCodexAccountPools(connections, nowMs);
 
   const configuredProviders = new Set(
     connections.map((connection) => connection.provider).filter(Boolean)
@@ -366,6 +489,7 @@ export function buildHealthPayload({
     providerBreakers,
     providerHealth,
     connectionHealth,
+    codexAccountPools,
     providerSummary: {
       catalogCount,
       configuredCount: configuredProviders.size,
@@ -383,6 +507,9 @@ export function buildHealthPayload({
     sessions: buildSessionsSummary({ activeSessions, activeSessionsByKey }),
     credentialHealth, // may be undefined if credentialHealth module not loaded
     adaptiveAdmission: projectAdaptiveAdmissionSummary(adaptiveAdmission),
+    // #11244: the STRUCTURAL gate (chatBodyAdmission.ts) next to the adaptive one —
+    // distinct key so clients reading `adaptiveAdmission` are untouched.
+    chatAdmission: projectChatAdmissionSummary(chatAdmission),
     dedup: {
       inflightRequests,
     },

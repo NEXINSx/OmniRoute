@@ -73,6 +73,7 @@ export async function GET(request: Request) {
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("scope", scope);
+  url.searchParams.set("state", state);
   const isHttpsRequest = scheme === "https";
   const useSecureCookie = process.env.AUTH_COOKIE_SECURE === "true" || isHttpsRequest;
 

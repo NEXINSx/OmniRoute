@@ -1,1 +1,0 @@
-- feat(providers): add Muse Code CLI provider preset (#9544)

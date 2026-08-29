@@ -1,21 +1,12 @@
 // Re-export service kinds from leaf module (avoids circular dep with providerSchema)
 export type { ServiceKind } from "./serviceKinds";
-export { SERVICE_KIND_VALUES } from "./serviceKinds";
-
 export type RiskNoticeVariant = "oauth" | "webCookie" | "deprecated" | "embedded-service";
-
-export interface ProviderRiskNoticeFields {
-  subscriptionRisk?: boolean;
-  riskNoticeVariant?: RiskNoticeVariant;
-  isEmbeddedService?: boolean;
-}
 
 import { NOAUTH_PROVIDERS } from "./providers/noauth";
 export { supportsNoAuthProviderProxy } from "./providers/noauth";
 import { OAUTH_PROVIDERS } from "./providers/oauth";
 import { WEB_COOKIE_PROVIDERS, resolveWebProviderHost } from "./providers/web-cookie";
 export { resolveWebProviderHost };
-export type { WebProviderHostLink } from "./providers/web-cookie";
 import { APIKEY_PROVIDERS } from "./providers/apikey";
 import { LOCAL_PROVIDERS } from "./providers/local";
 import { SEARCH_PROVIDERS } from "./providers/search";
@@ -23,6 +14,7 @@ import { AUDIO_ONLY_PROVIDERS } from "./providers/audio";
 import { UPSTREAM_PROXY_PROVIDERS } from "./providers/upstream-proxy";
 import { CLOUD_AGENT_PROVIDERS } from "./providers/cloud-agent";
 import { SYSTEM_PROVIDERS } from "./providers/system";
+import { validateProviders } from "../validation/providerSchema";
 
 export const FREE_PROVIDERS = {};
 
@@ -30,7 +22,6 @@ export const FREE_PROVIDERS = {};
 
 export const FREE_APIKEY_PROVIDER_IDS = new Set([
   "qoder",
-  "mimocode",
   "opencode",
   "dahl",
   // auggie is a fully local, credential-less CLI passthrough (auth handled by
@@ -38,18 +29,48 @@ export const FREE_APIKEY_PROVIDER_IDS = new Set([
   // accepts an optional connection row for display/priority/testStatus tracking —
   // no apiKey is ever required or sent upstream.
   "auggie",
+  // zcode is a local app-server backend; auth stays in the ZCode profile.
+  "zcode",
+  // AI Horde works anonymously (`0000000000`) and also accepts a free registered
+  // key for higher queue priority. The no-auth page still enables the provider;
+  // this flag admits an optional apikey connection so that stored key is used.
+  "aihorde",
 ]);
 
 export function supportsApiKeyOnFreeProvider(providerId: unknown): boolean {
   return typeof providerId === "string" && FREE_APIKEY_PROVIDER_IDS.has(providerId);
 }
 
-// OAuth-primary providers that also accept a direct API key. Keep these out of
-// FREE_APIKEY_PROVIDER_IDS so the dashboard's primary action remains OAuth.
-const DUAL_AUTH_PROVIDER_IDS = new Set(["clinepass", "codebuddy-cn"]);
+// Providers presented as one dashboard card with OAuth as the primary action
+// and a direct API-key alternative. Keep these out of FREE_APIKEY_PROVIDER_IDS.
+const DUAL_AUTH_PROVIDER_IDS = new Set(["clinepass", "codebuddy-cn", "xai"]);
 
 export function supportsDualAuthProvider(providerId: unknown): boolean {
   return typeof providerId === "string" && DUAL_AUTH_PROVIDER_IDS.has(providerId);
+}
+
+/**
+ * Backend provider IDs that are managed from one dashboard provider family.
+ *
+ * Family members intentionally remain distinct in the registry and database:
+ * the xAI OAuth ID has different token-refresh and quota semantics from the
+ * API-key ID. Consumers that need to list or test every connection for a
+ * family should use getProviderConnectionFamilyIds() rather than duplicating
+ * this compatibility map.
+ */
+export const PROVIDER_CONNECTION_FAMILY_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  alibaba: ["alibaba-cn"],
+  "kimi-coding": ["kimi-coding-apikey"],
+  xai: ["xai-oauth", "xao"],
+  // magnific is the canonical (post-rebrand) slug; freepik stays a legacy
+  // alias so old URLs and pre-migration connection rows keep working.
+  magnific: ["freepik"],
+  freepik: ["magnific"],
+};
+
+export function getProviderConnectionFamilyIds(providerId: unknown): readonly string[] {
+  if (typeof providerId !== "string" || providerId.length === 0) return [];
+  return [providerId, ...(PROVIDER_CONNECTION_FAMILY_ALIASES[providerId] || [])];
 }
 
 // Web / Cookie Providers
@@ -66,7 +87,7 @@ export const IMAGE_ONLY_PROVIDER_IDS = new Set([
   "recraft",
   "topaz",
   "segmind",
-  "freepik",
+  "magnific",
   "deepai",
 ]);
 
@@ -76,6 +97,7 @@ export const AGGREGATOR_PROVIDER_IDS = new Set([
   "kilo-gateway",
   "aimlapi",
   "novita",
+  "opper",
   "piapi",
   "getgoapi",
   "laozhang",
@@ -87,7 +109,6 @@ export const AGGREGATOR_PROVIDER_IDS = new Set([
   "empower",
   "poe",
   "chutes",
-  "hackclub",
   "freetheai",
   "g4f-groq",
   "g4f-gemini",
@@ -120,8 +141,12 @@ export const AGGREGATOR_PROVIDER_IDS = new Set([
   "chat-oripe",
   "freeinference",
   "free-ai",
+  "void-ai",
+  "helixmind",
+  "tabitoken",
+  "logfare",
 
-]);;
+]);
 
 export const ENTERPRISE_CLOUD_PROVIDER_IDS = new Set([
   "azure-openai",
@@ -157,7 +182,7 @@ export const VIDEO_PROVIDER_IDS = new Set([
 // IDE Providers: editors with built-in AI subscription (separate section in UI).
 // These providers live in OAUTH_PROVIDERS but render under "IDE Providers"
 // instead of "OAuth Providers" to avoid visual duplication.
-export const IDE_PROVIDER_IDS = new Set(["cursor", "zed", "trae", "raycast"]);
+export const IDE_PROVIDER_IDS = new Set(["cursor", "zed", "trae"]);
 
 export const EMBEDDING_RERANK_PROVIDER_IDS = new Set(["voyage-ai", "jina-ai"]);
 
@@ -191,6 +216,8 @@ export function isLocalProvider(providerId: unknown): boolean {
 }
 
 export const SELF_HOSTED_CHAT_PROVIDER_IDS = new Set([
+  "mlx-gemma",
+  "mlx-qwen",
   "ollama-local",
   "lm-studio",
   "vllm",
@@ -214,9 +241,7 @@ export function isSelfHostedChatProvider(providerId: unknown): boolean {
 const EXPLICIT_OPTIONAL_APIKEY_PROVIDER_IDS = new Set([
   "searxng-search",
   "firecrawl",
-  "pollinations",
   "copilot-web",
-  "hackclub",
   "g4f-groq",
   "g4f-gemini",
   "g4f-pollinations",
@@ -247,6 +272,8 @@ export function providerAllowsOptionalApiKey(providerId: unknown): boolean {
 const BULK_API_KEY_EXCLUDED = new Set([
   "vertex",
   "vertex-partner",
+  "mlx-gemma",
+  "mlx-qwen",
   "ollama-local",
   "grok-web",
   "perplexity-web",
@@ -284,10 +311,27 @@ const _PROVIDER_SECTIONS = [
   SYSTEM_PROVIDERS,
 ] as const;
 
+let _validated = false;
+
+function ensureProvidersValidated() {
+  if (_validated) return;
+  validateProviders(NOAUTH_PROVIDERS, "NOAUTH_PROVIDERS");
+  validateProviders(OAUTH_PROVIDERS, "OAUTH_PROVIDERS");
+  validateProviders(APIKEY_PROVIDERS, "APIKEY_PROVIDERS");
+  validateProviders(WEB_COOKIE_PROVIDERS, "WEB_COOKIE_PROVIDERS");
+  validateProviders(LOCAL_PROVIDERS, "LOCAL_PROVIDERS");
+  validateProviders(SEARCH_PROVIDERS, "SEARCH_PROVIDERS");
+  validateProviders(AUDIO_ONLY_PROVIDERS, "AUDIO_ONLY_PROVIDERS");
+  validateProviders(UPSTREAM_PROXY_PROVIDERS, "UPSTREAM_PROXY_PROVIDERS");
+  validateProviders(CLOUD_AGENT_PROVIDERS, "CLOUD_AGENT_PROVIDERS");
+  _validated = true;
+}
+
 let _aiProviders: Record<string, any> | null = null;
 
 function getOrCreateAiProviders(): Record<string, any> {
   if (!_aiProviders) {
+    ensureProvidersValidated();
     _aiProviders = {};
     for (const section of _PROVIDER_SECTIONS) {
       Object.assign(_aiProviders, section);
@@ -359,18 +403,6 @@ export const AI_PROVIDERS = new Proxy({} as Record<string, any>, {
     return undefined;
   },
 });
-
-export type AiProviderId =
-  | keyof typeof NOAUTH_PROVIDERS
-  | keyof typeof OAUTH_PROVIDERS
-  | keyof typeof APIKEY_PROVIDERS
-  | keyof typeof WEB_COOKIE_PROVIDERS
-  | keyof typeof LOCAL_PROVIDERS
-  | keyof typeof SEARCH_PROVIDERS
-  | keyof typeof AUDIO_ONLY_PROVIDERS
-  | keyof typeof UPSTREAM_PROXY_PROVIDERS
-  | keyof typeof CLOUD_AGENT_PROVIDERS
-  | keyof typeof SYSTEM_PROVIDERS;
 
 export type AiProviderDefinition =
   | (typeof NOAUTH_PROVIDERS)[keyof typeof NOAUTH_PROVIDERS]
@@ -494,13 +526,23 @@ export const USAGE_SUPPORTED_PROVIDERS = [
   "grok-cli",
   // Firecrawl team credits (GET /v2/team/credit-usage)
   "firecrawl",
+  // Volcano Ark Plan subscriptions (agent-plan / coding-plan)
+  "volcengine-agent-plan",
+  "volcengine-coding-plan",
   // Command Code credits + 5h/weekly rolling windows
   "command-code",
   "conol-web",
   "cnl",
+  // Alibaba Coding Plan triple-window quota (#9603 UI gap — fetcher existed, list entry missing)
+  "bailian-coding-plan",
+  // Qwen Cloud / Model Studio personal Token Plan (cookie-authenticated console gateway)
+  "qwen-cloud-token-plan",
+  // AgentRouter (New-API) console balance quota (consoleApiKey + newApiUserId)
+  "agentrouter",
 ];
 
-// ── Zod validation at module load (Phase 7.2) ──
+// ── Zod validation, lazily on first AI_PROVIDERS access (perf: skips the walk
+// for processes that never touch AI_PROVIDERS, e.g. short-lived CLI commands) ──
 
 // Re-export the extracted data catalogs so external importers of providers.ts are unchanged.
 export {
@@ -515,15 +557,3 @@ export {
   CLOUD_AGENT_PROVIDERS,
   SYSTEM_PROVIDERS,
 };
-
-import { validateProviders } from "../validation/providerSchema";
-
-validateProviders(NOAUTH_PROVIDERS, "NOAUTH_PROVIDERS");
-validateProviders(OAUTH_PROVIDERS, "OAUTH_PROVIDERS");
-validateProviders(APIKEY_PROVIDERS, "APIKEY_PROVIDERS");
-validateProviders(WEB_COOKIE_PROVIDERS, "WEB_COOKIE_PROVIDERS");
-validateProviders(LOCAL_PROVIDERS, "LOCAL_PROVIDERS");
-validateProviders(SEARCH_PROVIDERS, "SEARCH_PROVIDERS");
-validateProviders(AUDIO_ONLY_PROVIDERS, "AUDIO_ONLY_PROVIDERS");
-validateProviders(UPSTREAM_PROXY_PROVIDERS, "UPSTREAM_PROXY_PROVIDERS");
-validateProviders(CLOUD_AGENT_PROVIDERS, "CLOUD_AGENT_PROVIDERS");

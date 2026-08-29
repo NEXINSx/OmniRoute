@@ -92,7 +92,7 @@ describe("tokenExtractionConfig", () => {
   });
 
   it("getExtractionConfig returns config for known providers", () => {
-    const providers = ["claude-web", "chatgpt-web", "gemini-web", "grok-web", "deepseek-web"];
+    const providers = ["claude-web", "perplexity-web", "gemini-web", "grok-web", "deepseek-web"];
     for (const id of providers) {
       const cfg = getExtractionConfig(id);
       assert.ok(cfg !== undefined, `getExtractionConfig("${id}") returned undefined`);
@@ -100,10 +100,21 @@ describe("tokenExtractionConfig", () => {
     }
   });
 
+  it("does not expose in-app extraction for retired common ChatGPT Web ids", () => {
+    assert.equal(getExtractionConfig("chatgpt-web"), undefined);
+    assert.equal(getExtractionConfig("cgpt-web"), undefined);
+  });
+
   it("captures Copilot's bearer authorization header instead of an unrelated cookie", () => {
     const cfg = getExtractionConfig("copilot-web");
     assert.deepEqual(cfg?.tokenSources, [{ type: "header", name: "Authorization" }]);
     assert.doesNotMatch(cfg?.instructions || "", /RPSCAuth/i);
+  });
+
+  it("extracts zai-web auth from localStorage rather than a cookie", () => {
+    const cfg = getExtractionConfig("zai-web");
+    assert.deepEqual(cfg?.tokenSources, [{ type: "localStorage", key: "token" }]);
+    assert.match(cfg?.instructions ?? "", /CAPTCHA/);
   });
 
   it("listExtractionConfigs returns all configs as an array", () => {
@@ -121,9 +132,13 @@ describe("tokenExtractionConfig", () => {
   });
 
   it("every provider ID matches the executor naming convention", () => {
+    // volcengine-console is exempt: it extracts a console session cookie for
+    // provider binding (volcenginePlanBinding), not a chat-web credential, so
+    // the "-web" suffix convention does not apply to it.
+    const exempt = new Set(["volcengine-console"]);
     for (const providerId of TOKEN_EXTRACTION_CONFIGS.keys()) {
       assert.ok(
-        providerId.endsWith("-web"),
+        providerId.endsWith("-web") || exempt.has(providerId),
         `Provider ID "${providerId}" should follow the "-web" naming convention`
       );
     }

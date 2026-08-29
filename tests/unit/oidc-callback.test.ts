@@ -32,7 +32,7 @@ let capturedCookies: Record<string, CapturedCookie> = {};
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   capturedCookies = {};
 }
@@ -61,7 +61,7 @@ test.afterEach(() => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   delete process.env.JWT_SECRET;
 });
 
@@ -484,4 +484,25 @@ test("OIDC callback rejects missing JWT_SECRET at mint time (server_misconfigure
     }
     globalThis.fetch = originalFetch;
   }
+});
+
+test("OIDC callback error redirect respects proxy headers (#10224)", async () => {
+  await setupFullOidcSettings();
+
+  // Omit code/state to force an immediate error redirect
+  // Use a bind-address style URL like when behind an internal proxy
+  const request = new Request("http://127.0.0.1:20128/api/auth/oidc/callback", {
+    headers: {
+      "x-forwarded-proto": "https",
+      host: "auth.pubg-sell.ir",
+    },
+  });
+
+  const response = await callbackRoute.GET(request);
+  assert.equal(response.status, 307);
+
+  const loc = response.headers.get("location") || "";
+  // Without the fix, this would be http://127.0.0.1:20128/login?oidc_error=missing_code
+  // With the fix, it correctly uses originEarly
+  assert.equal(loc, "https://auth.pubg-sell.ir/login?oidc_error=missing_code");
 });

@@ -60,13 +60,52 @@ jobs:
   build:
     name: Build (advisory)
     needs: changes
-    if: ${{ github.event_name != 'pull_request' || ((github.event.pull_request.draft == false || startsWith(github.head_ref, 'mergify/merge-queue/')) && needs.changes.outputs.code == 'true') }}
-    # Dynamic runner — same fork-safe rule as ci.yml / fast-gates.
-    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && fromJSON('["self-hosted","omni-release"]') || 'ubuntu-latest' }}
+    # FORK PRs ONLY. build.yml's `Fast Production Build` triggers on `push: branches: ["**"]`
+    # (#11946, 2026-08-29: build.yml is now workflow_dispatch-only — the hosted runner cannot
+    # build this tree in any profile, 8/8 recent fork PRs included — so own-origin PRs rely on
+    # ci.yml `Build` after merge to main and on nightly-release-green for release/**.)
+    # and runs `build:release` — a superset of this job — so for an own-origin branch this job
+    # was building the same tree twice. A fork contributor pushes to THEIR repo, so that push
+    # never fires here, and this is the only pre-merge build signal they get. Measured
+    # 2026-08-14: 72 of the last 100 PRs into release/** came from forks, so the fork case is
+    # the majority of the traffic, not the exception — this job earns its place, it just should
+    # not duplicate build.yml for the own-origin 28%.
+    if: ${{ github.event_name != 'pull_request' || ((github.event.pull_request.draft == false || startsWith(github.head_ref, 'mergify/merge-queue/')) && needs.changes.outputs.code == 'true' && github.event.pull_request.head.repo.full_name != github.repository) }}
+    # PINNED to hosted — this was the last job in THIS workflow still on the USE_VPS_RUNNER
+    # switch (ci.yml's Build, nightly-release-green and npm-publish keep it, so the variable
+    # stays meaningful), and with USE_VPS_RUNNER=true it produced NO signal at all here.
+    # Measured 2026-08-14 over the last 25
+    # quality.yml runs: not one Build (advisory) reached a conclusion. Every sample was either
+    # queued on the self-hosted pool (2 runners, `omniroute-113-6/7`, both permanently busy — one
+    # job sat queued 2h+ and was still unclaimed) or, when it did land, killed mid-build by this
+    # workflow's own `cancel-in-progress` concurrency. 6/6 sampled "failures" are exit 143 /
+    # "The runner has received a shutdown signal" at ~3.5 min into `npm run build` — zero OOM,
+    # zero build errors. So the job burned a scarce runner that the gates actually need while
+    # reporting a permanent red on every PR.
+    #
+    # Gap 19 left USE_VPS_RUNNER governing build-like jobs on the premise that "the build needs
+    # the .113's RAM". That premise no longer holds: `Fast Production Build` (build.yml) runs
+    # `build:release` — a SUPERSET of this job's `npm run build`, plus the CLI bundle — on plain
+    # ubuntu-latest and passed 24/25 of its last runs in ~15 min. What it has and this job did
+    # not is memory PROVISIONING: a 10 GB swapfile plus a 12 GB V8 heap. That matters because
+    # --max-old-space-size only bounds V8's JS heap, never Turbopack's native (Rust) allocation
+    # (#6409) — swap is what absorbs the native peak. Both are mirrored below.
+    runs-on: ubuntu-latest
     # #7307: advisory for the first week of release-PR runs; remove
     # continue-on-error after the production-build signal is stable.
     continue-on-error: true
     steps:
+      # Mirrors build.yml: Turbopack's native peak is not bounded by --max-old-space-size, so
+      # the hosted runner needs swap headroom before the build starts.
+      - name: Expand virtual memory (10 GB swap)
+        run: |
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile /swapfile
+          sudo fallocate -l 10G /mnt/swapfile || sudo dd if=/dev/zero of=/mnt/swapfile bs=1M count=10240
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -h
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
@@ -79,6 +118,10 @@ jobs:
       - run: npm run build
         env:
           OMNIROUTE_USE_TURBOPACK: "1"
+          # Same heap build.yml proves sufficient. build-next-isolated.mjs defaults to 8192 and
+          # honours OMNIROUTE_BUILD_MEMORY_MB; NODE_OPTIONS is set for parity with build.yml.
+          NODE_OPTIONS: "--max-old-space-size=12288"
+          OMNIROUTE_BUILD_MEMORY_MB: "12288"
       # No artifact upload here: the PR-to-release quality workflow has no
       # downstream package/e2e jobs that consume the Next.js build output.
 
@@ -97,7 +140,7 @@ jobs:
         with:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/npm-ci-retry
       # One walk of src/app/api for openapi-routes + docs-symbols (both still fail independently).
       - run: npm run check:api-docs-refs
       - name: Docs accuracy (fabricated-docs + i18n mirrors, strict)
@@ -141,7 +184,7 @@ jobs:
         with:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/npm-ci-retry
       - name: Restore ESLint file cache
         uses: actions/cache@v6
         with:
@@ -149,8 +192,11 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       # Security scanners — same hardened install as ci.yml quality-extended
       # (gh release download = authenticated, 5000 req/hr; curl to api.github.com
       # is rate-limited to 60/hr and silently no-ops when throttled). The blocking
@@ -229,11 +275,11 @@ jobs:
         run: |
           set -uo pipefail
           gates=(
-            provider-consistency fetch-targets deps file-size error-helper
+            provider-consistency provider-asset-provenance fetch-targets deps file-size error-helper
             migration-numbering public-creds db-rules known-symbols
             route-guard-membership test-discovery test-runner-api
             mutation-test-coverage any-budget:t11 build-scope pack-policy
-            complexity-ratchets
+            complexity-ratchets model-lifecycle
             cycles lockfile duplication dead-code type-coverage compression-budget
             # #8781: open-sse workspace typecheck gate — the workspace imports @/ which
             # escapes to src/ via undeclared path aliases. See check-open-sse-typecheck.mjs.
@@ -266,6 +312,15 @@ jobs:
           echo "::group::check:dashboard-typecheck"
           npm run check:dashboard-typecheck || failed+=("check:dashboard-typecheck")
           echo "::endgroup::"
+          # #10134: TS7 zero-new-diagnostics ratchet — folded into this non-fail-fast
+          # loop (never a separate blocking step) so an earlier red gate cannot abort
+          # the job and mask it (#8542 mechanism). PR-only: the base-relative
+          # comparison needs the PR base SHA (empty on workflow_dispatch).
+          if [ -n "${PR_BASE_SHA:-}" ]; then
+            echo "::group::check:ts7-diagnostics-ratchet"
+            npm run check:ts7-diagnostics-ratchet -- --base-ref "$PR_BASE_SHA" || failed+=("ts7-diagnostics-ratchet")
+            echo "::endgroup::"
+          fi
           if (( ${#failed[@]} )); then
             printf '::error::%d gate(s) failed: %s\n' "${#failed[@]}" "${failed[*]}"
             exit 1
@@ -275,13 +330,16 @@ jobs:
       # arrives in 7.1, so typescript-eslint / type-coverage / Stryker stay on 6.x
       # (the hybrid is the officially documented pattern). Isolated npx on purpose:
       # installing an alias package could collide node_modules/.bin/tsc with 6.x.
-      # Promote to the blocking gate after ~1 week of parity with the step above.
+      # The full result stays advisory while #8484 has a backlog. The blocking
+      # base-relative ratchet (folded into the non-fail-fast gates step above)
+      # rejects only diagnostics added by the PR, so existing release debt does
+      # not block unrelated work.
       - name: Typecheck (core) — TS7 native shadow (advisory)
         continue-on-error: true
         run: |
           RC=0
           START=$(date +%s)
-          npx -y -p typescript@7 tsc --pretty false -p tsconfig.typecheck-core.json || RC=$?
+          npm exec --yes --package=typescript@7.0.2 -- tsc --pretty false -p tsconfig.typecheck-core.json || RC=$?
           echo "[ts7-shadow] exit=$RC elapsed=$(( $(date +%s) - START ))s — the 6.x step above stays authoritative"
           exit $RC
       # TIA: build the impact map at runtime (gitignored, ~21MB) and run only the
@@ -378,7 +436,7 @@ jobs:
         with:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/npm-ci-retry
       # WS5.2/5.3: JUnit feeds Trunk Flaky Tests — the fast-path runs on EVERY PR,
       # which is where flaky-detection volume actually comes from (ci.yml's heavy
       # jobs only run on the release PR). Advisory upload, own-origin only.
@@ -408,6 +466,12 @@ jobs:
     # cache restore saturating the link), while the tests themselves tied, 2m54 vs 2m31. So
     # self-hosted is strictly worse here and there is nothing to configure.
     runs-on: ubuntu-latest
+    # A shard finishes in ~10 min. Without a ceiling a hung test process holds the PR for
+    # GitHub's 6 h default: on 2026-08-28 shard 1/4 sat 64 min without a line of output
+    # (twice, same spot — a timing race, gone on the third run) while the other three
+    # shards were long green. 30 min = 3x the normal wall-clock; a shard that needs more
+    # is a hang, not a slow run, and a fast red with a re-run beats a silent 6 h hold.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -424,7 +488,7 @@ jobs:
         with:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/npm-ci-retry
       # QW-d: fonte única — o mesmo npm script do CI pesado/local. Fecha dois drifts do
       # comando inline antigo: os dirs `memory` e `usage` estavam FORA do glob (testes
       # silenciosamente não rodavam no fast path) e o setupPolyfill não era importado.
@@ -464,7 +528,7 @@ jobs:
         with:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/npm-ci-retry
       - name: Restore ESLint file cache
         uses: actions/cache@v6
         with:
@@ -472,8 +536,11 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       - name: ESLint (baseline congelado — warning novo = vermelho)
         # lint:json writes the report; --max-warnings 0 keeps no-new-warnings policy.
         run: npm run lint:json -- --max-warnings 0
@@ -531,7 +598,7 @@ jobs:
         with:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/npm-ci-retry
       - name: CHANGELOG integrity (nenhum bullet da base pode sumir no merge-result)
         run: npm run check:changelog-integrity
       - name: Agent-skills generator sync (SKILL.md gerado ≡ catálogo)

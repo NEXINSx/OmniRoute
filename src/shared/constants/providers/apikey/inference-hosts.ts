@@ -127,7 +127,8 @@ export const APIKEY_PROVIDERS_INFERENCE = {
     textIcon: "SF",
     website: "https://cloud.siliconflow.com",
     hasFree: true,
-    freeNote: "$1 free credits plus permanently free models after identity verification",
+    freeNote:
+      "$1 free credits plus currently listed $0 models after identity verification; availability and limits may change",
   },
   hyperbolic: {
     id: "hyperbolic",
@@ -309,7 +310,7 @@ export const APIKEY_PROVIDERS_INFERENCE = {
       "One-time signup trial credits for decentralized GPU inference (no recurring free plan). No credit card required.",
     passthroughModels: true,
     authHint: "Get API key at monsterapi.ai",
-    isDeprecated: true,
+    deprecated: true,
     deprecationReason:
       "Monster API shuttered operations on 2026-06-30. Use alternative OpenAI-compatible providers.",
   },

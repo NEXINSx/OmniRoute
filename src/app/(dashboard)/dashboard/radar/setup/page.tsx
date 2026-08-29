@@ -8,6 +8,7 @@ import { Card } from "@/shared/components";
 import {
   firstProviderConnectionId,
   providerConnectionsRequestUrl,
+  providerSetupConnectionUrl,
   type RadarSetupConnection,
 } from "@/lib/radar/setupConnections";
 import type { RadarLocalizedText } from "@/lib/radar/feedSchema";
@@ -132,13 +133,13 @@ export default function RadarSetupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.valid === true) {
         setTestResult({ ok: true, message: t("testSuccess") });
       } else {
-        const data = await res.json().catch(() => null);
         setTestResult({
           ok: false,
-          message: data?.error?.message || t("testFailed"),
+          message: t("testFailed"),
         });
       }
     } catch {
@@ -236,14 +237,6 @@ export default function RadarSetupPage() {
             <Card>
               <div className="text-center py-8 text-text-muted">
                 <p>{t("noGuide")}</p>
-                <a
-                  href={`https://${provider}.com`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-violet-400 hover:underline mt-2 inline-block"
-                >
-                  {t("visitDocs")}
-                </a>
               </div>
             </Card>
           )}
@@ -276,7 +269,7 @@ export default function RadarSetupPage() {
               <h2 className="font-semibold">{t("addConnection")}</h2>
               <p className="text-sm text-text-muted">{t("addConnectionDescription")}</p>
               <Link
-                href={`/dashboard/providers?add=${encodeURIComponent(provider)}`}
+                href={providerSetupConnectionUrl(provider)}
                 className="text-violet-400 hover:underline text-sm"
               >
                 {t("addConnectionLink")}

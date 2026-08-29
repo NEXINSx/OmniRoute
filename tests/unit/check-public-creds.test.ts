@@ -67,6 +67,22 @@ test("allowlist freezes a literal by file:line:value key", () => {
   assert.deepEqual(findLiteralCreds(src, allow, "x.ts"), []);
 });
 
+test("allowlist preserves the local ZCode handshake client ID without weakening credential detection", () => {
+  const src = `${"\n".repeat(301)}clientId: \`omniroute-\${process.pid}\`,`;
+  assert.deepEqual(
+    findLiteralCreds(src, KNOWN_LITERAL_CREDS, "open-sse/executors/zcodeProtocol.ts"),
+    []
+  );
+  assert.equal(
+    findLiteralCreds(
+      src.replace("omniroute-", "upstream-client-"),
+      KNOWN_LITERAL_CREDS,
+      "open-sse/executors/zcodeProtocol.ts"
+    ).length,
+    1
+  );
+});
+
 test("a NEW literal is still flagged even with the real frozen allowlist", () => {
   const src = `clientIdDefault: "brand-new-leaked-client-id",`;
   const v = findLiteralCreds(src, KNOWN_LITERAL_CREDS, "x.ts");

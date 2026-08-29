@@ -62,6 +62,10 @@ const eslintConfig = [
       "no-implied-eval": "error",
       "no-new-func": "error",
       "no-restricted-imports": ["error", IMPORT_BOUNDARY_RESTRICTIONS],
+      // New rule shipped by the eslint-config-next bump (#10043); flags 6 pre-existing
+      // window.location.href navigations, several of which are deliberate full-page
+      // reloads (login/logout state reset). Off pending per-case review — issue #10292.
+      "@next/next/no-location-assign-relative-destination": "off",
     },
   },
   // G14: DB internals may use the compatibility barrel while it is decomposed; all
@@ -139,6 +143,31 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "error",
       "@next/next/no-assign-module-variable": "off",
       "react-hooks/rules-of-hooks": "off",
+    },
+  },
+  // Ratchet: bar NEW unused vars/args/catches outside the `_` escape hatch.
+  // Pre-existing violations are frozen via config/quality/eslint-suppressions.json
+  // (same pattern as #7879 toNumber); only genuinely NEW unused bindings fail
+  // lint. `args: "all"` (not `after-used`) so a leading unused param is never
+  // silently skipped, e.g. `function handle(req, _opts, next)` must flag `req`.
+  {
+    files: ["src/**/*.{ts,tsx,js,jsx}", "open-sse/**/*.ts", "tests/**/*.{ts,tsx,mjs}"],
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "all",
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
   // Global ignores — keep ESLint scoped to source files only

@@ -182,6 +182,22 @@ With Stacked:        10K-2.5K tokens sent     (78-95% eligible RTK+Caveman range
 
 ---
 
+## Output Styles
+
+Output styles inject a system prompt instruction to steer the model's writing style. They are defined in the output style catalog and support multiple languages and intensity levels (`lite`, `full`, `ultra`). 
+
+| Style | Description | Supported Languages | Levels |
+| --- | --- | --- | --- |
+| `terse-prose` | Drop filler/articles/hedging; keep technical substance exact. | `en`, `pt-BR`, `ja`, `id`, `vi` | `lite`, `full`, `ultra` |
+| `less-code` | YAGNI ladder: smallest working change, no unrequested abstractions. | `en`, `pt-BR`, `vi`, `ja`, `id` | `lite`, `full`, `ultra` |
+| `ponytail` | Lazy senior-dev discipline: climb the YAGNI ladder, fix root cause, smallest working diff. | `en`, `pt-BR`, `vi`, `ja`, `id` | `lite`, `full`, `ultra` |
+| `i-have-adhd` | Action-first output: next action leads, steps numbered, one concrete next step, no preamble. | `en`, `pt-BR`, `vi`, `ja`, `id` | `lite`, `full`, `ultra` |
+| `terse-cjk` | Classical-Chinese ultra-terse style (locale-gated to zh). | `zh` | `lite`, `full`, `ultra` |
+
+Each level appends a shared boundary clause ensuring that code blocks, URLs, file paths, commands, and identifiers remain verbatim.
+
+---
+
 ## Configuration
 
 ### Dashboard
@@ -199,7 +215,7 @@ In `Dashboard → Context & Cache → Compression Combos`, assign a compression 
 combo:
 
 ```txt
-Combo: "free-forever"
+Combo: "free-tier-fallback"
   Compression Combo: "coding-agent-stack"
   Pipeline: RTK -> Caveman
   Targets:
@@ -445,6 +461,60 @@ Caveman output mode is **opt-in** — set it via the combo config:
   }
 }
 ```
+
+### Output Styles (catalog)
+
+Caveman output mode above is the **legacy single-style path**. Phase 4 generalized it
+into a catalog of composable output styles: `OUTPUT_STYLE_CATALOG` in
+`open-sse/services/compression/outputStyles/catalog.ts`. Each style is a system-prompt
+instruction that makes the model itself produce cheaper output; styles can be enabled
+together and are injected in catalog order.
+
+| Style | `id` | What it does | Instruction languages |
+| --- | --- | --- | --- |
+| Terse prose | `terse-prose` | Drop filler/articles/hedging; keep technical substance exact. Same text as the legacy caveman output mode (referenced, not re-typed). | en, pt-BR, ja, id |
+| Less code | `less-code` | YAGNI ladder: smallest working change, no unrequested abstractions. | en only (backlog: [#10426](https://github.com/diegosouzapw/OmniRoute/issues/10426)) |
+| Ponytail (lazy senior dev) | `ponytail` | "The best code is the code never written": reuse > rewrite, root cause > symptom, shortest working diff. | en, pt-BR, vi, ja, id |
+| I have ADHD (action-first) | `i-have-adhd` | Action first (command/path/snippet before prose), numbered bounded steps, ONE concrete next step, no preamble/recap/closers. Adapted from [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) (MIT). | en, pt-BR, vi, ja, id |
+| Terse CJK (文言) | `terse-cjk` | Classical-Chinese ultra-terse style. | zh (locale-gated: only offered when the detected language is `zh`) |
+
+Every style ships three intensity levels — `lite`, `full`, `ultra` — and every level
+ends with the shared boundaries clause, which keeps code blocks, file paths, commands,
+error strings, URLs and identifiers verbatim.
+
+#### How injection works
+
+`applyOutputStyles()` (`open-sse/services/compression/outputStyles/apply.ts`) resolves
+the selection against the catalog (unknown ids and locale-mismatched styles are
+dropped, never an error), concatenates the selected instructions in catalog order,
+appends the boundaries clause **once**, and front-loads the result into the system
+prompt behind a single idempotency marker (`[OmniRoute Output Styles]`) — re-applying
+is a no-op. When the detected request language has a translation, the localized
+instruction is injected instead of English.
+
+#### How to enable
+
+In the dashboard: **Context → Settings → Compression** — one row per style with an
+on/off toggle and a level selector. Programmatically, the compression config persists
+the selection as:
+
+```json
+{
+  "outputStyles": [
+    { "id": "i-have-adhd", "level": "full" },
+    { "id": "less-code", "level": "lite" }
+  ]
+}
+```
+
+Back-compat: the legacy `outputMode: "caveman"` combo setting still works and maps to
+`terse-prose`, byte-identical to the old injection in all four legacy languages.
+
+The style × language matrix is pinned by
+`tests/unit/compression/output-styles-i18n-matrix.test.ts`: a new style cannot ship
+without at least a pt-BR translation (or an explicit tracked exception), and an
+existing style cannot silently lose a locale. To add a style, see
+[EXTENDING_COMPRESSION.md](./EXTENDING_COMPRESSION.md#adding-an-output-style).
 
 ### Tool Result Compression
 

@@ -343,6 +343,17 @@ export async function handlePipelineCombo({
     }
   }
 
+  // G6 (silent-stop fix): if the reflection loop burned its retry budget and the
+  // verdict is still "fail", the fall-through below returns a FAILED result
+  // indistinguishable from a first-attempt failure. Surface it loudly so the
+  // caller (and operator logs) can tell "retries exhausted" apart.
+  if (result.reflectVerdict === "fail" && reflectionCount > 0) {
+    log.warn(
+      "PIPELINE",
+      `Reflection retries exhausted (${reflectionCount}/${maxReflectionLoops}) — pipeline verdict still "fail", returning the original failed result`
+    );
+  }
+
   // ── Return result ─────────────────────────────────────────────────────────
   // Check if the last stage has a streaming Response
   const lastStage = result.stages[result.stages.length - 1];

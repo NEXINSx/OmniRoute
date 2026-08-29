@@ -1,5 +1,5 @@
 export { parseQuotaData } from "./quotaParsing";
-import { hasFixedQuotaOrder } from "./quotaParsing";
+import { hasFixedQuotaOrder, hasCanonicalWindowOrder, sortQuotasByWindow } from "./quotaParsing";
 
 const PROVIDER_PLAN_FALLBACKS = new Set([
   "claude code",
@@ -98,7 +98,7 @@ export function formatQuotaLabel(name: string) {
     return `Weekly ${toTitleCaseWords(weeklyModelMatch[1])}`;
   }
 
-  return trimmed;
+  return toTitleCaseWords(trimmed.replace(/_/g, " "));
 }
 
 /**
@@ -392,12 +392,21 @@ const STATUS_ORDER: Record<"critical" | "alert" | "ok", number> = {
 export function topQuotas(quotas: any[], n = 3, providerId?: string): any[] {
   const filtered = quotas.filter(Boolean);
 
-  // Providers with a deterministic fixed-window order (codex, glm family — see
-  // quotaParsing.ts's sortCodexOrder()/sortGlmOrder()) must keep the order
+  // Providers with a deterministic fixed-window order (Codex, GLM family,
+  // Kimi Coding — see quotaParsing.ts) must keep the order
   // parseQuotaData() already established rather than being re-sorted by
   // status/remaining-%, which would undo it (#6687's collapsed-card sibling, #7764).
   if (hasFixedQuotaOrder(providerId)) {
     return filtered.slice(0, n);
+  }
+
+  // #7764 residual: any OTHER provider reporting rolling time windows (claude,
+  // minimax, zai, command-code, ...) has an equally inherent session→weekly→
+  // monthly order. Re-sorting those by remaining % makes two accounts of the
+  // same provider render the bars in opposite positions. Detected from the
+  // quota keys, so a new provider needs no list update.
+  if (hasCanonicalWindowOrder(filtered)) {
+    return sortQuotasByWindow(filtered).slice(0, n);
   }
 
   return [...filtered]
@@ -496,7 +505,7 @@ export function collectHiddenQuotaModelIds(provider: string, payload: unknown): 
     if (!Array.isArray(entries)) return;
     for (const entry of entries) {
       const record = toRecord(entry);
-      if (record.isHidden !== true && record.isDeleted !== true) continue;
+      if (record.isHidden !== true) continue;
       if (typeof record.id === "string") addQuotaModelIdVariants(hidden, provider, record.id);
     }
   };
@@ -537,11 +546,10 @@ export function filterHiddenModelQuotas(
 
 // --- Per-user quota row visibility (upstream 9router#2371 port) ---------
 // Distinct from collectHiddenQuotaModelIds()/filterHiddenModelQuotas() above:
-// those hide rows for models the ADMIN marked isHidden/isDeleted in the model
-// catalog. These hide rows the OPERATOR clicked "hide" on for their own view
-// (persisted per-provider in settings.quotaVisibility), independent of model
-// catalog state — e.g. temporarily decluttering a quota card without editing
-// the catalog. Both mechanisms can apply to the same row.
+// those hide rows for models the ADMIN hid in the model catalog. These hide rows
+// the OPERATOR clicked "hide" on for their own view (persisted per-provider in
+// settings.quotaVisibility), independent of model catalog state — e.g.
+// temporarily decluttering a quota card without editing the catalog.
 
 /** Stable identity for a quota row: prefer modelKey (survives displayName i18n), fall back to name. */
 export function getQuotaVisibilityKey(quota: any): string {

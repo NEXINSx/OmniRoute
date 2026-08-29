@@ -318,7 +318,14 @@ function getTargetHost(req) {
   const host = String(req.headers.host || "")
     .split(":")[0]
     .toLowerCase();
-  return TARGET_HOSTS.has(host) ? host : "daily-cloudcode-pa.sandbox.googleapis.com";
+  // #10479: the non-TARGET_HOSTS branch used to hardcode a fallback host — in
+  // the original Antigravity DNS-spoof flow, req.headers.host is always a
+  // TARGET_HOSTS member, so it was dead code. The passthrough() call path
+  // added for transparent-redirect/HTTP-proxy clients can reach ANY internet
+  // host, so the real requested Host header must always be forwarded, never
+  // a hardcoded default (which silently misrouted every non-TARGET_HOSTS
+  // request to an unrelated backend).
+  return host;
 }
 
 async function resolveTargetIP(targetHost) {

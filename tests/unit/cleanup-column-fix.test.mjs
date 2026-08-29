@@ -67,16 +67,19 @@ test("cleanup: has background scheduler (startCleanupScheduler)", () => {
   );
 });
 
-test("cleanup: scheduler is wired into server-init.ts", () => {
-  const serverInitPath = path.resolve(import.meta.dirname, "../../src/server-init.ts");
-  const serverInit = fs.readFileSync(serverInitPath, "utf-8");
+test("cleanup: scheduler is wired into instrumentation-node.ts", () => {
+  const instrumentationPath = path.resolve(
+    import.meta.dirname,
+    "../../src/instrumentation-node.ts"
+  );
+  const instrumentation = fs.readFileSync(instrumentationPath, "utf-8");
   assert.ok(
-    serverInit.includes('import { startCleanupScheduler } from "./lib/db/cleanup"'),
-    "server-init.ts must import startCleanupScheduler"
+    instrumentation.includes("startCleanupScheduler"),
+    "instrumentation-node.ts must import startCleanupScheduler"
   );
   assert.ok(
-    serverInit.includes("startCleanupScheduler()"),
-    "server-init.ts must call startCleanupScheduler() at startup"
+    instrumentation.includes("startCleanupScheduler()"),
+    "instrumentation-node.ts must call startCleanupScheduler() at startup"
   );
 });
 

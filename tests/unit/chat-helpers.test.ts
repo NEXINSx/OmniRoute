@@ -28,7 +28,7 @@ const { setTlsClientForTest } = await import("../../open-sse/utils/proxyFetch.ts
 async function resetStorage() {
   resetAllCircuitBreakers();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -51,7 +51,7 @@ test.beforeEach(async () => {
 
 test.after(async () => {
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("resolveModelOrError resolves built-in auto catalog ids without persisted combo rows", async () => {
@@ -164,11 +164,15 @@ test("resolveModelOrError routes Codex native compact gpt-5.5 requests to Codex"
 });
 
 test("resolveModelOrError routes bare gpt-5.5 Responses requests to Codex regardless of client user-agent", async () => {
-  // #9275: gpt-5.5 is now in CODEX_NATIVE_UNPREFIXED_MODELS — bare-id requests
-  // always route to codex, even from a non-Codex-CLI client, so the Codex CLI
-  // default is honored deterministically instead of racing other providers
-  // that also catalog the id. Prefix the model id (e.g. openai/gpt-5.5) to opt
-  // into a different provider.
+  // #9275: gpt-5.5 is in CODEX_NATIVE_UNPREFIXED_MODELS — bare-id requests
+  // route to codex even from a non-Codex-CLI client, so the Codex CLI default
+  // is honored deterministically instead of racing other providers that also
+  // catalog the id. #9447 bounded that precedence: it only PREEMPTS another
+  // provider when a codex connection is actually ACTIVE, so this case seeds
+  // one first. Prefix the model id (e.g. openai/gpt-5.5) to opt into a
+  // different provider.
+  await seedConnection("codex");
+
   const result = await resolveModelOrError(
     "gpt-5.5",
     { model: "gpt-5.5", input: "hello" },
@@ -195,12 +199,12 @@ test("resolveModelOrError routes bare gpt-5.5 to Codex medium when Codex is the 
   assert.equal(result.targetFormat, "openai-responses");
 });
 
-test("resolveModelOrError routes bare gpt-5.5 to Codex even when OpenAI is the only active account", async () => {
-  // #9275: the codex-first default for gpt-5.5 is unconditional — it does not
-  // fall back to whichever OTHER provider happens to be active. If codex has
-  // no active connection, execution surfaces a "No active credentials" error
-  // with candidate-prefix hints (see handleNoCredentials, #9275) rather than
-  // silently routing to openai here.
+test("resolveModelOrError keeps bare gpt-5.5 on OpenAI when OpenAI is the only active account", async () => {
+  // #9447 bounded the #9275 codex-first default: the Codex-native preference
+  // may only PREEMPT another provider when a codex connection is ACTIVE. An
+  // OpenAI-only install must not have bare gpt-5.5 sent to codex only to fail
+  // with "no active credentials for provider: codex" on a model OpenAI
+  // serves — it routes to the provider that can actually serve it.
   await seedConnection("openai");
 
   const result = await resolveModelOrError(
@@ -210,7 +214,7 @@ test("resolveModelOrError routes bare gpt-5.5 to Codex even when OpenAI is the o
     { "user-agent": "OpenAI/Node" }
   );
 
-  assert.equal(result.provider, "codex");
+  assert.equal(result.provider, "openai");
   assert.equal(result.model, "gpt-5.5");
 });
 
@@ -304,7 +308,18 @@ test("handleNoCredentials reports missing provider credentials and exhausted acc
   // open-sse/services/accountFallback.ts:1593-1599) so the next combo target is
   // tried. We surface "no active credentials" as 404 so combo can skip past a
   // disabled-credentials provider instead of failing the whole request.
-  const missing = handleNoCredentials(null, null, "openai", "gpt-4o-mini", null, null);
+  // In combo routing the no-credentials branch must stay 404 NOT_FOUND so the
+  // combo target loop can fall through to the next target. Pass isCombo=true.
+  const missing = handleNoCredentials(
+    null,
+    null,
+    "openai",
+    "gpt-4o-mini",
+    null,
+    null,
+    undefined,
+    true
+  );
   const exhausted = handleNoCredentials(
     null,
     "conn_123",
@@ -321,6 +336,65 @@ test("handleNoCredentials reports missing provider credentials and exhausted acc
   assert.match(missingJson.error.message, /No active credentials for provider: openai/);
   assert.equal(exhausted.status, 500);
   assert.match(exhaustedJson.error.message, /Primary account failed/);
+});
+
+test("handleNoCredentials remaps leaked 404 to 401/503 for single-model requests", async () => {
+  // Issue #2: a direct (non-combo) API client must not receive a misleading 404
+  // "No active credentials" error — remap to an explicit auth/credential status.
+  const forKnownProvider = handleNoCredentials(
+    null,
+    null,
+    "byNara",
+    "claude-sonnet-4.6",
+    null,
+    null,
+    undefined,
+    /* isCombo */ false
+  );
+  assert.equal(forKnownProvider.status, 401);
+  const knownJson = (await forKnownProvider.json()) as { error?: { message?: string } };
+  assert.match(knownJson.error?.message ?? "", /No active credentials for provider: byNara/);
+
+  const forUnknownProvider = handleNoCredentials(
+    null,
+    null,
+    "",
+    "gpt-4o-mini",
+    null,
+    null,
+    undefined,
+    /* isCombo */ false
+  );
+  assert.equal(forUnknownProvider.status, 503);
+});
+
+test("handleNoCredentials still leaks 404 (combo fall-through) only when combo", async () => {
+  // Regression guard: the 404 is intentionally preserved for combo routing so it
+  // can skip a disabled-credentials leg. Explicitly assert isCombo=true keeps 404
+  // and isCombo=false does not. (Issue #2)
+  const combo = handleNoCredentials(
+    null,
+    null,
+    "kiro",
+    "claude-opus-5",
+    null,
+    null,
+    undefined,
+    true
+  );
+  assert.equal(combo.status, 404);
+
+  const single = handleNoCredentials(
+    null,
+    null,
+    "byNara",
+    "claude-opus-5",
+    null,
+    null,
+    undefined,
+    false
+  );
+  assert.notEqual(single.status, 404);
 });
 
 test("handleNoCredentials returns Retry-After when every account is rate limited", async () => {
@@ -408,6 +482,20 @@ test("handleNoCredentials maps allExpired status='expired' to the 'authenticatio
 
   assert.equal(response.status, 401);
   assert.match(json.error.message, /3 connection\(s\) authentication expired/);
+});
+
+test("handleNoCredentials preserves lastError over allExpired after a failed attempt", async () => {
+  const response = handleNoCredentials(
+    { allExpired: true, expiredCount: 1, expiredStatus: "credits_exhausted" },
+    null,
+    "openai",
+    "gpt-4.1",
+    "quota exceeded",
+    402
+  );
+  const json = (await response.json()) as { error?: { message?: string } };
+  assert.equal(response.status, 402);
+  assert.match(json.error.message, /quota exceeded/i);
 });
 
 test("safeResolveProxy returns the direct route when no proxy config is present", async () => {
@@ -502,7 +590,7 @@ test("executeChatWithBreaker preserves account TLS scope when a proxy bypasses t
           ],
           usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
         }),
-        { headers: { "content-type": "application/json" } },
+        { headers: { "content-type": "application/json" } }
       );
     },
   });

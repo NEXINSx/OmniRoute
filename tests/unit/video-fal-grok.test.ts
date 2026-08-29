@@ -114,7 +114,9 @@ test("handleVideoGeneration rejects malformed Fal video URL payloads", async () 
 
     assert.equal(result.success, false);
     assert.equal(result.status, 502);
-    assert.match(result.error, /no video URL/);
+    // #9982 folded the video path into the provider-neutral mediaGeneration/fal.ts,
+    // whose wording is media-kind agnostic ("no media URL").
+    assert.match(result.error, /no media URL/);
   } finally {
     globalThis.fetch = originalFetch;
   }

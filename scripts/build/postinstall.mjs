@@ -15,7 +15,9 @@
  * Modules repaired:
  *   - better-sqlite3 (SQLite bindings)
  *   - wreq-js (TLS client for OAuth providers)
- *   - tls-client-node (TLS client for chatgpt-web/claude-web/grok-web/lmarena/perplexity-web)
+ *   - tls-client-node (TLS client for claude-web/grok-web/lmarena/perplexity-web)
+ *   - sql.js (WASM SQLite fallback runtime)
+ *   - node-machine-id (local CLI machine-token server runtime)
  *
  * Fixes: https://github.com/diegosouzapw/OmniRoute/issues/129
  * Fixes: https://github.com/diegosouzapw/OmniRoute/issues/321
@@ -33,6 +35,7 @@ import {
   readdirSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -45,6 +48,7 @@ import { fixPlaywrightAndroid } from "./fixPlaywrightAndroid.mjs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = join(__dirname, "..", "..");
+const requireFromPackage = createRequire(join(ROOT, "package.json"));
 
 /**
  * Patch node-gyp's common.gypi to include the android_ndk_path variable.
@@ -437,12 +441,33 @@ async function verifyDevNativeModules() {
   }
 }
 
+async function ensureStandaloneRuntimePackages() {
+  for (const packageName of ["sql.js", "node-machine-id"]) {
+    let source;
+    try {
+      source = dirname(dirname(requireFromPackage.resolve(packageName)));
+    } catch {
+      console.warn(`  ⚠️  ${packageName} could not be resolved from the npm install.`);
+      continue;
+    }
+    const destination = join(ROOT, "dist", "node_modules", packageName);
+    try {
+      mkdirSync(dirname(destination), { recursive: true });
+      cpSync(source, destination, { recursive: true, force: true });
+      console.log(`  ✅ ${packageName} copied to standalone dist/node_modules.`);
+    } catch (err) {
+      console.warn(`  ⚠️  Could not copy ${packageName}: ${err.message}`);
+    }
+  }
+}
+
 await verifyDevNativeModules();
 await fixBetterSqliteBinary();
 await fixWreqJsBinary();
 await fixTlsClientNodeBinary({ rootDir: ROOT });
 await fixPlaywrightAndroid({ rootDir: ROOT });
 await ensureSwcHelpers();
+await ensureStandaloneRuntimePackages();
 await ensureLlmlinguaOptionals();
 await syncProjectEnv();
 

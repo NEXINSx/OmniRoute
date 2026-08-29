@@ -263,6 +263,26 @@ describe("stacked Lite precedence (global config vs explicit step)", () => {
     assert.ok(!result.stats?.techniquesUsed.includes("tool-compress"));
   });
 
+  it("non-boolean step compressToolResults falls through to global config", () => {
+    // stepConfig is Record<string, unknown> — a malformed (non-boolean) step value must
+    // not override; it falls through to global config.lite (false → no truncation).
+    const result = applyCompression(
+      { messages: [{ role: "tool", content: toolContent }] },
+      "stacked",
+      {
+        config: {
+          ...baseConfig,
+          lite: { compressToolResults: false },
+          stackedPipeline: [{ engine: "lite", config: { compressToolResults: "yes" } }],
+        },
+      }
+    );
+    const messages = result.body.messages as Array<{ content: string }>;
+    assert.equal(messages[0].content, toolContent.trimEnd());
+    assert.doesNotMatch(messages[0].content, /\[truncated\]/);
+    assert.ok(!result.stats?.techniquesUsed.includes("tool-compress"));
+  });
+
   it("stacked default (no lite config) keeps truncation enabled", () => {
     const result = applyCompression(
       { messages: [{ role: "tool", content: toolContent }] },

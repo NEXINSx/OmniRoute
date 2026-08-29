@@ -1046,9 +1046,11 @@ import {
                 className="w-full px-3 py-2 rounded bg-bg-subtle border border-border"
                 value={form.status}
                 onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
+                data-testid="proxy-registry-status-select"
               >
                 <option value="active">{t("statusActive")}</option>
                 <option value="inactive">{t("statusInactive")}</option>
+                {form.status === "dead" && <option value="dead">dead</option>}
               </select>
             </div>
           </div>
@@ -1281,7 +1283,11 @@ import {
                   >
                     <option value="">{t("poolSelectProxy")}</option>
                     {items
-                      .filter((item) => !poolMembers.includes(item.id))
+                      .filter(
+                        (item) =>
+                          !poolMembers.includes(item.id) &&
+                          (item.status ?? "").toLowerCase() !== "dead"
+                      )
                       .map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name} ({item.type}://{item.host}:{item.port})

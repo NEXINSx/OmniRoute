@@ -1,1 +1,0 @@
-- Reconcile the final v3.8.50 bundle-size and file-size ratchets against the measured release tip, preserving exact direction-down ceilings and their source attribution.

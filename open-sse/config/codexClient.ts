@@ -1,9 +1,13 @@
 import {
+  CODEX_CLI_RS_ORIGINATOR,
   DEFAULT_CODEX_CLIENT_VERSION,
   getCodexCliRsHeaders as buildCodexCliRsHeaders,
 } from "@/shared/constants/codexClient";
 
-export { DEFAULT_CODEX_CLIENT_VERSION } from "@/shared/constants/codexClient";
+export {
+  DEFAULT_CODEX_CLIENT_VERSION,
+  CODEX_CLI_RS_ORIGINATOR,
+} from "@/shared/constants/codexClient";
 const DEFAULT_CODEX_USER_AGENT_PLATFORM = "Windows 10.0.26200";
 const DEFAULT_CODEX_USER_AGENT_ARCH = "x64";
 const CODEX_VERSION_OVERRIDE_ENV = "CODEX_CLIENT_VERSION";
@@ -49,6 +53,35 @@ export function getCodexDefaultHeaders(): Record<string, string> {
 
 export function getCodexCliRsHeaders(): Record<string, string> {
   return buildCodexCliRsHeaders(getCodexClientVersion());
+}
+
+/**
+ * Identity for the credential face (auth.openai.com: token exchange / refresh).
+ * The real Codex client sends only `originator` + `User-Agent` on that face
+ * (codex-rs login/default_client.rs default_headers()); the `Version` header
+ * gate exists only on the chatgpt.com/backend-api inference face, so it is
+ * deliberately omitted here. Mirrors sub2api v0.1.178
+ * ApplyCodexCanonicalAuthIdentity.
+ */
+export function getCodexAuthIdentityHeaders(): Record<string, string> {
+  return {
+    "User-Agent": getCodexUserAgent(),
+    originator: CODEX_CLI_RS_ORIGINATOR,
+  };
+}
+
+/**
+ * Canonical Codex CLI identity for server-initiated calls against the
+ * chatgpt.com/backend-api face that are not tied to one end-client request
+ * (usage / quota / models manifest / reset-credits). Same UA/version chain as
+ * inference so these calls do not show up upstream as anonymous half-identities.
+ */
+export function getCodexBackendIdentityHeaders(): Record<string, string> {
+  return {
+    "User-Agent": getCodexUserAgent(),
+    originator: CODEX_CLI_RS_ORIGINATOR,
+    Version: getCodexClientVersion(),
+  };
 }
 
 export function normalizeCodexSessionId(value: unknown): string | null {

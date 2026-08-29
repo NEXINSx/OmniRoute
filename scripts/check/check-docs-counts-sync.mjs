@@ -18,9 +18,13 @@
 // Exits 0 on success, 1 on STRICT drift (or any drift with --strict).
 // Run: node scripts/check/check-docs-counts-sync.mjs
 //
-// NOTE: the provider check trusts PROVIDER_REFERENCE.md as the canonical total. If a
-// provider is added to the code but the reference is not regenerated, this guard will
-// not catch it — regenerate with `npm run gen:provider-reference` before relying on it.
+// NOTE: PROVIDER_REFERENCE.md is no longer blindly trusted — a STRICT check compares
+// the doc's `Total providers` against the live provider modules (the same collections
+// the generator reads), so a hand-stale doc is a red, not a silently propagated total.
+// Fix by running `npm run gen:provider-reference`. Additional STRICT coverage added in
+// the 2026-08-12 hardening: llm.txt + package.json description (providers), migration
+// count (README/AGENTS/llm.txt), and canonical numbers inside the README SVG diagrams
+// (providers / MCP tools / routing strategies / free-tier pools).
 
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -62,6 +66,25 @@ function countRoutingStrategies() {
   return (m[1].match(/"[^"]+"/g) || []).length;
 }
 
+// PURE: count the factors the Auto-Combo scorer actually declares.
+// The engine is described as "N-factor" in prose, in code comments and in the
+// strategy descriptions; N is `DEFAULT_WEIGHTS`, and nothing else. Two of those
+// factors sit at weight 0 by default — they are still computed and consumed
+// (`cacheAffinity > 0` gates prompt-cache dedup), so they count as declared.
+export function parseScoringFactors(sourceText) {
+  if (!sourceText) return 0;
+  const m = sourceText.match(/DEFAULT_WEIGHTS[^=]*=\s*\{([\s\S]*?)\n\};/);
+  if (!m) return 0;
+  const body = m[1].replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  return (body.match(/^\s*([A-Za-z_$][\w$]*)\s*:/gm) || []).length;
+}
+
+function countScoringFactors() {
+  const file = path.join(ROOT, "open-sse", "services", "autoCombo", "scoring.ts");
+  if (!fs.existsSync(file)) return 0;
+  return parseScoringFactors(fs.readFileSync(file, "utf8"));
+}
+
 // PURE: parse the canonical provider total out of the auto-generated catalog text.
 export function parseProviderTotal(referenceText) {
   if (!referenceText) return 0;
@@ -74,6 +97,13 @@ export function readProviderTotal() {
   const abs = path.join(ROOT, "docs", "reference", "PROVIDER_REFERENCE.md");
   if (!fs.existsSync(abs)) return 0;
   return parseProviderTotal(fs.readFileSync(abs, "utf8"));
+}
+
+// STRICT: number of SQL migration files shipped with the app.
+export function countMigrations() {
+  const abs = path.join(ROOT, "src", "lib", "db", "migrations");
+  if (!fs.existsSync(abs)) return 0;
+  return fs.readdirSync(abs).filter((f) => f.endsWith(".sql")).length;
 }
 
 // STRICT: canonical i18n locale count, read from the shared config.
@@ -147,18 +177,33 @@ function readCodeFacts() {
     'import {pluginTools} from "./open-sse/mcp-server/tools/pluginTools.ts";',
     'import {notionTools} from "./open-sse/mcp-server/tools/notionTools.ts";',
     'import {obsidianTools} from "./open-sse/mcp-server/tools/obsidianTools.ts";',
+    'import {localCorpusTools} from "./open-sse/mcp-server/tools/localCorpusTools.ts";',
     'import {compressionTools} from "./open-sse/mcp-server/tools/compressionTools.ts";',
+    // Live provider total — the SAME collections gen-provider-reference.ts unions, so the
+    // doc-vs-live check below cannot drift from the generator's definition of "provider".
+    'import * as PROV from "./src/shared/constants/providers.ts";',
+    "const provCols=[PROV.FREE_PROVIDERS,PROV.NOAUTH_PROVIDERS,PROV.OAUTH_PROVIDERS,",
+    "PROV.WEB_COOKIE_PROVIDERS,PROV.APIKEY_PROVIDERS,PROV.LOCAL_PROVIDERS,PROV.SEARCH_PROVIDERS,",
+    "PROV.AUDIO_ONLY_PROVIDERS,PROV.UPSTREAM_PROXY_PROVIDERS,PROV.CLOUD_AGENT_PROVIDERS,",
+    "PROV.SYSTEM_PROVIDERS];",
+    "const pids=new Set();",
+    "for(const c of provCols)for(const p of Object.values(c||{}))if(p&&p.id)pids.add(p.id);",
     "const cols={MCP_TOOLS,memoryTools,skillTools,agentSkillTools,githubSkillTools,poolTools,",
-    "gamificationTools,pluginTools,notionTools,obsidianTools,compressionTools};",
+    "gamificationTools,pluginTools,notionTools,obsidianTools,localCorpusTools,compressionTools};",
     "const sc=new Set();",
     "for(const col of Object.values(cols))for(const t of Object.values(col))",
     "for(const x of (t?.scopes||[]))sc.add(x);",
     "const t=computeFreeModelTotals();const cli=Object.values(CLI_TOOLS);",
     "const by=(c)=>cli.filter(x=>x.category===c).length;",
+    // "Free forever" = every provider whose free access renews or needs no key at all.
+    // one-time-initial (signup credits) and discontinued pools are excluded on purpose.
+    "const FOREVER=new Set(['recurring-monthly','recurring-daily','recurring-uncapped',",
+    "'recurring-credit','keyless']);",
+    "const ff=new Set();for(const m of t.perModel)if(FOREVER.has(m.freeType))ff.add(m.provider);",
     'console.log("@@"+JSON.stringify({freeSteady:t.steadyRecurringTokens,',
     "freeFirst:t.firstMonthRealisticTokens,freePools:t.poolCount,engines:ENGINE_IDS.length,",
     "cliTotal:cli.length,cliCode:by('code'),cliAgent:by('agent'),",
-    "mcpTools:countUniqueMcpTools(cols),mcpScopes:sc.size}));",
+    "mcpTools:countUniqueMcpTools(cols),mcpScopes:sc.size,providers:pids.size,freeForever:ff.size}));",
   ].join("");
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "docs-counts-"));
   try {
@@ -252,6 +297,82 @@ export function makeNumberClaimValidator(expected, opts) {
   };
 }
 
+// --- v3.8.50 hardening validators --------------------------------------------
+// PURE: doc total must equal the live provider-module total (closes the falso-verde
+// found in the 2026-08-12 audit: the doc sat hand-stale at 291 while the modules
+// defined 338, and every downstream check inherited the stale total).
+export function makeProviderReferenceValidator(expected) {
+  return (content) => {
+    const total = parseProviderTotal(content);
+    if (!total) return { ok: false, detail: "no `Total providers: **N**` marker found" };
+    if (total === expected)
+      return { ok: true, detail: `doc total ${total} matches the live provider modules` };
+    return {
+      ok: false,
+      detail:
+        `doc total ${total} is stale — the live provider modules define ${expected} ` +
+        `(run npm run gen:provider-reference)`,
+    };
+  };
+}
+
+// PURE: the npm package description must carry the live provider count.
+export function makePackageDescriptionValidator(expected) {
+  return (content) => {
+    let desc = "";
+    try {
+      desc = String(JSON.parse(content).description || "");
+    } catch {
+      return { ok: false, detail: "package.json could not be parsed" };
+    }
+    if (desc.includes(String(expected)))
+      return { ok: true, detail: `description mentions the live provider count ${expected}` };
+    return {
+      ok: false,
+      detail: `description does not mention the live provider count ${expected}: "${desc}"`,
+    };
+  };
+}
+
+// PURE: sweep an SVG's text/aria content for the canonical numbers. Patterns are
+// deliberately narrow — they anchor on the surrounding words so path coordinates,
+// width/font-size attributes and small unrelated counts ("15 providers ToS-flagged",
+// "100+ providers") can never register as claims. Providers require 3+ digits for the
+// same reason.
+const SVG_CANONICAL_PATTERNS = [
+  { key: "providers", what: "providers", pattern: /(\d{3,4}) (?:AI )?providers\b/g },
+  { key: "mcpTools", what: "MCP tools", pattern: /MCP (?:server with |with |\()(\d+)/g },
+  { key: "strategies", what: "routing strategies", pattern: /(\d+) routing strategies\b/g },
+  { key: "pools", what: "free-tier pools", pattern: /(\d+) provider pools\b/g },
+];
+
+export function checkSvgCanonicalNumbers(content, expected) {
+  const stale = [];
+  let claims = 0;
+  for (const { key, what, pattern } of SVG_CANONICAL_PATTERNS) {
+    if (expected[key] == null) continue;
+    for (const m of content.matchAll(pattern)) {
+      claims++;
+      const value = Number(m[1]);
+      if (value !== expected[key]) stale.push(`"${m[0]}" (${what} — code has ${expected[key]})`);
+    }
+  }
+  if (!claims) return { ok: true, detail: "no canonical-number claims in this SVG" };
+  if (!stale.length) return { ok: true, detail: `${claims} canonical claim(s) match the code` };
+  return { ok: false, detail: `stale: ${[...new Set(stale)].join(", ")}` };
+}
+
+// The README-embedded diagrams that historically rotted because no gate read them
+// (the alt-text in README.md is checked, the SVG text nodes never were).
+const SVG_DIAGRAM_FILES = [
+  "docs/diagrams/readme-hero.svg",
+  "docs/diagrams/free-tier-budget.svg",
+  "docs/diagrams/promise-pillars.svg",
+  "docs/diagrams/comparison-table.svg",
+  "docs/diagrams/cli-terminal.svg",
+  "docs/diagrams/tier-cascade.svg",
+];
+
 export function buildChecks() {
   return [
     {
@@ -259,7 +380,26 @@ export function buildChecks() {
       actual: readProviderTotal(),
       docKey: "providers",
       strict: true,
-      files: ["README.md", "AGENTS.md"],
+      files: ["README.md", "AGENTS.md", "llm.txt"],
+    },
+    {
+      label: "Provider count (package.json description)",
+      actual: readProviderTotal(),
+      docKey: "providers",
+      strict: true,
+      files: ["package.json"],
+      validate: makePackageDescriptionValidator(readProviderTotal()),
+    },
+    {
+      label: "DB migrations count",
+      actual: countMigrations(),
+      docKey: "migrations",
+      strict: true,
+      files: ["README.md", "AGENTS.md", "llm.txt"],
+      validate: makeNumberClaimValidator(countMigrations(), {
+        what: "migrations",
+        pattern: /(\d+)\+? migrations?\b/gi,
+      }),
     },
     {
       label: "i18n locales count",
@@ -290,6 +430,30 @@ export function buildChecks() {
       });
       return [
         {
+          label: "Provider reference total (doc vs live modules)",
+          actual: f.providers,
+          docKey: "providers (live)",
+          strict: true,
+          files: ["docs/reference/PROVIDER_REFERENCE.md"],
+          validate: makeProviderReferenceValidator(f.providers),
+        },
+        {
+          label: "SVG canonical numbers (live code)",
+          actual:
+            `${f.providers} providers / ${f.mcpTools} MCP tools / ` +
+            `${countRoutingStrategies()} strategies / ${f.freePools} pools`,
+          docKey: "SVG canonical numbers",
+          strict: true,
+          files: SVG_DIAGRAM_FILES,
+          validate: (content) =>
+            checkSvgCanonicalNumbers(content, {
+              providers: f.providers,
+              mcpTools: f.mcpTools,
+              strategies: countRoutingStrategies(),
+              pools: f.freePools,
+            }),
+        },
+        {
           label: "Free-tier headline (live catalog)",
           actual: `~${(f.freeSteady / 1e9).toFixed(2)}B steady / ${f.freePools} pools`,
           docKey: "free-tier headline",
@@ -313,7 +477,7 @@ export function buildChecks() {
             // total ("33 tools (25 CLI Code's …)") are not the MCP aggregate
             // per-module rows read "… tool definitions (N tools" / "… management tools
             // (N tools" — the word tool(s)/definitions sits right before the paren. The
-            // aggregate ("MCP Server (104 tools", "all 104 tools") never does.
+            // aggregate ("MCP Server (109 tools", "all 109 tools") never does.
             skipBefore: /(tools?|definitions?)\s*\(\s*$/i,
             skipAfter: /^\s*\(\d+ CLI/,
           },
@@ -321,6 +485,10 @@ export function buildChecks() {
         ),
         claim(f.mcpScopes, "MCP scopes", { pattern: /(\d+) scopes/gi }, ["README.md", "AGENTS.md"]),
         claim(f.cliTotal, "CLI tools", { pattern: /(\d+) tools(?=\s*\(\d+ CLI)/gi }, ["README.md"]),
+        claim(f.freeForever, "free-forever providers", { pattern: /(\d+) free forever/gi }, [
+          "README.md",
+          "docs/diagrams/promise-pillars.svg",
+        ]),
       ];
     })(),
     {
@@ -329,6 +497,36 @@ export function buildChecks() {
       docKey: "executors",
       strict: false,
       files: ["docs/architecture/ARCHITECTURE.md", "docs/architecture/CODEBASE_DOCUMENTATION.md"],
+    },
+    {
+      // The Auto-Combo engine is advertised as "N-factor" in a dozen places, in
+      // prose and in code comments alike, and N had drifted to five different
+      // values (6, 9, 12, 13, 14) against a code that declares 15. The number
+      // now comes from `DEFAULT_WEIGHTS`; adding a factor without touching the
+      // prose fails here. `CHANGELOG.md` is deliberately out of scope: its old
+      // entries record what was true when they were written.
+      label: "Auto-Combo scoring factors count",
+      actual: countScoringFactors(),
+      docKey: "scoring factors",
+      strict: true,
+      files: [
+        "README.md",
+        "AGENTS.md",
+        "docs/routing/AUTO-COMBO.md",
+        "docs/guides/TIERS.md",
+        "docs/guides/FEATURES.md",
+        "docs/guides/FREE_PROVIDER_RANKINGS.md",
+        "docs/diagrams/strategies-grid.svg",
+        "docs/diagrams/auto-combo-12factor.mmd",
+        "open-sse/services/autoCombo/routerStrategy.ts",
+        "open-sse/services/taskAwareRouter.ts",
+        "tests/unit/lkgp-enabled-context-11181.test.ts",
+        "tests/integration/combo-matrix/auto.test.ts",
+      ],
+      validate: makeNumberClaimValidator(countScoringFactors(), {
+        what: "scoring factors",
+        pattern: /(\d+)[- ]factors?\b/gi,
+      }),
     },
     {
       label: "Routing strategies count",

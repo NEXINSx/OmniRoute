@@ -1,1 +1,0 @@
-- **feat(infra):** add systemd autostart unit for Linux ([#8635](https://github.com/diegosouzapw/OmniRoute/issues/8635))

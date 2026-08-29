@@ -54,7 +54,7 @@ test.afterEach(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // --- Pure unit tests for the extracted admission check -------------------
@@ -175,12 +175,60 @@ test("#6593 withRateLimit: default maxQueueDepth=0 preserves unbounded-queue beh
   assert.deepEqual(results, ["job1", "job2", "job3", "job4"]);
 });
 
-// --- Default maxWaitMs lowered 120000 -> 15000 ----------------------------
+// --- Default maxWaitMs ----------------------------------------------------
 
 test("#6593 DEFAULT_REQUEST_QUEUE_MAX_WAIT_MS is 15s absent RATE_LIMIT_MAX_WAIT_MS", () => {
   assert.equal(process.env.RATE_LIMIT_MAX_WAIT_MS, undefined);
   assert.equal(resilienceSettings.DEFAULT_REQUEST_QUEUE_MAX_WAIT_MS, 15000);
   assert.equal(resilienceSettings.DEFAULT_RESILIENCE_SETTINGS.requestQueue.maxWaitMs, 15000);
+});
+
+test("#6593 zai-web receives a provider-scoped 60s scheduling budget", () => {
+  assert.equal(rateLimitManager.resolveRequestQueueMaxWaitMs("openai", 15_000), 15_000);
+  assert.equal(rateLimitManager.resolveRequestQueueMaxWaitMs("zai-web", 15_000), 60_000);
+  assert.equal(rateLimitManager.resolveRequestQueueMaxWaitMs("ZAI-WEB", 90_000), 90_000);
+});
+
+test("#6593 connection maxWaitMs override takes priority over the zai-web scheduling budget", () => {
+  rateLimitManager.refreshConnectionRateLimits("conn-maxwait-override", { maxWaitMs: 45_000 });
+  try {
+    // Non-special provider: override wins over the passed-in configured default.
+    assert.equal(
+      rateLimitManager.resolveRequestQueueMaxWaitMs("openai", 15_000, "conn-maxwait-override"),
+      45_000
+    );
+    // zai-web: override wins over its hardcoded 60s floor too.
+    assert.equal(
+      rateLimitManager.resolveRequestQueueMaxWaitMs("zai-web", 15_000, "conn-maxwait-override"),
+      45_000
+    );
+  } finally {
+    rateLimitManager.refreshConnectionRateLimits("conn-maxwait-override", null);
+  }
+});
+
+test("#6593 a connection without a maxWaitMs override keeps the zai-web 60s floor", () => {
+  rateLimitManager.refreshConnectionRateLimits("conn-no-maxwait-override", { rpm: 10 });
+  try {
+    assert.equal(
+      rateLimitManager.resolveRequestQueueMaxWaitMs("zai-web", 15_000, "conn-no-maxwait-override"),
+      rateLimitManager.ZAI_WEB_REQUEST_QUEUE_MAX_WAIT_MS
+    );
+  } finally {
+    rateLimitManager.refreshConnectionRateLimits("conn-no-maxwait-override", null);
+  }
+});
+
+test("#6593 a maxWaitMs override of 0 is treated as no override", () => {
+  rateLimitManager.refreshConnectionRateLimits("conn-zero-maxwait-override", { maxWaitMs: 0 });
+  try {
+    assert.equal(
+      rateLimitManager.resolveRequestQueueMaxWaitMs("openai", 15_000, "conn-zero-maxwait-override"),
+      15_000
+    );
+  } finally {
+    rateLimitManager.refreshConnectionRateLimits("conn-zero-maxwait-override", null);
+  }
 });
 
 test("#6593 DEFAULT_REQUEST_QUEUE_MAX_DEPTH defaults to 0 (disabled) absent an env override", () => {

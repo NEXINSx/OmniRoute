@@ -12,7 +12,11 @@ import {
   isCodexTokenizerContext,
   tokenizerContextFromBody,
 } from "../../../src/shared/utils/tiktokenCounter.ts";
-import { anthropicImageTokens, ANTHROPIC_IMAGE_BLOCK_OVERHEAD_TOKENS } from "omniglyph";
+import {
+  anthropicImageTokens,
+  ANTHROPIC_IMAGE_BLOCK_OVERHEAD_TOKENS,
+  openAIVisionTokens,
+} from "omniglyph";
 
 const CHARS_PER_TOKEN = 4;
 
@@ -27,6 +31,17 @@ interface AnthropicImageBlock {
   source: { type: "base64"; media_type: string; data: string };
 }
 
+interface OpenAIChatImagePart {
+  type: "image_url";
+  image_url: { url: string; detail?: string };
+}
+
+interface OpenAIResponsesImagePart {
+  type: "input_image";
+  image_url: string;
+  detail?: string;
+}
+
 function isAnthropicPngImageBlock(value: unknown): value is AnthropicImageBlock {
   if (!value || typeof value !== "object") return false;
   const block = value as Record<string, unknown>;
@@ -36,6 +51,36 @@ function isAnthropicPngImageBlock(value: unknown): value is AnthropicImageBlock 
   return (
     source.type === "base64" && source.media_type === "image/png" && typeof source.data === "string"
   );
+}
+
+function isOpenAIChatPngImagePart(value: unknown): value is OpenAIChatImagePart {
+  if (!value || typeof value !== "object") return false;
+  const part = value as Record<string, unknown>;
+  const image = part.image_url as Record<string, unknown> | undefined;
+  return (
+    part.type === "image_url" &&
+    !!image &&
+    typeof image === "object" &&
+    typeof image.url === "string" &&
+    image.url.startsWith("data:image/png;base64,")
+  );
+}
+
+function isOpenAIResponsesPngImagePart(value: unknown): value is OpenAIResponsesImagePart {
+  const part = value as Record<string, unknown> | null;
+  return (
+    !!part &&
+    part.type === "input_image" &&
+    typeof part.image_url === "string" &&
+    part.image_url.startsWith("data:image/png;base64,")
+  );
+}
+
+function pngDimensionsFromDataUrl(value: string): { width: number; height: number } | null {
+  const marker = ";base64,";
+  const markerIndex = value.indexOf(marker);
+  if (markerIndex < 0) return null;
+  return decodePngDimensions(value.slice(markerIndex + marker.length));
 }
 
 /**
@@ -89,17 +134,32 @@ function blankImageBlocksAndSumImageTokens(body: Record<string, unknown>): {
   imageTokens: number;
 } {
   let imageTokens = 0;
+  const model = typeof body.model === "string" ? body.model : "";
   const clone: Record<string, unknown> = { ...body };
 
   const processContentArray = (content: unknown): unknown => {
     if (!Array.isArray(content)) return content;
     return content.map((block) => {
-      if (!isAnthropicPngImageBlock(block)) return block;
-      const dims = decodePngDimensions(block.source.data);
-      if (!dims) return block; // fall back to char-counting this block as-is
-      imageTokens += anthropicImageTokens(dims.width, dims.height, "standard");
-      imageTokens += ANTHROPIC_IMAGE_BLOCK_OVERHEAD_TOKENS;
-      return { ...block, source: { ...block.source, data: "" } };
+      if (isAnthropicPngImageBlock(block)) {
+        const dims = decodePngDimensions(block.source.data);
+        if (!dims) return block; // fall back to char-counting this block as-is
+        imageTokens += anthropicImageTokens(dims.width, dims.height, "standard");
+        imageTokens += ANTHROPIC_IMAGE_BLOCK_OVERHEAD_TOKENS;
+        return { ...block, source: { ...block.source, data: "" } };
+      }
+      if (isOpenAIChatPngImagePart(block)) {
+        const dims = pngDimensionsFromDataUrl(block.image_url.url);
+        if (!dims) return block;
+        imageTokens += openAIVisionTokens(model, dims.width, dims.height);
+        return { ...block, image_url: { ...block.image_url, url: "" } };
+      }
+      if (isOpenAIResponsesPngImagePart(block)) {
+        const dims = pngDimensionsFromDataUrl(block.image_url);
+        if (!dims) return block;
+        imageTokens += openAIVisionTokens(model, dims.width, dims.height);
+        return { ...block, image_url: "" };
+      }
+      return block;
     });
   };
 
@@ -114,6 +174,16 @@ function blankImageBlocksAndSumImageTokens(body: Record<string, unknown>): {
 
   if (Array.isArray(clone.system)) {
     clone.system = processContentArray(clone.system);
+  }
+
+  if (Array.isArray(clone.input)) {
+    clone.input = clone.input.map((item) => {
+      if (!item || typeof item !== "object") return item;
+      const record = item as Record<string, unknown>;
+      return Array.isArray(record.content)
+        ? { ...record, content: processContentArray(record.content) }
+        : record;
+    });
   }
 
   return { clone, imageTokens };

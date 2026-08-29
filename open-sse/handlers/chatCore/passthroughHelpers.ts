@@ -46,10 +46,33 @@ export function shouldUseNativeXaiResponsesPassthrough({
 
 export function stampNativeResponsesPassthroughBody(
   body: Record<string, unknown>,
-  mode: "codex" | "xai"
+  mode: "codex" | "xai" | "openai-compatible"
 ): Record<string, unknown> {
   if (mode === "codex") return { ...body, _nativeCodexPassthrough: true };
-  return { ...body, _nativeXaiResponsesPassthrough: true };
+  if (mode === "xai") return { ...body, _nativeXaiResponsesPassthrough: true };
+  return { ...body, _nativeOpenAICompatibleResponsesPassthrough: true };
+}
+
+export function shouldUseNativeOpenAICompatibleResponsesPassthrough({
+  provider,
+  sourceFormat,
+  endpointPath,
+  providerSpecificData,
+}: {
+  provider?: string | null;
+  sourceFormat?: string | null;
+  endpointPath?: string | null;
+  providerSpecificData?: unknown;
+}): boolean {
+  if (!provider?.startsWith("openai-compatible-")) return false;
+  if (sourceFormat !== FORMATS.OPENAI_RESPONSES) return false;
+  if (providerSpecificData && typeof providerSpecificData === "object") {
+    const psd = providerSpecificData as Record<string, unknown>;
+    if (psd.apiType === "responses" || psd._omnirouteForceResponsesUpstream === true) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

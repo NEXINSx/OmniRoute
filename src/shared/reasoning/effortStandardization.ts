@@ -64,6 +64,57 @@ const EFFORT_TIER_ALIASES: Record<string, CanonicalEffort> = {
 };
 
 /**
+ * DeepSeek V4 exposes a native `max` reasoning tier ABOVE its `high` tier.
+ *
+ * Per https://api-docs.deepseek.com/api/create-chat-completion the accepted
+ * `reasoning_effort` values are `low`, `high` and `max`, the default is `high`,
+ * and **`medium` / `xhigh` are both mapped to `high` upstream**. Canonical
+ * `max` collapses to `xhigh` (see EFFORT_TIER_ALIASES), so without this the
+ * top tier is unreachable: `{"effort":"max"}` → `xhigh` → upstream `high`.
+ *
+ * Mirrors extendCodexGpt56EffortValues: expose the provider-native tier for
+ * these models only, without widening the global request vocabulary.
+ */
+export function extendDeepSeekEffortValues(
+  provider: string | null | undefined,
+  model: string | null | undefined,
+  baseValues: readonly string[]
+): string[] {
+  const values = [...baseValues];
+  if (!isDeepSeekNativeMaxModel(provider, model)) return values;
+  return values.includes("max") ? values : [...values, "max"];
+}
+
+/**
+ * Whether `<provider>/<model>` is a DeepSeek V4 model served by the native
+ * DeepSeek provider (registry id `deepseek`, alias `ds`).
+ *
+ * Deliberately scoped to the native provider: routed namespaces such as
+ * `openrouter/deepseek/...` or `tllm/deepseek_v4` terminate at a different
+ * upstream whose accepted effort vocabulary we do not control.
+ */
+export function isDeepSeekNativeMaxModel(
+  provider: string | null | undefined,
+  model: string | null | undefined
+): boolean {
+  const rawModel = model?.trim().toLowerCase();
+  if (!rawModel) return false;
+
+  // The provider is not always resolved yet at the point the canonical request
+  // params are folded in (see chat.ts), so accept either an explicit provider or
+  // a `<prefix>/<model>` id carrying the native DeepSeek prefix.
+  const prefixMatch = rawModel.match(/^(deepseek|ds)\//);
+  const normalizedProvider = provider?.trim().toLowerCase() || prefixMatch?.[1];
+  if (normalizedProvider !== "deepseek" && normalizedProvider !== "ds") return false;
+
+  const normalizedModel = rawModel.replace(/^(?:deepseek|ds)\//, "");
+  if (!normalizedModel) return false;
+  return /^deepseek-v4-(?:pro|flash)(?:-(?:none|minimal|low|medium|high|xhigh|max))?$/.test(
+    normalizedModel
+  );
+}
+
+/**
  * Normalize an arbitrary effort value onto the canonical vocabulary. Accepts the canonical
  * values plus the UI tier synonyms (`extra`/`max` → `xhigh`), case-insensitively. Returns
  * `undefined` for anything unrecognized so callers can leave the request untouched.
@@ -100,6 +151,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Read a request body's `model` field when it is a usable string. */
+function asModelId(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
 /**
  * Fold the canonical `effort` / `thinking` request params onto the per-provider reasoning
  * fields the existing translators already consume (`reasoning_effort`, `reasoning.effort`,
@@ -112,10 +168,17 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  *  - An explicit object-shaped `thinking` (the Anthropic `{ type, budget_tokens }` config)
  *    is never overwritten by the canonical boolean `thinking`.
  */
-export function normalizeReasoningRequest<T>(body: T): T {
+export function normalizeReasoningRequest<T>(body: T, provider?: string | null): T {
   if (!isPlainObject(body)) return body;
 
-  const canonicalEffort = normalizeEffort(body.effort);
+  // DeepSeek V4 has a native `max` tier above `high`. Canonical `max` normally
+  // collapses to `xhigh`, which DeepSeek maps back down to `high` — so preserve
+  // the literal value for those models instead of round-tripping it away.
+  const rawEffort = typeof body.effort === "string" ? body.effort.trim().toLowerCase() : undefined;
+  const canonicalEffort =
+    rawEffort === "max" && isDeepSeekNativeMaxModel(provider, asModelId(body.model))
+      ? ("max" as const)
+      : normalizeEffort(body.effort);
   const canonicalThinking = body.thinking;
   const hasCanonicalThinkingBool = typeof canonicalThinking === "boolean";
 

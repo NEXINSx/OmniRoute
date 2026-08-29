@@ -1,1 +1,0 @@
-- feat(cursor): surface a dismissible dashboard banner suggesting `cursor-agent` installation when it isn't available, so Cursor connections needing periodic manual reconnection aren't a silent surprise (#9173)

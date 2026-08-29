@@ -15,6 +15,7 @@
 
 import { BaseExecutor, type ExecuteInput } from "./base.ts";
 import { buildErrorBody, sanitizeErrorMessage } from "../utils/error.ts";
+import { normalizeGeminiCookieInput } from "../utils/geminiCookies.ts";
 import { prepareToolMessages } from "../translator/webTools.ts";
 import { buildToolModeResponse } from "./chatgptWebTools.ts";
 import {
@@ -34,8 +35,12 @@ const GEMINI_URL = "https://gemini.google.com/app";
  */
 export function isMissingBrowserExecutable(message: string): boolean {
   if (!message) return false;
-  return /executable doesn't exist|executablenotfound|playwright install|chromium.*download/i.test(
-    message
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("executable doesn't exist") ||
+    lower.includes("executablenotfound") ||
+    lower.includes("playwright install") ||
+    (lower.includes("chromium") && lower.includes("download"))
   );
 }
 const GEMINI_USER_AGENT =
@@ -319,12 +324,6 @@ export function mergeRotatedGeminiCookies(
   return merged.map(({ name, value }) => `${name}=${value}`).join("; ");
 }
 
-function normalizeGeminiCookieInput(raw: string, cookieName = "__Secure-1PSID"): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "";
-  return trimmed.includes("=") ? trimmed : `${cookieName}=${trimmed}`;
-}
-
 function resolveGeminiWebCookie(credentials: ExecuteInput["credentials"]): string {
   const directCookie =
     readCredentialString(credentials?.apiKey) ||
@@ -365,9 +364,7 @@ export class GeminiWebExecutor extends BaseExecutor {
     _signal?: AbortSignal
   ): Promise<boolean> {
     try {
-      const cookie = resolveGeminiWebCookie(
-        credentials as unknown as ExecuteInput["credentials"]
-      );
+      const cookie = resolveGeminiWebCookie(credentials as unknown as ExecuteInput["credentials"]);
       if (!cookie) return false;
       const pairs = parseCookies(cookie);
       return pairs.some((p) => p.value.length > 0);
@@ -381,7 +378,7 @@ export class GeminiWebExecutor extends BaseExecutor {
    * Google rotated any of the __Secure-1PSID* cookies, forward the merged
    * cookie string through onCredentialsRefreshed so it gets persisted to the
    * encrypted provider_connections.api_key field. Mirrors the rotate-and-
-   * persist pattern already shipped in chatgpt-web.ts. A persistence failure
+   * persist pattern used by other rotating-session executors. A persistence failure
    * must never fail the user-facing response (#7676).
    */
   private async persistRotatedCookies(
@@ -511,7 +508,11 @@ export class GeminiWebExecutor extends BaseExecutor {
       let captured = false;
       const responsePromise = new Promise<void>((resolve) => {
         page.on("response", async (resp: any) => {
-          if (captured || !resp.url().includes("StreamGenerate")) return;
+          if (!resp.url().includes("StreamGenerate")) return;
+          if (captured) return;
+          // Resolve even if reading the body throws, so the flow falls through
+          // to the "No response from Gemini" 502 instead of burning the full
+          // wait window.
           captured = true;
           try {
             const raw = await resp.text();
@@ -538,7 +539,6 @@ export class GeminiWebExecutor extends BaseExecutor {
       await page.waitForTimeout(300);
       await page.keyboard.press("Enter");
 
-      // Wait for response or timeout
       await Promise.race([responsePromise, page.waitForTimeout(30000)]);
       if (signal?.aborted) {
         throw signal.reason instanceof Error ? signal.reason : new Error("Request aborted");

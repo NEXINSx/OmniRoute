@@ -368,3 +368,36 @@ test("isCloudflareFingerprintRejection: space-separated and URL-path forms match
     "URL path"
   );
 });
+
+test("classifyProviderError: 422 + gcp_project_required => GCP_PROJECT_REQUIRED (BYOP fast-fail)", () => {
+  const body = JSON.stringify({
+    error: {
+      message:
+        "GCP_PROJECT_REQUIRED: Google Antigravity now requires a free GCP Project ID. " +
+        "Create one at console.cloud.google.com and enter it in Providers → Antigravity.",
+      type: "gcp_project_required",
+      code: "gcp_project_required",
+    },
+  });
+  assert.equal(
+    classifyProviderError(422, body, "antigravity"),
+    PROVIDER_ERROR_TYPES.GCP_PROJECT_REQUIRED
+  );
+});
+
+test("classifyProviderError: 422 without the BYOP code stays unclassified (no model lockout)", () => {
+  // The sibling missing-project error (code missing_project_id) and any other
+  // 422 must NOT map to GCP_PROJECT_REQUIRED — and never to MODEL_NOT_FOUND,
+  // so chatCore keeps its fail-closed behavior without locking the model.
+  assert.equal(
+    classifyProviderError(
+      422,
+      JSON.stringify({
+        error: { code: "missing_project_id", message: "Missing Google projectId" },
+      }),
+      "antigravity"
+    ),
+    null
+  );
+  assert.equal(classifyProviderError(422, "some other body", "antigravity"), null);
+});

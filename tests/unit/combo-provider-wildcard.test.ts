@@ -55,10 +55,17 @@ async function seedSyncedModels(
   const db = core.getDbInstance();
   const now = new Date().toISOString();
 
+  // Upsert, not REPLACE: REPLACE deletes+reinserts the whole row, silently wiping
+  // provider_specific_data on connections pre-created via createProviderConnection()
+  // (which the Alibaba drained-models test depends on).
   db.prepare(
-    `INSERT OR REPLACE INTO provider_connections
+    `INSERT INTO provider_connections
        (id, provider, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       provider = excluded.provider,
+       is_active = excluded.is_active,
+       updated_at = excluded.updated_at`
   ).run(connectionId, providerId, isActive ? 1 : 0, now, now);
 
   await replaceSyncedAvailableModelsForConnection(

@@ -16,6 +16,8 @@ export interface RequestQueueSettings {
   requestsPerMinute: number;
   minTimeBetweenRequestsMs: number;
   concurrentRequests: number;
+  /** Whole-process upstream concurrency cap. Zero disables the global gate. */
+  globalConcurrentRequests: number;
   /**
    * Legacy persisted key used as Bottleneck's post-dispatch execution
    * expiration. It does not bound time spent in Bottleneck's QUEUED state.
@@ -169,6 +171,8 @@ export interface ProviderQuotaOverrideSettings {
   rpm?: number;
   /** Overrides the static per-connection concurrency cap. */
   concurrency?: number;
+  /** Shared concurrency cap across every connection for this provider. */
+  providerConcurrency?: number;
 }
 
 export interface StreamRecoverySettings {

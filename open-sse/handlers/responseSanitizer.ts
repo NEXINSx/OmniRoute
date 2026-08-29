@@ -8,7 +8,10 @@ import {
   collapseExcessiveNewlines,
   extractThinkingFromContent,
 } from "./responseSanitizer/reasoning.ts";
-import { applyCacheHitTokensToUsage, applyCacheHitTokensToResponsesUsage } from "./responseSanitizer/cacheHitTokens.ts";
+import {
+  applyCacheHitTokensToUsage,
+  applyCacheHitTokensToResponsesUsage,
+} from "./responseSanitizer/cacheHitTokens.ts";
 export {
   extractThinkingFromContent,
   shouldParseTextualReasoningTags,
@@ -31,7 +34,9 @@ const ALLOWED_USAGE_FIELDS = new Set([
   "total_tokens",
   "cached_tokens",
   "prompt_tokens_details",
-  "completion_tokens_details", "cache_read_input_tokens", "cache_creation_input_tokens",
+  "completion_tokens_details",
+  "cache_read_input_tokens",
+  "cache_creation_input_tokens",
   // Keep through sanitize → applyClientUsageBuffer so heuristic web usage is
   // not inflated by the default USAGE_TOKEN_BUFFER (2000).
   "estimated",
@@ -258,6 +263,14 @@ export interface SanitizeOpenAIResponseOptions {
 }
 
 export function sanitizeOpenAIResponse(
+  body: JsonRecord,
+  options?: SanitizeOpenAIResponseOptions
+): JsonRecord;
+export function sanitizeOpenAIResponse(
+  body: unknown,
+  options?: SanitizeOpenAIResponseOptions
+): unknown;
+export function sanitizeOpenAIResponse(
   body: unknown,
   options: SanitizeOpenAIResponseOptions = {}
 ): unknown {
@@ -310,6 +323,8 @@ export function sanitizeOpenAIResponse(
   return sanitized;
 }
 
+export function sanitizeResponsesApiResponse(body: JsonRecord): JsonRecord;
+export function sanitizeResponsesApiResponse(body: unknown): unknown;
 export function sanitizeResponsesApiResponse(body: unknown): unknown {
   const bodyRecord = toRecord(body);
   if (!bodyRecord) return body;
@@ -537,10 +552,10 @@ function sanitizeResponsesUsage(usage: unknown): unknown {
   // DeepSeek native API: map flat prompt_cache_hit_tokens into input_tokens_details
   if (
     normalized.prompt_cache_hit_tokens !== undefined &&
-    !normalized.input_tokens_details?.cached_tokens
+    !(toRecord(normalized.input_tokens_details) ?? {}).cached_tokens
   ) {
     normalized.input_tokens_details = {
-      ...(normalized.input_tokens_details as Record<string, unknown> || {}),
+      ...((normalized.input_tokens_details as Record<string, unknown>) || {}),
       cached_tokens: normalized.prompt_cache_hit_tokens,
     };
   }
@@ -549,10 +564,10 @@ function sanitizeResponsesUsage(usage: unknown): unknown {
   if (
     normalized.cache_read_input_tokens !== undefined &&
     normalized.cache_read_input_tokens !== 0 &&
-    !normalized.input_tokens_details?.cached_tokens
+    !(toRecord(normalized.input_tokens_details) ?? {}).cached_tokens
   ) {
     normalized.input_tokens_details = {
-      ...(normalized.input_tokens_details as Record<string, unknown> || {}),
+      ...((normalized.input_tokens_details as Record<string, unknown>) || {}),
       cached_tokens: normalized.cache_read_input_tokens,
     };
   }
@@ -853,6 +868,7 @@ function sanitizeResponsesOutputItem(item: unknown, index: number): JsonRecord |
       : [];
 
     return {
+      ...itemRecord,
       id: toString(itemRecord.id) || `rs_${index}`,
       type: "reasoning",
       summary,

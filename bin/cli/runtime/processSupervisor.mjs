@@ -8,7 +8,7 @@ import {
   computeRestartDelayMs,
   waitUntilPortFree,
 } from "./supervisorPolicy.mjs";
-import { buildNodeHeapArgs } from "../../../scripts/build/runtime-env.mjs";
+import { buildNodeRuntimeArgs } from "../../../scripts/build/runtime-env.mjs";
 import { stopProcessGracefully } from "../../../src/shared/platform/windowsProcess.ts";
 import {
   isFatalInstrumentationHookFailure,
@@ -44,23 +44,26 @@ export class ServerSupervisor {
     this.instrumentationFailureHintPrinted = false;
 
     const showLog = process.env.OMNIROUTE_SHOW_LOG === "1";
-    // #5238: skip the explicit CLI --max-old-space-size when the user pinned the
-    // heap via NODE_OPTIONS (a CLI arg would shadow/override their value). The
-    // calibrated heap is already carried by env.NODE_OPTIONS either way.
-    const heapArgs = buildNodeHeapArgs(process.env, this.memoryLimit);
     // #6321: stdout used to be discarded (`"ignore"`) whenever `--log`/OMNIROUTE_SHOW_LOG
     // wasn't set (the default) — any debug/pino output written to stdout vanished
     // silently, so a boot that never becomes ready looked like a dead hang with zero
     // output even at APP_LOG_LEVEL=debug. Pipe stdout too and buffer it alongside
     // stderr so a readiness timeout can surface what the child actually printed.
+    // #9156: always spawn via process.execPath (absolute path to the running
+    // runtime — node or bun). Bare "node" is unresolvable under macOS launchd's
+    // minimal PATH; #9761's Bun ternary accidentally regressed the Node branch.
+    // Node args come from buildNodeRuntimeArgs (#9209 IPv4-first DNS + #5238
+    // heap flag handling); the Bun branch keeps #9761's polyfill preload —
+    // Bun does not accept the Node-only flags.
     this.child = spawn(
-      process.versions.bun ? process.execPath : "node",
-      [
-        ...(process.versions.bun
-          ? ["--preload", join(dirname(this.serverPath), "open-sse/utils/setupPolyfill.ts")]
-          : heapArgs),
-        this.serverPath,
-      ],
+      process.execPath,
+      process.versions.bun
+        ? [
+            "--preload",
+            join(dirname(this.serverPath), "open-sse/utils/setupPolyfill.ts"),
+            this.serverPath,
+          ]
+        : buildNodeRuntimeArgs(process.env, this.memoryLimit, this.serverPath),
       {
         cwd: dirname(this.serverPath),
         env: this.env,

@@ -228,7 +228,73 @@ test("extractUsageFromResponse reads Gemini usageMetadata and thinking tokens", 
   assert.deepEqual(usage, {
     prompt_tokens: 11,
     completion_tokens: 7,
+    cached_tokens: 0,
     reasoning_tokens: 2,
+  });
+});
+
+test("extractUsageFromResponse reads Gemini usageMetadata from the antigravity response envelope", () => {
+  // Antigravity / gemini-cli wrap non-streaming payloads in { response: {...} }
+  // (port of decolua/9router#59d858b — previously logged zero usage).
+  const usage = extractUsageFromResponse(
+    {
+      response: {
+        usageMetadata: {
+          promptTokenCount: 42,
+          candidatesTokenCount: 13,
+          thoughtsTokenCount: 4,
+          cachedContentTokenCount: 7,
+        },
+      },
+    },
+    "antigravity"
+  );
+
+  assert.deepEqual(usage, {
+    prompt_tokens: 42,
+    completion_tokens: 17,
+    cached_tokens: 7,
+    reasoning_tokens: 4,
+  });
+});
+
+test("extractUsageFromResponse prefers top-level usageMetadata over the envelope", () => {
+  const usage = extractUsageFromResponse(
+    {
+      usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 2 },
+      response: { usageMetadata: { promptTokenCount: 99, candidatesTokenCount: 99 } },
+    },
+    "gemini"
+  );
+
+  assert.deepEqual(usage, {
+    prompt_tokens: 1,
+    completion_tokens: 2,
+    cached_tokens: 0,
+    reasoning_tokens: 0,
+  });
+});
+
+test("extractUsageFromResponse surfaces Gemini cachedContentTokenCount as cached_tokens", () => {
+  // Review follow-up on #10430: match the OpenAI/Claude/Responses branches and
+  // the streaming path (usageTracking.ts) by surfacing Gemini cache-hit tokens.
+  const usage = extractUsageFromResponse(
+    {
+      usageMetadata: {
+        promptTokenCount: 30,
+        candidatesTokenCount: 10,
+        thoughtsTokenCount: 3,
+        cachedContentTokenCount: 12,
+      },
+    },
+    "gemini"
+  );
+
+  assert.deepEqual(usage, {
+    prompt_tokens: 30,
+    completion_tokens: 13,
+    cached_tokens: 12,
+    reasoning_tokens: 3,
   });
 });
 

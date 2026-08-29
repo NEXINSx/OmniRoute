@@ -22,7 +22,7 @@ When an IDE agent (e.g., GitHub Copilot, Cursor, Claude Code) makes an API call,
 
 This means you can:
 
-- **Reroute any agent to any provider**: Copilot talking to OpenAI? Redirect it to Anthropic Claude, Gemini, or any of OmniRoute's 226+ providers.
+- **Reroute any agent to any provider**: Copilot talking to OpenAI? Redirect it to Anthropic Claude, Gemini, or any of OmniRoute's 338 providers.
 - **Apply model mappings**: `gemini-3-flash` → `claude-sonnet-4.7` transparently at the handler level.
 - **Observe all agent traffic**: every intercepted request is published to the [Traffic Inspector](./TRAFFIC_INSPECTOR.md).
 - **Apply OmniRoute resilience**: combo routing, circuit breakers, fallbacks, and cost tracking work for IDE agent traffic too.
@@ -172,11 +172,16 @@ When set, configures `undici`'s global dispatcher with the extra CA cert, allowi
 
 ### 2.7 Secret masking (`src/mitm/maskSecrets.ts`)
 
-Applied to all request bodies and headers **before** they enter the Traffic Inspector buffer or any log:
+The independent clean-room scanner is applied to request bodies and credential headers
+**before** they enter the Traffic Inspector buffer or any log. It performs a single linear pass:
 
 - `sk-` / `ak-` / `pk-` prefixed tokens (OpenAI/Anthropic-style)
-- `Authorization: Bearer <token>` headers
-- Generic long tokens (≥40 chars)
+- RFC 6750 `Authorization: Bearer <token>` credentials, with whole-token precedence
+- Generic long opaque tokens (≥40 chars), including dotted and padded forms
+
+`sanitizeHeaders()` lowercases retained names, joins array values deterministically, drops the
+shared hop-by-hop/framing denylist (including proxy authentication), fully redacts `cookie` and
+`set-cookie`, and delegates credential values to the scanner.
 
 ---
 

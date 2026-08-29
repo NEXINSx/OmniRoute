@@ -23,16 +23,6 @@ test("Pollinations catalog mirrors the current public text model lineup", () => 
   );
 });
 
-test("Puter catalog exposes the currently documented Sonar models", () => {
-  const ids = new Set(getModelsByProviderId("puter").map((model) => model.id));
-
-  assert.ok(ids.has("perplexity/sonar"));
-  assert.ok(ids.has("perplexity/sonar-pro"));
-  assert.ok(ids.has("perplexity/sonar-pro-search"));
-  assert.ok(ids.has("perplexity/sonar-reasoning-pro"));
-  assert.ok(ids.has("perplexity/sonar-deep-research"));
-});
-
 test("NVIDIA catalog includes the verified 2026 additions and GPT OSS 20B alias resolution", () => {
   const ids = new Set(getModelsByProviderId("nvidia").map((model) => model.id));
 

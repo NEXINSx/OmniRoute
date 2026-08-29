@@ -15,6 +15,9 @@ export type WebSessionCredentialRequirement =
        */
       hintKey?: string;
       hintFallback?: string;
+      /** Provider-specific replacement for the generic four-step DevTools guide. */
+      guideSteps?: readonly string[];
+      guideNote?: string;
     }
   | {
       kind: "none";
@@ -39,19 +42,19 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie"],
   },
+  "tencent-aistudio-web": {
+    kind: "cookie",
+    credentialName: "Cookie header (full)",
+    placeholder: "paste the full Cookie header from aistudio.tencent.ai",
+    acceptsFullCookieHeader: true,
+    storageKeys: ["cookie"],
+  },
   "tinycms-web": {
     kind: "token",
     credentialName: "app-config-uuid",
     placeholder: "R...",
     acceptsFullCookieHeader: false,
     storageKeys: ["apiKey", "token", "uuid", "app-config-uuid"],
-  },
-  "chatgpt-web": {
-    kind: "cookie",
-    credentialName: "__Secure-next-auth.session-token",
-    placeholder: "__Secure-next-auth.session-token=...",
-    acceptsFullCookieHeader: true,
-    storageKeys: ["cookie", "sessionToken", "session-token", "__Secure-next-auth.session-token"],
   },
   "grok-web": {
     kind: "cookie",
@@ -72,6 +75,9 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     kind: "cookie",
     credentialName: "__Secure-1PSID (optional: __Secure-1PSIDTS)",
     placeholder: "__Secure-1PSID=...; __Secure-1PSIDTS=...",
+    hintKey: "geminiWebCookieHint",
+    hintFallback:
+      'Accepted formats: full Cookie header without the "Cookie:" prefix, a single __Secure-1PSID value, or browser-export JSON such as {"cookies":{"__Secure-1PSID":"...","__Secure-1PSIDTS":"...","__Secure-1PSIDCC":"..."}}.',
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "__Secure-1PSID", "__Secure-1PSIDTS"],
   },
@@ -122,13 +128,6 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "ecto_1_sess", "abra_sess"],
   },
-  "hailuo-web": {
-    kind: "token",
-    credentialName: "_token",
-    placeholder: '_token=... (hailuo.ai → DevTools → Local Storage → "_token")',
-    acceptsFullCookieHeader: false,
-    storageKeys: ["token", "_token"],
-  },
   "claude-web": {
     kind: "cookie",
     credentialName: "sessionKey",
@@ -147,13 +146,6 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     kind: "token",
     credentialName: "access_token",
     placeholder: "access_token=... or a DevTools HAR export",
-    acceptsFullCookieHeader: false,
-    storageKeys: ["token", "access_token", "accessToken"],
-  },
-  "microsoft-designer-web": {
-    kind: "token",
-    credentialName: "access_token",
-    placeholder: "access_token=... (Authorization: Bearer header from the DallE.ashx request)",
     acceptsFullCookieHeader: false,
     storageKeys: ["token", "access_token", "accessToken"],
   },
@@ -240,14 +232,6 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "sessionid", "ttwid", "s_v_web_id", "fp"],
   },
-  "qwen-web": {
-    kind: "cookie",
-    credentialName: "full Cookie header (must include cna, ssxmod_itna, token)",
-    placeholder:
-      "cna=...; token=...; ssxmod_itna=...; ssxmod_itna2=... (full Cookie header from chat.qwen.ai)",
-    acceptsFullCookieHeader: true,
-    storageKeys: ["cookie", "token", "ssxmod_itna", "ssxmod_itna2", "cna", "tongyi_sso_ticket"],
-  },
   "duckduckgo-web": {
     kind: "cookie",
     credentialName: "duckai",
@@ -284,11 +268,22 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     storageKeys: ["cookie", "manus_session"],
   },
   "zai-web": {
-    kind: "cookie",
-    credentialName: "token",
-    placeholder: "token=... or full Cookie header from chat.z.ai",
-    acceptsFullCookieHeader: true,
-    storageKeys: ["cookie", "token"],
+    kind: "token",
+    credentialName: 'Local Storage value named "token"',
+    placeholder: "eyJ... (chat.z.ai → DevTools → Application → Local Storage → token)",
+    acceptsFullCookieHeader: false,
+    storageKeys: ["token"],
+    hintKey: "zaiWebCredentialHint",
+    hintFallback:
+      'Copy only the "token" value from chat.z.ai Local Storage. Do not copy a Cookie header. OmniRoute uses its browser transport to obtain the per-request CAPTCHA proof.',
+    guideSteps: [
+      "Open chat.z.ai and sign in.",
+      "Open DevTools → Application → Local Storage → https://chat.z.ai.",
+      'Find the row named "token" and copy only its value. Do not copy any Cookie header.',
+      "Paste the token below and check the connection. OmniRoute handles the per-request CAPTCHA through its browser transport.",
+    ],
+    guideNote:
+      "Treat the token like a password. Browser transport is enabled by default; do not set OMNIROUTE_BROWSER_POOL=off for this connection. If Z.ai signs you out or the token expires, repeat these steps with the new value.",
   },
   lmarena: {
     kind: "cookie",
@@ -335,8 +330,7 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
   "conol-web": {
     kind: "cookie",
     credentialName: "__Secure-better-auth.session_token",
-    placeholder:
-      "__Secure-better-auth.session_token=... or full Cookie header from conol.ai",
+    placeholder: "__Secure-better-auth.session_token=... or full Cookie header from conol.ai",
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "__Secure-better-auth.session_token"],
   },
@@ -352,6 +346,12 @@ export function getWebSessionCredentialRequirement(
       providerId as keyof typeof WEB_SESSION_CREDENTIAL_REQUIREMENTS
     ] ?? null
   );
+}
+
+export function canUpdateProviderApiKey(authType: unknown, providerId: unknown): boolean {
+  if (authType === "apikey") return true;
+  if (authType !== "cookie") return false;
+  return getWebSessionCredentialRequirement(providerId)?.kind === "token";
 }
 
 export function requiresWebSessionCredential(providerId: unknown): boolean {

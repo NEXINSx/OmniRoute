@@ -24,10 +24,10 @@ const dbCore = await import("../../src/lib/db/core.ts");
 
 test.after(() => {
   dbCore.closeDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
-const AGNES_RESPONSES_URL = "https://apihub.agnes-ai.com/v1/responses";
+const AGNES_CHAT_URL = "https://apihub.agnes-ai.com/v1/chat/completions";
 
 test("agnes is registered as an API-key provider with complete metadata", () => {
   const entry = APIKEY_PROVIDERS.agnes;
@@ -44,31 +44,31 @@ test("agnes is registered as an API-key provider with complete metadata", () => 
   assert.ok(entry.authHint, "authHint must be defined");
 });
 
-test("agnes registry entry uses Responses format with bearer API-key auth", () => {
+test("agnes registry entry uses OpenAI Chat Completions format with bearer API-key auth", () => {
   const entry = providerRegistry.agnes;
   assert.ok(entry, "providerRegistry.agnes must be defined");
   assert.equal(entry.id, "agnes");
-  assert.equal(entry.format, "openai-responses");
+  assert.equal(entry.format, "openai");
   assert.equal(entry.executor, "default");
   assert.equal(entry.authType, "apikey");
   assert.equal(entry.authHeader, "bearer");
-  assert.equal(entry.baseUrl, AGNES_RESPONSES_URL);
+  assert.equal(entry.baseUrl, AGNES_CHAT_URL);
 });
 
-test("agnes routes Chat Completions clients through its Responses upstream", () => {
+test("agnes routes Chat Completions clients through its OpenAI chat upstream", () => {
   const { targetFormat } = resolveChatCoreTargetFormat({
     provider: "agnes",
-    resolvedModel: "agnes-2.5-pro",
+    resolvedModel: "agnes-2.5-flash",
     apiFormat: undefined,
     sourceFormat: "openai",
     customModelTargetFormat: undefined,
     providerSpecificData: null,
   });
 
-  assert.equal(targetFormat, "openai-responses");
+  assert.equal(targetFormat, "openai");
   assert.equal(
-    new DefaultExecutor("agnes").buildUrl("agnes-2.5-pro", true, 0, null),
-    AGNES_RESPONSES_URL
+    new DefaultExecutor("agnes").buildUrl("agnes-2.5-flash", true, 0, null),
+    AGNES_CHAT_URL
   );
 });
 
@@ -76,33 +76,34 @@ test("agnes ships the current public chat models with correct capabilities", () 
   const entry = providerRegistry.agnes;
   assert.deepEqual(
     entry.models.map((model) => model.id),
-    ["agnes-2.5-pro", "agnes-2.5-flash"]
+    ["agnes-1.5-flash", "agnes-2.0-flash", "agnes-2.5-flash"]
   );
+
+  const flash15 = entry.models.find((m) => m.id === "agnes-1.5-flash");
+  assert.ok(flash15, "agnes-1.5-flash must be defined");
+  assert.equal(flash15.contextLength, 262144);
+  assert.equal(flash15.maxOutputTokens, 65536);
+  assert.equal(flash15.supportsVision, true);
+  assert.equal(flash15.toolCalling, true);
+
+  const flash20 = entry.models.find((m) => m.id === "agnes-2.0-flash");
+  assert.ok(flash20, "agnes-2.0-flash must be defined");
+  assert.equal(flash20.contextLength, 262144);
+  assert.equal(flash20.maxOutputTokens, 65536);
+  assert.equal(flash20.supportsReasoning, true);
+  assert.equal(flash20.supportsVision, true);
+  assert.equal(flash20.toolCalling, true);
 
   const flash25 = entry.models.find((m) => m.id === "agnes-2.5-flash");
   assert.ok(flash25, "agnes-2.5-flash must be defined");
   assert.equal(flash25.contextLength, 524288);
   assert.equal(flash25.maxOutputTokens, 65536);
-  assert.equal(flash25.supportsReasoning, true);
-  assert.equal(flash25.supportsVision, true);
-  assert.equal(flash25.toolCalling, true);
-  assert.equal(flash25.interleavedField, "reasoning_content");
-
-  const pro25 = entry.models.find((model) => model.id === "agnes-2.5-pro");
-  assert.ok(pro25, "agnes-2.5-pro must be defined");
-  assert.equal(pro25.contextLength, 1048576);
-  assert.equal(pro25.maxOutputTokens, 65536);
-  assert.equal(pro25.supportsReasoning, true);
-  assert.equal(pro25.supportsVision, true);
-  assert.equal(pro25.toolCalling, true);
-  assert.equal(pro25.interleavedField, "reasoning_content");
 });
-
 test("agnes free catalog exposes the current free chat models through one shared pool", () => {
   const rows = FREE_MODEL_BUDGETS.filter((model) => model.provider === "agnes");
   assert.deepEqual(
     rows.map((model) => model.modelId),
-    ["agnes-2.5-pro", "agnes-2.5-flash"]
+    ["agnes-1.5-flash", "agnes-2.0-flash", "agnes-2.5-flash"]
   );
   assert.ok(rows.every((model) => model.poolKey === "agnes-free"));
 });

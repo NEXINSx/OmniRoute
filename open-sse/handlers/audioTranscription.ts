@@ -69,8 +69,24 @@ function isValidPathSegment(segment: string): boolean {
   return !segment.includes("..") && !segment.includes("//");
 }
 
+/**
+ * A `.opus` file is Opus audio in an Ogg container (RFC 7845) — the same bytes
+ * a client would otherwise name `.ogg`. Whisper-compatible upstreams pick the
+ * decoder from the *filename* and their allow-list
+ * (`flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm`) has no `opus`, so
+ * `note.opus` 400s while byte-identical `note.ogg` succeeds. Since
+ * `/v1/audio/speech` emits `audio/opus` for `response_format=opus`, clients
+ * round-tripping their own voice notes hit this constantly. Relabel to the
+ * container that actually describes the bytes.
+ */
+function normalizeUploadExtension(name: string): string {
+  return name.replace(/\.opus$/i, ".ogg");
+}
+
 function getUploadedFileName(file: Blob & { name?: unknown }): string {
-  return typeof file.name === "string" && file.name.length > 0 ? file.name : "audio.wav";
+  return typeof file.name === "string" && file.name.length > 0
+    ? normalizeUploadExtension(file.name)
+    : "audio.wav";
 }
 
 /**

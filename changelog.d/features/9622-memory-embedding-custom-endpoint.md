@@ -1,1 +1,0 @@
-- feat(memory): support custom OpenAI-compatible endpoints for Memory embeddings (#9622)

@@ -43,6 +43,9 @@ test("a heavy structural request waits for capacity instead of failing immediate
       heavyTools: 10,
       heavyTokens: 10_000,
       queueMs: 500,
+      // #10183/#10268: entry into the bounded-wait path requires real heap
+      // pressure now; force it so this test still exercises the wait.
+      heapPressureCheck: () => true,
     }
   );
 
@@ -85,6 +88,9 @@ test("waiting for admission times out into a retryable 503", async () => {
       heavyTools: 10,
       heavyTokens: 10_000,
       queueMs: 50,
+      // #10183/#10268: entry into the bounded-wait/shed path requires real
+      // heap pressure now; force it to still exercise the timeout.
+      heapPressureCheck: () => true,
     }
   );
 
@@ -148,6 +154,9 @@ test("expired admission queue keeps the legacy immediate 503 behaviour", async (
       heavyTools: 10,
       heavyTokens: 10_000,
       queueMs: 0,
+      // #10183/#10268: shedding now requires real heap pressure; force it to
+      // still exercise the legacy immediate-reject path.
+      heapPressureCheck: () => true,
     }
   );
 
@@ -174,6 +183,9 @@ test("admission waiters are served FIFO as capacity frees", async () => {
     heavyTools: 10,
     heavyTokens: 10_000,
     queueMs: 500,
+    // #10183/#10268: entry into the bounded-wait path requires real heap
+    // pressure now; force it so both waiters still queue.
+    heapPressureCheck: () => true,
   };
   const first = admitChatStructure(body, null, options);
   const second = admitChatStructure(body, null, options);
@@ -367,6 +379,9 @@ test("structural admission enforces the queued-bytes cap end-to-end", async () =
     heavyTools: 10,
     heavyTokens: 10_000,
     queueMs: 2_000,
+    // #10183/#10268: entry into the bounded-wait path requires real heap
+    // pressure now; force it so the queued-bytes cap is still exercised.
+    heapPressureCheck: () => true,
   };
 
   // First structural wait parks, charging the conservative 256KB weight.
@@ -485,6 +500,9 @@ test("aborting the signal cancels a structural queue-wait", async () => {
       heavyTokens: 10_000,
       queueMs: 2_000,
       signal: abortController.signal,
+      // #10183/#10268: entry into the bounded-wait path requires real heap
+      // pressure now; force it so the abort is still exercised mid-wait.
+      heapPressureCheck: () => true,
     }
   );
 

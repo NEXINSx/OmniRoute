@@ -18,16 +18,30 @@ import { accessScheduleSchema } from "./misc.ts";
 
 // ──── API Key Schemas ────
 
-export const createKeySchema = z.object({
-  name: z.string().min(1, "Name is required").max(200),
-  noLog: z.boolean().optional(),
-  allowUsageCommand: z.boolean().optional(),
-  usageLimitEnabled: z.boolean().optional(),
-  dailyUsageLimitUsd: z.coerce.number().min(0).optional().nullable(),
-  weeklyUsageLimitUsd: z.coerce.number().min(0).optional().nullable(),
-  chaosModeEnabled: z.boolean().optional(),
-  scopes: z.array(z.string().trim().min(1).max(64)).max(32).optional(),
-});
+const requireExclusiveLeaseConnections = (value: {
+  scopes?: string[]; allowedConnections?: string[];
+}, ctx: z.RefinementCtx) => {
+  if (value.scopes?.includes("lease:exclusive") && !value.allowedConnections?.length)
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "lease:exclusive requires explicit allowedConnections",
+      path: ["allowedConnections"],
+    });
+};
+
+export const createKeySchema = z
+  .object({
+    name: z.string().min(1, "Name is required").max(200),
+    noLog: z.boolean().optional(),
+    allowUsageCommand: z.boolean().optional(),
+    usageLimitEnabled: z.boolean().optional(),
+    dailyUsageLimitUsd: z.coerce.number().min(0).optional().nullable(),
+    weeklyUsageLimitUsd: z.coerce.number().min(0).optional().nullable(),
+    chaosModeEnabled: z.boolean().optional(),
+    scopes: z.array(z.string().trim().min(1).max(64)).max(32).optional(),
+    allowedConnections: z.array(z.string().uuid()).min(1).max(100).optional(),
+  })
+  .superRefine(requireExclusiveLeaseConnections);
 
 export const createSyncTokenSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(200),
@@ -156,5 +170,8 @@ export const updateKeyPermissionsSchema = z
         message: "No valid fields to update",
         path: [],
       });
+    }
+    if (value.scopes !== undefined && value.allowedConnections !== undefined) {
+      requireExclusiveLeaseConnections(value, ctx);
     }
   });

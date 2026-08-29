@@ -8,6 +8,7 @@ import {
   type StaticProviderCatalogCategory,
 } from "@/lib/providers/catalog";
 import {
+  getProviderConnectionFamilyIds,
   isClaudeCodeCompatibleProvider,
   supportsApiKeyOnFreeProvider,
   supportsDualAuthProvider,
@@ -204,13 +205,8 @@ type ProviderRecord<TProvider = Record<string, unknown>> = Record<string, TProvi
 
 const OAUTH_CARD_API_KEY_CONNECTION_PROVIDER_IDS = new Set(["kiro", "amazon-q", "kimi-coding"]);
 
-const PROVIDER_CONNECTION_ALIASES: Record<string, readonly string[]> = {
-  alibaba: ["alibaba-cn"],
-  "kimi-coding": ["kimi-coding-apikey"],
-};
-
 export function getProviderConnectionsRequestUrl(providerId: string): string {
-  const hasAliases = (PROVIDER_CONNECTION_ALIASES[providerId]?.length ?? 0) > 0;
+  const hasAliases = getProviderConnectionFamilyIds(providerId).length > 1;
   return hasAliases
     ? "/api/providers"
     : `/api/providers?provider=${encodeURIComponent(providerId)}`;
@@ -221,8 +217,16 @@ export function connectionBelongsToProviderPage(
   providerId: string
 ): boolean {
   if (!connectionProvider) return false;
-  if (connectionProvider === providerId) return true;
-  return PROVIDER_CONNECTION_ALIASES[providerId]?.includes(connectionProvider) === true;
+  return getProviderConnectionFamilyIds(providerId).includes(connectionProvider);
+}
+
+export function resolveProviderOAuthBackendId(
+  providerId: string,
+  provider: { oauthProviderId?: unknown } | null | undefined
+): string {
+  return typeof provider?.oauthProviderId === "string" && provider.oauthProviderId.length > 0
+    ? provider.oauthProviderId
+    : providerId;
 }
 
 /**

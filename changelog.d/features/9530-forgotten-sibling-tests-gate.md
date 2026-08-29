@@ -1,1 +1,0 @@
-- Add an advisory forgotten-sibling-tests report to pull-request quality checks. The report traces changed modules through their static consumers to candidate sibling tests, while keeping barrel and dynamic-import cases non-blocking and requiring reviewed, referenced exceptions.

@@ -185,7 +185,7 @@ export default function ResilienceConnectionsClient() {
             color: "var(--color-warning)",
           }}
         >
-          {t("degraded", {
+          {t("degraded.message", {
             sources: data.meta.degraded.map((s) => t(`degraded.source.${s}`)).join(", "),
           })}
         </div>

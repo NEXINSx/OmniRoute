@@ -2,6 +2,8 @@ import { BaseExecutor, type ExecutorLog, type ProviderCredentials } from "./base
 import { PROVIDERS } from "../config/constants.ts";
 import { getModelTargetFormat } from "../config/providerModels.ts";
 import { isResponsesEndpointPath } from "../utils/responsesEndpoint.ts";
+import { chatRequestToXaiResponses } from "@/lib/providers/xai/translators/openai-chat.ts";
+import { capXaiRequestHistory } from "../services/xaiMessageCap.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -124,13 +126,40 @@ export class XaiExecutor extends BaseExecutor {
     const record = asRecord(cleaned);
     if (!record) return cleaned;
 
-    const out: JsonRecord = { ...record };
+    let out: JsonRecord = { ...record };
     const nativeXaiPassthrough = record._nativeXaiResponsesPassthrough === true;
     delete out._nativeXaiResponsesPassthrough;
     delete out._nativeCodexPassthrough;
 
-    if (nativeXaiPassthrough || getModelTargetFormat(this.provider, model) === "openai-responses") {
-      return out;
+    const useResponses =
+      nativeXaiPassthrough ||
+      getModelTargetFormat(this.provider, model) === "openai-responses" ||
+      isResponsesEndpointPath(credentials?.requestEndpointPath);
+
+    // #10165: chat/completions clients send messages + max_tokens; xAI /v1/responses
+    // requires input + max_output_tokens. Convert at the executor edge so a missed
+    // chatCore translation cannot ship a chat-shaped body to Responses.
+    if (useResponses) {
+      if (Array.isArray(out.messages) && out.input == null) {
+        out = chatRequestToXaiResponses(out as never) as unknown as JsonRecord;
+      } else {
+        if (out.max_completion_tokens != null && out.max_output_tokens == null) {
+          out.max_output_tokens = out.max_completion_tokens;
+          delete out.max_completion_tokens;
+        }
+        if (out.max_tokens != null && out.max_output_tokens == null) {
+          out.max_output_tokens = out.max_tokens;
+          delete out.max_tokens;
+        }
+        if (out.response_format != null && out.text == null) {
+          out.text = { format: out.response_format };
+          delete out.response_format;
+        }
+      }
+      // Keep model id from the routed request when the translator left it empty.
+      if (out.model == null && model) out.model = model;
+      // After chat→Responses expansion, `input` is what xAI counts toward 800.
+      return capXaiRequestHistory(out);
     }
 
     let modelId = typeof out.model === "string" ? out.model : model;
@@ -158,7 +187,7 @@ export class XaiExecutor extends BaseExecutor {
       if (effort) out.reasoning_effort = effort;
     }
 
-    return out;
+    return capXaiRequestHistory(out);
   }
 }
 

@@ -121,6 +121,29 @@ export function pushUniqueResponsesOutputItems(target: unknown[], items: readonl
   }
 }
 
+/**
+ * #10156 — strip items matched by `isCommentaryItem` (the same predicate used
+ * to drop live commentary-phase SSE frames, #6199) from a `response.completed`
+ * output array before it is forwarded or buffered for backfill. Upstreams may
+ * echo an already-dropped commentary item back inside a non-empty terminal
+ * `output` array; without this, the live stream and the terminal snapshot
+ * silently disagree about what the client actually saw.
+ */
+export function filterResponsesCommentaryFromItems(
+  items: readonly unknown[],
+  isCommentaryItem: (item: unknown) => boolean
+): { items: unknown[]; changed: boolean } {
+  let changed = false;
+  const filtered = items.filter((item) => {
+    if (isCommentaryItem(item)) {
+      changed = true;
+      return false;
+    }
+    return true;
+  });
+  return { items: filtered, changed };
+}
+
 export function backfillResponsesCompletedOutput(
   parsed: unknown,
   collectedItems: readonly unknown[]

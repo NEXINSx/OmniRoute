@@ -75,6 +75,13 @@ const CHARS_PER_TOKEN = 4;
 // see #8368 research notes.
 const IMAGE_TOKEN_ESTIMATE = 1200;
 
+// #10840: same budget, deliberately. The Gemini `inlineData` matcher does not
+// inspect media type, so a base64 PDF arriving in that shape is ALREADY measured
+// at IMAGE_TOKEN_ESTIMATE today. Reusing it makes the OpenAI `file` and Claude
+// `document` shapes agree with the estimate the same document already receives,
+// rather than introducing a second constant with no grounding in this repo.
+const DOCUMENT_TOKEN_ESTIMATE = IMAGE_TOKEN_ESTIMATE;
+
 // Matches inline base64 data URLs, e.g. "data:image/png;base64,AAAA...".
 // Deliberately scoped to `data:image/...;base64,` so remote (http/https)
 // URLs and generic long base64 text strings stay on the text-estimation path.
@@ -115,6 +122,45 @@ function matchesGeminiInlineDataShape(node: Record<string, unknown>): boolean {
   const inlineData = node.inlineData ?? node.inline_data;
   if (!inlineData || typeof inlineData !== "object") return false;
   return typeof (inlineData as Record<string, unknown>).data === "string";
+}
+
+// Any inline base64 data URL, regardless of media type — file parts legitimately
+// carry application/pdf, text/csv, and so on.
+const INLINE_BASE64_DATA_RE = /^data:[^;,]+;base64,/;
+
+function isInlineBase64DataUrl(value: unknown): boolean {
+  return typeof value === "string" && INLINE_BASE64_DATA_RE.test(value);
+}
+
+// OpenAI chat.completions: { type: 'file', file: { file_data | data: 'data:...;base64,...' } }
+// Responses API:          { type: 'input_file', file_data: 'data:...;base64,...' }
+// Shapes mirror services/ccOpenAiMediaBlocks.ts::convertOpenAiMediaBlock.
+function matchesOpenAIFileShape(node: Record<string, unknown>): boolean {
+  if (node.type === "input_file") return isInlineBase64DataUrl(node.file_data);
+  if (node.type !== "file") return false;
+  const file = node.file;
+  if (!file || typeof file !== "object") return false;
+  const f = file as Record<string, unknown>;
+  return isInlineBase64DataUrl(f.file_data) || isInlineBase64DataUrl(f.data);
+}
+
+// Claude: { type: 'document', source: { type: 'base64', data: '...' } }
+function matchesClaudeDocumentShape(node: Record<string, unknown>): boolean {
+  if (node.type !== "document") return false;
+  const source = node.source;
+  if (!source || typeof source !== "object") return false;
+  const src = source as Record<string, unknown>;
+  return src.type === "base64" && typeof src.data === "string";
+}
+
+/**
+ * Detect inline-base64 *document* blocks (#10840). Deliberately separate from
+ * {@link isInlineBase64ImageBlock}: that predicate also drives
+ * pruneOlderInlineImages, and dropping a user's attached PDF is not the same
+ * decision as dropping an old screenshot. This one only feeds token estimation.
+ */
+export function isInlineBase64DocumentBlock(node: Record<string, unknown>): boolean {
+  return matchesOpenAIFileShape(node) || matchesClaudeDocumentShape(node);
 }
 
 /**
@@ -224,6 +270,10 @@ function extractImageTokens(node: unknown, seen: Set<unknown>): { node: unknown;
         tokens += IMAGE_TOKEN_ESTIMATE;
         return { __image_token_estimate__: IMAGE_TOKEN_ESTIMATE };
       }
+      if (record && isInlineBase64DocumentBlock(record)) {
+        tokens += DOCUMENT_TOKEN_ESTIMATE;
+        return { __document_token_estimate__: DOCUMENT_TOKEN_ESTIMATE };
+      }
       const result = extractImageTokens(item, seen);
       tokens += result.tokens;
       return result.node;
@@ -236,6 +286,12 @@ function extractImageTokens(node: unknown, seen: Set<unknown>): { node: unknown;
     return {
       node: { __image_token_estimate__: IMAGE_TOKEN_ESTIMATE },
       tokens: IMAGE_TOKEN_ESTIMATE,
+    };
+  }
+  if (isInlineBase64DocumentBlock(record)) {
+    return {
+      node: { __document_token_estimate__: DOCUMENT_TOKEN_ESTIMATE },
+      tokens: DOCUMENT_TOKEN_ESTIMATE,
     };
   }
 
@@ -282,6 +338,29 @@ export function getTokenLimit(
 }
 
 /**
+ * Context window from a known source only: an explicit canonical window, or a
+ * provider/model-specific `resolveTokenLimit` result. The generic 128000
+ * catch-all (`specific: false`) is treated as unknown so combo `min()` does
+ * not advertise 128k when every real member is larger (#10734).
+ */
+export function getSourcedTokenLimit(
+  provider: string,
+  model: string | null = null,
+  canonicalWindow?: unknown,
+  snapshot?: ModelCapabilityResolutionSnapshot | null
+): number | undefined {
+  if (
+    typeof canonicalWindow === "number" &&
+    Number.isFinite(canonicalWindow) &&
+    canonicalWindow > 0
+  ) {
+    return canonicalWindow;
+  }
+  const resolved = resolveTokenLimit(provider, model, snapshot);
+  return resolved.specific ? resolved.limit : undefined;
+}
+
+/**
  * Resolve a combo target's token limit without crashing when `parseModel(modelStr)`
  * returns `provider: null` (model id with no `provider/` prefix).
  *
@@ -315,7 +394,7 @@ export function getComboTargetTokenLimit(options: {
  * name heuristic, curated per-provider default) or only from the generic
  * catch-all default.
  */
-function resolveTokenLimit(
+export function resolveTokenLimit(
   provider: string,
   model: string | null = null,
   snapshot?: ModelCapabilityResolutionSnapshot | null
@@ -590,13 +669,35 @@ function purifyHistory(messages: Record<string, unknown>[], targetTokens: number
   result = fixToolPairs(result);
   result = stripTrailingAssistantOrphanToolUse(result);
 
-  // Add summary of dropped messages
+  // Add summary of dropped messages. Merge the notice INTO the leading
+  // system/developer message instead of splicing a second system-role message
+  // mid-array: strict gateways (TokenRouter confirmed live 2026-08-22, see the
+  // PROVIDERS_SYSTEM_MUST_BE_FIRST list in src/lib/memory/injection.ts) reject
+  // any system message at index > 0 with HTTP 400 "System message must be at
+  // the beginning". When there is no leading system message, prepend one --
+  // index 0 is accepted by every provider (same slot the old splice used when
+  // system[] was empty).
   if (keep < nonSystem.length) {
     const dropped = nonSystem.length - keep;
-    result.splice(system.length, 0, {
-      role: "system",
-      content: `[Context compressed: ${dropped} earlier messages removed to fit context window]`,
-    });
+    const droppedNotice = `[Context compressed: ${dropped} earlier messages removed to fit context window]`;
+    const first = result[0];
+    if (first && (first.role === "system" || first.role === "developer")) {
+      if (typeof first.content === "string") {
+        result[0] = {
+          ...first,
+          content: first.content ? `${droppedNotice}\n${first.content}` : droppedNotice,
+        };
+      } else if (Array.isArray(first.content)) {
+        result[0] = {
+          ...first,
+          content: [{ type: "text", text: droppedNotice }, ...(first.content as unknown[])],
+        };
+      } else {
+        result[0] = { ...first, content: droppedNotice };
+      }
+    } else {
+      result.unshift({ role: "system", content: droppedNotice });
+    }
   }
 
   return result;

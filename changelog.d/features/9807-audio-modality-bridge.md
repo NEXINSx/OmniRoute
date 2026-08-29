@@ -1,1 +1,0 @@
-- **feat(modality bridge):** Transcribe chat audio for text-only models through the existing speech-to-text providers, with configurable limits, caching, runtime stats, and a dashboard self-test ([#9807](https://github.com/diegosouzapw/OmniRoute/pull/9807))

@@ -17,7 +17,6 @@ import { hasSpecializedExecutor } from "../../open-sse/executors/index.ts";
 for (const provider of [
   "theoldllm",
   "chipotle",
-  "mimocode",
   "opencode",
   "duckduckgo-web",
   "veoaifree-web",

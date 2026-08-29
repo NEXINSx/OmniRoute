@@ -3,12 +3,32 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next-intl", () => ({
-  useTranslations: (namespace?: string) => (key: string) =>
-    namespace === "cache"
-      ? ({ cachedTokensCol: "Cache Read", cacheCreation: "Cache Write" }[key] ?? key)
-      : key,
-}));
+vi.mock("next-intl", () => {
+  const cacheLabels: Record<string, string> = {
+    cachedTokensCol: "Cache Read",
+    cacheCreation: "Cache Write",
+  };
+  const detailLabels: Record<string, string> = {
+    totalIn: "Total In: {value}",
+    cacheRead: "Cache Read: {value}",
+    cacheWrite: "Cache Write: {value}",
+    compressed: "Compressed: {percent}%",
+    totalOut: "Total Out: {value}",
+    reasoning: "Reasoning: {value}",
+    notAvailable: "N/A",
+  };
+  const interpolate = (template: string, params: Record<string, string> = {}) =>
+    template.replace(/\{(\w+)\}/g, (_, k) => (k in params ? String(params[k]) : `{${k}}`));
+  return {
+    useLocale: () => "en",
+    useTranslations: (namespace?: string) => (key: string, params?: Record<string, string>) =>
+      namespace === "cache"
+        ? interpolate(cacheLabels[key] ?? key, params)
+        : namespace === "requestLogger.detail"
+          ? interpolate(detailLabels[key] ?? key, params)
+          : interpolate(key, params),
+  };
+});
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),

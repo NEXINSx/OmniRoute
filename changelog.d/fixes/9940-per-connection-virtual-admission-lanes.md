@@ -1,1 +1,0 @@
-- **fix(admission):** per-connection virtual admission lanes with idle TTL eviction — guards `expireEntry` null deref, adds `deleteLane()` for safe LRU eviction, and passes `sessionId` to byte-level admission (fixes #9654)

@@ -46,9 +46,19 @@ import {
   getCodexGlobalServiceMode,
   type CodexGlobalServiceMode,
 } from "@/lib/providers/codexFastTier";
-import AddCompatibleProviderModal from "./components/AddCompatibleProviderModal";
+import dynamic from "next/dynamic";
+const AddCompatibleProviderModal = dynamic(
+  () => import("./components/AddCompatibleProviderModal"),
+  { ssr: false }
+);
 import { CategoryDot } from "./components/CategoryDot";
-import { ImportProvidersFromFileModal } from "./components/ImportProvidersFromFileModal";
+const ImportProvidersFromFileModal = dynamic(
+  () =>
+    import("./components/ImportProvidersFromFileModal").then(
+      (m) => m.ImportProvidersFromFileModal
+    ),
+  { ssr: false }
+);
 import NoAuthProvidersSection from "./components/NoAuthProvidersSection";
 import HighlightableProviderCard from "./components/HighlightableProviderCard";
 import ProviderCountBadge from "./components/ProviderCountBadge";
@@ -393,18 +403,39 @@ export default function ProvidersPage() {
             : null
         : null;
 
-    // Count API keys in "warning" state across all connections
+    // Count API keys in "warning" state across all connections, and (#10261)
+    // aggregate a SANITIZED reasons summary (max failure count + most recent
+    // failure time — never the raw upstream error text) so the warning badge
+    // can expose why connections are flagged instead of a bare count.
+    let warningMaxFailures = 0;
+    let warningLatestFailureAt: string | null = null;
     const warning = providerConnections.reduce((warnCount, conn) => {
       const health = (conn as any).providerSpecificData?.apiKeyHealth as
-        Record<string, { status: string }> | undefined;
+        | Record<string, { status: string; failures?: number; lastFailure?: string | null }>
+        | undefined;
       if (!health) return warnCount;
-      return warnCount + Object.values(health).filter((h) => h.status === "warning").length;
+      const warningEntries = Object.values(health).filter((h) => h.status === "warning");
+      for (const entry of warningEntries) {
+        warningMaxFailures = Math.max(warningMaxFailures, entry.failures ?? 0);
+        if (
+          entry.lastFailure &&
+          (!warningLatestFailureAt || entry.lastFailure > warningLatestFailureAt)
+        ) {
+          warningLatestFailureAt = entry.lastFailure;
+        }
+      }
+      return warnCount + warningEntries.length;
     }, 0);
+    const warningLastFailureRelative = warningLatestFailureAt
+      ? getRelativeTime(warningLatestFailureAt)
+      : null;
 
     return {
       connected,
       error,
       warning,
+      warningMaxFailures,
+      warningLastFailureRelative,
       total,
       errorCode,
       errorTime,

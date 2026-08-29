@@ -19,12 +19,57 @@ export const GLM_ANTHROPIC_DEFAULT_BASE_URLS = Object.freeze({
 
 export const GLM_SHARED_MODELS = Object.freeze([
   {
+    // GLM-5.3 exposes low|high|max reasoning_effort (default max); -high/-low
+    // are OmniRoute aliases resolved by GlmExecutor::parseGlmEffortTier.
+    // https://docs.z.ai/guides/llm/glm-5.3
+    id: "glm-5.3",
+    name: "GLM 5.3",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["low", "high", "max"],
+  },
+  {
+    id: "glm-5.3-high",
+    name: "GLM 5.3 High",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["high"],
+  },
+  {
+    id: "glm-5.3-low",
+    name: "GLM 5.3 Low",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["low"],
+  },
+  {
+    // Explicit alias for the upstream default (max) — pins reasoning_effort so
+    // the tier survives an upstream default change, and mirrors glm-5.2-max UX.
+    id: "glm-5.3-max",
+    name: "GLM 5.3 Max",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["max"],
+  },
+  {
+    // GLM-5.2 has two positive effective tiers: low/medium map to high and xhigh
+    // maps to max; disabling thinking remains the separate thinking toggle.
+    // https://docs.z.ai/guides/capabilities/thinking
     id: "glm-5.2",
     name: "GLM 5.2",
     contextLength: 1000000,
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: ["high", "max"],
   },
   {
     id: "glm-5.2-high",
@@ -33,6 +78,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: ["high"],
   },
   {
     id: "glm-5.2-max",
@@ -41,14 +87,18 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: ["max"],
   },
   {
+    // Earlier GLM families support the thinking toggle, not reasoning_effort.
+    // An explicit empty list prevents generic catalog tiers from being inferred.
     id: "glm-5.1",
     name: "GLM 5.1",
     contextLength: 204800,
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
   {
     id: "glm-5",
@@ -57,6 +107,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
   {
     id: "glm-5-turbo",
@@ -65,6 +116,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
   {
     id: "glm-4.7-flash",
@@ -73,6 +125,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
   {
     id: "glm-4.7",
@@ -81,6 +134,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 131072,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
   {
     id: "glm-4.6v",
@@ -89,6 +143,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 32768,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
     supportsVision: true,
   },
   {
@@ -98,6 +153,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 32768,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
   {
     id: "glm-4.5v",
@@ -106,6 +162,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 32768,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
     supportsVision: true,
   },
   {
@@ -115,6 +172,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 32768,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
   {
     id: "glm-4.5-air",
@@ -123,6 +181,7 @@ export const GLM_SHARED_MODELS = Object.freeze([
     maxOutputTokens: 32768,
     toolCalling: true,
     supportsReasoning: true,
+    supportedThinkingEfforts: [],
   },
 ]);
 

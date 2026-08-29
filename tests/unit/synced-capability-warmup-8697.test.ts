@@ -1,19 +1,51 @@
 import assert from "node:assert/strict";
 import { describe, it, mock } from "node:test";
 import { getDbInstance } from "../../src/lib/db/core.ts";
-import { getSyncedCapability } from "../../src/lib/modelsDevSync.ts";
+import {
+  getSyncedCapabilities,
+  getSyncedCapability,
+  loadAllSyncedCapabilitiesUncached,
+} from "../../src/lib/modelsDevSync.ts";
 
-describe("getSyncedCapability warm-up (#8697-adjacent)", () => {
-  it("does not run a DB round-trip per distinct model lookup (regression guard for the missing bulk warm-up)", () => {
+// #8697 guarded the cold /v1/models catalog build against one SQLite round-trip per
+// distinct model lookup. #9199 deliberately moved that contract: getSyncedCapability()
+// no longer self-warms the module cache — bulk callers (catalog builds) must pass a
+// build-local snapshot (`bulk`, from loadAllSyncedCapabilitiesUncached()), and warm
+// runtime lookups are served from the module cache. Both paths must stay off SQLite
+// per model, otherwise the #8697 cold-catalog freeze regresses.
+describe("getSyncedCapability bulk/warm lookups (#8697-adjacent, contract per #9199)", () => {
+  it("does not touch SQLite per model when a bulk snapshot is supplied (catalog build path)", () => {
+    const bulk = loadAllSyncedCapabilitiesUncached();
+
     const db = getDbInstance();
     const prepareSpy = mock.method(db, "prepare");
     const callsBefore = prepareSpy.mock.calls.length;
 
-    // A catalog rebuild calls getSyncedCapability() once per distinct model — this
-    // used to run one SQLite SELECT per call on a cold cache (no warm-up caller sits
-    // in the /v1/models build path). Self-warmed, only the one-time bulk load (plus
-    // its CREATE TABLE IF NOT EXISTS guard) should touch the DB, regardless of how
-    // many distinct models are looked up afterward.
+    const N = 200;
+    for (let i = 0; i < N; i++) {
+      getSyncedCapability("openai", `synthetic-model-${i}`, bulk);
+    }
+
+    const callsAfter = prepareSpy.mock.calls.length;
+    prepareSpy.mock.restore();
+
+    assert.equal(
+      callsAfter - callsBefore,
+      0,
+      `expected 0 db.prepare() calls across ${N} distinct model lookups with a bulk ` +
+        `snapshot, got ${callsAfter - callsBefore} — the catalog build path may have ` +
+        `regressed to a per-model SQLite round-trip (#8697)`
+    );
+  });
+
+  it("does not touch SQLite per model once the whole-table cache is warm", () => {
+    // Warm the module cache the way runtime callers do (one bulk read + table guard).
+    getSyncedCapabilities();
+
+    const db = getDbInstance();
+    const prepareSpy = mock.method(db, "prepare");
+    const callsBefore = prepareSpy.mock.calls.length;
+
     const N = 200;
     for (let i = 0; i < N; i++) {
       getSyncedCapability("openai", `synthetic-model-${i}`);
@@ -22,11 +54,12 @@ describe("getSyncedCapability warm-up (#8697-adjacent)", () => {
     const callsAfter = prepareSpy.mock.calls.length;
     prepareSpy.mock.restore();
 
-    assert.ok(
-      callsAfter - callsBefore <= 2,
-      `expected at most 2 db.prepare() calls (bulk load + table guard) across ${N} distinct ` +
-        `model lookups, got ${callsAfter - callsBefore} — getSyncedCapability() may have regressed ` +
-        `to a per-model SQLite round-trip`
+    assert.equal(
+      callsAfter - callsBefore,
+      0,
+      `expected 0 db.prepare() calls across ${N} distinct model lookups on a warm ` +
+        `cache, got ${callsAfter - callsBefore} — warm-path lookups may have regressed ` +
+        `to a per-model SQLite round-trip (#8697)`
     );
   });
 });

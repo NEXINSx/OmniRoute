@@ -183,9 +183,13 @@ export const comboRuntimeConfigSchema = z
     handoffProviders: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
     maxMessagesForSummary: z.coerce.number().int().min(5).max(100).optional(),
     maxComboDepth: z.coerce.number().int().min(1).max(10).optional(),
+    // #11134: shared per-request attempt budget. Bounds mirror
+    // MAX_GLOBAL_ATTEMPTS_HARD_CAP (200) in comboPredicates.ts.
+    maxGlobalAttempts: z.coerce.number().int().min(1).max(200).optional(),
     nestedComboMode: z.enum(["flatten", "execute"]).optional(),
     trackMetrics: z.boolean().optional(),
     reasoningTokenBufferEnabled: z.boolean().optional(),
+    reasoningTransportFallback: z.enum(["skip", "drop"]).optional(),
     compressionMode: compressionModeSchema.optional(),
     failoverBeforeRetry: z.boolean().optional(),
     maxSetRetries: z.coerce.number().int().min(0).max(10).optional(),
@@ -220,6 +224,9 @@ export const comboRuntimeConfigSchema = z
     resetWindowTieBandMs: z.coerce.number().int().min(0).max(86_400_000).optional(),
     resetWindowQuotaCacheTtlMs: z.coerce.number().int().min(0).max(300_000).optional(),
     resetWindowQuotaCacheMaxStaleMs: z.coerce.number().int().min(0).max(3_600_000).optional(),
+    // Connection-aware expansion for group-B combo strategies is opt-in.
+    connectionAwareExpansion: z.boolean().optional(),
+    connectionAwareExpansionMaxPerTarget: z.coerce.number().int().min(1).max(64).optional(),
     shadowRouting: shadowRoutingSchema.optional(),
     evalRouting: evalRoutingSchema.optional(),
     // Fusion strategy (open-sse/services/fusion.ts): the panel is the combo's
@@ -252,6 +259,12 @@ export const comboRuntimeConfigSchema = z
         contextFilterMode: z.enum(["strict", "lenient"]).optional(),
       })
       .strict()
+      .optional(),
+    // Optional client-side sort hint for combo models.
+    // Honored in the dashboard builder; reserved for future server-side use. Inert on execution.
+    modelSort: z
+      .object({ method: z.enum(["manual", "provider", "score", "name"]) })
+      .passthrough()
       .optional(),
   })
   .passthrough()
@@ -320,7 +333,7 @@ export const createComboSchema = z
   .object({
     name: comboNameSchema,
     description: z.string().max(2000).optional(),
-    models: z.array(comboModelEntry).optional().default([]),
+    models: z.array(comboModelEntry).min(1, "a combo requires at least one model"),
     strategy: comboStrategySchema.optional().default("priority"),
     config: comboRuntimeConfigSchema.optional(),
     allowedProviders: z.array(z.string().trim().min(1).max(200)).max(100).optional(),
@@ -379,7 +392,13 @@ export const updateComboSchema = z
   .object({
     name: comboNameSchema.optional(),
     description: z.string().max(2000).optional().nullable(),
-    models: z.array(comboModelEntry).optional(),
+    // An update may not remove every model from a combo, or a working combo
+    // loses every target. Creation refuses an empty list too: since the CLI
+    // gained --models (#10954), an empty draft has no remaining legitimate path.
+    models: z
+      .array(comboModelEntry)
+      .min(1, "an update cannot remove every model from a combo")
+      .optional(),
     strategy: comboStrategySchema.optional(),
     config: comboRuntimeConfigSchema.optional(),
     isActive: z.boolean().optional(),
@@ -437,4 +456,11 @@ export const reorderCombosSchema = z
 
 export const testComboSchema = z.object({
   comboName: z.string().trim().min(1, "comboName is required"),
+});
+
+// POST /api/combos/duplicate - Resolve an auto-combo template (e.g. "auto/best-coding")
+// into a static, editable combo snapshot.
+export const duplicateAutoComboSchema = z.object({
+  name: z.string().trim().min(1, 'Missing required field: "name" (e.g. auto/best-coding)'),
+  strategy: comboStrategySchema.optional(),
 });

@@ -268,7 +268,14 @@ test("VB-S02d: Conol text-only models remain eligible for the vision bridge", as
   assert.equal(getResolvedModelCapabilities(model).supportsVision, false);
   assert.strictEqual(result.block, false);
   assert.notStrictEqual(result.modifiedPayload, undefined);
-  assert.strictEqual(visionCallCount, 1);
+  // #9759: with a configured vision model, individual text-only models REROUTE
+  // to it (images kept) instead of describing through an intermediate vision
+  // call — same contract as VB-S07. The point of this case is unchanged: conol
+  // text-only models must not be skipped by the bridge.
+  const modified = result.modifiedPayload as { model?: string };
+  assert.ok(modified.model, "rerouted model should be set");
+  assert.notStrictEqual(modified.model, model, "model should be different from original");
+  assert.strictEqual(visionCallCount, 0, "reroute keeps images; no describe call");
 });
 
 test("VB-S02: model capabilities returns supportsVision for known models", () => {

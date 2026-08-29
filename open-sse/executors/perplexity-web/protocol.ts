@@ -69,24 +69,26 @@ export const MODEL_MAP: Record<string, [string, string]> = {
   "pplx-sonar": ["copilot", "turbo"],
   "pplx-gpt-5.6-terra": ["copilot", "gpt56_terra"],
   "pplx-gpt-5.6-sol": ["copilot", "gpt56_sol"],
-  "pplx-gemini": ["copilot", "gemini31pro_high"],
+  "pplx-gemini": ["copilot", "gemini37flash"],
   "pplx-sonnet": ["copilot", "claude50sonnet"],
   // Perplexity's catalog moved Opus to 5.0; claude48opus is still accepted but
   // answers from the older model.
   "pplx-opus": ["copilot", "claude50opus"],
   "pplx-glm": ["copilot", "glm_5_2"],
-  "pplx-kimi": ["copilot", "kimik26instant"],
-  "pplx-grok-4.5": ["copilot", "grok45low"],
+  // The current Kimi K3 catalog entry only exposes its reasoning model.
+  "pplx-kimi": ["copilot", "kimik3thinking"],
+  "pplx-grok-4.6": ["copilot", "grok46low"],
   "pplx-nemotron": ["copilot", "nv_nemotron_3_ultra"],
 };
 
 export const THINKING_MAP: Record<string, string> = {
   "pplx-gpt-5.6-terra": "gpt56_terra_thinking",
   "pplx-gpt-5.6-sol": "gpt56_sol_thinking",
+  "pplx-gemini": "gemini37flashthinking",
   "pplx-sonnet": "claude50sonnetthinking",
   "pplx-opus": "claude50opusthinking",
-  "pplx-kimi": "kimik26thinking",
-  "pplx-grok-4.5": "grok45medium",
+  "pplx-kimi": "kimik3thinking",
+  "pplx-grok-4.6": "grok46medium",
 };
 
 export const CITATION_RE = /\[\d+\]/g;
@@ -148,6 +150,36 @@ export interface PplxBlock {
     }>;
     goals?: Array<{ description?: string }>;
   };
+  // Workflow API (`intended_usage: "workflow_root"`). Perplexity moved the answer
+  // text here from markdown_block: it now arrives as one WORKFLOW_ITEM_TEXT item
+  // whose `text_payload.variant` is "answer", nested under a workflow step. Other
+  // variants ("thinking") and item types (queries, sources) are not answer text.
+  workflow_block?: PplxWorkflowBlock;
+}
+
+export interface PplxWorkflowTextPayload {
+  text?: string;
+  chunks?: string[];
+  variant?: string;
+  is_streaming?: boolean;
+}
+
+export interface PplxWorkflowItem {
+  type?: string;
+  variant?: string;
+  payload?: { text_payload?: PplxWorkflowTextPayload };
+}
+
+export interface PplxWorkflowStep {
+  status?: string;
+  title?: string;
+  tool_name?: string;
+  items?: PplxWorkflowItem[];
+}
+
+export interface PplxWorkflowBlock {
+  status?: string;
+  steps?: PplxWorkflowStep[];
 }
 
 export interface PplxUpsellInformation {
@@ -338,15 +370,29 @@ export function buildPplxRequestBody(
   };
 }
 
+const SEARCH_HINT = "You have built-in web search. Answer questions directly using search results.";
+
+/**
+ * Whether to append {@link SEARCH_HINT} to the caller's system message.
+ *
+ * It used to be unconditional. Perplexity's answer engine is search-first anyway, and
+ * for coding clients the sentence leaks into replies as meta-commentary ("I need to
+ * search before responding per my instructions"), so it is now opt-in via
+ * `OMNIROUTE_PPLX_SEARCH_HINT`. Read per call rather than at module load so the flag
+ * can be flipped without restarting the server (and so tests can toggle it).
+ */
+function searchHintEnabled(): boolean {
+  return /^(1|true|yes|on)$/i.test(process.env.OMNIROUTE_PPLX_SEARCH_HINT ?? "");
+}
+
 export function buildQuery(parsed: ParsedMessages, followUpUuid: string | null): string {
   if (followUpUuid) return parsed.currentMsg;
 
   const obj: Record<string, unknown> = {};
   if (parsed.systemMsg.trim()) {
-    obj.instructions = [
-      parsed.systemMsg.trim(),
-      "You have built-in web search. Answer questions directly using search results.",
-    ];
+    obj.instructions = searchHintEnabled()
+      ? [parsed.systemMsg.trim(), SEARCH_HINT]
+      : [parsed.systemMsg.trim()];
   }
   if (parsed.history.length > 0) {
     obj.history = parsed.history;
@@ -425,6 +471,134 @@ export function applyMarkdownDiff(acc: MarkdownAccumulator, patches: PplxDiffPat
       acc.chunks[idx] = patch.value;
     }
   }
+}
+
+/** Answer-text items carry this `variant`; "thinking" and friends are not answer text. */
+const WORKFLOW_ANSWER_VARIANT = "answer";
+
+/**
+ * mdState key for one workflow answer item. Keyed per step+item so the
+ * `/chunks/<k>` indices of two concurrent items can never overwrite each other.
+ */
+function workflowUsageKey(stepIdx: number, itemIdx: number): string {
+  return `workflow_root:${stepIdx}:${itemIdx}`;
+}
+
+function isAnswerItem(item: PplxWorkflowItem | undefined): boolean {
+  if (!item) return false;
+  const payloadVariant = item.payload?.text_payload?.variant;
+  return (payloadVariant ?? item.variant) === WORKFLOW_ANSWER_VARIANT;
+}
+
+/**
+ * Seed an accumulator from a materialized answer item. Chunks win over `text`:
+ * the terminal frame can carry a `text` that lags the chunk track (same
+ * precedence markdown_block already uses for `chunks` over `answer`).
+ */
+function seedFromAnswerItem(acc: MarkdownAccumulator, item: PplxWorkflowItem): void {
+  const tp = item.payload?.text_payload;
+  if (!tp) return;
+  if (Array.isArray(tp.chunks) && tp.chunks.length > 0) {
+    acc.chunks = tp.chunks.map((c) => String(c));
+  } else if (typeof tp.text === "string" && tp.text.length > 0) {
+    acc.chunks = [tp.text];
+  }
+}
+
+function ensureAcc(mdState: Map<string, MarkdownAccumulator>, key: string): MarkdownAccumulator {
+  let acc = mdState.get(key);
+  if (!acc) {
+    acc = { chunks: [] };
+    mdState.set(key, acc);
+  }
+  return acc;
+}
+
+/**
+ * Apply a `field: "workflow_block"` diff patch set.
+ *
+ * Live shapes (Aug 2026 capture, pplx-auto / mode=copilot):
+ *   {op:"add",     path:"/steps/1",                                        value:{items:[…]}}
+ *   {op:"add",     path:"/steps/0/items/1",                                value:{…}}
+ *   {op:"add",     path:"/steps/1/items/0/payload/text_payload/chunks/2",  value:"…"}
+ *   {op:"replace", path:"/steps/1/items/0/payload/text_payload/text",      value:"…"}
+ *
+ * Only answer-variant items are accumulated; step/status patches are ignored.
+ */
+export function applyWorkflowDiff(
+  mdState: Map<string, MarkdownAccumulator>,
+  patches: PplxDiffPatch[]
+): void {
+  for (const patch of patches) {
+    const path = patch.path ?? "";
+
+    // Whole step materialized — pick up every answer item it carries.
+    const stepMatch = /^\/steps\/(\d+)$/.exec(path);
+    if (stepMatch) {
+      const stepIdx = Number.parseInt(stepMatch[1], 10);
+      const step = (patch.value ?? {}) as PplxWorkflowStep;
+      (step.items ?? []).forEach((item, itemIdx) => {
+        if (!isAnswerItem(item)) return;
+        seedFromAnswerItem(ensureAcc(mdState, workflowUsageKey(stepIdx, itemIdx)), item);
+      });
+      continue;
+    }
+
+    // Single item appended to an existing step.
+    const itemMatch = /^\/steps\/(\d+)\/items\/(\d+)$/.exec(path);
+    if (itemMatch) {
+      const item = (patch.value ?? {}) as PplxWorkflowItem;
+      if (!isAnswerItem(item)) continue;
+      const key = workflowUsageKey(
+        Number.parseInt(itemMatch[1], 10),
+        Number.parseInt(itemMatch[2], 10)
+      );
+      seedFromAnswerItem(ensureAcc(mdState, key), item);
+      continue;
+    }
+
+    // Incremental chunk append — the streaming hot path.
+    const chunkMatch = /^\/steps\/(\d+)\/items\/(\d+)\/payload\/text_payload\/chunks\/(\d+)$/.exec(
+      path
+    );
+    if (chunkMatch && typeof patch.value === "string") {
+      const key = workflowUsageKey(
+        Number.parseInt(chunkMatch[1], 10),
+        Number.parseInt(chunkMatch[2], 10)
+      );
+      // Only extend a track already seeded by an answer item: a chunk patch
+      // carries no variant, so an unseeded key could be a "thinking" track.
+      const acc = mdState.get(key);
+      if (!acc) continue;
+      acc.chunks[Number.parseInt(chunkMatch[3], 10)] = patch.value;
+      continue;
+    }
+
+    // Terminal `text` materialization — only used when no chunks arrived.
+    const textMatch = /^\/steps\/(\d+)\/items\/(\d+)\/payload\/text_payload\/text$/.exec(path);
+    if (textMatch && typeof patch.value === "string" && patch.value.length > 0) {
+      const key = workflowUsageKey(
+        Number.parseInt(textMatch[1], 10),
+        Number.parseInt(textMatch[2], 10)
+      );
+      const acc = mdState.get(key);
+      if (!acc || acc.chunks.join("").length > 0) continue;
+      acc.chunks = [patch.value];
+    }
+  }
+}
+
+/** Accumulate every answer item of a materialized workflow_block. */
+export function applyWorkflowBlock(
+  mdState: Map<string, MarkdownAccumulator>,
+  workflow: PplxWorkflowBlock
+): void {
+  (workflow.steps ?? []).forEach((step, stepIdx) => {
+    (step.items ?? []).forEach((item, itemIdx) => {
+      if (!isAnswerItem(item)) return;
+      seedFromAnswerItem(ensureAcc(mdState, workflowUsageKey(stepIdx, itemIdx)), item);
+    });
+  });
 }
 
 /**
@@ -644,6 +818,18 @@ export async function* extractContent(
             yield { thinking: desc, backendUuid: backendUuid ?? undefined };
           }
         }
+      }
+
+      // Content: workflow_block answer items. Perplexity migrated the answer text
+      // here from markdown_block, so this must run BEFORE the isAnswerTextUsage
+      // gate — the carrying usage is "workflow_root", which that gate rejects.
+      if (block.workflow_block) {
+        applyWorkflowBlock(mdState, block.workflow_block);
+        continue;
+      }
+      if (block.diff_block?.field === "workflow_block") {
+        applyWorkflowDiff(mdState, block.diff_block.patches ?? []);
+        continue;
       }
 
       // Content: answer-text blocks (schematized diff frames OR materialized

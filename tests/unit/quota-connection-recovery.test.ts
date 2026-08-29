@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, mock } from "node:test";
+import assert from "node:assert/strict";
 import {
   CREDITS_EXHAUSTED_STATUS,
   isCreditsExhaustedReprobeCandidate,
   isRecoverableCooldownConnection,
   selectRecoverableConnections,
   runConnectionRecoveryTick,
+  TERMINAL_CONNECTION_STATUSES,
 } from "@/lib/quota/connectionRecovery";
 
 describe("connectionRecovery — credits_exhausted reprobe", () => {
@@ -17,7 +19,7 @@ describe("connectionRecovery — credits_exhausted reprobe", () => {
       testStatus: CREDITS_EXHAUSTED_STATUS,
       rateLimitedUntil: new Date(nowMs - 5000).toISOString(),
     };
-    expect(isRecoverableCooldownConnection(conn, nowMs)).toBe(false);
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), false);
   });
 
   it("should reprobe credits_exhausted when >30m has elapsed since lastErrorAt", () => {
@@ -27,7 +29,7 @@ describe("connectionRecovery — credits_exhausted reprobe", () => {
       testStatus: CREDITS_EXHAUSTED_STATUS,
       lastErrorAt: thirtyOneMinAgo,
     };
-    expect(isCreditsExhaustedReprobeCandidate(conn, nowMs)).toBe(true);
+    assert.equal(isCreditsExhaustedReprobeCandidate(conn, nowMs), true);
   });
 
   it("should NOT reprobe credits_exhausted when <30m has elapsed since lastErrorAt", () => {
@@ -37,7 +39,7 @@ describe("connectionRecovery — credits_exhausted reprobe", () => {
       testStatus: CREDITS_EXHAUSTED_STATUS,
       lastErrorAt: tenMinAgo,
     };
-    expect(isCreditsExhaustedReprobeCandidate(conn, nowMs)).toBe(false);
+    assert.equal(isCreditsExhaustedReprobeCandidate(conn, nowMs), false);
   });
 
   it("should reprobe credits_exhausted if no timestamp is present (first tick after startup)", () => {
@@ -45,7 +47,7 @@ describe("connectionRecovery — credits_exhausted reprobe", () => {
       id: "conn-1",
       testStatus: CREDITS_EXHAUSTED_STATUS,
     };
-    expect(isCreditsExhaustedReprobeCandidate(conn, nowMs)).toBe(true);
+    assert.equal(isCreditsExhaustedReprobeCandidate(conn, nowMs), true);
   });
 
   it("selectRecoverableConnections includes both transient cooldowns and expired credits_exhausted", () => {
@@ -69,18 +71,21 @@ describe("connectionRecovery — credits_exhausted reprobe", () => {
       [activeTransient, expiredCredits, freshCredits],
       nowMs
     );
-    expect(selected.map((c) => c.id)).toEqual(["t-1", "c-1"]);
+    assert.deepEqual(
+      selected.map((c) => c.id),
+      ["t-1", "c-1"]
+    );
   });
 
   it("runConnectionRecoveryTick calls clearConnectionError for reprobe candidates", async () => {
-    const loadConnections = vi.fn().mockResolvedValue([
+    const loadConnections = mock.fn(async () => [
       {
         id: "c-1",
         testStatus: CREDITS_EXHAUSTED_STATUS,
         lastErrorAt: new Date(nowMs - thirtyMinMs - 1000).toISOString(),
       },
     ]);
-    const clearConnectionError = vi.fn().mockResolvedValue(undefined);
+    const clearConnectionError = mock.fn(async () => undefined);
 
     const res = await runConnectionRecoveryTick({
       nowMs,
@@ -88,8 +93,126 @@ describe("connectionRecovery — credits_exhausted reprobe", () => {
       clearConnectionError,
     });
 
-    expect(res.recovered).toBe(1);
-    expect(res.recoveredIds).toEqual(["c-1"]);
-    expect(clearConnectionError).toHaveBeenCalledWith("c-1", expect.anything());
+    assert.equal(res.recovered, 1);
+    assert.deepEqual(res.recoveredIds, ["c-1"]);
+    assert.equal(clearConnectionError.mock.callCount(), 1);
+    assert.equal(clearConnectionError.mock.calls[0].arguments[0], "c-1");
+    assert.notEqual(clearConnectionError.mock.calls[0].arguments[1], undefined);
+  });
+});
+
+describe("connectionRecovery — stale testStatus='error' labels", () => {
+  const nowMs = 1_700_000_000_000;
+
+  it("should recover an error-status connection whose cooldown elapsed", () => {
+    const conn = {
+      id: "e-1",
+      testStatus: "error",
+      rateLimitedUntil: new Date(nowMs - 1000).toISOString(),
+    };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), true);
+  });
+
+  it("should recover an error-status connection with no cooldown at all (stale label)", () => {
+    const conn = {
+      id: "e-2",
+      testStatus: "error",
+      rateLimitedUntil: null,
+      lastErrorAt: new Date(nowMs - 5 * 60 * 1000).toISOString(),
+    };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), true);
+  });
+
+  it("should NOT recover a fresh no-cooldown error label inside the grace window", () => {
+    const conn = {
+      id: "e-2b",
+      testStatus: "error",
+      rateLimitedUntil: null,
+      lastErrorAt: new Date(nowMs - 30 * 1000).toISOString(),
+    };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), false);
+  });
+
+  it("should NOT recover an error label with neither cooldown nor timestamp (unverifiable)", () => {
+    const conn = { id: "e-2c", testStatus: "error", rateLimitedUntil: null };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), false);
+  });
+
+  it("should NOT recover an error-status connection still inside its cooldown window", () => {
+    const conn = {
+      id: "e-3",
+      testStatus: "error",
+      rateLimitedUntil: new Date(nowMs + 30_000).toISOString(),
+    };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), false);
+  });
+
+  it("should NOT recover terminal statuses", () => {
+    for (const status of TERMINAL_CONNECTION_STATUSES) {
+      const conn = {
+        id: "e-4",
+        testStatus: status,
+        rateLimitedUntil: new Date(nowMs - 1000).toISOString(),
+      };
+      assert.equal(isRecoverableCooldownConnection(conn, nowMs), false, status);
+    }
+  });
+
+  it("selectRecoverableConnections includes stale error labels alongside cooldown recoveries", () => {
+    const staleError = {
+      id: "e-1",
+      testStatus: "error",
+      rateLimitedUntil: null,
+      lastErrorAt: new Date(nowMs - 10 * 60 * 1000).toISOString(),
+    };
+    const coolingError = {
+      id: "e-2",
+      testStatus: "error",
+      rateLimitedUntil: new Date(nowMs + 60_000).toISOString(),
+    };
+    const transient = {
+      id: "t-1",
+      testStatus: "unavailable",
+      rateLimitedUntil: new Date(nowMs - 1000).toISOString(),
+    };
+    const selected = selectRecoverableConnections([staleError, coolingError, transient], nowMs);
+    assert.deepEqual(
+      selected.map((c) => c.id),
+      ["e-1", "t-1"]
+    );
+  });
+});
+
+describe("connectionRecovery — unrecognized statuses", () => {
+  const nowMs = 1_700_000_000_000;
+  it("should NOT recover an unknown testStatus value", () => {
+    const conn = {
+      id: "u-1",
+      testStatus: "unknown-status",
+      rateLimitedUntil: new Date(nowMs - 1000).toISOString(),
+    };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), false);
+  });
+});
+
+describe("connectionRecovery — mixed timestamp encodings", () => {
+  const nowMs = 1_700_000_000_000;
+  it("should recover a stale error label with a numeric-string lastErrorAt", () => {
+    const conn = {
+      id: "n-1",
+      testStatus: "error",
+      rateLimitedUntil: null,
+      lastErrorAt: String(nowMs - 120_000), // epoch-ms string, 2 minutes ago
+    };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), true);
+  });
+  it("should NOT recover a fresh error label with a numeric-string lastErrorAt", () => {
+    const conn = {
+      id: "n-2",
+      testStatus: "error",
+      rateLimitedUntil: null,
+      lastErrorAt: String(nowMs - 10_000), // 10s ago — inside the grace window
+    };
+    assert.equal(isRecoverableCooldownConnection(conn, nowMs), false);
   });
 });

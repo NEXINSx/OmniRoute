@@ -234,7 +234,6 @@ v1/
 ├── audio/{speech, transcriptions}/      TTS + STT
 ├── batches/[id]/{cancel}, batches/      OpenAI Batches API
 ├── chat/completions/                    Chat Completions (główny endpoint)
-├── chatgpt-web/                         compat ChatGPT-Web
 ├── completions/                         Legacy text completions
 ├── embeddings/                          Embeddings
 ├── files/[id]/, files/                  Pliki API
@@ -457,7 +456,7 @@ open-sse/
 ├── transformer/            Transformer strumienia Responses API ↔ Chat Completions
 ├── services/               80+ modułów services (combos, fallback, quotas, identity, …)
 ├── utils/                  Helpery streamingu, klient TLS, AWS SigV4, proxy fetch, …
-└── mcp-server/             serwer MCP (3 transports, 32 scopes, 99 tools)
+└── mcp-server/             serwer MCP (3 transports, 32 scopes, 107 tools)
 ```
 
 ### 4.1 `open-sse/handlers/`
@@ -482,16 +481,16 @@ open-sse/
 
 ### 4.2 `open-sse/executors/`
 
-84 executory providerów, każdy rozszerza `BaseExecutor` (`base.ts`):
+107 executorów providerów, każdy rozszerza `BaseExecutor` (`base.ts`):
 
-`antigravity`, `azure-openai`, `blackbox-web`, `chatgpt-web`, `cliproxyapi`,
-`cloudflare-ai`, `codex`, `commiCode`, `cursor`, `default`, `devin-cli`,
+`antigravity`, `azure-openai`, `blackbox-web`, `cliproxyapi`,
+`chatgpt-web-codex`, `cloudflare-ai`, `codex`, `commiCode`, `cursor`, `default`, `devin-cli`,
 `muse-spark-web`, `nlpcloud`, `opencode`, `perplexity-web`, `petals`,
-`pollinations`, `puter`, `qoder`, `vertex`, `windsurf`, plus `claudeIdentity.ts`
+`pollinations`, `qoder`, `vertex`, `windsurf`, plus `claudeIdentity.ts`
 (współdzielony helper identity) i `index.ts` (rejestr).
 
 > Uwaga: providery niewymienione tutaj są obsługiwane przez `default.ts` z generycznym
-> executorem zgodnym z OpenAI. Pełny katalog providerów (268 wpisów) jest w
+> executorem zgodnym z OpenAI. Pełny katalog providerów (351 wpisów) jest w
 > `src/shared/constants/providers.ts`.
 
 ### 4.3 `open-sse/translator/`
@@ -524,7 +523,7 @@ Wyróżniki (pełna lista w `open-sse/services/`):
 
 | Zagadnienie           | Pliki                                                                                                                                                                                                                                           |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Combo routing         | `combo.ts` (17 strategies), `comboConfig.ts`, `comboMetrics.ts`, `comboManifestMetrics.ts`, `comboAgentMiddleware.ts`                                                                                                                           |
+| Combo routing         | `combo.ts` (19 public strategies), `comboConfig.ts`, `comboMetrics.ts`, `comboManifestMetrics.ts`, `comboAgentMiddleware.ts`                                                                                                                    |
 | Silnik Auto Combo     | `autoCombo/` — `engine.ts`, `scoring.ts`, `taskFitness.ts`, `virtualFactory.ts`, `modePacks.ts`, `autoPrefix.ts`, `persistence.ts`, `providerDiversity.ts`, `providerRegistryAccessor.ts`, `routerStrategy.ts`, `selfHealing.ts`, `index.ts`    |
 | Resilience            | `accountFallback.ts` (cooldown + lockout), `errorClassifier.ts`, `emergencyFallback.ts`, `rateLimitManager.ts`, `rateLimitSemaphore.ts`, `accountSemaphore.ts`, `accountSelector.ts`                                                            |
 | Quotas                | `quotaMonitor.ts`, `quotaPreflight.ts`, `bailianQuotaFetcher.ts`, `codexQuotaFetcher.ts`, `deepseekQuotaFetcher.ts`, `openrouterQuotaFetcher.ts`, `openrouterFreeWindow.ts`, `crofUsageFetcher.ts`, `antigravityCredits.ts`                     |
@@ -540,11 +539,11 @@ Wyróżniki (pełna lista w `open-sse/services/`):
 
 ### 4.6 `open-sse/mcp-server/`
 
-- **31 registered tools** wired in `server.ts` (12 scoped under `schemas/tools.ts`,
+- **32 registered tools** wired in `server.ts` (12 scoped under `schemas/tools.ts`,
   5 compression tools, 3 memory tools, 4 skills tools, plus advanced tools added
   through `advancedTools.ts`).
 - **3 transports**: stdio, HTTP Streamable, SSE.
-- **13 scopes** declared in `src/shared/constants/mcpScopes.ts`.
+- **32 scopes** declared in `src/shared/constants/mcpScopes.ts`.
 - Audit table: `mcp_tool_audit` (populated by `audit.ts`).
 - Pliki: `server.ts`, `index.ts`, `httpTransport.ts`, `audit.ts`, `scopeEnforcement.ts`,
   `runtimeHeartbeat.ts`, `descriptionCompressor.ts`, `schemas/{tools, a2a, audit, index}.ts`,
@@ -634,17 +633,17 @@ Dwa binaria są wystawione w `package.json` → `bin`:
 
 ## 7. `tests/`
 
-| Katalog                                                                        | Typ                                                                                                       |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `tests/unit/`                                                                  | Testy jednostkowe przez Node native test runner (1821 plików, plus `api/`, `auth/`, `authz/` podkatalogi) |
-| `tests/integration/`                                                           | Testy cross-module + stan DB                                                                              |
-| `tests/e2e/`                                                                   | Playwright UI tests                                                                                       |
-| `tests/protocols-e2e/`                                                         | MCP/A2A protocol e2e                                                                                      |
-| `tests/translator/`                                                            | Translator-specific tests                                                                                 |
-| `tests/security/`                                                              | Security regressions                                                                                      |
-| `tests/load/`                                                                  | Load / stress tests                                                                                       |
-| `tests/golden-set/`                                                            | Reference outputs for translator regressions                                                              |
-| `tests/helpers/`, `tests/fixtures/`, `tests/manual/`, `tests/scratch_test.mjs` | Support                                                                                                   |
+| Katalog                                              | Typ                                                                                                       |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `tests/unit/`                                        | Testy jednostkowe przez Node native test runner (1821 plików, plus `api/`, `auth/`, `authz/` podkatalogi) |
+| `tests/integration/`                                 | Testy cross-module + stan DB                                                                              |
+| `tests/e2e/`                                         | Playwright UI tests                                                                                       |
+| `tests/protocols-e2e/`                               | MCP/A2A protocol e2e                                                                                      |
+| `tests/translator/`                                  | Translator-specific tests                                                                                 |
+| `tests/security/`                                    | Security regressions                                                                                      |
+| `tests/load/`                                        | Load / stress tests                                                                                       |
+| `tests/golden-set/`                                  | Reference outputs for translator regressions                                                              |
+| `tests/helpers/`, `tests/fixtures/`, `tests/manual/` | Support                                                                                                   |
 
 Common commands:
 

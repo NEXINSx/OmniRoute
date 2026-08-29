@@ -34,9 +34,13 @@ export const PROVIDER_ENDPOINTS = {
   "chat-oripe": "https://api.oriper.com/v1/chat/completions",
   freeinference: "https://freeinference.org/v1/chat/completions",
   "free-ai": "https://api.free.ai/v1/chat/",
+  "void-ai": "https://api.voidai.app/v1/chat/completions",
+  helixmind: "https://helixmind.online/v1/chat/completions",
+  tabitoken: "https://tabitoken.com/v1/messages",
   glm: "https://api.z.ai/api/anthropic/v1/messages",
   glmt: "https://api.z.ai/api/anthropic/v1/messages",
-  "bailian-coding-plan": "https://coding-intl.dashscope.aliyuncs.com/apps/anthropic/v1/messages",
+  "bailian-coding-plan":
+    "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1/messages",
   "qwen-cloud": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
   "qwen-cloud-token-plan":
     "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
@@ -50,6 +54,7 @@ export const PROVIDER_ENDPOINTS = {
   openadapter: "https://api.openadapter.in/v1/chat/completions",
   dit: "https://api.dit.ai/v1/chat/completions",
   tokenrouter: "https://api.tokenrouter.com/v1/chat/completions",
+  "token-kiosk": "https://agent-router.gaib.ai/v1/chat/completions",
   sumopod: "https://ai.sumopod.com/v1/chat/completions",
   x5lab: "https://api.x5lab.dev/v1/chat/completions",
   kenari: "https://kenari.id/v1/chat/completions",

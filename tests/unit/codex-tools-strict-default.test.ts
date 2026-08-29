@@ -114,7 +114,10 @@ test("hosted, namespace, and custom tools are unchanged by function strict defau
   assert.deepEqual(tools, before);
 });
 
-test("production-like enum and oneOf schema is preserved exactly", () => {
+// Since #9828 (16bf95fe33), normalizeCodexTools strips a `oneOf` that is fully
+// redundant with a sibling `enum` (Codex private Responses 502 workaround); the
+// rest of the production-like schema must still be preserved exactly.
+test("production-like enum and oneOf schema keeps everything but the redundant oneOf", () => {
   const parameters = {
     type: "object",
     description: "Dynamic action parameters",
@@ -151,6 +154,8 @@ test("production-like enum and oneOf schema is preserved exactly", () => {
     function: { name: "dynamic_tool", parameters },
   } as JsonRecord;
   const expected = structuredClone(parameters);
+  // #9828: the const set exactly matches the sibling enum, so oneOf is dropped.
+  delete (expected.properties.action as { oneOf?: unknown }).oneOf;
 
   normalizeCodexTools({ tools: [tool] });
 

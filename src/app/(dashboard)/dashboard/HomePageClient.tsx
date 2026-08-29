@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
-import dynamic from "next/dynamic";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardSkeleton, Button, Modal } from "@/shared/components";
@@ -20,9 +19,7 @@ import { getProviderDisplayLabel } from "@/shared/utils/providerDisplayLabel";
 import { useIsElectron, useOpenExternal } from "@/shared/hooks/useElectron";
 import { HomeProviderTopologySection } from "./HomeProviderTopologySection";
 import { shouldShowProviderTopologyOnHome } from "./homeAppearance";
-
-const ProviderQuotaWidget = dynamic(() => import("../home/ProviderQuotaWidget"), { ssr: false });
-import type { NewsAnnouncement } from "@/shared/utils/releaseNotes";
+import HomeRecentRequests from "../home/HomeRecentRequests";
 
 type UpdateStep = {
   step: string;
@@ -37,7 +34,6 @@ type VersionInfo = {
   channel: string;
   autoUpdateSupported: boolean;
   autoUpdateError?: string | null;
-  news?: NewsAnnouncement | null;
 };
 
 type HomePageClientProps = {
@@ -204,13 +200,10 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
   const [updatePhase, setUpdatePhase] = useState<"idle" | "running" | "done" | "failed">("idle");
 
   // Appearance settings for home page pinning
-  const [pinProviderQuotaToHome, setPinProviderQuotaToHome] = useState(false);
   const [showQuickStartOnHome, setShowQuickStartOnHome] = useState(true); // default on
   // #4596: default hidden until appearance settings load, so the live-WS
   // topology connection is never opened before we know the user wants it.
   const [showProviderTopologyOnHome, setShowProviderTopologyOnHome] = useState(false);
-  const [autoRefreshProviderQuota, setAutoRefreshProviderQuota] = useState(false);
-  const [autoRefreshProviderQuotaInterval, setAutoRefreshProviderQuotaInterval] = useState(180);
   const [appearanceSettingsLoaded, setAppearanceSettingsLoaded] = useState(false);
 
   useEffect(() => {
@@ -219,9 +212,6 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
       .then((r) => (r.ok ? r.json() : {}))
       .then((data) => {
         if (data) {
-          if (typeof data.pinProviderQuotaToHome === "boolean") {
-            setPinProviderQuotaToHome(data.pinProviderQuotaToHome);
-          }
           if (typeof data.showQuickStartOnHome === "boolean") {
             setShowQuickStartOnHome(data.showQuickStartOnHome);
           }
@@ -234,12 +224,6 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
           setShowProviderTopologyOnHome(
             shouldShowProviderTopologyOnHome(data.showProviderTopologyOnHome)
           );
-          if (typeof data.autoRefreshProviderQuota === "boolean") {
-            setAutoRefreshProviderQuota(data.autoRefreshProviderQuota);
-          }
-          if (typeof data.autoRefreshProviderQuotaInterval === "number") {
-            setAutoRefreshProviderQuotaInterval(data.autoRefreshProviderQuotaInterval);
-          }
         }
       })
       .catch(() => {
@@ -1047,47 +1031,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
                 </div>
               )}
           </div>
-
-          {/* News Notification Banner */}
-          {versionInfo?.news && (
-            <div className="flex min-h-[64px] items-center justify-between rounded-lg border border-border bg-surface px-5 py-4">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-bg text-text-muted">
-                  <span className="material-symbols-outlined text-[22px] text-primary">
-                    {versionInfo.news.icon || "campaign"}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-text-main">{versionInfo.news.title}</p>
-                  <p className="mt-0.5 max-w-[560px] text-xs leading-relaxed text-text-muted">
-                    {versionInfo.news.message}
-                  </p>
-                </div>
-              </div>
-
-              {versionInfo.news.link && (
-                <a
-                  href={versionInfo.news.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-4 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-bg px-4 py-2 text-xs font-semibold text-text-main transition-colors hover:border-primary/30 hover:text-primary"
-                >
-                  {versionInfo.news.linkLabel || t("readMore")}
-                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                </a>
-              )}
-            </div>
-          )}
         </div>
-      )}
-
-      {/* Pinned Provider Quota Limits */}
-      {pinProviderQuotaToHome && (
-        <Suspense fallback={<CardSkeleton />}>
-          <ProviderQuotaWidget
-            autoRefreshInterval={autoRefreshProviderQuota ? autoRefreshProviderQuotaInterval : 0}
-          />
-        </Suspense>
       )}
 
       {/* Quick Start (controlled by Appearance setting, default on) */}
@@ -1183,12 +1127,15 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
       )}
 
       {showProviderTopologyOnHome && (
-        <HomeProviderTopologySection
-          providers={topologyProviders}
-          lastProvider={lastProvider}
-          errorProvider={errorProvider}
-          enabled={showProviderTopologyOnHome}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
+          <HomeProviderTopologySection
+            providers={topologyProviders}
+            lastProvider={lastProvider}
+            errorProvider={errorProvider}
+            enabled={showProviderTopologyOnHome}
+          />
+          <HomeRecentRequests enabled={showProviderTopologyOnHome} />
+        </div>
       )}
 
       {/* Provider Models Modal */}

@@ -26,7 +26,8 @@ But typical clients (Cursor, Cline, Roo Code, OpenAI SDK) strip `reasoning_conte
 ```
 Turn N (assistant generates):
   → response contains reasoning_content + tool_calls
-  → cacheReasoningFromAssistantMessage() writes (memory + DB), keyed by every tool_call.id
+  → if requiresReasoningReplay(provider, model): cacheReasoningFromAssistantMessage()
+      writes (memory + DB), keyed by every tool_call.id
   → forward response to client (which may or may not retain reasoning)
 
 Turn N+1 (client sends follow-up):
@@ -157,6 +158,7 @@ The cache exposes two endpoints under `src/app/api/cache/reasoning/route.ts`. Bo
 - **Cleanup:** `cleanupReasoningCache()` purges expired memory entries and runs `DELETE FROM reasoning_cache WHERE expires_at <= unixepoch('now')`. Health-check workers call this periodically.
 - **Crash recovery:** After a restart, memory is empty but the DB still holds unexpired entries. The first lookup for a given `tool_call_id` is a DB hit; subsequent lookups are memory hits.
 - **No reasoning, no cache:** `cacheReasoningFromAssistantMessage` returns `0` when the assistant message has no `reasoning_content` / `reasoning` field, so non-thinking responses cost nothing.
+- **Write is gated too:** both call sites in `chatCore.ts` (non-streaming and streaming) only call `cacheReasoningFromAssistantMessage()` when `requiresReasoningReplay(provider, model)` is `true` — the same predicate the read side checks. Installs that never touch a replay provider stop paying for the write, the index update, and the try/catch on every reasoning-bearing response.
 - **Non-strict providers:** When `requiresReasoningReplay` is `false` and the target format is OpenAI, the translator **strips** any `reasoning_content` field from outgoing messages — OpenAI Chat Completions does not accept it.
 
 ## See Also

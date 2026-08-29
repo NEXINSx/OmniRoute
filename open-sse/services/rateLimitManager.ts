@@ -9,7 +9,7 @@
  */
 
 import Bottleneck from "bottleneck";
-import { applyBottleneckDoExpirePatch } from "./bottleneckPatch.ts";
+import { applyBottleneckDoExpirePatch, applyBottleneckHeartbeatPatch } from "./bottleneckPatch.ts";
 import { parseRetryAfterFromBody } from "./accountFallback.ts";
 import { getAntigravityQuotaFamily } from "./antigravityQuotaFamily.ts";
 import { getProviderCategory } from "../config/providerRegistry.ts";
@@ -96,6 +96,7 @@ const PERSIST_DEBOUNCE_MS = 60_000; // Debounce persistence to every 60s max
 let initialized = false;
 
 let currentRequestQueueSettings: RequestQueueSettings = DEFAULT_RESILIENCE_SETTINGS.requestQueue;
+export const ZAI_WEB_REQUEST_QUEUE_MAX_WAIT_MS = 60_000;
 
 const limiterEffectiveSettings = new WeakMap<Bottleneck, Bottleneck.ConstructorOptions>();
 const preservedReplacementSettings = new Map<string, Bottleneck.ConstructorOptions>();
@@ -139,19 +140,40 @@ function isAutoEnableActive(settings: RequestQueueSettings): boolean {
 const EFFECTIVELY_INFINITE = Number.MAX_SAFE_INTEGER;
 const EFFECTIVELY_INFINITE_CONCURRENCY = 1000;
 
+// Shared override-resolution rule for every per-connection rate-limit field:
+// a positive override wins, 0 or missing falls through to `fallback`.
+function resolveOverride(override: number | undefined | null, fallback: number): number {
+  return typeof override === "number" && override > 0 ? override : fallback;
+}
+
 // Resolve an RPM override. 0 or missing means "infinite" (no rate cap).
 function resolveRpm(override: number | undefined | null): number {
-  return typeof override === "number" && override > 0 ? override : EFFECTIVELY_INFINITE;
+  return resolveOverride(override, EFFECTIVELY_INFINITE);
 }
 
 // Resolve a minTime override. 0 or missing means "no minimum gap".
 function resolveMinTime(override: number | undefined | null): number {
-  return typeof override === "number" && override > 0 ? override : 0;
+  return resolveOverride(override, 0);
 }
 
 // Resolve a maxConcurrent override. 0 or missing means "effectively infinite".
 function resolveMaxConcurrent(override: number | undefined | null): number {
-  return typeof override === "number" && override > 0 ? override : EFFECTIVELY_INFINITE_CONCURRENCY;
+  return resolveOverride(override, EFFECTIVELY_INFINITE_CONCURRENCY);
+}
+
+export function resolveRequestQueueMaxWaitMs(
+  provider: string,
+  configuredMaxWaitMs: number = currentRequestQueueSettings.maxWaitMs,
+  connectionId?: string
+): number {
+  const legacyDefault =
+    provider.trim().toLowerCase() === "zai-web"
+      ? Math.max(configuredMaxWaitMs, ZAI_WEB_REQUEST_QUEUE_MAX_WAIT_MS)
+      : configuredMaxWaitMs;
+  const override = connectionId
+    ? connectionRateLimitOverrides.get(connectionId)?.maxWaitMs
+    : undefined;
+  return resolveOverride(override, legacyDefault);
 }
 
 function buildLimiterDefaults() {
@@ -313,6 +335,7 @@ export async function initializeRateLimits() {
   initialized = true;
   // Fix Bottleneck v2.19.5 doExpire bug before any limiter is created.
   applyBottleneckDoExpirePatch();
+  applyBottleneckHeartbeatPatch();
 
   try {
     const { getCachedProviderConnections, getSettings } = await import("@/lib/localDb");
@@ -457,6 +480,10 @@ function getLimiter(provider, connectionId, model = null) {
   const key = getLimiterKey(provider, connectionId, model);
 
   if (!limiters.has(key)) {
+    // Idempotent — covers callers (and tests) that reach limiter creation
+    // without going through initializeRateLimits().
+    applyBottleneckDoExpirePatch();
+    applyBottleneckHeartbeatPatch();
     const preserved = preservedReplacementSettings.get(key);
     let options: Bottleneck.ConstructorOptions;
     if (preserved) {
@@ -531,18 +558,14 @@ export async function withRateLimit(provider, connectionId, model, fn, signal = 
 
   // Proactive sliding-window fallback for header-less providers with a declared cap
   // (Fase 8.2). No-op unless PROVIDER_DEFAULT_RATE_LIMITS has an entry for `provider`.
-  await awaitProviderDefaultSlot(
-    provider,
-    connectionId,
-    signal,
-    currentRequestQueueSettings.maxWaitMs
-  );
+  const maxWaitMs = resolveRequestQueueMaxWaitMs(provider, undefined, connectionId);
+  await awaitProviderDefaultSlot(provider, connectionId, signal, maxWaitMs);
 
   const limiter = getLimiter(provider, connectionId, model);
   // Bottleneck's `expiration` starts only after a job leaves QUEUED. The
   // legacy maxWaitMs setting therefore bounds limiter-managed execution; it
   // is not a queue-wait deadline.
-  const executionExpirationMs = currentRequestQueueSettings.maxWaitMs;
+  const executionExpirationMs = maxWaitMs;
   const scheduleOpts =
     executionExpirationMs && executionExpirationMs > 0 ? { expiration: executionExpirationMs } : {};
 
@@ -588,7 +611,14 @@ export async function withRateLimit(provider, connectionId, model, fn, signal = 
       }
 
       try {
-        return await Promise.race([limiter.schedule(scheduleOpts, fn), abortPromise]);
+        // Race the work against the abort signal. When abort wins, fn is still
+        // running inside Bottleneck's limiter — its eventual rejection must not
+        // surface as an unhandledRejection. The .catch(noop) silences only the
+        // orphaned branch; the real rejection comes from abortPromise.
+        const scheduled = limiter.schedule(scheduleOpts, fn);
+        scheduled.catch(() => {}); // prevent unhandledRejection when abort wins
+        abortPromise.catch(() => {}); // prevent unhandledRejection when scheduled wins
+        return await Promise.race([scheduled, abortPromise]);
       } finally {
         if (abortListener) {
           signal.removeEventListener("abort", abortListener);
@@ -738,7 +768,7 @@ export function updateFromHeaders(provider, connectionId, headers, status, model
         );
       } else if (remaining > limit * 0.5) {
         // Plenty of headroom — relax the limiter
-        updates.minTime = 0;
+        updates.minTime = resolveMinTime(currentRequestQueueSettings.minTimeBetweenRequestsMs);
         updates.reservoir = null;
         updates.reservoirRefreshAmount = null;
         updates.reservoirRefreshInterval = null;

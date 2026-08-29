@@ -5,6 +5,15 @@ import { FORMATS } from "../../open-sse/translator/formats.ts";
 import { getRegistryEntry } from "../../open-sse/config/providerRegistry.ts";
 import { createPassthroughStreamWithLogger } from "../../open-sse/utils/stream.ts";
 
+// History: #9256 (aff021e78f) added ensureThinkingSignature normalization for the
+// MiniMax Anthropic-compatible endpoint (issue 2706). PR #9463 (c61cdc30aa,
+// 2026-08-11) then deliberately switched minimax/minimax-cn from claude to
+// openai format (images 403'd on /anthropic/v1/messages) and REMOVED the
+// ensureThinkingSignature opt-in — the claude-shaped thinking-signature
+// placeholder no longer applies to these providers. This file now pins that
+// NEW contract: MiniMax streams pass through untouched, exactly like any other
+// non-opted-in provider.
+
 const encoder = new TextEncoder();
 
 async function runPassthrough(provider: string, input: string, chunkSize = input.length) {
@@ -56,12 +65,14 @@ function thinkingStart(signature?: string) {
   };
 }
 
-test("MiniMax registries opt into thinking signature normalization", () => {
-  assert.equal(getRegistryEntry("minimax")?.ensureThinkingSignature, true);
-  assert.equal(getRegistryEntry("minimax-cn")?.ensureThinkingSignature, true);
+test("MiniMax registries no longer opt into thinking signature normalization (#9463)", () => {
+  // c61cdc30aa switched both providers to openai format and dropped the
+  // claude-format ensureThinkingSignature opt-in added by #9256.
+  assert.equal(getRegistryEntry("minimax")?.ensureThinkingSignature, undefined);
+  assert.equal(getRegistryEntry("minimax-cn")?.ensureThinkingSignature, undefined);
 });
 
-test("unsigned MiniMax thinking block starts receive an empty signature", async () => {
+test("unsigned MiniMax thinking block starts pass through without a signature placeholder", async () => {
   const event = thinkingStart();
   const output = await runPassthrough(
     "minimax",
@@ -69,7 +80,11 @@ test("unsigned MiniMax thinking block starts receive an empty signature", async 
   );
   const firstEvent = parseDataEvents(output)[0];
 
-  assert.equal((firstEvent.content_block as Record<string, unknown>).signature, "");
+  assert.equal(
+    "signature" in (firstEvent.content_block as Record<string, unknown>),
+    false,
+    "since #9463 minimax must not receive the empty-signature placeholder"
+  );
 });
 
 test("fragmented MiniMax streams preserve real signatures and later signature deltas", async () => {
@@ -84,7 +99,7 @@ test("fragmented MiniMax streams preserve real signatures and later signature de
     `event: content_block_delta\ndata: ${JSON.stringify(signatureDelta)}\n\n`;
   const events = parseDataEvents(await runPassthrough("minimax-cn", input, 7));
 
-  assert.equal((events[0].content_block as Record<string, unknown>).signature, "");
+  assert.equal("signature" in (events[0].content_block as Record<string, unknown>), false);
   assert.deepEqual(events[1].delta, signatureDelta.delta);
 
   const existing = parseDataEvents(

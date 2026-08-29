@@ -1102,3 +1102,47 @@ test("connectionMatchesProviderCard counts a dual-auth provider's PAT (apikey) c
   assert.equal(connectionMatchesProviderCard(null, "qoder", "oauth"), false);
   assert.equal(connectionMatchesProviderCard(undefined, "qoder", "oauth"), false);
 });
+
+test("unified xAI OAuth card includes canonical and legacy connection provider IDs", () => {
+  const {
+    buildStaticProviderEntries,
+    connectionBelongsToProviderPage,
+    connectionMatchesProviderCard,
+    resolveProviderOAuthBackendId,
+  } = providerPageUtils;
+  const connections = [
+    { provider: "xai", authType: "apikey" },
+    { provider: "xai-oauth", authType: "oauth" },
+    { provider: "xao", authType: "oauth" },
+  ];
+
+  assert.deepEqual(
+    connections
+      .filter((connection) => connectionBelongsToProviderPage(connection.provider, "xai"))
+      .map((connection) => connection.provider),
+    ["xai", "xai-oauth", "xao"]
+  );
+  assert.deepEqual(
+    connections
+      .filter((connection) => connectionMatchesProviderCard(connection, "xai", "oauth"))
+      .map((connection) => connection.provider),
+    ["xai", "xai-oauth", "xao"]
+  );
+  assert.equal(resolveProviderOAuthBackendId("xai", providers.APIKEY_PROVIDERS.xai), "xai-oauth");
+  assert.equal(
+    resolveProviderOAuthBackendId("openai", providers.APIKEY_PROVIDERS.openai),
+    "openai"
+  );
+  assert.equal(providers.OAUTH_PROVIDERS["xai-oauth"].hiddenFromDashboard, true);
+  assert.equal(providers.supportsDualAuthProvider("xai"), true);
+
+  const emptyStats = () => ({ total: 0 });
+  assert.ok(
+    buildStaticProviderEntries("apikey", emptyStats).some((entry) => entry.providerId === "xai")
+  );
+  assert.ok(
+    !buildStaticProviderEntries("oauth", emptyStats).some(
+      (entry) => entry.providerId === "xai-oauth"
+    )
+  );
+});

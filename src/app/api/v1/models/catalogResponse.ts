@@ -32,6 +32,7 @@ import {
   enrichCatalogModelEntry,
   type CatalogEnrichmentSnapshot,
 } from "@/lib/modelMetadataRegistry";
+import { createModelCapabilityResolutionSnapshot } from "@/lib/modelCapabilityResolutionSnapshot";
 import { isModelCatalogNamesEnabled } from "@/shared/utils/featureFlags";
 import { extractApiKey } from "@/sse/services/auth";
 import { maybeOmitCatalogModelName } from "./catalogHelpers";
@@ -45,7 +46,7 @@ import { isCodexModelCatalogClient } from "./catalogRequest";
  * returns early, but it still owes the caller these steps — the discovery mirrors in
  * particular are what let Claude Code see a quota pool's models at all.
  */
-export function applyCatalogPostFilters(
+export async function applyCatalogPostFilters(
   request: Request,
   models: Array<Record<string, any>>,
   ctx: {
@@ -54,7 +55,8 @@ export function applyCatalogPostFilters(
     aliasToProviderId: Record<string, string>;
     hideNoThinkVariants?: boolean;
   }
-): Array<Record<string, any>> {
+): Promise<Array<Record<string, any>>> {
+  const yieldTurn = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
   let finalModels = models;
 
   // variants are only generated for surviving models.
@@ -64,6 +66,11 @@ export function applyCatalogPostFilters(
       return hasEligibleConnectionForModel(ctx.connections, m.root);
     });
   }
+
+  // #9147: the variant-append passes each walk the full model list (O(n) per pass),
+  // so a catalog-scale build must not run all of them in one synchronous stretch.
+  // Yield once between the expensive passes to let the event loop breathe.
+  await yieldTurn();
 
   // Advertise Claude reasoning-effort variants (claude/<model>-{low,medium,high[,xhigh]}).
   // Derived from the already key-filtered list so a variant only appears when its real
@@ -139,10 +146,14 @@ export function applyCatalogPostFilters(
     );
   }
 
+  await yieldTurn();
+
   // #7694: advertise `<provider>/<model>-<tier>` variants for synced models that
   // captured `reasoning.supported_efforts` at sync time (capabilities.effort_tiers).
   // Derived from the already key-filtered list; skips codex/kimi (own suffix mechanism).
   finalModels = appendSyncedEffortVariants(finalModels);
+
+  await yieldTurn();
 
   // #4424 follow-up — drop exact-duplicate ids that slip through the per-source push
   // guards (e.g. `codex/gpt-5.5`, `veo-free/seedance` listed twice). Keyed by listing
@@ -207,25 +218,46 @@ export async function finalizeCatalogResponse(
   }
 
   const includeModelNames = isModelCatalogNamesEnabled();
-  const enrichedModels = disambiguateCatalogModelNames(
-    finalModels.map((model) => {
-      if (model.owned_by === "combo") {
-        return maybeOmitCatalogModelName(model, includeModelNames);
-      }
-      const enriched = enrichCatalogModelEntry(model, undefined, enrichmentSnapshot);
-      const fallbackContextLength = getContextFallback(enriched);
-      const listedModel = fallbackContextLength
-        ? { ...enriched, context_length: fallbackContextLength }
-        : enriched;
-      return maybeOmitCatalogModelName(listedModel, includeModelNames);
-    })
-  );
-  // Canonical provider-grouped publication: one contiguous block per provider,
-  // combos pinned first. Stable — preserves combo sort_order, connection priority,
-  // and equal-id audio twins. Grouped by owned_by (canonical identity), not the
-  // routing alias prefix. Applied after enrichment/disambiguation so the final
-  // serialized order is what every consumer sees; cached as part of the body.
+  // #9147: enrichment is the most expensive single stage of the catalog build —
+  // per-entry provider/model resolution plus pricing + token/context override
+  // lookups. Two fixes so a large catalog cannot pin the Node.js thread here:
+  //  (1) bulk-load the synced-capability + override tables ONCE into an in-memory
+  //      snapshot (#9199 machinery) so per-entry enrichment never hits SQLite;
+  //  (2) yield to the event loop every `YIELD_EVERY` entries so even the remaining
+  //      per-entry work is interleaved with other callers / the dashboard WS.
+  const yieldTurn = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+  await yieldTurn();
+  const capabilityResolutionSnapshot =
+    enrichmentSnapshot?.capabilityResolutionSnapshot ?? createModelCapabilityResolutionSnapshot();
+  const enriched: Array<Record<string, unknown>> = [];
+  const catYIELD_EVERY = 5;
+  let catEnrichCount = 0;
+  for (const model of finalModels) {
+    let listedModel: Record<string, unknown>;
+    if (model.owned_by === "combo") {
+      listedModel = maybeOmitCatalogModelName(model, includeModelNames);
+    } else {
+      const entry = enrichCatalogModelEntry(model, undefined, {
+        ...enrichmentSnapshot,
+        capabilityResolutionSnapshot,
+      });
+      const fallbackContextLength = getContextFallback(entry);
+      listedModel = fallbackContextLength
+        ? { ...entry, context_length: fallbackContextLength }
+        : entry;
+      listedModel = maybeOmitCatalogModelName(listedModel, includeModelNames);
+    }
+    enriched.push(listedModel);
+    catEnrichCount++;
+    if (catEnrichCount % catYIELD_EVERY === 0) {
+      await yieldTurn();
+    }
+  }
+  await yieldTurn();
+  const enrichedModels = disambiguateCatalogModelNames(enriched);
+  await yieldTurn();
   const orderedModels = sortCatalogModelsProviderGrouped(enrichedModels);
+  await yieldTurn();
   // Codex CLI compatibility: its model-catalog refresh (codex_models_manager) does
   // GET /v1/models?client_version=<v> and decodes a JSON object with a TOP-LEVEL
   // `models` array, so the OpenAI-standard `{object,data}` shape makes it fail with

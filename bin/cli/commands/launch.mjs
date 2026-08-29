@@ -190,7 +190,10 @@ export async function runLaunchCommand(opts = {}, claudeArgs = []) {
   const configDir = opts.profile
     ? join(opts.claudeHome || join(os.homedir(), ".claude"), "profiles", opts.profile)
     : undefined;
-  const env = buildClaudeEnv(process.env, baseUrl, authToken, { configDir });
+  const env = buildClaudeEnv(process.env, baseUrl, authToken, {
+    configDir,
+    model: opts.model,
+  });
 
   const { command, shell } = await resolveClaudeSpawn(process.platform);
 
@@ -201,16 +204,43 @@ export async function runLaunchCommand(opts = {}, claudeArgs = []) {
       shell,
       ...(process.platform === "win32" ? { windowsHide: true } : {}),
     });
+    let settled = false;
+    const signalExitCode = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 };
+    const signalHandlers = {};
+    const cleanupSignalHandlers = () => {
+      for (const signal of Object.keys(signalExitCode)) {
+        process.removeListener(signal, signalHandlers[signal]);
+      }
+    };
+    const finish = (code) => {
+      if (settled) return;
+      settled = true;
+      cleanupSignalHandlers();
+      resolve(code);
+    };
+    for (const signal of Object.keys(signalExitCode)) {
+      signalHandlers[signal] = () => {
+        try {
+          child.kill(signal);
+        } catch {
+          // The child may have already exited between the signal and cleanup.
+        }
+        finish(signalExitCode[signal]);
+      };
+      process.once(signal, signalHandlers[signal]);
+    }
     child.on("error", (err) => {
       if (err && err.code === "ENOENT") {
         console.error(t("launch.notFound") || "The 'claude' CLI was not found in PATH.");
-        resolve(127);
+        finish(127);
       } else {
         console.error(String(err?.message || err));
-        resolve(1);
+        finish(1);
       }
     });
-    child.on("exit", (code) => resolve(code ?? 0));
+    child.on("exit", (code, signalName) => {
+      finish(code ?? signalExitCode[signalName] ?? 0);
+    });
   });
 }
 

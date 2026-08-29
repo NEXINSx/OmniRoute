@@ -29,6 +29,15 @@ import {
   OPTIONAL_FTS5_MIGRATION_VERSIONS,
 } from "./migrationRunner/constants";
 import { getExtraMigrationFiles } from "./migrationRunner/extraDirs";
+// Retention primitives live in their own `core`-free module: `core.ts` imports this file,
+// so importing `backup.ts` (which imports `core.ts`) here would close a dependency cycle.
+import {
+  MAX_DB_BACKUPS,
+  DEFAULT_DB_BACKUP_RETENTION_DAYS,
+  parsePositiveInt,
+  parseNonNegativeInt,
+  pruneBackupDirectory,
+} from "./backupRetention";
 
 const isNodeTestRunnerChild = typeof process.env.NODE_TEST_CONTEXT === "string";
 
@@ -487,6 +496,27 @@ function isSchemaAlreadyApplied(
       // but still burn a version-tracking slot mismatch — guard it the same
       // way as the other renumbers for consistency.
       return hasTable(db, "connection_runtime_state");
+    case "143":
+      // A cumulative Radar checkout could have occupied version 143 before the
+      // canonical API-key cache migration landed. Once that legacy row is
+      // reconciled to 153, apply 143 only when its column is genuinely absent.
+      return hasColumn(db, "api_keys", "cache_default_mode");
+    case "153":
+      // Retroactive guard for 143_radar_local_model_state -> 153. A database
+      // that already created the table must not execute or track it twice.
+      return hasTable(db, "radar_local_model_state");
+    case "159":
+      // Renumbered from 158 (collided with 158_call_logs_error_type on
+      // release/v3.8.50). Idempotent freepik->magnific slug rewrite: skip
+      // when provider_connections has no remaining freepik rows (already
+      // applied under 158, or a DB that never stored Freepik).
+      if (migration.name !== "rename_freepik_to_magnific") return false;
+      if (!hasTable(db, "provider_connections")) return false;
+      return (
+        db
+          .prepare("SELECT 1 FROM provider_connections WHERE provider = 'freepik' LIMIT 1")
+          .get() == null
+      );
     default:
       return false;
   }
@@ -806,6 +836,56 @@ function rehomeLegacyVersionSlotMigrations(
 }
 
 /**
+ * Read a persisted `dbBackup` retention setting through the adapter that is ALREADY open
+ * for this migration run.
+ *
+ * `backup.ts`'s equivalent goes through `getDbInstance()`, which is unsafe here: this
+ * code runs from inside database initialization, so asking for the singleton would
+ * re-enter it. Reading off `db` keeps the same stored values without that risk. A DB too
+ * old to have `key_value` yet simply falls back to the default.
+ */
+function readStoredBackupSetting(db: SqliteAdapter, key: string, min: number): number | undefined {
+  try {
+    const row = db
+      .prepare("SELECT value FROM key_value WHERE namespace = ? AND key = ?")
+      .get("dbBackup", key) as { value?: string } | undefined;
+    if (!row?.value) return undefined;
+    const parsed = JSON.parse(row.value);
+    return Number.isInteger(parsed) && parsed >= min ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Enforce the backup retention budget after a pre-migration snapshot (#10421).
+ *
+ * Precedence matches `backup.ts`: env override → persisted operator setting → default.
+ * Never throws: a migration must not fail because housekeeping did.
+ */
+function pruneMigrationBackups(db: SqliteAdapter, backupDir: string): void {
+  try {
+    const maxFiles = process.env.DB_BACKUP_MAX_FILES
+      ? parsePositiveInt(process.env.DB_BACKUP_MAX_FILES, MAX_DB_BACKUPS)
+      : (readStoredBackupSetting(db, "maxFiles", 1) ?? MAX_DB_BACKUPS);
+    const retentionDays = process.env.DB_BACKUP_RETENTION_DAYS
+      ? parseNonNegativeInt(process.env.DB_BACKUP_RETENTION_DAYS, DEFAULT_DB_BACKUP_RETENTION_DAYS)
+      : (readStoredBackupSetting(db, "retentionDays", 0) ?? DEFAULT_DB_BACKUP_RETENTION_DAYS);
+
+    const result = pruneBackupDirectory({ backupDir, maxFiles, retentionDays });
+    if (result.deletedFiles > 0) {
+      console.log(
+        `[Migration] Pruned ${result.deletedFiles} old backup file(s) ` +
+          `(${result.keptBackupFamilies} kept, maxFiles=${maxFiles}, retentionDays=${retentionDays}).`
+      );
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[Migration] Failed to prune old backups: ${message}`);
+  }
+}
+
+/**
  * Create a pre-migration backup of the SQLite database using VACUUM INTO.
  * Returns the backup path on success, null on failure.
  */
@@ -825,6 +905,12 @@ function createPreMigrationBackup(db: SqliteAdapter): string | null {
 
     db.exec(`VACUUM INTO '${escapedBackupPath}'`);
     console.log(`[Migration] Pre-migration backup created: ${backupPath}`);
+
+    // #10421: apply the operator's retention budget right here. Without this the
+    // migration path was the one backup producer that never pruned, so every process
+    // start with a pending migration added ~5 MB forever (observed: 49k files / 204 GB).
+    pruneMigrationBackups(db, backupDir);
+
     return backupPath;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

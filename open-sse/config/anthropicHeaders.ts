@@ -6,6 +6,7 @@ import {
   CLAUDE_CODE_SDK_PACKAGE_VERSION,
   getClaudeCodeUserAgent,
 } from "@/shared/constants/claudeCodeClient";
+import { modelSupportsContext1mBeta } from "../config/context1m.ts";
 
 export const ANTHROPIC_VERSION_HEADER = "2023-06-01";
 
@@ -70,11 +71,21 @@ export const FORWARDABLE_CLIENT_BETAS = Object.freeze([
  * case-insensitive). The client beta is added only if it is on `allow`, so this
  * never forces betas the client did not request nor leaks betas the backend
  * rejects. See #3974 (tool-search-tool dropped on the Claude OAuth path).
+ *
+ * `model` (optional) gate: when a resolved upstream model is supplied and it does
+ * NOT support the long-context beta, `context-1m-2025-08-07` is dropped from the
+ * merged allowlist instead of being forwarded blind. Combo/fallback
+ * can re-route a request whose client negotiated `[1m]` for a more capable sibling
+ * onto a model that does not qualify (e.g. a Haiku) — Anthropic rejects the beta
+ * there with "long context beta is not yet available for this subscription"
+ * (#10119). When no model is supplied (legacy callers without model resolution),
+ * the prior forwarding behavior is preserved.
  */
 export function mergeClientAnthropicBeta(
   base: string,
   clientBeta: string | null | undefined,
-  allow: readonly string[] = FORWARDABLE_CLIENT_BETAS
+  allow: readonly string[] = FORWARDABLE_CLIENT_BETAS,
+  model?: string | null
 ): string {
   const baseList = base
     .split(",")
@@ -82,7 +93,14 @@ export function mergeClientAnthropicBeta(
     .filter(Boolean);
   if (typeof clientBeta !== "string" || !clientBeta.trim()) return baseList.join(",");
   const seen = new Set(baseList.map((s) => s.toLowerCase()));
-  const allowSet = new Set(allow.map((s) => s.toLowerCase()));
+  const allowList = allow
+    .map((s) => s.toLowerCase())
+    .filter((lower) => {
+      if (lower !== "context-1m-2025-08-07") return true;
+      if (model === undefined || model === null || model === "") return true;
+      return modelSupportsContext1mBeta(model);
+    });
+  const allowSet = new Set(allowList);
   for (const token of clientBeta
     .split(",")
     .map((s) => s.trim())

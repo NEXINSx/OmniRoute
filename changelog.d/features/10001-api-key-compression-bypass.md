@@ -1,1 +1,0 @@
-- **feat(api):** API keys can disable prompt compression from the dashboard, including for clients that cannot send custom headers ([#10001](https://github.com/diegosouzapw/OmniRoute/pull/10001)) — thanks @shixi-li

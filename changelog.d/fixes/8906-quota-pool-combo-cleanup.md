@@ -1,1 +1,0 @@
-- **fix(quota):** Deleting a quota pool now removes its scoped managed combos without racing in-flight pool mutations ([#8906](https://github.com/diegosouzapw/OmniRoute/pull/8906)) — thanks @xiaoyaner0201

@@ -26,6 +26,9 @@ export const OAUTH_PROVIDERS = {
     website: "https://x.ai",
     subscriptionRisk: true,
     riskNoticeVariant: "oauth",
+    // Render xAI OAuth through the unified xAI dashboard card. Keep this
+    // catalog entry addressable for existing routes and stored connections.
+    hiddenFromDashboard: true,
     authHint:
       "Sign in with xAI to use api.x.ai models such as Grok 4.5. This is separate from Grok Build JWT sessions, which use cli-chat-proxy.grok.com and grok-build model aliases.",
   },
@@ -184,19 +187,6 @@ export const OAUTH_PROVIDERS = {
     authHint:
       "Trae is an AI-native IDE by ByteDance (SOLO remote agent). Authorize via trae.ai in the popup, or sign in at solo.trae.ai and paste the Cloud-IDE-JWT (sent as 'Authorization: Cloud-IDE-JWT <token>', ~14-day lifetime) as the access token; web_id/biz_user_id/user_unique_id/scope/tenant/region propagate via providerSpecificData. No headless refresh for pasted tokens — re-paste on expiry.",
   },
-  raycast: {
-    id: "raycast",
-    alias: "rc",
-    name: "Raycast Pro AI",
-    icon: "terminal",
-    color: "#FF6363",
-    textIcon: "RC",
-    website: "https://raycast.com/ai",
-    subscriptionRisk: true,
-    riskNoticeVariant: "oauth",
-    authHint:
-      "Unofficial integration — uses your Raycast Pro subscription via credentials from the macOS app (Auto-Import or manual capture). May break on Raycast updates. Not for redistribution; personal use only.",
-  },
   "kimi-coding": {
     id: "kimi-coding",
     alias: "kmc",
@@ -249,23 +239,23 @@ export const OAUTH_PROVIDERS = {
     authHint:
       "ClinePass is Cline's $9.99/mo subscription bundling 10 open coding models. Sign in with your Cline account (same login as the Cline CLI/IDE), or paste a direct ClinePass API key (app.cline.bot → Settings → API Keys). A ClinePass subscription unlocks the cline-pass/* models. Reuses the Cline WorkOS OAuth flow.",
   },
-  windsurf: {
-    id: "windsurf",
-    alias: "ws",
-    name: "Windsurf (Devin CLI)",
-    icon: "air",
-    color: "#00C5A0",
-    textIcon: "WS",
+  "devin-desktop": {
+    id: "devin-desktop",
+    alias: undefined,
+    name: "Devin Desktop",
+    icon: "terminal",
+    color: "#6366F1",
+    textIcon: "DD",
     subscriptionRisk: true,
     riskNoticeVariant: "oauth",
     authHint:
-      'In the Windsurf / VS Code IDE, open the command palette and run `Windsurf: Provide Auth Token` (or click the Jupyter "Get Windsurf Authentication Token" button), then copy the shown token and paste it here. Note: opening windsurf.com/show-auth-token directly only renders a "Redirecting" page — the IDE must initiate the flow (it adds a `?state=...` param) for the token to appear.',
-    website: "https://windsurf.com",
+      "Paste an existing Devin API key from an authenticated Devin session. Key export availability and steps vary by Devin version and account.",
+    website: "https://devin.ai",
   },
   "devin-cli": {
     id: "devin-cli",
     alias: "dv",
-    name: "Devin CLI (Official)",
+    name: "Devin CLI",
     icon: "terminal",
     color: "#6366F1",
     textIcon: "DV",

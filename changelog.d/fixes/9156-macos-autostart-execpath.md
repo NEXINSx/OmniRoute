@@ -1,1 +1,0 @@
-- fix(cli): use process.execPath for macOS launchd autostart

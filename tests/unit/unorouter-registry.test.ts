@@ -5,7 +5,9 @@ const { APIKEY_PROVIDERS } = await import("../../src/shared/constants/providers.
 const { REGISTRY: providerRegistry } = await import("../../open-sse/config/providerRegistry.ts");
 const { isValidModel } = await import("../../src/shared/constants/models.ts");
 
-const UNOROUTER_CHAT_URL = "https://api.unorouter.ai/v1/chat/completions";
+// Canonical host is .com — api.unorouter.ai 301-redirects there (verified live 2026-08-12,
+// base-reds round 3 #9985); wave4 (#9584) moved the registry to the canonical host.
+const UNOROUTER_CHAT_URL = "https://api.unorouter.com/v1/chat/completions";
 
 test("unorouter is registered as an API-key gateway provider", () => {
   const entry = APIKEY_PROVIDERS.unorouter;
@@ -30,10 +32,11 @@ test("unorouter registry entry uses OpenAI format with bearer API-key auth", () 
   assert.equal(entry.passthroughModels, true);
 });
 
-test("unorouter ships with auto model", () => {
-  assert.deepEqual(providerRegistry.unorouter.models, [
-    { id: "auto", name: "Auto (Best Available)" },
-  ]);
+test("unorouter discovers models live via passthrough (no static seed list)", () => {
+  // Wave4 (#9584) replaced the static auto-model seed with live /v1/models discovery.
+  assert.deepEqual(providerRegistry.unorouter.models, []);
+  assert.equal(providerRegistry.unorouter.passthroughModels, true);
+  assert.equal(providerRegistry.unorouter.modelsUrl, "https://api.unorouter.com/v1/models");
 });
 
 test("unorouter accepts any model id via passthrough", () => {

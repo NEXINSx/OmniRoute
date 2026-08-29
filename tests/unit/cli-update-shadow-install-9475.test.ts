@@ -1,19 +1,25 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 const update = await import("../../bin/cli/commands/update.mjs");
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const REAL_VERSION = JSON.parse(
-  readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8")
-).version;
-const FAKE_BIN = path.join(REPO_ROOT, ".fakebin-9475");
 
 test("runUpdateCommand claims success without verifying the running binary version changed (#9475)", async () => {
+  const fakeBin = mkdtempSync(path.join(tmpdir(), "omniroute-cli-update-9475-"));
+  writeFileSync(
+    path.join(fakeBin, "npm"),
+    `#!/usr/bin/env bash
+if [ "$1" = "view" ]; then echo "3.8.99"; exit 0; fi
+if [ "$1" = "install" ]; then echo "added 1 package"; exit 0; fi
+exit 0
+`,
+    { mode: 0o755 }
+  );
+
   const origPath = process.env.PATH;
-  process.env.PATH = FAKE_BIN + path.delimiter + origPath;
+  process.env.PATH = fakeBin + path.delimiter + (origPath ?? "");
   const stdoutLogs: string[] = [];
   const origLog = console.log;
   console.log = function (...args: unknown[]) {
@@ -33,6 +39,8 @@ test("runUpdateCommand claims success without verifying the running binary versi
     assert.ok(true);
   } finally {
     console.log = origLog;
-    process.env.PATH = origPath;
+    if (origPath === undefined) delete process.env.PATH;
+    else process.env.PATH = origPath;
+    rmSync(fakeBin, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

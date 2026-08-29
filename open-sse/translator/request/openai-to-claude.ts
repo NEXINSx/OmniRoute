@@ -7,14 +7,27 @@ import { sanitizeToolId } from "../helpers/schemaCoercion.ts";
 import { safeParseJSON } from "../helpers/jsonUtil.ts";
 import { applyKimiCodingThinking } from "../helpers/claudeHelper.ts";
 import { DEFAULT_THINKING_CLAUDE_SIGNATURE } from "../../config/defaultThinkingSignature.ts";
-import { isAdaptiveThinkingOnly } from "../../../src/shared/constants/modelSpecs.ts";
+import {
+  getDefaultThinkingBudget,
+  isAdaptiveThinkingOnly,
+} from "../../../src/shared/constants/modelSpecs.ts";
 import { fitThinkingToMaxTokens } from "./openai-to-claude/thinkingBudget.ts";
 import { enforceToolResultAdjacency } from "./openai-to-claude/toolResultAdjacency.ts";
 import { sanitizeToolResultId } from "./openai-to-claude/sanitizeToolResultId.ts";
+import {
+  openAiImagePartToClaudeBlock,
+  normalizeToolResultImages,
+} from "./openai-to-claude/imageBlocks.ts";
 
 // Reasoning-effort levels Anthropic accepts on `output_config.effort`. Used to steer
 // adaptive-only Claude models (Opus 4.7+/Fable 5) without ever emitting a manual budget.
 const ADAPTIVE_EFFORT_LEVELS = new Set(["low", "medium", "high", "xhigh", "max"]);
+
+// Safe manual budget when `thinking:{type:"adaptive"}` must be downgraded to the
+// compatible manual `type:"enabled"` form for a model that does not support adaptive
+// thinking (#10119). 1024 is both Anthropic's MIN thinking budget (thinkingBudget.ts)
+// and the `low` effort bucket — conservative for small-context models like Haiku.
+const ADAPTIVE_DOWNGRADE_BUDGET = 1024;
 
 // Prefix for Claude OAuth tool names to avoid conflicts
 // Can be disabled per-request via body._disableToolPrefix = true
@@ -179,11 +192,27 @@ export function openaiToClaudeRequest(model, body, stream, credentials = null) {
   if (isKimiCoding) {
     applyKimiCodingThinking(result, body);
   } else if (body.thinking) {
-    result.thinking = {
-      type: body.thinking.type || "enabled",
-      ...(body.thinking.budget_tokens && { budget_tokens: body.thinking.budget_tokens }),
-      ...(body.thinking.max_tokens && { max_tokens: body.thinking.max_tokens }),
-    };
+    const thinkingType = body.thinking.type || "enabled";
+    if (thinkingType === "adaptive" && !isAdaptiveThinkingOnly(model)) {
+      // Downgrade guard (#10119): a request can carry `thinking:{type:"adaptive"}` — the
+      // shape built for an adaptive-only sibling (Opus 4.7+/Sonnet-5) in a combo — and be
+      // re-routed by combo/fallback to a model that only accepts manual extended thinking
+      // (e.g. claude-haiku-4-5-20251001). Anthropic rejects `adaptive` on those models with
+      // "adaptive thinking is not supported on this model". Convert to the compatible manual
+      // `enabled` form with a safe budget instead of forwarding an incompatible type.
+      const callerBudget = Number(body.thinking.budget_tokens);
+      const safeBudget =
+        (Number.isFinite(callerBudget) && callerBudget > 0 ? callerBudget : 0) ||
+        getDefaultThinkingBudget(model) ||
+        ADAPTIVE_DOWNGRADE_BUDGET;
+      result.thinking = { type: "enabled", budget_tokens: safeBudget };
+    } else {
+      result.thinking = {
+        type: thinkingType,
+        ...(body.thinking.budget_tokens && { budget_tokens: body.thinking.budget_tokens }),
+        ...(body.thinking.max_tokens && { max_tokens: body.thinking.max_tokens }),
+      };
+    }
   } else if (body.reasoning_effort) {
     // Convert OpenAI reasoning_effort to Claude thinking format (#627)
     // Clients like OpenCode send reasoning_effort via @ai-sdk/openai-compatible
@@ -240,7 +269,12 @@ export function openaiToClaudeRequest(model, body, stream, credentials = null) {
   // could exceed model caps (e.g. Opus 4.7's 128000 ceiling) and trigger
   // HTTP 400 from Anthropic.
   if (!isKimiCoding) {
-    const fitted = fitThinkingToMaxTokens(model, Number(result.max_tokens) || 0, result.thinking);
+    const fitted = fitThinkingToMaxTokens(
+      model,
+      Number(result.max_tokens) || 0,
+      result.thinking,
+      routedProvider
+    );
     result.max_tokens = fitted.maxTokens;
     if (fitted.thinking === undefined) {
       delete result.thinking;
@@ -507,9 +541,10 @@ function getContentBlocksFromMessage(
     const sanitizedToolUseId = sanitizeToolResultId(msg.tool_call_id); // #7705
     if (!sanitizedToolUseId) return blocks;
     // T02: Strip empty text blocks from nested tool_result content to avoid Anthropic 400
-    const toolContent = Array.isArray(msg.content)
-      ? stripEmptyTextBlocks(msg.content)
-      : msg.content;
+    // #9692: rewrite OpenAI image_url parts to Claude image blocks (same as user turns)
+    const toolContent = normalizeToolResultImages(
+      Array.isArray(msg.content) ? stripEmptyTextBlocks(msg.content) : msg.content
+    );
     blocks.push({
       type: "tool_result",
       tool_use_id: sanitizedToolUseId,
@@ -528,43 +563,19 @@ function getContentBlocksFromMessage(
           // Skip tool_result with no tool_use_id (would be useless and may cause errors)
           if (!part.tool_use_id) continue;
           // T02: strip empty text blocks from nested content before passing to Anthropic
-          const resultContent = Array.isArray(part.content)
-            ? stripEmptyTextBlocks(part.content)
-            : part.content;
+          // #9692: convert OpenAI image_url nested in tool_result the same way
+          const resultContent = normalizeToolResultImages(
+            Array.isArray(part.content) ? stripEmptyTextBlocks(part.content) : part.content
+          );
           blocks.push({
             type: "tool_result",
             tool_use_id: sanitizeToolId(part.tool_use_id), // #7705
             content: resultContent,
             ...(part.is_error && { is_error: part.is_error }),
           });
-        } else if (part.type === "image_url") {
-          const url = part.image_url.url;
-          const match = url.match(/^data:([^;]+);base64,(.+)$/);
-          if (match) {
-            blocks.push({
-              type: "image",
-              source: { type: "base64", media_type: match[1], data: match[2] },
-            });
-          } else if (typeof url === "string" && url.trim()) {
-            blocks.push({
-              type: "image",
-              source: { type: "url", url },
-            });
-          }
-        } else if (part.type === "image" && part.source) {
-          blocks.push({ type: "image", source: part.source });
-        } else if (part.type === "image" && typeof part.image === "string") {
-          // AI SDK-style image part: { type: "image", image: "data:...;base64,..." } (#1330)
-          const url = part.image;
-          const match = url.match(/^data:([^;]+);base64,(.+)$/);
-          if (match) {
-            blocks.push({
-              type: "image",
-              source: { type: "base64", media_type: match[1], data: match[2] },
-            });
-          } else if (url.trim()) {
-            blocks.push({ type: "image", source: { type: "url", url } });
-          }
+        } else if (part.type === "image_url" || part.type === "image") {
+          const imageBlock = openAiImagePartToClaudeBlock(part);
+          if (imageBlock) blocks.push(imageBlock);
         } else if (part.type === "file" && (part.file?.file_data || part.file?.data)) {
           // OpenAI Chat Completions file block:
           // {type:"file", file:{filename, file_data:"data:<mime>;base64,..."}}.

@@ -31,6 +31,20 @@ function toNumber(value: unknown, fallback = 0): number {
   return fallback;
 }
 
+/**
+ * Current time in the same format `expires_at` and `created_at` are written in.
+ *
+ * `expires_at` is a TEXT column holding an ISO-8601 string ("2026-08-26T14:00:00.000Z"),
+ * so it has to be compared against another ISO-8601 string. Comparing it to SQLite's
+ * `datetime('now')` ("2026-08-26 14:00:00") is a lexicographic comparison that diverges
+ * at index 10, where the stored value has 'T' (0x54) and `datetime('now')` has ' ' (0x20).
+ * 'T' sorts after ' ', so every row whose UTC calendar date was today compared as
+ * unexpired regardless of its real time-of-day TTL.
+ */
+function isoNow(): string {
+  return new Date().toISOString();
+}
+
 function ensureCacheMetricsTable() {
   try {
     const db = getDbInstance();
@@ -103,6 +117,22 @@ function getMemoryCache() {
     ensureCacheMetricsTable();
   }
   return memoryCache;
+}
+
+/**
+ * In-memory LRU stats for the semantic cache.
+ *
+ * Exposed for `/api/cache/stats`, which used to report `getPromptCache()` — an
+ * LRU that nothing writes to, so it always answered 0 hit / 0 miss. Same shape
+ * as `LRUCache.getStats()`, so callers do not have to change.
+ */
+export function getMemoryCacheStats(): ReturnType<LRUCache["getStats"]> {
+  return getMemoryCache().getStats();
+}
+
+/** Drop the in-memory LRU without touching the `semantic_cache` table. */
+export function clearMemoryCache(): void {
+  getMemoryCache().clear();
 }
 
 // ─── Signature Generation ─────────────────
@@ -187,9 +217,9 @@ export function getCachedResponse(signature) {
     const db = getDbInstance();
     const row = db
       .prepare(
-        "SELECT response, tokens_saved FROM semantic_cache WHERE signature = ? AND expires_at > datetime('now')"
+        "SELECT response, tokens_saved FROM semantic_cache WHERE signature = ? AND expires_at > ?"
       )
-      .get(signature);
+      .get(signature, isoNow());
 
     if (row) {
       const record = asRecord(row);
@@ -326,8 +356,8 @@ export function getCacheStats() {
   try {
     const db = getDbInstance();
     const row = db
-      .prepare("SELECT COUNT(*) as count FROM semantic_cache WHERE expires_at > datetime('now')")
-      .get();
+      .prepare("SELECT COUNT(*) as count FROM semantic_cache WHERE expires_at > ?")
+      .get(isoNow());
     dbSize = toNumber(asRecord(row).count, 0);
   } catch {
     // DB not available

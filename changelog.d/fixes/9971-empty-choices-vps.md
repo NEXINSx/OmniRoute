@@ -1,1 +1,0 @@
-- fix(chat): don't misclassify content-less thinking/redacted Claude bodies as empty_choices (#9971)

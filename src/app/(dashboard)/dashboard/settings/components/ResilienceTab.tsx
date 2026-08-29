@@ -13,6 +13,7 @@ type RequestQueueSettings = {
   requestsPerMinute: number;
   minTimeBetweenRequestsMs: number;
   concurrentRequests: number;
+  globalConcurrentRequests: number;
   maxWaitMs: number;
 };
 
@@ -240,11 +241,19 @@ function RequestQueueCard({
               }
             />
             <NumberField
-              label={t("resilienceConcurrentRequests")}
+              label={t("resilienceConnectionScopeConcurrentRequests")}
               value={draft.concurrentRequests}
               min={1}
               onChange={(concurrentRequests) =>
                 setDraft((prev) => ({ ...prev, concurrentRequests }))
+              }
+            />
+            <NumberField
+              label={t("resilienceGlobalConcurrentRequests")}
+              value={draft.globalConcurrentRequests}
+              min={0}
+              onChange={(globalConcurrentRequests) =>
+                setDraft((prev) => ({ ...prev, globalConcurrentRequests }))
               }
             />
             <NumberField
@@ -278,9 +287,19 @@ function RequestQueueCard({
               </div>
             </div>
             <div className="rounded-xl border border-border bg-bg-subtle p-4">
-              <div className="text-xs text-text-muted">{t("resilienceConcurrentRequests")}</div>
+              <div className="text-xs text-text-muted">
+                {t("resilienceConnectionScopeConcurrentRequests")}
+              </div>
               <div className="mt-1 text-sm font-semibold text-text-main">
                 {value.concurrentRequests}
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-bg-subtle p-4">
+              <div className="text-xs text-text-muted">
+                {t("resilienceGlobalConcurrentRequests")}
+              </div>
+              <div className="mt-1 text-sm font-semibold text-text-main">
+                {value.globalConcurrentRequests || t("statusDisabled")}
               </div>
             </div>
             <div className="rounded-xl border border-border bg-bg-subtle p-4">

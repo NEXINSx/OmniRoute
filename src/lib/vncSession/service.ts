@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { getProviderConnectionById, updateProviderConnection } from "@/lib/db/providers";
 import { validateProviderApiKey } from "@/lib/providers/validation";
 import { VNC_CONFIG, getVncProvider } from "./manifest";
@@ -153,6 +154,9 @@ async function publishedPort(containerName: string, containerPort: number): Prom
 }
 
 export async function startSession(connectionId: string): Promise<VncSession> {
+  if (await isConnectionUnavailableToAuxiliaryActivity(connectionId))
+    throw new Error("Browser login is unavailable for managed lease connections");
+
   await reconcileStaleContainers();
 
   const connection = await getProviderConnectionById(connectionId);
@@ -254,6 +258,9 @@ export async function harvestSession(
   connectionId: string,
   sessionId: string
 ): Promise<HarvestSessionResult> {
+  if (await isConnectionUnavailableToAuxiliaryActivity(connectionId))
+    throw new Error("Browser login is unavailable for managed lease connections");
+
   const session = getSession(connectionId, sessionId);
   if (!session) throw new Error("Browser-login session not found");
   if (session.status !== "running") {

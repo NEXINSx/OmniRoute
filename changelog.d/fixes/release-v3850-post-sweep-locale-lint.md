@@ -1,1 +1,0 @@
-- Repair release-sweep regressions in locale and environment contracts, package metadata, scripts, dependency, size and dead-code ratchets, OpenAPI coverage, Telegram error sanitization, Openference public-credential handling, DB-module classification, resilience UI test assertions, strict CodeBuddy CN tests, Lite compression typing, and the job-registry migration number.

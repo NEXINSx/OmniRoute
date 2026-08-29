@@ -1,14 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   REQUIRED_SQLJS_RUNTIME_FILES,
+  REQUIRED_MACHINE_TOKEN_RUNTIME_FILES,
   pickTarball,
   evaluateBoot,
   pickPort,
   findMissingSqlJsRuntimeFiles,
+  findMissingMachineTokenRuntimeFiles,
+  evaluateMachineTokenAuth,
   evaluateSqlJsRoundTrip,
   evaluateRestartPersistence,
 } from "../../scripts/check/check-pack-boot.mjs";
@@ -67,11 +71,72 @@ test("installed package contract requires sql.js metadata, entrypoint, and WASM"
     []
   );
 
-  present.delete(path.join("/pkg", "dist/node_modules/sql.js/dist/sql-wasm.wasm"));
+  // Dependency-based packaging (#11242): sql.js is a declared dependency, so the
+  // contract path is the npm-installed <packageRoot>/node_modules/sql.js location,
+  // never the old vendored dist/node_modules one (banned from the tarball).
+  present.delete(path.join("/pkg", "node_modules/sql.js/dist/sql-wasm.wasm"));
   assert.deepEqual(
     findMissingSqlJsRuntimeFiles("/pkg", (file) => present.has(file)),
-    ["dist/node_modules/sql.js/dist/sql-wasm.wasm"]
+    ["node_modules/sql.js/dist/sql-wasm.wasm"]
   );
+});
+
+test("installed package contract requires a resolvable node-machine-id CommonJS runtime", () => {
+  const present = new Set(
+    REQUIRED_MACHINE_TOKEN_RUNTIME_FILES.map((file) => path.join("/pkg", file))
+  );
+  assert.deepEqual(
+    findMissingMachineTokenRuntimeFiles("/pkg", (file) => present.has(file)),
+    []
+  );
+
+  present.delete(path.join("/pkg", "node_modules/node-machine-id/index.js"));
+  assert.deepEqual(
+    findMissingMachineTokenRuntimeFiles("/pkg", (file) => present.has(file)),
+    ["node_modules/node-machine-id/index.js"]
+  );
+});
+
+test("machine-token smoke requires no/invalid credentials to fail and the packaged CLI token to pass", () => {
+  assert.deepEqual(
+    evaluateMachineTokenAuth({
+      cliToken: "a".repeat(64),
+      unauthenticatedStatus: 401,
+      invalidStatus: 401,
+      authenticatedStatus: 200,
+    }),
+    { ok: true, failures: [] }
+  );
+
+  for (const candidate of [
+    { cliToken: "", unauthenticatedStatus: 401, invalidStatus: 401, authenticatedStatus: 200 },
+    {
+      cliToken: "a".repeat(64),
+      unauthenticatedStatus: 200,
+      invalidStatus: 401,
+      authenticatedStatus: 200,
+    },
+    {
+      cliToken: "a".repeat(64),
+      unauthenticatedStatus: 401,
+      invalidStatus: 200,
+      authenticatedStatus: 200,
+    },
+    {
+      cliToken: "a".repeat(64),
+      unauthenticatedStatus: 401,
+      invalidStatus: 401,
+      authenticatedStatus: 401,
+    },
+    {
+      cliToken: createHmac("sha256", "").update("omniroute-cli-auth-v1").digest("hex"),
+      unauthenticatedStatus: 401,
+      invalidStatus: 401,
+      authenticatedStatus: 200,
+    },
+  ]) {
+    assert.equal(evaluateMachineTokenAuth(candidate).ok, false);
+  }
 });
 
 test("sql.js round trip requires the forced-driver marker plus PATCH and GET persistence", () => {
@@ -103,10 +168,20 @@ test("source guard: the gate polls the real health endpoint of the INSTALLED bin
   );
   assert.ok(src.includes("/api/monitoring/health"), "must poll the health endpoint");
   assert.ok(src.includes("/api/settings"), "must verify a real application write and read");
+  assert.ok(src.includes("/api/cli/whoami"), "must exercise the machine-token auth endpoint");
+  assert.ok(src.includes("x-omniroute-cli-token"), "must send the official machine-token header");
+  const postinstall = readFileSync(
+    fileURLToPath(new URL("../../scripts/build/postinstall.mjs", import.meta.url)),
+    "utf8"
+  );
+  assert.ok(postinstall.includes('["sql.js", "node-machine-id"]'));
+  assert.ok(postinstall.includes('join(ROOT, "dist", "node_modules", packageName)'));
   assert.ok(
     src.includes('OMNIROUTE_PACK_BOOT_FORCE_SQLJS: "1"'),
     "must force the packaged sql.js tier during this smoke"
   );
+  assert.ok(src.includes("MAX_SERVER_OUTPUT_CHARS"));
+  assert.ok(!src.includes("while (tail.length > 80)"), "must not discard early startup proof");
   assert.ok(src.indexOf("npm") < src.indexOf("spawn"), "pack+install must precede the boot spawn");
 });
 

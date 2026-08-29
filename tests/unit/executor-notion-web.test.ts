@@ -48,11 +48,27 @@ describe("NotionWebExecutor — registry consistency", () => {
 
   it("registers a model catalog reachable via getModelsByProviderId", () => {
     const models = getModelsByProviderId("notion-web");
-    assert.ok(models.length >= 1);
-    assert.ok(models.some((m) => m.id === "notion-ai"));
-    // Seed catalog uses real web-picker labels (fable-5 / gpt-5.6-sol), not food codenames.
-    assert.ok(
-      models.some((m) => m.id === "fable-5" || m.id === "gpt-5.6-sol" || m.id === "opus-4.8")
+    assert.deepEqual(
+      models.map((m) => m.id),
+      [
+        "notion-ai",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gemini-3.7-flash",
+        "gemini-3.1-pro",
+        "fable-5",
+        "opus-5",
+        "sonnet-5",
+        "haiku-4.5",
+        "grok-4.6",
+        "kimi-k3",
+        "kimi-k2.7-code",
+        "deepseek-v4-pro",
+        "glm-5.2",
+      ]
     );
     assert.equal(
       models.some(
@@ -103,6 +119,7 @@ const COOKIE_WITH_SPACE = "token_v2=xyz; space_id=space-1; notion_user_id=user-1
 
 describe("NotionWebExecutor — upstream translation (mocked TLS fetch)", () => {
   it("posts createThread + config/context/user and returns a chat.completion", async () => {
+    mod.__resetNotionThreadSessionsForTests();
     const executor = new mod.NotionWebExecutor();
     let capturedUrl = "";
     let capturedHeaders: Record<string, string> = {};

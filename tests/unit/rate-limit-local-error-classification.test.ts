@@ -97,7 +97,7 @@ test.afterEach(() => {
   providerCooldown.clearCooldownState();
   rateLimitSemaphore.resetAll();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 });
 
@@ -107,10 +107,10 @@ test.after(() => {
   providerCooldown.clearCooldownState();
   rateLimitSemaphore.resetAll();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
-test("trusted provenance, not a public code string, classifies local limiter failures", () => {
+test("execution-timeout classification requires trusted provenance; queue codes classify by string (#9164/#9342)", () => {
   const executionError = markLocalRateLimitError(
     new Error("local execution expiration"),
     RATE_LIMIT_EXECUTION_TIMEOUT_CODE
@@ -142,11 +142,16 @@ test("trusted provenance, not a public code string, classifies local limiter fai
     }),
     true
   );
+  // #9164 (3898305df0) deliberately widened the contract: the rate_limit_queue_*
+  // code strings are OmniRoute-owned backpressure codes and classify as
+  // request-scoped even without WeakMap provenance (an upstream collision is
+  // accepted as fail-safe: worst case a colliding provider 503 skips health
+  // penalties, it never amplifies into fallback storms).
   assert.equal(
     isComboRequestScopedFailure(collisionResponse, "provider collision", {
       code: RATE_LIMIT_QUEUE_WEDGED_CODE,
     }),
-    false
+    true
   );
   assert.equal(
     shouldTripProviderBreakerForResult(
@@ -170,8 +175,8 @@ test("trusted provenance, not a public code string, classifies local limiter fai
       false,
       false
     ),
-    true,
-    "an untrusted upstream collision must remain a provider-health failure"
+    false,
+    "#9342 (47c819df66): RATE_LIMIT_QUEUE_* codes are OmniRoute backpressure and never trip the provider breaker, provenance or not"
   );
   assert.equal(
     shouldSkipConnDisable(
@@ -197,7 +202,8 @@ test("trusted provenance, not a public code string, classifies local limiter fai
       false,
       "openai"
     ),
-    false
+    true,
+    "#9164: the queue-code string alone marks the failure request-scoped, so the connection is not disabled"
   );
   assert.equal(
     shouldRecordProviderBreakerFailure({
@@ -213,7 +219,7 @@ test("trusted provenance, not a public code string, classifies local limiter fai
   );
 });
 
-test("legacy queue-timeout compatibility also requires trusted local provenance", () => {
+test("legacy queue-timeout code classifies as request-scoped with or without provenance (#9164)", () => {
   const untrusted = new Response("legacy collision", { status: 503 });
   const legacyError = markLocalRateLimitError(
     new Error("legacy local timeout"),
@@ -224,11 +230,14 @@ test("legacy queue-timeout compatibility also requires trusted local provenance"
     legacyError
   );
 
+  // #9164 added rate_limit_queue_timeout to REQUEST_SCOPED_UPSTREAM_ERROR_CODES,
+  // so the code string is sufficient — trusted provenance is no longer required
+  // for this classification (it still works, next assertion).
   assert.equal(
     isComboRequestScopedFailure(untrusted, "legacy collision", {
       code: LEGACY_RATE_LIMIT_QUEUE_TIMEOUT_CODE,
     }),
-    false
+    true
   );
   assert.equal(
     isComboRequestScopedFailure(trusted, "legacy local timeout", {
@@ -315,7 +324,7 @@ for (const strategy of ["priority", "round-robin"] as const) {
   });
 }
 
-test("an untrusted upstream code collision retains ordinary health penalties", async () => {
+test("an upstream body colliding with local queue codes is treated as local backpressure (#9164)", async () => {
   const connection = await providersDb.createProviderConnection({
     provider: "openai",
     authType: "apikey",
@@ -348,8 +357,15 @@ test("an untrusted upstream code collision retains ordinary health penalties", a
   });
 
   assert.equal(result.status, 503);
-  assert.ok(
-    (accountFallback.getProviderBreakerState("openai")?.failureCount ?? 0) >= 1,
-    "the upstream 503 must remain eligible for provider-breaker accounting"
+  // #9164 (3898305df0): isLocalQueueCapacityErrorBody matches the queue-code
+  // string in the body, so the combo returns the 503 without upstream fallback
+  // and without counting it toward provider health — the collision is accepted
+  // as fail-safe (no breaker/cooldown penalties, but also no retry amplification).
+  assert.equal(
+    accountFallback.getProviderBreakerState("openai")?.failureCount ?? 0,
+    0,
+    "a queue-code collision body is classified local backpressure and skips breaker accounting"
   );
+  const storedConnection = await providersDb.getProviderConnectionById(connection.id);
+  assert.equal(storedConnection?.testStatus, "active", "the connection must not be disabled");
 });

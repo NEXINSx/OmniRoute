@@ -85,7 +85,6 @@ export type CompatModelRow = {
   normalizeToolCallId?: boolean;
   preserveOpenAIDeveloperRole?: boolean;
   isHidden?: boolean;
-  isDeleted?: boolean;
   upstreamHeaders?: Record<string, string>;
   compatByProtocol?: CompatByProtocolMap;
   /** #2905: per-model upstream wire-format override. */ targetFormat?: string;
@@ -93,6 +92,7 @@ export type CompatModelRow = {
   /** #1904: manual vision-capability override for custom models whose upstream
    * discovery metadata doesn't self-report an image input modality. */
   supportsVision?: boolean;
+  isFree?: boolean;
 };
 
 export type CompatModelMap = Map<string, CompatModelRow>;
@@ -167,7 +167,9 @@ export function evaluateTestAllEntry(
   autoHideFailed: boolean
 ): TestAllModelOutcome {
   const ok = entry?.status === "ok";
-  const transient = [entry?.rateLimited, entry?.isTimeout, entry?.isTransient, entry?.isQuota].some(Boolean);
+  const transient = [entry?.rateLimited, entry?.isTimeout, entry?.isTransient, entry?.isQuota].some(
+    Boolean
+  );
   return {
     status: ok ? "ok" : "error",
     // #9511: quota errors (isQuota) are surfaced on the icon but kept visible
@@ -247,7 +249,7 @@ export const CONFIGURABLE_BASE_URL_PROVIDERS = new Set([
 export const DEFAULT_PROVIDER_BASE_URLS: Record<string, string> = {
   "azure-openai": "https://example-resource.openai.azure.com",
   "azure-ai": "https://example-resource.services.ai.azure.com/openai/v1",
-  "bailian-coding-plan": "https://coding-intl.dashscope.aliyuncs.com/apps/anthropic/v1",
+  "bailian-coding-plan": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1",
   "xiaomi-mimo": "https://token-plan-sgp.xiaomimimo.com/v1",
   siliconflow: "https://api.siliconflow.com/v1",
   "searxng-search": "http://localhost:8888/search",
@@ -502,7 +504,7 @@ export function getDisplayModelAlias(modelId: string, alias?: string | null): st
 }
 
 function readActiveHiddenFlag(row: CompatModelRow | undefined): boolean | undefined {
-  if (!row || row.isDeleted === true) return undefined;
+  if (!row) return undefined;
   if (Object.prototype.hasOwnProperty.call(row, "isHidden")) {
     return Boolean(row.isHidden);
   }
@@ -627,6 +629,43 @@ export const CODEX_ACCOUNT_SERVICE_TIER_VALUES: CodexServiceTier[] = [
   "priority",
   "flex",
 ];
+
+export const CODEX_FINGERPRINT_MODE_VALUES = ["off", "device", "session", "full"] as const;
+export type CodexFingerprintModeValue = (typeof CODEX_FINGERPRINT_MODE_VALUES)[number];
+
+export function getCodexFingerprintMode(providerSpecificData: unknown): CodexFingerprintModeValue {
+  const data =
+    providerSpecificData &&
+    typeof providerSpecificData === "object" &&
+    !Array.isArray(providerSpecificData)
+      ? (providerSpecificData as Record<string, unknown>)
+      : undefined;
+  const raw = data?.codexFingerprintMode ?? data?.codex_fingerprint_mode;
+  const normalized = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return (CODEX_FINGERPRINT_MODE_VALUES as readonly string[]).includes(normalized)
+    ? (normalized as CodexFingerprintModeValue)
+    : "session";
+}
+
+export function getCodexFingerprintModeLabel(
+  t: ProviderMessageTranslator,
+  value: CodexFingerprintModeValue
+): string {
+  if (value === "off") {
+    return providerText(t, "codexFingerprintModeOff", "Off — pass client IDs through");
+  }
+  if (value === "device") {
+    return providerText(t, "codexFingerprintModeDevice", "Device — one installation ID");
+  }
+  if (value === "full") {
+    return providerText(t, "codexFingerprintModeFull", "Full — one device, session, and thread");
+  }
+  return providerText(
+    t,
+    "codexFingerprintModeSession",
+    "Session — one device and session, thread per client"
+  );
+}
 
 export const CODEX_GLOBAL_SERVICE_MODE_VALUES: CodexGlobalServiceMode[] = [
   "none",
@@ -827,7 +866,10 @@ export function shouldSwitchToVisibleFilter(opts: {
 // ---------------------------------------------------------------------------
 // Error-type label map — shared by ConnectionRow and EditConnectionModal
 // ---------------------------------------------------------------------------
-export const ERROR_TYPE_LABELS: Record<string, { labelKey: string; variant: string }> = {
+export const ERROR_TYPE_LABELS: Record<
+  string,
+  { labelKey: string; variant: "error" | "default" | "warning" | "success" | "info" | "primary" }
+> = {
   runtime_error: { labelKey: "errorTypeRuntime", variant: "warning" },
   upstream_auth_error: { labelKey: "errorTypeUpstreamAuth", variant: "error" },
   account_deactivated: { labelKey: "Account Deactivated", variant: "error" },

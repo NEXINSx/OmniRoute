@@ -6,7 +6,12 @@ import { getSettings } from "@/lib/db/settings";
 import { getProviderRegistry } from "./providerRegistryAccessor";
 import type { ConnectionFields } from "@/lib/db/encryption";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
+import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
+import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
+import { isCommonChatGptWebRetiredProviderId } from "@/shared/constants/chatgptWebRetirement";
 import { hasUsableWebSessionCredential } from "@/shared/providers/webSessionCredentials";
+import { toNumber } from "@/shared/utils/numeric";
+import { isCompatibleProviderConnectionId } from "@/shared/utils/compatibleProviderId";
 import { defaultLogger as log } from "@omniroute/open-sse/utils/logger";
 import { getTokenLimit } from "../contextManager";
 import {
@@ -20,11 +25,21 @@ import {
   type AutoCategory,
   type AutoTier,
 } from "./suffixComposition";
+import { classifyTier } from "../tierResolver";
 import type { AutoVariant } from "./autoPrefix";
 import { buildFamilyCandidateFilter, type ModelFamily } from "./modelFamily";
 import { getHiddenModelsByProvider } from "@/models";
+import { getSyncedAvailableModelsByConnection, getCustomModels } from "@/lib/db/models";
 import { filterPaidOnlyCandidates } from "./paidModelFilter";
+import {
+  filterSubscriptionOnlyCandidates,
+  orderPoolByRung,
+  type LadderOptions,
+} from "./subscriptionLadder";
+import { filterStrictZeroCostCandidates, filterTosAvoidCandidates } from "./strictZeroCostFilter";
+import { resolveFreeAccessState } from "./freeAccessQuota";
 import { isModelExcludedByConnection } from "@/domain/connectionModelRules";
+import { resolveProviderAlias } from "../model.ts";
 import { filterExcludedCandidates } from "./candidateOverrides";
 import { getExcludedConnectionIds } from "@/lib/db/autoCandidateOverrides";
 import {
@@ -41,6 +56,21 @@ export interface AutoComboSpec {
   category?: AutoCategory;
   tier?: AutoTier;
   family?: ModelFamily;
+}
+
+/** Once-per-process empty-pool AUTO warns (steady empty is not a metronome). */
+const emptyPoolWarned = new Set<string>();
+
+export function warnEmptyAutoPoolOnce(label: string, message: string, _now = Date.now()): boolean {
+  if (emptyPoolWarned.has(label)) return false;
+  emptyPoolWarned.add(label);
+  log.warn("AUTO", message);
+  return true;
+}
+
+/** Test-only: reset the once-per-label set (also models emptiness reappearing). */
+export function resetEmptyAutoPoolWarnStateForTests(): void {
+  emptyPoolWarned.clear();
 }
 
 /** Minimal connection shape needed for virtual auto-combo factory */
@@ -123,6 +153,98 @@ type VirtualAutoCombo = AutoComboConfig & {
 export interface PreparedVirtualAutoComboInputs {
   readonly regularCandidates: readonly VirtualAutoComboCandidate[];
   readonly familyCandidates: readonly VirtualAutoComboCandidate[];
+  /**
+   * `provider_connections.auth_type` per connection id. Subscription-first
+   * routing classifies billing per CONNECTION (`connectionBilling.ts`), and
+   * the candidate pool only carries connection ids — so the auth types are
+   * captured here, during the one bulk connection read this function already
+   * does, instead of re-reading the DB per pool narrowing.
+   */
+  readonly authTypeByConnectionId?: ReadonlyMap<string, string | null>;
+  /** Operator settings for the subscription ladder; absent = feature off. */
+  readonly subscriptionLadder?: SubscriptionLadderSettings;
+}
+
+/**
+ * Operator-facing knobs for subscription-first routing. Mirrors the Zod shape
+ * in `src/shared/validation/settingsSchemas.ts`.
+ *
+ * Deliberately TUNING ONLY — there is no `enabled` flag here. `auto/subscription`
+ * and `auto/thrifty` are new ids that nothing routes through unless a caller
+ * asks for them by name, so requesting the id IS the opt-in. A settings toggle
+ * that could switch them off would be actively dangerous: it would leave an id
+ * whose whole promise is "plan-included only" quietly serving the full pool,
+ * paid models included.
+ */
+export interface SubscriptionLadderSettings {
+  exitCutoffPercent?: number;
+  reentryMinRemainingPercent?: number;
+  rungBudgetUsd?: Record<string, number>;
+  /** Staleness bound for a cached quota reading, derived from the existing
+   * `autoRefreshProviderQuotaInterval` exactly as STRICT_ZERO_COST does. */
+  maxStateAgeMs: number;
+}
+
+function readSubscriptionLadderSettings(
+  settings: Record<string, unknown>
+): SubscriptionLadderSettings {
+  const maxStateAgeMs = (Number(settings.autoRefreshProviderQuotaInterval) || 180) * 1000;
+  const raw = settings.subscriptionLadder;
+  if (!raw || typeof raw !== "object") return { maxStateAgeMs };
+  const value = raw as Record<string, unknown>;
+  const numeric = (key: string): number | undefined =>
+    typeof value[key] === "number" && Number.isFinite(value[key] as number)
+      ? (value[key] as number)
+      : undefined;
+  const exitCutoffPercent = numeric("exitCutoffPercent");
+  const reentryMinRemainingPercent = numeric("reentryMinRemainingPercent");
+  return {
+    maxStateAgeMs,
+    ...(exitCutoffPercent === undefined ? {} : { exitCutoffPercent }),
+    ...(reentryMinRemainingPercent === undefined ? {} : { reentryMinRemainingPercent }),
+    ...(value.rungBudgetUsd && typeof value.rungBudgetUsd === "object"
+      ? { rungBudgetUsd: value.rungBudgetUsd as Record<string, number> }
+      : {}),
+  };
+}
+
+/**
+ * Build the injected dependencies the pure ladder module needs. Everything it
+ * touches is resolved here — the live quota cache, connection auth types, and
+ * the economic tier resolver — so `subscriptionLadder.ts` itself stays free of
+ * DB, network, and registry imports.
+ */
+function buildLadderOptions(
+  prepared: PreparedVirtualAutoComboInputs,
+  tier: "subscription" | "thrifty"
+): LadderOptions {
+  const tuning = prepared.subscriptionLadder;
+  const authTypes = prepared.authTypeByConnectionId;
+  return {
+    enabled: true,
+    resolveFreeAccessState,
+    resolveAuthType: (connectionId: string) => authTypes?.get(connectionId) ?? null,
+    resolveEconomicTier: (provider: string, model: string) => {
+      try {
+        const resolved = classifyTier(provider, model).tier;
+        return resolved === "free" || resolved === "premium" ? resolved : "cheap";
+      } catch {
+        // Same conservative default `safeClassifyTier` uses in suffixComposition.
+        return "cheap";
+      }
+    },
+    maxStateAgeMs: tuning?.maxStateAgeMs ?? 180_000,
+    // The two groupings read a missing quota reading OPPOSITELY on purpose —
+    // see `LadderOptions.admitUnknownQuota`.
+    admitUnknownQuota: tier === "thrifty",
+    ...(tuning?.exitCutoffPercent === undefined
+      ? {}
+      : { exitCutoffPercent: tuning.exitCutoffPercent }),
+    ...(tuning?.reentryMinRemainingPercent === undefined
+      ? {}
+      : { reentryMinRemainingPercent: tuning.reentryMinRemainingPercent }),
+    ...(tuning?.rungBudgetUsd ? { rungBudgetUsd: tuning.rungBudgetUsd } : {}),
+  };
 }
 
 function toExpiryMs(value: unknown): number | null {
@@ -159,17 +281,39 @@ function hasProviderSpecificSessionData(conn: VirtualFactoryConn): boolean {
   return hasUsableWebSessionCredential(conn.provider, conn.providerSpecificData);
 }
 
+/**
+ * #11180: a custom compatible connection (`openai-compatible-*` /
+ * `anthropic-compatible-*`) may legitimately carry no credential at all,
+ * because it points at a self-hosted backend the operator started without one
+ * (`llama-server --host 0.0.0.0` with no `--api-key`, Ollama, vLLM). For those
+ * IDs "no credential" is the normal configuration rather than an unconfigured
+ * connection, so the credential gate must not silently drop them from every
+ * `auto/*` pool while direct `<provider>/<model>` calls keep working.
+ *
+ * Deliberately narrow: only the four generated compatible-provider ID shapes
+ * qualify. A first-party provider with an empty key really is unconfigured and
+ * stays filtered out, and the no-auth registry allowlist below is untouched.
+ */
+function isKeylessEligibleConnection(conn: VirtualFactoryConn): boolean {
+  return isCompatibleProviderConnectionId(conn.provider);
+}
+
 function hasUsableConnectionCredential(conn: VirtualFactoryConn): boolean {
   const hasApiKey = typeof conn.apiKey === "string" && conn.apiKey.trim().length > 0;
-  return hasApiKey || hasUsableOAuthToken(conn) || hasProviderSpecificSessionData(conn);
+  return (
+    hasApiKey ||
+    hasUsableOAuthToken(conn) ||
+    hasProviderSpecificSessionData(conn) ||
+    isKeylessEligibleConnection(conn)
+  );
 }
 
 const SYNTHETIC_NOAUTH_CONNECTION_ID = RESILIENCE_NOAUTH_CONNECTION_ID;
 
 // Allowlist of no-auth (keyless) providers permitted to enter the `auto`/`auto-*`
 // candidate pool. Narrowed to the backends verified to answer without any
-// configuration on our reference egress (VPS .15): `opencode` and `felo-web`
-// both return 200 there, while duckduckgo-web (429/VQD rate limit), theoldllm
+// configuration on our reference egress (VPS .15): `opencode` returns 200
+// there, while duckduckgo-web (429/VQD rate limit), theoldllm
 // (403 Vercel egress block), chipotle (502), aihorde (401, anon key rejected)
 // and the others are unreliable. The excluded providers stay fully usable via
 // direct `<alias>/<model>` calls — they are just kept OUT of auto-routing until
@@ -183,7 +327,7 @@ const SYNTHETIC_NOAUTH_CONNECTION_ID = RESILIENCE_NOAUTH_CONNECTION_ID;
 // pool, so it admits any no-auth backend that genuinely serves the family (e.g.
 // auggie, a local CLI subprocess with zero HTTP egress, belongs in auto/glm
 // regardless of this list). See the `bypassAllowlist` param below.
-const AUTO_COMBO_NOAUTH_ALLOWLIST = new Set<string>(["opencode", "felo-web"]);
+const AUTO_COMBO_NOAUTH_ALLOWLIST = new Set<string>(["opencode"]);
 
 function isChatAutoComboNoAuthProvider(
   providerDef: NoAuthProviderDefinition,
@@ -256,9 +400,19 @@ function getNoAuthCandidates(
     // modelCompatOverrides/customModels key_value namespaces) the same way the
     // credentialed-connection loop below does, so a hidden no-auth model never
     // enters the auto-combo/fusion candidate pool either.
-    const hiddenModels =
-      hiddenModelsMap.get(providerId) ??
-      (typeof providerDef.alias === "string" ? hiddenModelsMap.get(providerDef.alias) : undefined);
+    const hiddenLookupIds = [
+      providerId,
+      typeof providerDef.alias === "string" ? providerDef.alias : null,
+      registryAlias,
+      routingPrefix,
+      resolveProviderAlias(providerId),
+      resolveProviderAlias(routingPrefix),
+    ];
+    const hiddenModels = new Set<string>();
+    for (const id of hiddenLookupIds) {
+      if (!id) continue;
+      for (const modelId of hiddenModelsMap.get(id) ?? []) hiddenModels.add(modelId);
+    }
 
     for (const model of registryModels) {
       const modelId = typeof model?.id === "string" && model.id.trim().length > 0 ? model.id : null;
@@ -350,7 +504,9 @@ export function computeAdvertisedLimits(candidates: AdvertisedLimitCandidate[]):
   return { contextLength, maxOutputTokens };
 }
 
-const PREPARED_CAPABILITY_YIELD_INTERVAL = 16;
+// Catalog-scale pools can contain hundreds of models. Keep both candidate construction
+// and capability preparation cooperative instead of monopolising one event-loop turn.
+const VIRTUAL_AUTO_PREPARATION_YIELD_INTERVAL = 4;
 
 type PreparedCapabilityValues = {
   resolvedContextLength: number | null;
@@ -395,6 +551,7 @@ async function attachPreparedCapabilityValues(
           provider: candidate.provider,
           model: candidate.model,
         },
+        undefined,
         state.resolutionSnapshot
       );
       const maxOutputTokens = capabilities.maxOutputTokens;
@@ -413,7 +570,7 @@ async function attachPreparedCapabilityValues(
       };
       byModel.set(candidate.model, values);
       state.resolvedSinceYield++;
-      if (state.resolvedSinceYield >= PREPARED_CAPABILITY_YIELD_INTERVAL) {
+      if (state.resolvedSinceYield >= VIRTUAL_AUTO_PREPARATION_YIELD_INTERVAL) {
         state.resolvedSinceYield = 0;
         await yieldVirtualAutoPreparationTurn();
       }
@@ -424,17 +581,22 @@ async function attachPreparedCapabilityValues(
 }
 
 export async function prepareVirtualAutoComboInputs(
-  options: { includeResolvedCapabilities?: boolean } = {}
+  options: {
+    includeResolvedCapabilities?: boolean;
+    resolutionSnapshot?: ModelCapabilityResolutionSnapshot;
+  } = {}
 ): Promise<PreparedVirtualAutoComboInputs> {
-  const [connections, disabledNoAuthConnections, settings] = await Promise.all([
+  const [rawConnections, rawDisabledNoAuthConnections, settings] = await Promise.all([
     getCachedProviderConnections({ isActive: true }) as Promise<VirtualFactoryConn[]>,
-    // #6557: no-auth providers (opencode/mimocode/etc.) don't get an isActive
-    // filter applied above since their credential is synthetic, but a real
-    // provider_connections row CAN exist for them (created via "Add Account")
-    // and its own isActive=false must gate the auto-combo pool too — not just
+    // #6557: synthetic no-auth credentials bypass active filtering, but a real Add Account
+    // row may exist; its isActive=false must also gate auto-combo.
     getCachedProviderConnections({ isActive: false }) as Promise<VirtualFactoryConn[]>,
     getSettings().catch(() => ({}) as Record<string, unknown>),
   ]);
+  const available = (conn: VirtualFactoryConn) =>
+    !isCommonChatGptWebRetiredProviderId(conn.provider);
+  const connections = rawConnections.filter(available);
+  const disabledNoAuthConnections = rawDisabledNoAuthConnections.filter(available);
   const blockedProviders = new Set(
     Array.isArray(settings.blockedProviders) ? (settings.blockedProviders as string[]) : []
   );
@@ -443,19 +605,24 @@ export async function prepareVirtualAutoComboInputs(
       .filter((conn) => conn.provider in NOAUTH_PROVIDERS)
       .map((conn) => conn.provider)
   );
+  const runtimeConnections = connections.filter(
+    (connection) =>
+      !isMicrosoftDesignerWebRetiredProviderId(connection.provider) &&
+      !isRuntimeRetiredProviderId(connection.provider)
+  );
   const hiddenModelsMap = getHiddenModelsByProvider();
   // #7622: a no-auth provider's own provider_connections row (#6557) can carry
   // `providerSpecificData.excludedModels` regardless of its isActive state (the
   // dispatch-time enforcement in auth.ts does not gate on isActive either), so
   // gather it from BOTH the active and disabled connection lists.
   const noAuthProviderSpecificData = new Map<string, Record<string, unknown> | null | undefined>();
-  for (const conn of [...connections, ...disabledNoAuthConnections]) {
+  for (const conn of [...runtimeConnections, ...disabledNoAuthConnections]) {
     if (conn.provider in NOAUTH_PROVIDERS) {
       noAuthProviderSpecificData.set(conn.provider, conn.providerSpecificData);
     }
   }
 
-  const validConnections = connections.filter(hasUsableConnectionCredential);
+  const validConnections = runtimeConnections.filter(hasUsableConnectionCredential);
 
   const candidatePool: VirtualAutoComboCandidate[] = [];
   const registry = getProviderRegistry();
@@ -469,6 +636,7 @@ export async function prepareVirtualAutoComboInputs(
   // Build one logical candidate per provider/model and keep account fallback as an
   // allowlist on that candidate. This avoids both the old "first registry model per
   // connection" blind spot and a connections × models Cartesian candidate pool.
+  let candidateModelsSinceYield = 0;
   for (const [providerId, providerConnections] of connectionsByProvider) {
     const providerInfo = registry[providerId];
     const registryModelIds = Array.isArray(providerInfo?.models)
@@ -480,15 +648,46 @@ export async function prepareVirtualAutoComboInputs(
     const defaultModelIds = providerConnections
       .map((conn) => (typeof conn.defaultModel === "string" ? conn.defaultModel.trim() : ""))
       .filter(Boolean);
-    const modelIds = Array.from(new Set([...registryModelIds, ...defaultModelIds]));
     const hiddenModels = hiddenModelsMap.get(providerId);
 
+    // #auto-pool-visible-only: build the credentialed pool from the models the user
+    // actually has available (synced + custom non-hidden) when any exist, falling
+    // back to the static catalog only when the user has none. This keeps catalog-only
+    // models (e.g. openrouter/auto) out of every auto/* pool when the operator only
+    // synced a subset (e.g. OpenRouter with importFreeModelsOnly).
+    const [syncedByConnection, customModels] = await Promise.all([
+      getSyncedAvailableModelsByConnection(providerId),
+      getCustomModels(providerId),
+    ]);
+    const userVisibleIds = new Set<string>();
+    for (const models of Object.values(syncedByConnection)) {
+      for (const m of models) if (m.id && !hiddenModels?.has(m.id)) userVisibleIds.add(m.id);
+    }
+    for (const m of customModels) if (m.id && !hiddenModels?.has(m.id)) userVisibleIds.add(m.id);
+    const hasUserModels = userVisibleIds.size > 0;
+    const modelIds = hasUserModels
+      ? Array.from(userVisibleIds)
+      : Array.from(new Set([...registryModelIds, ...defaultModelIds]));
+
     for (const modelId of modelIds) {
+      candidateModelsSinceYield++;
+      if (candidateModelsSinceYield >= VIRTUAL_AUTO_PREPARATION_YIELD_INTERVAL) {
+        candidateModelsSinceYield = 0;
+        await yieldVirtualAutoPreparationTurn();
+      }
       if (hiddenModels?.has(modelId)) continue;
 
       const allowedConnectionIds = providerConnections
         .filter((conn) => {
           if (isModelExcludedByConnection(modelId, conn.providerSpecificData)) return false;
+          if (hasUserModels) {
+            // User-synced models are scoped to the connections that carry them;
+            // custom models are provider-wide like registry models.
+            const connSynced = syncedByConnection[conn.id] ?? [];
+            const isSyncedForConn = connSynced.some((m) => m.id === modelId);
+            const isCustomForProvider = customModels.some((m) => m.id === modelId);
+            return isSyncedForConn || isCustomForProvider || conn.defaultModel?.trim() === modelId;
+          }
           // Registry models are provider-wide. A non-registry default (for a custom
           // or passthrough model) is scoped only to connections that selected it.
           return registryModelIdSet.has(modelId) || conn.defaultModel?.trim() === modelId;
@@ -510,7 +709,7 @@ export async function prepareVirtualAutoComboInputs(
   // #7623: honor existing model lockouts + connection cooldown/terminal state so
   // auto/* never advertises models the dispatch path would immediately skip.
   const connectionsById = new Map<string, ConnectionResilienceView>();
-  for (const conn of [...connections, ...disabledNoAuthConnections]) {
+  for (const conn of [...runtimeConnections, ...disabledNoAuthConnections]) {
     connectionsById.set(conn.id, conn);
   }
 
@@ -535,14 +734,44 @@ export async function prepareVirtualAutoComboInputs(
     // exclude paid-only backends from EVERY `auto/*` candidate pool.
     const paidFilteredPool = filterPaidOnlyCandidates(pool, settings.hidePaidModels === true);
     if (paidFilteredPool !== pool) pool = paidFilteredPool;
+
+    // STRICT_ZERO_COST: opt-in, off by default (`settings.freeAccessPolicy !== "strict"`
+    // leaves `pool` byte-identical, same contract as `hidePaidModels`). See
+    // `strictZeroCostFilter.ts` for why this is stricter than `hidePaidModels` alone —
+    // including the connection-safety invariant it enforces per-connection, not just
+    // per-candidate: `resolveFreeAccessState` here is a raw pass-through of the real
+    // per-(provider,connectionId) resolver; the filter itself decides which connection(s)
+    // on each candidate to check and rewrites `allowedConnectionIds` to the SAFE subset.
+    const strictFilteredPool = filterStrictZeroCostCandidates(pool, {
+      enabled: settings.freeAccessPolicy === "strict",
+      resolveFreeAccessState,
+      // 1 percentage point of headroom, not 0: `freeAccessQuota.ts` reports
+      // remaining allowance as a percentage, and a raw ">0" comparison would
+      // let a reading of e.g. 0.3% (rounding noise, not real headroom) pass.
+      minRemainingAllowance: 1,
+      maxStateAgeMs: toNumber(settings.autoRefreshProviderQuotaInterval, 180) * 1000,
+    });
+    if (strictFilteredPool !== pool) pool = strictFilteredPool;
+
+    // Separate, optional ToS guard — independent of economic safety on purpose.
+    const tosFilteredPool = filterTosAvoidCandidates(pool, settings.excludeTosAvoid === true);
+    if (tosFilteredPool !== pool) pool = tosFilteredPool;
+
     return pool;
   };
 
   const regularCandidates = buildPreparedPool(false);
   // #6453/#8183: family selectors bypass the reliability-curated no-auth allowlist.
   const familyCandidates = buildPreparedPool(true);
+  // Subscription-first routing inputs, captured from the connection read above
+  // so no later stage has to touch the DB again.
+  const authTypeByConnectionId = new Map<string, string | null>();
+  for (const conn of connections) {
+    authTypeByConnectionId.set(conn.id, typeof conn.authType === "string" ? conn.authType : null);
+  }
+  const subscriptionLadder = readSubscriptionLadderSettings(settings);
   if (!options.includeResolvedCapabilities) {
-    return { regularCandidates, familyCandidates };
+    return { regularCandidates, familyCandidates, authTypeByConnectionId, subscriptionLadder };
   }
 
   // One uninterrupted bulk read of all three capability tables for this prepare only.
@@ -551,12 +780,69 @@ export async function prepareVirtualAutoComboInputs(
   const capabilityState: PreparedCapabilityState = {
     byTarget: new Map(),
     resolvedSinceYield: 0,
-    resolutionSnapshot: createModelCapabilityResolutionSnapshot(),
+    resolutionSnapshot: options.resolutionSnapshot ?? createModelCapabilityResolutionSnapshot(),
   };
   return {
     regularCandidates: await attachPreparedCapabilityValues(regularCandidates, capabilityState),
     familyCandidates: await attachPreparedCapabilityValues(familyCandidates, capabilityState),
+    authTypeByConnectionId,
+    subscriptionLadder,
   };
+}
+
+/**
+ * Score candidates at snapshot time using available data (capabilities, tier)
+ * and the mode-pack's dominant factors. Runtime telemetry (p95 latency, quota
+ * remaining) is not available during combo creation — this uses static signals only.
+ *
+ * Returns a map from modelStr → normalized weight score [0, 1].
+ */
+export function computeSnapshotWeights(
+  candidates: readonly VirtualAutoComboCandidate[],
+  weights: ScoringWeights
+): Map<string, number> {
+  const scores = new Map<string, number>();
+  for (const c of candidates) {
+    let score = 0;
+
+    // taskFit: reasoning + vision capable models score higher when taskFit is weighted
+    if (weights.taskFit > 0) {
+      if (c.resolvedReasoning || c.resolvedSupportsThinking) score += weights.taskFit * 0.6;
+      if (c.resolvedSupportsVision) score += weights.taskFit * 0.3;
+    }
+
+    // stability: models with richer capabilities are assumed more stable
+    if (weights.stability > 0) {
+      const capabilityCount =
+        Number(c.resolvedReasoning ?? false) +
+        Number(c.resolvedSupportsThinking ?? false) +
+        Number(c.resolvedSupportsVision ?? false);
+      score += weights.stability * Math.min(capabilityCount / 2, 1);
+    }
+
+    // Tier-based scoring (single classifyTier call covers both checks)
+    let tierInfo: { tier: string } | null = null;
+    if (weights.tierPriority > 0 || weights.costInv > 0) {
+      try {
+        tierInfo = classifyTier(c.provider, c.model);
+      } catch {
+        // fall through with zero
+      }
+    }
+    if (tierInfo && weights.tierPriority > 0 && tierInfo.tier === "premium")
+      score += weights.tierPriority;
+    if (tierInfo && weights.costInv > 0 && tierInfo.tier === "free") score += weights.costInv;
+
+    // latencyInv: all candidates get a base score when latency matters
+    // (no runtime data at snapshot time, so equal baseline)
+    if (weights.latencyInv > 0) score += weights.latencyInv * 0.5;
+
+    // health + quota: no runtime telemetry at snapshot time → neutral baseline
+    score += (weights.health + weights.quota) * 0.5;
+
+    scores.set(c.modelStr, Math.min(score, 1));
+  }
+  return scores;
 }
 
 function clonePreparedCandidates(
@@ -664,11 +950,37 @@ export async function createVirtualAutoComboFromPrepared(
       // Family combos always degrade to an empty pool when unavailable — a family
       // is a hard identity constraint, not a soft optimization bias, so there is
       // no sensible "fall back to the full pool" behavior for it.
-      log.warn(
-        "AUTO",
+      warnEmptyAutoPoolOnce(
+        label,
         `${label} matched no connected models; returning an empty pool.${spec?.family ? "" : ' Set OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL=true to restore the legacy "use full pool" behavior.'}`
       );
       effectivePool = [];
+    }
+  }
+
+  // Subscription-first routing (`auto/subscription`, `auto/thrifty`). Applied
+  // AFTER the category/tier narrowing above because, unlike every other tier,
+  // these two select on the connection's billing class and its live quota
+  // state rather than on the model's catalog price — see
+  // `subscriptionLadder.ts` and `docs/routing/SUBSCRIPTION_LADDER.md`.
+  if (spec?.tier === "subscription" || spec?.tier === "thrifty") {
+    const ladderOptions = buildLadderOptions(prepared, spec.tier);
+    const beforeCount = effectivePool.length;
+    effectivePool =
+      spec.tier === "subscription"
+        ? filterSubscriptionOnlyCandidates(effectivePool, ladderOptions)
+        : orderPoolByRung(effectivePool, ladderOptions);
+    if (spec.tier === "subscription" && effectivePool.length === 0 && beforeCount > 0) {
+      // Intended, not a defect: the operator asked for plan-included capacity
+      // only, and right now there is none with verified headroom. Failing
+      // closed here is the entire promise of the id — the caller's existing
+      // empty-pool path turns it into a clear error rather than a silent,
+      // billable fallback.
+      warnEmptyAutoPoolOnce(
+        "auto/subscription",
+        "auto/subscription: no plan-included connection has verified quota headroom; " +
+          "returning an empty pool rather than falling back to paid capacity."
+      );
     }
   }
 
@@ -727,6 +1039,7 @@ export async function createVirtualAutoComboFromPrepared(
   }
 
   const providerPool = [...new Set(effectivePool.map((c) => c.provider))];
+  const snapshotScores = computeSnapshotWeights(effectivePool, weights);
   const models = effectivePool.map((candidate, index) => ({
     id: `virtual-auto-${variant || "default"}-${index + 1}-${candidate.provider}`,
     kind: "model" as const,
@@ -736,7 +1049,7 @@ export async function createVirtualAutoComboFromPrepared(
     ...(candidate.allowedConnectionIds
       ? { allowedConnectionIds: candidate.allowedConnectionIds }
       : {}),
-    weight: 1,
+    weight: snapshotScores.get(candidate.modelStr) ?? 1,
     label: candidate.provider,
   }));
   const autoConfig = {

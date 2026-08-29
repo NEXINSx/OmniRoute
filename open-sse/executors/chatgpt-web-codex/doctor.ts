@@ -48,6 +48,7 @@ export async function getChatGptWebCodexDoctorStatus(connection: {
       mode: "browser-only",
       appName: "OmniRoute Codex",
       storageStatePath: paths.storageStatePath,
+      brokerSocketPath: paths.brokerSocketPath,
       ...(chrome ? { chromeExecutablePath: chrome } : {}),
       ...(cdpConfigured ? { cdpEndpoint: process.env.CHATGPT_WEB_CODEX_CDP_URL } : {}),
       headed: false,

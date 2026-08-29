@@ -15,6 +15,11 @@ import { ensureNativeSqlite } from "./ensure-native-sqlite.mjs";
 import { isTurbopackCacheCorruption, purgeAllTurbopackCaches } from "./turbopackCacheHeal.mjs";
 import { randomUUID } from "node:crypto";
 import { getMainServerTimeoutConfig } from "./main-server-timeouts.mjs";
+import { createSystemdNotifier } from "./systemd-notify.mjs";
+import {
+  attachRequestStreamGuards,
+  installProcessCrashGuard,
+} from "./httpClientAbortGuard.mjs";
 
 const { maybeHandleDisallowedMethod } = methodGuard;
 const { wrapRequestListenerWithHeadResponseGuard } = headResponseGuard;
@@ -60,6 +65,32 @@ for (const [key, value] of Object.entries(mergedEnv)) {
   }
 }
 
+// E2E open-mode bootstrap (#11535). Test harnesses that boot THIS server (protocol
+// clients E2E) rely on an auth-disabled "open" bootstrap so management endpoints such
+// as /api/mcp/audit are genuinely exercised unauthenticated (200), not short-circuited
+// by a stray credential. bootstrap-env.mjs deliberately drops empty strings from
+// process.env/.env/server.env, so an INITIAL_PASSWORD="" injected by a harness cannot
+// survive the merge above and any INITIAL_PASSWORD persisted in .env or server.env
+// would leak back in (401 → green-shallow suite).
+// Cleared to EMPTY STRING (not deleted): Next's env loader re-reads the repo .env
+// during app prepare(), AFTER this point — an absent var would be re-populated from
+// the file and src/instrumentation-node.ts would bcrypt-persist it as a real login
+// (401s everywhere). An existing empty var is falsy to every consumer AND wins over
+// dotenv's no-override load, mirroring run-next-playwright.mjs's open-mode overrides.
+// Gated on the test-only env var so production boots are untouched.
+if (process.env.OMNIROUTE_E2E_BOOTSTRAP_MODE === "open") {
+  process.env.INITIAL_PASSWORD = "";
+  process.env.OMNIROUTE_E2E_PASSWORD = "";
+  process.env.OMNIROUTE_API_KEY = "";
+}
+
+// systemd sd_notify (Type=notify / WatchdogSec=): this process owns the
+// watchdog pings — if its event loop blocks (freeze), the pings stop and
+// systemd kills the service. No-op outside systemd (no NOTIFY_SOCKET).
+// Created AFTER .env is merged so the OMNIROUTE_DISABLE_SD_NOTIFY opt-out
+// documented in .env is honored on this path too.
+const systemdNotifier = createSystemdNotifier();
+
 // The mergedEnv copy above pulls NODE_ENV straight from `.env` — and the shipped
 // `.env.example` default is `NODE_ENV=production`. Next's programmatic `next()`
 // entry (unlike the `next` CLI) trusts that value verbatim, so `npm run dev`
@@ -75,8 +106,10 @@ const { dashboardPort } = runtimePorts;
 const hostname = process.env.HOST || "0.0.0.0";
 // Turbopack by default in dev (matches the Next 16 CLI default and the production
 // build default in build-next-isolated.mjs); OMNIROUTE_USE_TURBOPACK=0 is the
-// webpack escape hatch.
-const useTurbopack = dev && mergedEnv.OMNIROUTE_USE_TURBOPACK !== "0";
+// webpack escape hatch. Under Bun, Turbopack native V8 bindings are unavailable,
+// so Bun automatically disables Turbopack and uses Webpack.
+const isBun = Boolean(process.versions.bun);
+const useTurbopack = dev && mergedEnv.OMNIROUTE_USE_TURBOPACK !== "0" && !isBun;
 process.env.OMNIROUTE_WS_BRIDGE_SECRET ||= randomUUID();
 // Per-process secret used to prove the trusted peer-IP stamp came from this
 // server (read by the authz middleware in the same process). See peer-stamp.mjs.
@@ -133,6 +166,13 @@ async function prepareWithHeal() {
 }
 
 async function start() {
+  // Safety net: a client aborting a connection (browser navigation, HMR reconnect,
+  // Back/Forward cache) can emit `Error: aborted`/`ECONNRESET` on the request
+  // stream. Without this the single missed listener becomes an uncaughtException
+  // that takes the whole server down — surfacing as a wall of ERR_CONNECTION_REFUSED
+  // after login. Benign aborts are swallowed; genuine errors still crash loudly.
+  installProcessCrashGuard();
+
   await prepareWithHeal();
 
   const requestHandler = nextApp.getRequestHandler();
@@ -147,6 +187,10 @@ async function start() {
 
   const server = http.createServer(
     wrapRequestListenerWithHeadResponseGuard((req, res) => {
+      // Absorb client-abort errors (browser closes the socket during
+      // navigation/HMR/bfcache) on the request/response streams so they never
+      // surface as an uncaughtException that kills the whole server (#fix-dev-server-aborted).
+      attachRequestStreamGuards(req, res);
       if (maybeHandleDisallowedMethod(req, res)) return;
       // Stamp the real TCP peer IP before Next sees the request, so the authz
       // middleware can decide LOCAL_ONLY locality without trusting the Host header.
@@ -184,6 +228,7 @@ async function start() {
   });
 
   const shutdown = async (signal) => {
+    systemdNotifier.stopping();
     try {
       await new Promise((resolve) => server.close(resolve));
       await nextApp.close();
@@ -202,6 +247,8 @@ async function start() {
     console.log(
       `[Next] ${mode} server listening on http://${hostname}:${dashboardPort} (${bundler})`
     );
+    systemdNotifier.ready();
+    systemdNotifier.startWatchdog();
   });
 }
 

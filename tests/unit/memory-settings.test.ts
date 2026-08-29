@@ -26,6 +26,9 @@ describe("memory settings helpers", () => {
       // Plan 21 — Memory Engine Redesign extended fields (default values)
       embeddingSource: DEFAULT_MEMORY_SETTINGS.embeddingSource,
       embeddingProviderModel: DEFAULT_MEMORY_SETTINGS.embeddingProviderModel,
+      // #10010 — custom remote embedding endpoint fields (default values)
+      customBaseUrl: DEFAULT_MEMORY_SETTINGS.customBaseUrl,
+      customModelId: DEFAULT_MEMORY_SETTINGS.customModelId,
       transformersEnabled: DEFAULT_MEMORY_SETTINGS.transformersEnabled,
       staticEnabled: DEFAULT_MEMORY_SETTINGS.staticEnabled,
       rerankEnabled: DEFAULT_MEMORY_SETTINGS.rerankEnabled,

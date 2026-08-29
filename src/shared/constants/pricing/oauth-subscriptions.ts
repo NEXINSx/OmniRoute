@@ -4,12 +4,19 @@
  */
 import {
   CLAUDE_OPUS_5_PRICING,
+  GEMINI_3_7_FLASH_PROMO_PRICING,
   GPT_5_3_CODEX_PRICING,
   GPT_5_5_PRICING,
   GPT_5_6_LUNA_PRICING,
   GPT_5_6_SOL_PRICING,
   GPT_5_6_TERRA_PRICING,
 } from "./shared-tiers";
+
+const ANTIGRAVITY_GEMINI_3_7_PRICING = {
+  "gemini-3.7-flash-low": GEMINI_3_7_FLASH_PROMO_PRICING,
+  "gemini-3.7-flash-medium": GEMINI_3_7_FLASH_PROMO_PRICING,
+  "gemini-3.7-flash-high": GEMINI_3_7_FLASH_PROMO_PRICING,
+};
 
 export const DEFAULT_PRICING_OAUTH = {
   cc: {
@@ -277,35 +284,6 @@ export const DEFAULT_PRICING_OAUTH = {
       reasoning: 18.0,
       cache_creation: 2.0,
     },
-    // Antigravity 2.0.4+ exposes Gemini 3.5 Flash as three public client ids
-    // (see ANTIGRAVITY_PUBLIC_MODELS in open-sse/config/antigravityModelAliases.ts):
-    //   gemini-3.5-flash-extra-low → "Gemini 3.5 Flash (Low)"
-    //   gemini-3-flash-agent   → "Gemini 3.5 Flash (High)"
-    //   gemini-3.5-flash-low   → "Gemini 3.5 Flash (Medium)"
-    // Without these rows, getPricingForModel("ag", id) returns null and downstream
-    // cost and quota calculations silently fall back to $0.
-    "gemini-3.5-flash-extra-low": {
-      input: 0.5,
-      output: 3.0,
-      cached: 0.03,
-      reasoning: 4.5,
-      cache_creation: 0.5,
-    },
-    "gemini-3-flash-agent": {
-      input: 0.5,
-      output: 3.0,
-      cached: 0.03,
-      reasoning: 4.5,
-      cache_creation: 0.5,
-    },
-    "gemini-3.5-flash-low": {
-      input: 0.5,
-      output: 3.0,
-      cached: 0.03,
-      reasoning: 4.5,
-      cache_creation: 0.5,
-    },
-    // `gemini-pro-agent` is the callable Antigravity id for Gemini 3.1 Pro (High).
     "gemini-pro-agent": {
       input: 4.0,
       output: 18.0,
@@ -313,33 +291,7 @@ export const DEFAULT_PRICING_OAUTH = {
       reasoning: 27.0,
       cache_creation: 4.0,
     },
-    // Gemini 3.6 Flash (released 2026-07-21) - three tier variants like 3.5 Flash
-    // (see ANTIGRAVITY_PUBLIC_MODELS / MODEL_SPECS which already carry the catalog
-    // entries). Without these rows, getPricingForModel("ag", id) returns null and
-    // downstream cost and quota calculations silently fall back to $0.
-    // Pricing: $1.50 input / $7.50 output / $0.15 cached per MTok. Thinking tokens
-    // billed at output rate.
-    "gemini-3.6-flash-low": {
-      input: 1.5,
-      output: 7.5,
-      cached: 0.15,
-      reasoning: 7.5,
-      cache_creation: 1.5,
-    },
-    "gemini-3.6-flash-medium": {
-      input: 1.5,
-      output: 7.5,
-      cached: 0.15,
-      reasoning: 7.5,
-      cache_creation: 1.5,
-    },
-    "gemini-3.6-flash-high": {
-      input: 1.5,
-      output: 7.5,
-      cached: 0.15,
-      reasoning: 7.5,
-      cache_creation: 1.5,
-    },
+    ...ANTIGRAVITY_GEMINI_3_7_PRICING,
     "claude-sonnet-4-6": {
       input: 3.0,
       output: 15.0,
@@ -362,6 +314,8 @@ export const DEFAULT_PRICING_OAUTH = {
       cache_creation: 0.5,
     },
   },
+  antigravity: ANTIGRAVITY_GEMINI_3_7_PRICING,
+  agy: ANTIGRAVITY_GEMINI_3_7_PRICING,
   gh: {
     "claude-opus-5": CLAUDE_OPUS_5_PRICING,
     "gpt-5": {
@@ -434,6 +388,7 @@ export const DEFAULT_PRICING_OAUTH = {
       reasoning: 4.5,
       cache_creation: 0.5,
     },
+    "gemini-3.7-flash": GEMINI_3_7_FLASH_PROMO_PRICING,
     "gemini-2.5-pro": {
       input: 2.0,
       output: 12.0,

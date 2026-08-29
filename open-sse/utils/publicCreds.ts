@@ -1,16 +1,12 @@
 /**
  * Public credentials decoder.
  *
- * Some upstream providers (Gemini, Antigravity, Windsurf/Devin CLI) ship
- * OAuth client_id / client_secret / Firebase Web API key values inside their
- * public binaries or web apps. These are credentials by name only — Google
- * explicitly documents that:
- *
- *   - OAuth client_id/secret for native/installed apps using PKCE are
- *     publicly distributed and must not be treated as secrets.
- *     https://developers.google.com/identity/protocols/oauth2/native-app
- *   - Firebase Web API keys are public client identifiers.
- *     https://firebase.google.com/docs/projects/api-keys
+ * Some upstream providers (including Gemini and Antigravity) ship OAuth
+ * client_id / client_secret values inside their public binaries or web apps.
+ * These are credentials by name only: OAuth client credentials for
+ * native/installed apps using PKCE are publicly distributed and must not be
+ * treated as secrets.
+ * https://developers.google.com/identity/protocols/oauth2/native-app
  *
  * OmniRoute embeds them so users who do not configure `.env` still get a
  * working OAuth flow out of the box. The literals, however, trip pattern
@@ -23,10 +19,9 @@
  * which is fine because the value is public by design. The only goal is to
  * avoid known scanner regexes in the source text.
  *
- * Backward compatibility: existing users have raw values in their `.env`
- * (e.g. `WINDSURF_FIREBASE_API_KEY=AIzaSy...`). `decodePublicCred()` detects
- * raw values by their well-known prefixes and passes them through unchanged,
- * so no migration is required for current installations.
+ * Backward compatibility: `decodePublicCred()` detects raw values by their
+ * well-known prefixes and passes them through unchanged, so existing env
+ * overrides do not require migration.
  */
 
 const MASK = "omniroute-public-v1";
@@ -150,11 +145,6 @@ const EMBEDDED_DEFAULTS = {
     40, 34, 45, 58, 34, 55, 88, 63, 80, 21, 54, 34, 48, 88, 81, 85, 97, 18, 125, 37, 92, 3, 37, 48,
     87, 6, 44, 38, 25, 10, 67, 19, 40, 40, 5,
   ],
-  // Windsurf / Devin CLI — firebase web client identifier (public)
-  windsurf_fb: [
-    46, 36, 20, 8, 33, 22, 55, 4, 41, 121, 53, 50, 49, 24, 92, 90, 108, 35, 97, 36, 21, 44, 11, 69,
-    3, 60, 35, 15, 126, 53, 71, 56, 52, 56, 43, 26, 27, 86, 58,
-  ],
   // Claude Code CLI — anthropic oauth client (public, PKCE)
   claude_id: [
     86, 9, 95, 10, 64, 90, 69, 21, 72, 72, 70, 68, 0, 65, 93, 87, 73, 79, 28, 87, 85, 11, 13, 95,
@@ -182,22 +172,11 @@ const EMBEDDED_DEFAULTS = {
   openference_id: [0, 0, 0, 0, 0, 0, 0, 0, 0],
   // Trae Cloud IDE — public oauth client id
   trae_id: [10, 3, 95, 6, 10, 22, 66, 3, 11, 90, 72, 31, 91, 2],
-  // Microsoft Designer web app — public ClientId header sent by the
-  // designer.microsoft.com frontend to designerapp.officeapps.live.com
-  // (not a secret — every browser session sends the same fixed value;
-  // reverse-engineered from the g4f MicrosoftDesigner provider reference).
-  microsoft_designer_client_id: [
-    13, 88, 13, 91, 68, 89, 65, 21, 72, 26, 21, 76, 0, 65, 93, 2, 26, 23, 28, 87, 14, 87, 8, 95, 12,
-    17, 70, 6, 24, 66, 17, 1, 10, 95, 81, 28,
-  ],
-  // Microsoft Edge Read Aloud (EdgeTTS) — public "trusted client token" used to
-  // derive the Sec-MS-GEC anti-abuse header. Hardcoded in every known Edge
-  // browser build and every open-source edge-tts reimplementation (e.g.
-  // rany2/edge-tts constants.py) — not a per-user secret, just an
-  // abuse-mitigation constant Microsoft ships in public client binaries.
-  edgetts_token: [
-    89, 44, 91, 40, 51, 94, 49, 64, 32, 108, 54, 51, 86, 41, 80, 37, 111, 69, 6, 42, 95, 93, 45, 68,
-    87, 65, 77, 84, 105, 70, 51, 86,
+  // Microsoft 365 Copilot web (m365.cloud.microsoft) — public SPA client id
+  // observed in browser tokens and M365-Copilot2API. Not a per-user secret.
+  m365_oauth_client_id: [
+    12, 93, 15, 11, 74, 12, 16, 77, 72, 72, 73, 20, 82, 65, 93, 81, 72, 65, 28, 13, 93, 88, 93, 95,
+    92, 70, 16, 81, 31, 66, 17, 4, 88, 88, 5, 28,
   ],
   // Adobe Firefly web (firefly.adobe.com) — public x-api-key + IMS client_id
   // (`clio-playground-web`). Captured from live browser generate/discovery calls.
@@ -210,15 +189,6 @@ const EMBEDDED_DEFAULTS = {
   // Firefly credits balance endpoint public x-api-key (`SunbreakWebUI1`) from
   // GET firefly.adobe.io/v1/credits/balance browser traffic.
   adobe_firefly_balance_api_key: [60, 24, 0, 11, 0, 10, 20, 31, 50, 72, 18, 32, 43, 93],
-  // Raycast Pro V2 request-signature secret (#8895). Community-extracted from the
-  // public Raycast macOS client — the SAME value ships to every install, so it is
-  // public by design, not a per-user credential. Overridable via RAYCAST_SIG_SECRET
-  // or providerSpecificData.sigSecret.
-  raycast_sig_secret: [
-    89, 15, 13, 93, 71, 90, 65, 67, 86, 24, 71, 67, 1, 9, 91, 0, 73, 64, 87, 88, 93, 90, 91, 68, 12,
-    20, 18, 3, 21, 70, 66, 3, 13, 11, 1, 72, 69, 87, 88, 95, 87, 88, 17, 94, 20, 67, 92, 27, 72, 68,
-    3, 10, 92, 6, 21, 21, 84, 95, 14, 15, 88, 70, 95, 77,
-  ],
 } as const;
 
 export type EmbeddedDefaultKey = keyof typeof EMBEDDED_DEFAULTS;

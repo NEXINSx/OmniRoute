@@ -265,13 +265,14 @@ export function orderHeaders(
  * Apply a CLI fingerprint to headers and body.
  * Returns { headers, bodyString } with the correct ordering.
  */
-function stripInternalBodyFields(body: unknown): unknown {
+export function stripInternalBodyFields(body: unknown): unknown {
   if (!body || typeof body !== "object" || Array.isArray(body)) return body;
 
   const record = body as Record<string, unknown>;
   delete record._claudeCodeRequiresLowercaseToolNames;
   delete record._nativeCodexPassthrough;
   delete record._nativeXaiResponsesPassthrough;
+  delete record._nativeOpenAICompatibleResponsesPassthrough;
   delete record._omnirouteResponsesStore;
   return body;
 }

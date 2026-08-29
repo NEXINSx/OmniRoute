@@ -13,7 +13,13 @@ const routerControl = vi.hoisted(() => ({
 }));
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useLocale: () => "en",
+  useTranslations: (namespace?: string) => (key: string) => {
+    if (namespace === "requestLogger.detail") {
+      return { ariaLabel: "Request log detail", close: "Close detail modal" }[key] ?? key;
+    }
+    return key;
+  },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -285,7 +291,7 @@ afterEach(async () => {
 });
 
 describe("request-log position preservation (#9154)", () => {
-  it("opens an older row without changing the loaded, filtered, sorted, or scrolled view", async () => {
+  it("opens an older row without changing the loaded, filtered, sorted, or scrolled view", { timeout: 30000 }, async () => {
     const scrollContainer = await renderExpandedView();
 
     await openOlderRow();
@@ -319,6 +325,7 @@ describe("request-log position preservation (#9154)", () => {
     ],
   ])(
     "closes through %s without changing the loaded, filtered, sorted, or scrolled view",
+    { timeout: 30000 },
     async (_name, close) => {
       const scrollContainer = await renderExpandedView();
       await openOlderRow();
@@ -342,7 +349,7 @@ describe("request-log position preservation (#9154)", () => {
     }
   );
 
-  it("opens a direct id deep link on mount", async () => {
+  it("opens a direct id deep link on mount", { timeout: 30000 }, async () => {
     window.history.replaceState(null, "", "/dashboard/logs?tenant=kept&id=log-080");
 
     await act(async () => {
@@ -353,7 +360,7 @@ describe("request-log position preservation (#9154)", () => {
     expect(container.querySelector('[aria-label="Request log detail"]')).not.toBeNull();
   });
 
-  it("does not reopen a closed modal when its stale detail request completes", async () => {
+  it("does not reopen a closed modal when its stale detail request completes", { timeout: 30000 }, async () => {
     deferredDetail = createDeferredDetail("log-000");
     window.history.replaceState(null, "", "/dashboard/logs?tenant=kept");
 

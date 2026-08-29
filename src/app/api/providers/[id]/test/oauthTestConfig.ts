@@ -1,4 +1,39 @@
 import { buildGitLabOAuthEndpoints, resolveGitLabOAuthBaseUrl } from "@/lib/oauth/gitlab";
+import { ANTIGRAVITY_RUNTIME_BASE_URLS } from "@omniroute/open-sse/config/antigravityUpstream.ts";
+import { getAntigravityContentHeaders } from "@omniroute/open-sse/services/antigravityHeaders.ts";
+import { getAntigravityClientProfile } from "@omniroute/open-sse/services/antigravityClientProfile.ts";
+import { isGeoBlockedError } from "@omniroute/open-sse/services/errorClassifier.ts";
+
+// Real model-surface probe for antigravity/agy. The previous probe only hit the
+// OAuth userinfo endpoint, which is NOT geo-restricted — so "Test Connection"
+// stayed green while every model call failed with "User location is not
+// supported for the API use." Probe the actual Cloud Code model endpoint
+// (streamGenerateContent) with a minimal body:
+//   2xx      -> model path reachable (auth ok)
+//   400 geo  -> egress location blocked (auth ok — NOT an account problem)
+//   401/403  -> token bad
+// Mirrors AntigravityExecutor.buildUrl/buildHeaders so the probe exercises the
+// exact same surface as real requests.
+function buildAntigravityProbe(
+  connection: { providerSpecificData?: unknown },
+  accessToken: string
+) {
+  const profile = getAntigravityClientProfile(connection as never);
+  return {
+    url: `${ANTIGRAVITY_RUNTIME_BASE_URLS[0]}/v1internal:streamGenerateContent?alt=sse`,
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      ...getAntigravityContentHeaders(profile, accessToken),
+    },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: "ping" }] }],
+      generationConfig: { maxOutputTokens: 1 },
+    }),
+  };
+}
 
 const CLINE_OAUTH_TEST_CONFIG = {
   // Cline does not expose a stable lightweight auth probe. Validate token
@@ -27,7 +62,68 @@ const XAI_CHAT_OAUTH_TEST_CONFIG = {
 // OAuth provider test endpoints. Extracted from route.ts (#7610) so adding a
 // provider entry doesn't grow the frozen route.ts file past its check-file-size
 // cap — this module carries no logic of its own beyond the GitLab URL builder.
-export const OAUTH_TEST_CONFIG = {
+// Probe request built at test time by provider-specific configs (e.g.
+// antigravity), which need dynamic headers (client profile) the static fields
+// cannot express.
+export interface OAuthTestProbeRequest {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  body?: string;
+}
+
+export interface OAuthTestConfigEntry {
+  url?: string;
+  method?: string;
+  authHeader?: string;
+  authPrefix?: string;
+  extraHeaders?: Record<string, string>;
+  body?: string;
+  acceptStatuses?: number[];
+  inconclusiveStatuses?: number[];
+  checkExpiry?: boolean;
+  refreshable?: boolean;
+  getUrl?: (connection: any) => string;
+  buildProbe?: (
+    connection: any,
+    accessToken: string
+  ) => OAuthTestProbeRequest | Promise<OAuthTestProbeRequest>;
+}
+
+export interface OAuthProbeInconclusiveClassification {
+  warning: string;
+  diagnosisType: "ok";
+  diagnosisCode: "probe_inconclusive";
+}
+
+export function classifyOAuthProbeInconclusive(
+  config: OAuthTestConfigEntry,
+  provider: string,
+  status: number,
+  bodyText: string
+): OAuthProbeInconclusiveClassification | null {
+  if (
+    !Array.isArray(config.inconclusiveStatuses) ||
+    !config.inconclusiveStatuses.includes(status)
+  ) {
+    return null;
+  }
+
+  // Preserve the current upstream geo-block contract. Google's explicit
+  // location refusal is an egress/upstream availability failure, not a
+  // successful connection-test result.
+  if ((provider === "antigravity" || provider === "agy") && isGeoBlockedError(bodyText)) {
+    return null;
+  }
+
+  return {
+    warning: `${provider} probe returned HTTP ${status}; credential validity is inconclusive`,
+    diagnosisType: "ok",
+    diagnosisCode: "probe_inconclusive",
+  };
+}
+
+export const OAUTH_TEST_CONFIG: Record<string, OAuthTestConfigEntry> = {
   claude: {
     // Claude doesn't have userinfo, we verify token exists and not expired
     checkExpiry: true,
@@ -62,22 +158,20 @@ export const OAUTH_TEST_CONFIG = {
     refreshable: true,
   },
   antigravity: {
-    url: "https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
-    method: "GET",
-    authHeader: "Authorization",
-    authPrefix: "Bearer ",
+    // Real model-surface probe (see buildAntigravityProbe above): userinfo-only
+    // probing stayed green while the model API was geo-blocked.
+    buildProbe: buildAntigravityProbe,
+    inconclusiveStatuses: [400],
     refreshable: true,
   },
   // `agy` is a separate connection id that shares the Antigravity backend and the same
   // Google OAuth token lifecycle (tokenRefresh.ts routes it to refreshGoogleToken), but
   // it was missing here — so "Test Connection" fell through to "Provider test not
   // supported", recorded testStatus="error", and painted the home topology node red on a
-  // perfectly good account. Probe the same userinfo endpoint as antigravity.
+  // perfectly good account. Probe the same model surface as antigravity.
   agy: {
-    url: "https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
-    method: "GET",
-    authHeader: "Authorization",
-    authPrefix: "Bearer ",
+    buildProbe: buildAntigravityProbe,
+    inconclusiveStatuses: [400],
     refreshable: true,
   },
   xai: XAI_CHAT_OAUTH_TEST_CONFIG,
@@ -111,12 +205,10 @@ export const OAUTH_TEST_CONFIG = {
     // Validate using token presence/expiry as a lightweight auth check.
     checkExpiry: true,
   },
-  raycast: {
-    // #8895 — Raycast Pro is an `import_token` provider: the token is imported
-    // from the local Raycast install, `refreshToken` is always null and the
-    // stored `expiresIn` defaults to 30 days. There is nothing to refresh, so
-    // the test is the expiry check on the imported token; without an entry here
-    // Test Connection persists testStatus="error" on a healthy account (#8408).
+  "zed-hosted": {
+    // Zed Hosted Models uses a long-lived native-app access token with no
+    // expiry or refresh token. Validate presence here; real connectivity is
+    // exercised by chat requests through the ZedHostedExecutor.
     checkExpiry: true,
   },
   cline: CLINE_OAUTH_TEST_CONFIG,
@@ -146,6 +238,13 @@ export const OAUTH_TEST_CONFIG = {
     // token to rotate either. Validate on token presence/expiry; real
     // connectivity is proven by every chat/completions request.
     checkExpiry: true,
+  },
+  "devin-desktop": {
+    // Devin Desktop authentication is import-only: the copied API key has no
+    // refresh token or known expiry. Validate token presence here; real
+    // connectivity is exercised by chat requests.
+    checkExpiry: true,
+    refreshable: false,
   },
   "grok-cli": {
     // #7610: was entirely absent from OAUTH_TEST_CONFIG, so "Test Connection"

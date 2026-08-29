@@ -7,6 +7,7 @@ import {
   readCompressionRequestHeader,
   withCompressionHeaderEcho,
 } from "@/shared/utils/compressionHeaderEcho";
+import { withChatAdmission } from "@/shared/middleware/withChatAdmission";
 
 let initPromise = null;
 const injectionGuard = createInjectionGuard();
@@ -41,7 +42,7 @@ export async function OPTIONS() {
  *
  * @see https://platform.openai.com/docs/api-reference/completions
  */
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
   await ensureInitialized();
 
   // #6422 — capture the compression request header once so we can echo it back
@@ -122,3 +123,5 @@ export async function POST(request: Request) {
     compressionRequestHeader
   );
 }
+
+export const POST = withChatAdmission(postHandler);

@@ -4,6 +4,7 @@ import {
   getApiKeyById,
   updateApiKeyPermissions,
   isCloudEnabled,
+  ApiKeyPolicyInvariantError,
 } from "@/lib/localDb";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
@@ -11,6 +12,7 @@ import { updateKeyPermissionsSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import * as log from "@/sse/utils/logger";
+import { buildErrorBody } from "@omniroute/open-sse/utils/error.ts";
 
 // GET /api/keys/[id] - Get single API key
 export async function GET(request, { params }) {
@@ -159,6 +161,12 @@ export async function PATCH(request, { params }) {
       ...(chaosModeEnabled !== undefined && { chaosModeEnabled }),
     });
   } catch (error) {
+    if (error instanceof ApiKeyPolicyInvariantError) {
+      return NextResponse.json(buildErrorBody(400, error.message, null, {
+        type: "lease_error",
+        code: error.code,
+      }), { status: 400 });
+    }
     log.error("keys", "Error updating key permissions", error);
     return NextResponse.json({ error: "Failed to update permissions" }, { status: 500 });
   }

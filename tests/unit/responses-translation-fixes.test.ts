@@ -45,7 +45,7 @@ test("production Responses conversion preserves Kimi K3 reasoning history", () =
       { role: "user", content: [{ type: "input_text", text: "Call search." }] },
       {
         type: "reasoning",
-        summary: [{ type: "summary_text", text: "I should search first." }],
+        content: [{ type: "reasoning_text", text: "I should search first." }],
       },
       {
         type: "function_call",
@@ -87,7 +87,7 @@ test("Responses translation keeps authentic K3 reasoning through OpenAI cleanup"
       { role: "user", content: [{ type: "input_text", text: "Call search." }] },
       {
         type: "reasoning",
-        summary: [{ type: "summary_text", text: "I should search first." }],
+        content: [{ type: "reasoning_text", text: "I should search first." }],
       },
       {
         type: "function_call",

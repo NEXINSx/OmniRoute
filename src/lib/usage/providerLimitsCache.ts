@@ -1,5 +1,6 @@
 import type { ProviderLimitsCacheEntry } from "@/lib/db/providerLimits";
-import { sanitizeGrokBillingStatus } from "@/shared/utils/grokBilling";
+import { sanitizeProviderBillingStatus } from "@/shared/utils/providerBilling";
+import { GROK_BUILD_ADDITIONAL_CREDITS_URL } from "@/shared/utils/grokBilling";
 
 const GROK_CLI_PROVIDER = "grok-cli";
 
@@ -26,7 +27,7 @@ export function toProviderLimitsCacheEntry(
     fetchedAt,
     source,
     bankedResetCredits: Number.isFinite(bankedResetCredits) ? bankedResetCredits : undefined,
-    billing: sanitizeGrokBillingStatus(usage.billing),
+    billing: sanitizeProviderBillingStatus(usage.billing),
   };
 }
 
@@ -44,14 +45,21 @@ export function mergeProviderLimitsCacheEntry(
   if (provider !== GROK_CLI_PROVIDER) return next;
 
   const nextBilling = next.billing;
-  const previousAutoTopUp = previous.billing?.autoTopUp;
-  if (!nextBilling || nextBilling.autoTopUp.available || !previousAutoTopUp) return next;
+  const previousBilling = previous.billing;
+  if (
+    !nextBilling ||
+    nextBilling.additionalCreditsUrl !== GROK_BUILD_ADDITIONAL_CREDITS_URL ||
+    nextBilling.autoTopUp.available ||
+    !previousBilling ||
+    previousBilling.additionalCreditsUrl !== GROK_BUILD_ADDITIONAL_CREDITS_URL
+  )
+    return next;
 
   return {
     ...next,
     billing: {
       ...nextBilling,
-      autoTopUp: previousAutoTopUp,
+      autoTopUp: previousBilling.autoTopUp,
     },
   };
 }

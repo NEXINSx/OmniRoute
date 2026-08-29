@@ -17,7 +17,7 @@ import {
   getAntigravityFetchAvailableModelsUrls,
 } from "../../config/antigravityUpstream.ts";
 import {
-  isUserCallableAntigravityModelId,
+  isDiscoverableAntigravityModelId,
   toClientAntigravityQuotaModelId,
 } from "../../config/antigravityModelAliases.ts";
 import { isUserCallableAgyModelId } from "../../config/agyModels.ts";
@@ -273,15 +273,12 @@ async function fetchAntigravityUserQuotaCached(
   const promise = (async () => {
     try {
       for (const baseUrl of ANTIGRAVITY_RUNTIME_BASE_URLS) {
-        const response = await fetch(
-          `${baseUrl}/v1internal:retrieveUserQuota`,
-          {
-            method: "POST",
-            headers: getAntigravityContentHeaders(clientProfile, accessToken),
-            body: JSON.stringify({ project: projectId }),
-            signal: AbortSignal.timeout(10000),
-          }
-        );
+        const response = await fetch(`${baseUrl}/v1internal:retrieveUserQuota`, {
+          method: "POST",
+          headers: getAntigravityContentHeaders(clientProfile, accessToken),
+          body: JSON.stringify({ project: projectId }),
+          signal: AbortSignal.timeout(10000),
+        });
 
         if (!response.ok) continue;
 
@@ -649,7 +646,7 @@ export async function getAntigravityUsage(
         info.isInternal === true ||
         !(provider === "agy"
           ? isUserCallableAgyModelId(modelKey)
-          : isUserCallableAntigravityModelId(modelKey)) ||
+          : isDiscoverableAntigravityModelId(modelKey)) ||
         Object.keys(quotaInfo).length === 0
       ) {
         continue;
@@ -702,7 +699,7 @@ export async function getAntigravityUsage(
         quotas[modelKey] ||
         !(provider === "agy"
           ? isUserCallableAgyModelId(modelKey)
-          : isUserCallableAntigravityModelId(modelKey))
+          : isDiscoverableAntigravityModelId(modelKey))
       ) {
         continue;
       }

@@ -213,9 +213,15 @@ export function createSSEDataLineNormalizer(): SSEDataLineNormalizer {
   };
 }
 
-export function createSSEEventPrefixBuffer(): SSEEventPrefixBuffer {
+export function createSSEEventPrefixBuffer(options?: { forwardEvent?: boolean }): SSEEventPrefixBuffer {
   let lines: string[] = [];
   let emitted = false;
+  // The `event:` line is only part of the SSE framing for protocols that define
+  // it (OpenAI Responses API, Claude Messages API). For a plain OpenAI
+  // Chat-Completions-format client there is no `event:` field at all, so it must
+  // not be forwarded. Defaults to true to preserve prior behavior for client
+  // formats that declare no explicit preference (#10017).
+  const forwardEvent = options?.forwardEvent !== false;
   const hasUnemitted = () => lines.length > 0 && !emitted;
   const prefix = (output: string) => {
     if (!hasUnemitted()) return output;
@@ -241,6 +247,14 @@ export function createSSEEventPrefixBuffer(): SSEEventPrefixBuffer {
       return line.startsWith("data:") ? prefix(output) : output;
     },
     remember(line) {
+      const trimmed = line.trim();
+      // `id:`/`retry:` and bare `:` comment lines are not part of any of the
+      // OpenAI Chat-Completions, OpenAI Responses, or Claude Messages SSE
+      // protocols — never buffer (and thus never re-forward) them (#10017).
+      if (/^(?::|id:|retry:)/i.test(trimmed)) return;
+      // `event:` framing is only forwarded for protocols that define it; drop it
+      // for plain OpenAI Chat-Completions-format clients.
+      if (/^event:/i.test(trimmed) && !forwardEvent) return;
       lines.push(line);
       emitted = false;
     },

@@ -14,6 +14,7 @@ import { isRecord } from "./comboData.ts";
 import type { SlaRoutingPolicy } from "../autoCombo/routerStrategy.ts";
 import { RESET_WINDOW_NAMES } from "./types.ts";
 import type { ResolvedComboTarget } from "./types.ts";
+import { resolveProviderId } from "../../../src/shared/constants/providers.ts";
 
 const RESET_AWARE_SESSION_WINDOW_MS = 5 * 60 * 60 * 1000;
 const RESET_AWARE_WEEKLY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -138,7 +139,11 @@ export function resolveSlaRoutingPolicy(
 
 export function getResetAwareProvider(target: ResolvedComboTarget): string | null {
   const provider = (target.providerId || target.provider || "").toLowerCase();
-  return provider || null;
+  // #10877: combo targets can carry a legacy/user-facing alias spelling
+  // (e.g. "ollamacloud", "cx") while quota fetchers register under the
+  // canonical provider id (e.g. "ollama-cloud", "codex"). Canonicalize here
+  // so getQuotaFetcher() lookups downstream (quotaStrategies.ts) find them.
+  return provider ? resolveProviderId(provider) : null;
 }
 
 function normalizeResetAt(value: unknown): string | null {
@@ -256,7 +261,7 @@ function getWindowsMapQuotaWindow(
   );
 }
 
-function resolveQuotaWindowByName(
+export function resolveQuotaWindowByName(
   quota: unknown,
   windowName: ResetWindowName
 ): QuotaWindowSnapshot | null {
@@ -316,8 +321,8 @@ export function scoreResetAwareQuota(
   if (quota.limitReached === true) return { score: -Infinity };
 
   const overallPercentUsed = clamp01(finiteNumberOrNull(quota.percentUsed) ?? 0.5);
-  const sessionWindow = getQuotaWindow(quota, "window5h");
-  const weeklyWindow = getQuotaWindow(quota, "window7d") || getQuotaWindow(quota, "windowWeekly");
+  const sessionWindow = resolveQuotaWindowByName(quota, "session");
+  const weeklyWindow = resolveQuotaWindowByName(quota, "weekly");
   const sessionRemaining = clamp01(1 - (sessionWindow?.percentUsed ?? overallPercentUsed));
   const weeklyRemaining = clamp01(1 - (weeklyWindow?.percentUsed ?? overallPercentUsed));
   const sessionScore = scoreQuotaWindow(

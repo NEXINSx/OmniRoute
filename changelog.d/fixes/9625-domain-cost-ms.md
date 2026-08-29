@@ -1,1 +1,0 @@
-- fix(db): align domain_cost_history cleanup cutoff with millisecond column (#9625)

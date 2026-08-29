@@ -21,6 +21,7 @@ import {
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 import { logger } from "@omniroute/open-sse/utils/logger.ts";
 import { resolveProxy } from "@omniroute/open-sse/utils/networkProxy.ts";
+import { withCodexFingerprintCredentials } from "@omniroute/open-sse/config/codexIdentity.ts";
 import { proxyConfigToUrl } from "@omniroute/open-sse/utils/proxyDispatcher.ts";
 import {
   attachReasoningRuleDirective,
@@ -36,6 +37,11 @@ import { persistResponsesWsCallHistory } from "./history";
 import { applyResponsesWsCompression } from "./compression";
 import { getComboByName } from "@/lib/db/combos";
 import { getComboModelString } from "@/lib/combos/steps";
+import {
+  buildManagedLeaseErrorResponse,
+  isExclusiveLeaseManagedKey,
+  LeaseContextError,
+} from "@/sse/services/leaseContext";
 
 const CODEX_RESPONSES_WS_URL = "wss://chatgpt.com/backend-api/codex/responses";
 const executor = new CodexExecutor();
@@ -417,6 +423,17 @@ async function resolveCodexRequestContext(body: JsonRecord) {
   if (policyResult.rejection) return { error: policyResult.rejection };
   const metadata =
     policyResult.apiKeyInfo ?? (apiKey ? await getApiKeyMetadata(apiKey).catch(() => null) : null);
+  if (isExclusiveLeaseManagedKey(metadata)) {
+    return {
+      error: buildManagedLeaseErrorResponse(
+        new LeaseContextError(
+          409,
+          "LEASE_UNSUPPORTED_TRANSPORT",
+          "Managed leases require the fenced HTTP Responses transport"
+        )
+      ),
+    };
+  }
   const allowedConnections =
     metadata && Array.isArray(metadata.allowedConnections) && metadata.allowedConnections.length > 0
       ? metadata.allowedConnections
@@ -434,6 +451,7 @@ async function resolveCodexRequestContext(body: JsonRecord) {
     apiKey,
     responseBody,
     requestedModel,
+    clientHeaders: Object.fromEntries(authRequest.headers.entries()),
     metadata,
     allowedConnections,
     ...reasoningRoute,
@@ -542,17 +560,22 @@ async function prepare(body: JsonRecord) {
     model,
     requestId: randomUUID(),
   });
+  const credentialsWithFingerprint = withCodexFingerprintCredentials(
+    refreshedCredentials,
+    context.clientHeaders,
+    responseBodyWithMemory
+  );
   const transformed = (await executor.transformRequest(
     model,
     responseBodyWithMemory,
     true,
-    refreshedCredentials
+    credentialsWithFingerprint
   )) as JsonRecord;
   transformed.model = model;
   delete transformed.stream;
   delete transformed.stream_options;
 
-  const headers = normalizeUpstreamHeaders(executor.buildHeaders(refreshedCredentials, true));
+  const headers = normalizeUpstreamHeaders(executor.buildHeaders(credentialsWithFingerprint, true));
 
   // #5611: apply the configured Global/provider proxy to the upstream Codex
   // Responses WebSocket too. The downstream client→OmniRoute hop works, but the

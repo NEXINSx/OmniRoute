@@ -647,6 +647,24 @@ test("createComboSchema accepts nestedComboMode and rejects invalid values", () 
   assert.equal(invalid.success, false);
 });
 
+test("createComboSchema validates reasoning transport fallback modes", () => {
+  for (const mode of ["skip", "drop"] as const) {
+    const parsed = createComboSchema.parse({
+      name: `reasoning-transport-${mode}`,
+      models: ["openai/gpt-5.4"],
+      config: { reasoningTransportFallback: mode },
+    });
+    assert.equal(parsed.config.reasoningTransportFallback, mode);
+  }
+
+  const invalid = createComboSchema.safeParse({
+    name: "reasoning-transport-invalid",
+    models: ["openai/gpt-5.4"],
+    config: { reasoningTransportFallback: "retry" },
+  });
+  assert.equal(invalid.success, false);
+});
+
 test("createComboSchema accepts per-combo stickyRoundRobinLimit and rejects out-of-range", () => {
   const parsed = createComboSchema.parse({
     name: "sticky-override",

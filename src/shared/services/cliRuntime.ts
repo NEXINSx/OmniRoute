@@ -9,6 +9,14 @@ import { withSettingsFallback } from "./cliInstallFallback";
 import { GROK_BUILD_RUNTIME_ENTRY, AMP_RUNTIME_ENTRY } from "./cliRuntimeGrokBuild";
 import { isLocationTrusted, findKnownPathMatch } from "./cliRuntimeKnownPath";
 import { buildHealthcheckPath } from "./cliRuntimeHealthcheckPath";
+import {
+  describeContainerTarget,
+  hasBindMountAt,
+  isRunningInContainer,
+  type ContainerEnvDeps,
+} from "../utils/containerEnv";
+import { buildContainerWriteRefusal } from "../utils/containerConfigGuard";
+import { resolveOpencodeConfigPath as resolveOpenCodeConfigPath } from "./opencodeConfigPath";
 const VALID_RUNTIME_MODES = new Set(["auto", "host", "container"]);
 const FALSE_VALUES = new Set(["0", "false", "no", "off"]);
 
@@ -90,6 +98,17 @@ const CLI_TOOLS: Record<string, any> = {
             )
           : path.join(os.homedir(), ".config", "devin", "config.json");
       },
+    },
+  },
+  zcode: {
+    defaultCommand: "zcode",
+    envBinKey: "ZCODE_BIN",
+    requiresBinary: true,
+    // The app-server performs a local runtime handshake and can be slower on
+    // the first launch while the user's ZCode profile is loaded.
+    healthcheckTimeoutMs: 15000,
+    paths: {
+      config: ".zcode",
     },
   },
   cline: {
@@ -179,6 +198,34 @@ const CLI_TOOLS: Record<string, any> = {
       env: ".qwen/.env",
     },
   },
+  aider: {
+    defaultCommand: "aider",
+    envBinKey: "CLI_AIDER_BIN",
+    requiresBinary: true,
+    healthcheckTimeoutMs: 12000,
+    paths: {
+      config: ".aider.conf.yml",
+    },
+  },
+  goose: {
+    defaultCommand: "goose",
+    envBinKey: "CLI_GOOSE_BIN",
+    requiresBinary: true,
+    healthcheckTimeoutMs: 12000,
+    paths: {
+      config: ".config/goose/config.yaml",
+    },
+  },
+  gemini: {
+    defaultCommand: "gemini",
+    envBinKey: "CLI_GEMINI_BIN",
+    requiresBinary: true,
+    // gemini-cli cold start (bundle + extension discovery) can exceed 4s.
+    healthcheckTimeoutMs: 15000,
+    paths: {
+      settings: ".gemini/settings.json",
+    },
+  },
   // ── Plan 14 — new "custom" configType tools ───────────────────────────────
   forge: {
     defaultCommand: "forge",
@@ -195,7 +242,16 @@ const CLI_TOOLS: Record<string, any> = {
     requiresBinary: true,
     healthcheckTimeoutMs: 8000,
     paths: {
-      config: ".jcode/config.json",
+      config: ".jcode/config.toml",
+    },
+  },
+  "prime-agent": {
+    defaultCommand: "prime-agent",
+    envBinKey: "CLI_PRIME_AGENT_BIN",
+    requiresBinary: true,
+    healthcheckTimeoutMs: 8000,
+    paths: {
+      config: ".prime-agent/config.json",
     },
   },
   "grok-build": GROK_BUILD_RUNTIME_ENTRY,
@@ -267,6 +323,34 @@ const CLI_TOOLS: Record<string, any> = {
   },
 };
 
+/**
+ * Compatibility aliases accepted by CLI/API callers.
+ *
+ * The runtime catalog keeps one canonical id per executable. Older surfaces
+ * exposed a binary name (notably `kilocode`) or launcher aliases instead of
+ * that id, so normalize them at the boundary rather than duplicating entries.
+ */
+export const CLI_TOOL_ALIASES: Readonly<Record<string, string>> = {
+  kilocode: "kilo",
+  "kilo-code": "kilo",
+  kilo_cli: "kilo",
+  cc: "claude",
+  "claude-code": "claude",
+  "openai-codex": "codex",
+  openai: "codex",
+  "codex-app-server": "codex",
+  cn: "continue",
+  qodercli: "qoder",
+};
+
+/** Resolve a user-facing or legacy id to the canonical runtime id. */
+export const normalizeCliToolId = (toolId: string): string => {
+  const normalized = String(toolId || "")
+    .trim()
+    .toLowerCase();
+  return CLI_TOOL_ALIASES[normalized] || normalized;
+};
+
 const isWindows = () => process.platform === "win32";
 
 /**
@@ -333,7 +417,7 @@ const runProcess = (
     // is true (.cmd/.bat on Windows), Node quotes the command for cmd.exe itself.
     const child = spawn(command, args, {
       windowsHide: true,
-      env,
+      env: env as NodeJS.ProcessEnv,
       stdio: ["ignore", "pipe", "pipe"],
       // On Windows, npm installs CLI wrappers as .cmd/.bat scripts. Those still
       // need cmd.exe, but direct .exe paths must avoid the shell so paths with
@@ -352,11 +436,11 @@ const runProcess = (
       resolve(result);
     };
 
-    child.stdout.on("data", (chunk) => {
+    child.stdout?.on("data", (chunk) => {
       stdout += chunk.toString();
     });
 
-    child.stderr.on("data", (chunk) => {
+    child.stderr?.on("data", (chunk) => {
       stderr += chunk.toString();
     });
 
@@ -549,6 +633,7 @@ const getExtraPaths = () =>
  * Works on all platforms — Windows checks .cmd wrappers, Linux/macOS checks bare names.
  */
 export const getKnownToolPaths = (toolId: string): string[] => {
+  toolId = normalizeCliToolId(toolId);
   const home = os.homedir();
   const paths: string[] = [];
 
@@ -711,7 +796,7 @@ export const getLookupEnv = () => {
 };
 
 const resolveToolCommands = (toolId: string): string[] => {
-  const tool = CLI_TOOLS[toolId];
+  const tool = CLI_TOOLS[normalizeCliToolId(toolId)];
   if (!tool) return [];
   const envCommand = String(process.env[tool.envBinKey] || "").trim();
   if (envCommand) return [envCommand];
@@ -720,6 +805,16 @@ const resolveToolCommands = (toolId: string): string[] => {
   }
   return tool.defaultCommand ? [tool.defaultCommand] : [];
 };
+
+/**
+ * Return command candidates without probing the filesystem.
+ *
+ * Lightweight consumers (config status and CLI inventory) use this to build
+ * a version probe while getCliRuntimeStatus() remains the authoritative
+ * health/runnability check.
+ */
+export const getCliToolCommandCandidates = (toolId: string): string[] =>
+  resolveToolCommands(toolId);
 
 const checkExplicitPath = async (commandPath: string) => {
   // Reject paths that look like injection attempts
@@ -762,14 +857,24 @@ export const locateCommand = async (command: string, env: Record<string, string 
       // and a .cmd wrapper. We must prefer the Windows executable extension.
       const lines = located.stdout
         .split(/\r?\n/)
-        .map((l) => l.trim())
+        .map((l: string) => l.trim())
         .filter(Boolean);
       if (lines.length === 0) {
         return { installed: false, commandPath: null, reason: "not_found" };
       }
       const winExt = /\.(cmd|exe|bat|com)$/i;
-      const preferred = lines.find((l) => winExt.test(l)) || lines[0];
+      const preferred = lines.find((l: string) => winExt.test(l)) || lines[0];
       return { installed: true, commandPath: normalizeMsys2Path(preferred), reason: null };
+    }
+    // #10710: a probe timeout is NOT the same fact as a genuinely absent binary
+    // -- runProcess sets `timedOut` when its own 3s timer SIGKILLs the child
+    // before it answered. Collapsing that into "not_found" makes an installed
+    // CLI starved under concurrent fan-out (see all-statuses route) look
+    // identical to one that was never installed. Surface a distinct reason so
+    // callers can decide (retry, remember-and-continue, etc.) instead of
+    // silently reporting a false negative.
+    if (located.timedOut) {
+      return { installed: false, commandPath: null, reason: "timeout" };
     }
     return { installed: false, commandPath: null, reason: "not_found" };
   }
@@ -780,6 +885,11 @@ export const locateCommand = async (command: string, env: Record<string, string 
   });
   if (located.ok && located.stdout) {
     return { installed: true, commandPath: command, reason: null };
+  }
+  // #10710: see the matching Windows branch above -- a timeout must not be
+  // reported as "not_found".
+  if (located.timedOut) {
+    return { installed: false, commandPath: null, reason: "timeout" };
   }
   return { installed: false, commandPath: null, reason: "not_found" };
 };
@@ -860,7 +970,7 @@ export const checkKnownPath = async (commandPath: string) => {
 
 type KnownPathResult = Awaited<ReturnType<typeof checkKnownPath>>;
 
-const locateCommandCandidate = async (
+export const locateCommandCandidate = async (
   commands: string[],
   env: Record<string, string | undefined>,
   toolId?: string
@@ -890,13 +1000,31 @@ const locateCommandCandidate = async (
 
   // Always try PATH — a stray/broken known-path guess must never hide a genuinely
   // PATH-resolvable binary (#7774). User can also set CLI_EXTRA_PATHS if needed.
+  //
+  // #10710: "timeout" is deliberately NOT terminal like other failure reasons
+  // (unsafe_path, symlink_escape, ...). A timeout only proves the probe was
+  // too slow, not that the binary is absent, so remaining command aliases are
+  // still worth trying (the next one may resolve quickly). Remember the first
+  // timeout as a fallback so a genuine "not_found" for every alias doesn't
+  // silently swallow the fact that one probe never actually completed.
+  let bestTimeoutFailure: Awaited<ReturnType<typeof locateCommand>> | null = null;
   for (const command of commands) {
     const located = await locateCommand(command, env);
-    if (located.installed || located.reason !== "not_found") {
+    if (located.installed) {
+      return { command, ...located };
+    }
+    if (located.reason === "timeout") {
+      if (!bestTimeoutFailure) bestTimeoutFailure = located;
+      continue;
+    }
+    if (located.reason !== "not_found") {
       return { command, ...located };
     }
   }
 
+  if (bestTimeoutFailure) {
+    return { command: commands[0], ...bestTimeoutFailure };
+  }
   if (bestKnownPathFailure) {
     return { command: commands[0], ...bestKnownPathFailure };
   }
@@ -941,12 +1069,32 @@ const checkRunnable = async (
 export const isCliConfigWriteAllowed = () =>
   parseBoolean(process.env.CLI_ALLOW_CONFIG_WRITES, true);
 
-export const ensureCliConfigWriteAllowed = () => {
-  if (isCliConfigWriteAllowed()) return null;
-  return "CLI config writes are disabled (CLI_ALLOW_CONFIG_WRITES=false)";
+/**
+ * Gate for every CLI-tool config write.
+ *
+ * Pass `targetPath` whenever the caller knows it: inside a container, a path
+ * that is not bind-mounted from the host is thrown away when the container is
+ * recreated, and the host CLI never sees it. Refusing beats writing a file the
+ * operator will never find. Callers that omit the path keep the historical
+ * flag-only behavior.
+ */
+export const ensureCliConfigWriteAllowed = (
+  targetPath?: string,
+  options: { containerDeps?: ContainerEnvDeps; toolLabel?: string; hostCommand?: string } = {}
+) => {
+  if (!isCliConfigWriteAllowed()) {
+    return "CLI config writes are disabled (CLI_ALLOW_CONFIG_WRITES=false)";
+  }
+  if (!targetPath) return null;
+  if (parseBoolean(process.env.OMNIROUTE_ALLOW_CONTAINER_CONFIG_WRITE, false)) return null;
+  if (!describeContainerTarget(targetPath, options.containerDeps).ephemeral) return null;
+  return buildContainerWriteRefusal(targetPath, {
+    toolLabel: options.toolLabel,
+    hostCommand: options.hostCommand,
+  });
 };
 
-export const getCliConfigHome = () => {
+export const getCliConfigHome = (containerDeps?: ContainerEnvDeps) => {
   const override = String(process.env.CLI_CONFIG_HOME || "").trim();
   if (!override) return os.homedir();
 
@@ -959,39 +1107,34 @@ export const getCliConfigHome = () => {
   // Must not contain path traversal
   if (path.normalize(override).includes("..")) return os.homedir();
 
-  // Must be within user's home directory (prevent reading from system dirs)
+  // Must be within user's home directory (prevent reading from system dirs).
+  //
+  // Exception for containers: the compose `host` profile deliberately mounts the
+  // operator's real config dirs at /host-home, which is outside the container
+  // user's home (/home/node). A bind mount is proof the operator wired that path
+  // in on purpose, so it is honoured; an arbitrary unmounted system dir is not.
   const home = os.homedir();
   const normalized = path.normalize(override);
   if (!isPathWithin(normalized, home)) {
+    if (isRunningInContainer(containerDeps) && hasBindMountAt(normalized, containerDeps)) {
+      return normalized;
+    }
     return home; // Silently fall back to home
   }
 
   return normalized;
 };
 
-export const resolveOpencodeConfigDir = (
+export const resolveOpencodeConfigPath = (
   _platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,
   homeDir = os.homedir()
-) => {
-  // #3330: OpenCode reads its config from XDG `~/.config/opencode/` on ALL
-  // platforms — including Windows, where it uses `%USERPROFILE%\.config`, NOT
-  // `%APPDATA%`. Writing to %APPDATA% on Windows put the file where OpenCode
-  // never looks, so dashboard-saved config silently had no effect. `_platform`
-  // is kept in the signature for call-site/test compatibility.
-  const xdgConfigHome = String(env.XDG_CONFIG_HOME || "").trim();
-  return xdgConfigHome || path.join(homeDir, ".config");
-};
-
-export const resolveOpencodeConfigPath = (
-  platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env,
-  homeDir = os.homedir()
-) => path.join(resolveOpencodeConfigDir(platform, env, homeDir), "opencode", "opencode.json");
+) => resolveOpenCodeConfigPath(env, homeDir);
 
 export const getOpenCodeConfigPath = () => resolveOpencodeConfigPath();
 
 export const getCliConfigPaths = (toolId: string) => {
+  toolId = normalizeCliToolId(toolId);
   const tool = CLI_TOOLS[toolId];
   if (!tool) return null;
 
@@ -1038,6 +1181,7 @@ export const getCliPrimaryConfigPath = (toolId: string) => {
 };
 
 export const getCliRuntimeStatus = async (toolId: string) => {
+  toolId = normalizeCliToolId(toolId);
   const tool = CLI_TOOLS[toolId];
   const runtimeMode = getRuntimeMode();
   if (!tool) {

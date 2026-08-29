@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
-import { getSettings, updateSettings } from "@/lib/localDb";
+import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
+import { getSettings, updateSettings } from "@/lib/db/settings";
 import {
   hasManagementPasswordConfigured,
   hashManagementPassword,
@@ -52,12 +53,19 @@ export async function GET() {
     const hasPassword = hasManagementPasswordConfigured(settings);
     const setupComplete = !!settings.setupComplete;
     const oidcEnabled = !!settings.oidcEnabled;
+    const oidcDisablePasswordLogin =
+      oidcEnabled &&
+      (settings.oidcDisablePasswordLogin === true ||
+        isFeatureFlagEnabled("OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN") ||
+        process.env.OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN === "true" ||
+        process.env.OIDC_DISABLE_PASSWORD_LOGIN === "true");
     return NextResponse.json({
       authenticated,
       requireLogin,
       hasPassword,
       setupComplete,
       oidcEnabled,
+      oidcDisablePasswordLogin,
       ...nodeInfo,
     });
   } catch (error) {
@@ -69,6 +77,7 @@ export async function GET() {
         hasPassword: true,
         setupComplete: true,
         oidcEnabled: false,
+        oidcDisablePasswordLogin: false,
         ...nodeInfo,
       },
       { status: 200 }

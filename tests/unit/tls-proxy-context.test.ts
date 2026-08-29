@@ -659,7 +659,14 @@ test("proxy dispatcher failures sanitize logs and propagated errors", async () =
           caught = error;
         }
         assert.ok(caught instanceof Error);
-        assert.equal(caught.message, "Proxy request failed");
+        // #10032: the underlying reason is kept for diagnosability, with the
+        // proxy URL (credentials included) redacted before propagation (#9837).
+        assert.equal(
+          caught.message,
+          "Proxy request failed: connect failed via [redacted-proxy]",
+        );
+        assert.equal(caught.message.includes("user:password"), false);
+        assert.equal(caught.message.includes("placeholder.proxy"), false);
         assert.equal("code" in caught ? caught.code : undefined, "PROXY_UNREACHABLE");
         assert.equal(errors.some((line) => line.includes("user:password")), false);
         assert.equal(errors.some((line) => line.includes("placeholder.proxy")), false);

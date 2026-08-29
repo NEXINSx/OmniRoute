@@ -30,6 +30,16 @@ const STREAMING_RESPONSE_HEADER_DENYLIST = new Set([
   "x-accel-buffering",
 ]);
 
+/**
+ * `x-codex-turn-state` is forwarded verbatim and EXEMPT from the forwarding
+ * budget. The real Codex client captures this ~314-byte blob from /responses
+ * (and echoes it back within the same turn), so dropping it breaks the
+ * protocol chain — but naively counting it against the budget used to evict
+ * the x-codex-*-used-percent quota headers (the reason it was denylisted
+ * under #10315-era budgeting). Carving it out keeps both.
+ */
+const CODEX_TURN_STATE_RESPONSE_HEADER = "x-codex-turn-state";
+
 const DEFAULT_FORWARDED_HEADER_BUDGET_BYTES = 768;
 
 /**
@@ -40,7 +50,10 @@ const DEFAULT_FORWARDED_HEADER_BUDGET_BYTES = 768;
  * module-cache manipulation.
  */
 export function resolveForwardedHeaderBudget(env?: string): number {
-  const parsed = Number.parseInt(String(env ?? process.env.OMNIROUTE_FORWARDING_HEADER_BUDGET_BYTES), 10);
+  const parsed = Number.parseInt(
+    String(env ?? process.env.OMNIROUTE_FORWARDING_HEADER_BUDGET_BYTES),
+    10
+  );
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_FORWARDED_HEADER_BUDGET_BYTES;
 }
 
@@ -56,7 +69,30 @@ const responseHeaderEncoder = new TextEncoder();
 
 type ResponseHeaderLogger = {
   warn?: (tag: string, message: string, data?: Record<string, unknown>) => void;
+  debug?: (tag: string, message: string, data?: Record<string, unknown>) => void;
 } | null;
+
+/**
+ * #10315: the dropped-header set is usually identical across responses from the
+ * same upstream, so warn once per unique drop fingerprint per process, then log
+ * at debug level — a per-SSE-response warn storm buries real errors and adds
+ * event-loop serialization work. Fingerprints are dropped-header-name sets, so
+ * the set stays bounded by the distinct upstream header shapes in practice.
+ */
+const DROPPED_HEADER_WARN_FINGERPRINT_LIMIT = 1000;
+const droppedHeaderWarnFingerprints = new Set<string>();
+
+export function fingerprintDroppedHeaders(dropped: Array<{ name: string; bytes: number }>): string {
+  return dropped
+    .map((header) => header.name.toLowerCase())
+    .sort()
+    .join(",");
+}
+
+/** Test hook: forget already-warned drop fingerprints. */
+export function resetDroppedHeaderWarnFingerprints(): void {
+  droppedHeaderWarnFingerprints.clear();
+}
 
 function responseHeaderWireBytes(name: string, value: string): number {
   return responseHeaderEncoder.encode(`${name}: ${value}\r\n`).byteLength;
@@ -79,6 +115,30 @@ function getForwardingPriority(headerName: string): number {
   }
   if (normalized === "retry-after") return 1;
   if (normalized.includes("ratelimit") || normalized.includes("rate-limit")) return 2;
+  // Codex quota / reset / credits do not contain "ratelimit" in the name,
+  // so they used to fall through to priority 3 and lose to date/csp/cf-ray.
+  if (
+    normalized.startsWith("x-codex-") &&
+    (normalized.includes("used-percent") ||
+      normalized.includes("reset") ||
+      normalized.includes("window") ||
+      normalized.includes("credits") ||
+      normalized.includes("over-secondary") ||
+      normalized.includes("plan-type"))
+  ) {
+    return 2;
+  }
+  if (
+    normalized === "date" ||
+    normalized === "vary" ||
+    normalized === "x-robots-tag" ||
+    normalized === "content-security-policy" ||
+    normalized.startsWith("cf-") ||
+    normalized.endsWith("-organization-id") ||
+    normalized.endsWith("-workspace-id")
+  ) {
+    return 4;
+  }
   return 3;
 }
 
@@ -153,7 +213,9 @@ export function buildStreamingResponseHeaders(
       STREAMING_RESPONSE_HEADER_DENYLIST.has(normalized) ||
       connectionScopedHeaders.has(normalized) ||
       isNextMiddlewareControlHeader(normalized) ||
-      isOmniRouteInternalHeader(normalized)
+      isOmniRouteInternalHeader(normalized) ||
+      // Forwarded separately below, outside the byte budget.
+      normalized === CODEX_TURN_STATE_RESPONSE_HEADER
     ) {
       return;
     }
@@ -182,12 +244,30 @@ export function buildStreamingResponseHeaders(
   }
 
   if (droppedHeaders.length > 0) {
-    log?.warn?.("HTTP", "Dropped upstream response headers that exceeded forwarding budget", {
+    const dropPayload = {
       budgetBytes: MAX_FORWARDED_UPSTREAM_RESPONSE_HEADER_BYTES,
       forwardedBytes,
       droppedCount: droppedHeaders.length,
       droppedHeaders: droppedHeaders.slice(0, MAX_LOGGED_DROPPED_RESPONSE_HEADERS),
-    });
+    };
+    const fingerprint = fingerprintDroppedHeaders(droppedHeaders);
+    if (droppedHeaderWarnFingerprints.has(fingerprint)) {
+      log?.debug?.(
+        "HTTP",
+        "Dropped upstream response headers that exceeded forwarding budget (already warned once for this drop set)",
+        dropPayload
+      );
+    } else {
+      if (droppedHeaderWarnFingerprints.size >= DROPPED_HEADER_WARN_FINGERPRINT_LIMIT) {
+        droppedHeaderWarnFingerprints.clear();
+      }
+      droppedHeaderWarnFingerprints.add(fingerprint);
+      log?.warn?.(
+        "HTTP",
+        "Dropped upstream response headers that exceeded forwarding budget",
+        dropPayload
+      );
+    }
   }
 
   const responseHeaders: Record<string, string> = {
@@ -198,6 +278,10 @@ export function buildStreamingResponseHeaders(
     "X-Accel-Buffering": "no",
     [OMNIROUTE_RESPONSE_HEADERS.cache]: "MISS",
   };
+  const codexTurnState = providerHeaders.get(CODEX_TURN_STATE_RESPONSE_HEADER)?.trim();
+  if (codexTurnState) {
+    responseHeaders[CODEX_TURN_STATE_RESPONSE_HEADER] = codexTurnState;
+  }
   attachOmniRouteMetaHeaders(responseHeaders, meta);
   return responseHeaders;
 }

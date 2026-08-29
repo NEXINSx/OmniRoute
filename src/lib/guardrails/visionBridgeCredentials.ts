@@ -5,6 +5,9 @@
  * (visionBridge.ts already imports getBestVisionModel from visionBridgeRouter.ts).
  */
 
+import { resolveProviderId } from "@/shared/constants/providers";
+import { isNoAuthProviderKey } from "@/shared/utils/noAuthProviders";
+
 /**
  * True when a provider connection can actually authenticate upstream.
  * `noauth` with no real API key is NOT usable (opencode-zen free tier often
@@ -36,9 +39,14 @@ function hasOAuthCredential(connection: ProviderConnectionLike): boolean {
   );
 }
 
-export function isProviderConnectionUsable(connection: ProviderConnectionLike): boolean {
+/** True when the connection row carries a terminal status (disabled/banned/expired). */
+export function hasTerminalConnectionStatus(connection: ProviderConnectionLike): boolean {
   const status = String(connection.testStatus || "").toLowerCase();
-  if (TERMINAL_CONNECTION_STATUSES.has(status)) {
+  return TERMINAL_CONNECTION_STATUSES.has(status);
+}
+
+export function isProviderConnectionUsable(connection: ProviderConnectionLike): boolean {
+  if (hasTerminalConnectionStatus(connection)) {
     return false;
   }
 
@@ -78,16 +86,34 @@ function loadProvidersModule(): Promise<typeof import("@/lib/db/providers")> {
 /**
  * Resolve whether `provider/model` has at least one usable active connection.
  * Returns `null` when the credential store is unavailable (unit tests / early boot).
+ *
+ * The provider prefix is resolved alias→canonical id before querying
+ * `provider_connections` (the column stores the id, e.g. "opencode" for the
+ * "oc" alias — #10702: an alias-keyed query returned zero rows and excluded
+ * every candidate). No-auth providers (NOAUTH_PROVIDERS) need no stored API
+ * key: their effective credential is the synthetic "noauth" connection, so
+ * an empty active set is usable for them (unlike keyed providers). A stored
+ * row with a terminal status (disabled/banned/expired) still blocks the
+ * provider; any other row is treated as usable (the key requirement does not
+ * apply — a noauth row carries no API key by design).
  */
 export async function hasUsableCredentialsForModel(model: string): Promise<boolean | null> {
-  const provider = typeof model === "string" ? model.split("/")[0]?.trim() : "";
-  if (!provider) return null;
+  const rawProvider = typeof model === "string" ? model.split("/")[0]?.trim() : "";
+  if (!rawProvider) return null;
+  const provider = resolveProviderId(rawProvider);
+  const isNoAuth = isNoAuthProviderKey(rawProvider, provider);
   try {
     const { getProviderConnections } = await loadProvidersModule();
     const connections = await getProviderConnections({ provider, isActive: true });
     if (!Array.isArray(connections)) return null;
-    // Empty active set is a definitive "no" only when the table is readable.
-    if (connections.length === 0) return false;
+    // Empty active set: keyed providers are definitively unusable; no-auth
+    // providers still work through the synthetic "noauth" connection.
+    if (connections.length === 0) return isNoAuth;
+    // No-auth rows store no API key (authType "noauth" + empty apiKey would
+    // fail the generic key check) — only a terminal status blocks them.
+    if (isNoAuth) {
+      return !connections.some((c: any) => hasTerminalConnectionStatus(c));
+    }
     return connections.some((c: any) => isProviderConnectionUsable(c));
   } catch {
     return null;

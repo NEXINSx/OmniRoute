@@ -502,8 +502,6 @@ const UI_DEFAULTS_SNAPSHOT = {
             "codecompanion",
             "openwebui",
             "open-webui",
-            "hermes-agent",
-            "hermes",
           ],
           targets: ["system", "messages", "tools"],
         },

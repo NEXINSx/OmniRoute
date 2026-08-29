@@ -170,7 +170,7 @@ export async function updateProviderCredentials(connectionId: string, newCredent
     if (newCredentials.providerSpecificData) {
       updates.providerSpecificData = newCredentials.providerSpecificData;
     }
-    // Cookie/session providers (chatgpt-web, ...) refresh by rotating the
+    // Cookie/session providers (Perplexity Web, etc.) refresh by rotating the
     // stored apiKey blob — propagate that here too so DB credentials don't
     // go stale after Set-Cookie rotation.
     if (newCredentials.apiKey) {
@@ -276,7 +276,7 @@ export async function checkAndRefreshToken(provider: string, credentials: any) {
         updatedCredentials,
         resolveCopilotTokenBaseUrl(provider, updatedCredentials)
       );
-      if (copilotToken) {
+      if (copilotToken?.token) {
         await updateProviderCredentials(updatedCredentials.connectionId, {
           providerSpecificData: {
             ...updatedCredentials.providerSpecificData,
@@ -304,7 +304,7 @@ export async function refreshGitHubAndCopilotTokens(credentials: any) {
   const newGitHubCredentials = await refreshGitHubToken(credentials.refreshToken, credentials);
   if (newGitHubCredentials?.accessToken) {
     const copilotToken = await refreshCopilotToken(newGitHubCredentials.accessToken, credentials);
-    if (copilotToken) {
+    if (copilotToken?.token) {
       return {
         ...newGitHubCredentials,
         providerSpecificData: {

@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { notFound } from "next/navigation";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Card } from "@/shared/components";
 import { shouldAutoSyncOnOpen } from "@/lib/radar/autoSync";
 import { isValidSupporterKeyFormat } from "@/lib/radar/supporterKey";
+import { RadarCatalogTable, type RadarMergedEntry } from "./RadarCatalogTable";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,27 +17,6 @@ interface RadarMeta {
   version: string;
   tier: string;
   fetchedAt: string;
-}
-
-interface RadarMergedEntry {
-  provider: string;
-  modelId: string;
-  displayName: string;
-  monthlyTokens: number;
-  creditTokens: number;
-  freeType: string;
-  poolKey: string | null;
-  tos: string;
-  trainsOnPrompts?: boolean;
-  enabled?: boolean;
-  origin: "baseline" | "radar" | "local";
-  disabledBy?: "radar";
-  // Extended feed fields (present when origin=radar)
-  contextWindow?: number | null;
-  capabilities?: { tools: boolean; vision: boolean; thinking: boolean };
-  budget?: { kind: string; tokensPerMonth?: number; poolId?: string };
-  limits?: { rpm: number | null; rpd: number | null; tpm: number | null; tpd: number | null };
-  setup?: { keyUrl: string | null; steps: string[] } | null;
 }
 
 type PageState = "flag_off" | "optin_pending" | "empty" | "populated";
@@ -67,7 +47,7 @@ type RadarTabId = "catalog" | "referrals";
 export function resolveRadarPageState(
   flagOn: boolean,
   optedIn: boolean,
-  hasEntries: boolean,
+  hasEntries: boolean
 ): PageState {
   if (!flagOn) return "flag_off";
   if (!optedIn) return "optin_pending";
@@ -90,23 +70,6 @@ function relativeTime(isoDate: string): string {
   return `${days}d ago`;
 }
 
-/** Format token count as human-readable. */
-function formatTokens(n: number): string {
-  if (n === 0) return "rate-only";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return String(n);
-}
-
-/** Budget display string. */
-function budgetLabel(entry: RadarMergedEntry): string {
-  if (entry.budget?.kind === "shared_pool") {
-    return `shared (${formatTokens(entry.budget.tokensPerMonth ?? entry.monthlyTokens)}/mo)`;
-  }
-  if (entry.budget?.kind === "rate_only" || entry.monthlyTokens === 0) return "rate-only";
-  return `${formatTokens(entry.monthlyTokens)}/mo`;
-}
-
 // ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
@@ -117,6 +80,7 @@ export default function RadarPage() {
   const [meta, setMeta] = useState<RadarMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [featureAvailable, setFeatureAvailable] = useState<boolean | null>(null);
   const [optIn, setOptIn] = useState<boolean | null>(null);
   const [activating, setActivating] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -144,31 +108,35 @@ export default function RadarPage() {
   const [hasSupporterKey, setHasSupporterKey] = useState(false);
   const [supporterKeyMasked, setSupporterKeyMasked] = useState<string | null>(null);
   const [showKeyForm, setShowKeyForm] = useState(false);
-
   // Fetch catalog
-  const fetchCatalog = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/radar/catalog");
-      if (res.status === 404) {
-        // Flag off — treat as not found
-        setOptIn(false);
-        setEntries([]);
-        setMeta(null);
-        setLoading(false);
-        return;
+  const fetchCatalog = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) setLoading(true);
+      setError("");
+      try {
+        const res = await fetch("/api/radar/catalog", { cache: "no-store" });
+        if (res.status === 404) {
+          // Flag off — treat as not found
+          setFeatureAvailable(false);
+          setEntries([]);
+          setMeta(null);
+          if (showLoading) setLoading(false);
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        setFeatureAvailable(true);
+        const data = await res.json();
+        setEntries(data.entries || []);
+        setMeta(data.meta || null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("errorLoading"));
+      } finally {
+        if (showLoading) setLoading(false);
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setEntries(data.entries || []);
-      setMeta(data.meta || null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("errorLoading"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+    },
+    [t]
+  );
+  const refreshCatalogSilently = useCallback(() => fetchCatalog(false), [fetchCatalog]);
 
   // D28 — fetch the referral links section ("Pegue seus créditos grátis").
   // Best-effort: flag off => 404, no cache => empty shape; either way this
@@ -193,18 +161,20 @@ export default function RadarPage() {
   // the activation screen on every reload).
   const fetchSettings = useCallback(async () => {
     try {
-      const settingsRes = await fetch("/api/radar/settings");
+      const settingsRes = await fetch("/api/radar/settings", { cache: "no-store" });
       if (settingsRes.status === 404) {
         // Flag off
-        setOptIn(false);
+        setFeatureAvailable(false);
+        setOptIn(null);
         return;
       }
       if (!settingsRes.ok) throw new Error(`HTTP ${settingsRes.status}`);
       const settingsData = await settingsRes.json();
+      setFeatureAvailable(true);
       setOptIn(settingsData.optIn === true);
       setHasSupporterKey(settingsData.hasSupporterKey === true);
       setSupporterKeyMasked(
-        typeof settingsData.supporterKeyMasked === "string" ? settingsData.supporterKeyMasked : null,
+        typeof settingsData.supporterKeyMasked === "string" ? settingsData.supporterKeyMasked : null
       );
       // F4/T7 — best-effort: keep whatever we already had if the field is
       // absent (older cached response shape), never fall back to a literal.
@@ -329,16 +299,16 @@ export default function RadarPage() {
     }
   }, [keyInput, t, handleSync]);
 
-  // Determine effective state
-  const flagOn = optIn !== false || entries.length > 0 || meta !== null;
+  // Feature availability and privacy opt-in are independent states. A successful
+  // settings response with `optIn: false` means "show activation", not "flag off".
   const pageState = resolveRadarPageState(
-    optIn !== false, // if we got a 404, optIn=false => flag off
+    featureAvailable !== false,
     optIn === true,
-    entries.length > 0 && meta !== null,
+    meta !== null
   );
 
   // Flag off — render not-found
-  if (pageState === "flag_off" && !loading) {
+  if (featureAvailable === false && !loading) {
     notFound();
   }
 
@@ -350,15 +320,41 @@ export default function RadarPage() {
           <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-sm text-text-muted mt-1">{t("subtitle")}</p>
         </div>
-        {pageState === "populated" && (
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="px-4 py-2 text-sm font-medium rounded-lg border border-violet-500 text-violet-400 hover:bg-violet-500/10 transition-colors disabled:opacity-50"
-          >
-            {syncing ? t("syncing") : t("syncNow")}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {(pageState === "empty" || pageState === "populated") && (
+            <Link
+              href="/dashboard/radar/intel"
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-text-main hover:border-violet-500 hover:text-violet-400 transition-colors"
+            >
+              {t("intel")}
+            </Link>
+          )}
+          {(pageState === "empty" || pageState === "populated") && (
+            <Link
+              href="/dashboard/radar/offers"
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-text-main hover:border-violet-500 hover:text-violet-400 transition-colors"
+            >
+              {t("offers")}
+            </Link>
+          )}
+          {(pageState === "empty" || pageState === "populated") && (
+            <Link
+              href="/dashboard/radar/combos"
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-text-main hover:border-violet-500 hover:text-violet-400 transition-colors"
+            >
+              {t("guidedCombos")}
+            </Link>
+          )}
+          {pageState === "populated" && (
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-violet-500 text-violet-400 hover:bg-violet-500/10 transition-colors disabled:opacity-50"
+            >
+              {syncing ? t("syncing") : t("syncNow")}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Feed freshness header */}
@@ -379,9 +375,7 @@ export default function RadarPage() {
         </div>
       )}
 
-      {error && (
-        <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">{error}</div>
-      )}
+      {error && <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">{error}</div>}
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[200px]">
@@ -625,98 +619,11 @@ export default function RadarPage() {
 
           {/* Populated catalog table */}
           {pageState === "populated" && activeTab === "catalog" && (
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-text-muted border-b border-border">
-                      <th className="pb-3 font-medium">{t("colProvider")}</th>
-                      <th className="pb-3 font-medium">{t("colModel")}</th>
-                      <th className="pb-3 font-medium">{t("colQuota")}</th>
-                      <th className="pb-3 font-medium">{t("colContext")}</th>
-                      <th className="pb-3 font-medium">{t("colCapabilities")}</th>
-                      <th className="pb-3 font-medium">{t("colTos")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entries.map((entry) => (
-                      <tr
-                        key={`${entry.provider}:${entry.modelId}`}
-                        className={`border-b border-border/50 last:border-b-0 ${
-                          entry.enabled === false ? "opacity-50" : ""
-                        }`}
-                      >
-                        <td className="py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{entry.provider}</span>
-                            {entry.origin === "radar" && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 font-medium">
-                                {t("newBadge")}
-                              </span>
-                            )}
-                            {entry.setup?.keyUrl && (
-                              <Link
-                                href={`/dashboard/radar/setup?provider=${encodeURIComponent(entry.provider)}`}
-                                className="text-xs text-violet-400 hover:underline"
-                                title={t("setupGuide")}
-                              >
-                                ⚙
-                              </Link>
-                            )}
-                          </div>
-                          {entry.enabled === false && entry.disabledBy === "radar" && (
-                            <p className="text-xs text-red-400 mt-0.5">{t("disabledByFeed")}</p>
-                          )}
-                        </td>
-                        <td className="py-3 text-text-muted text-sm font-mono truncate max-w-[200px]">
-                          {entry.displayName}
-                        </td>
-                        <td className="py-3 text-sm">{budgetLabel(entry)}</td>
-                        <td className="py-3 text-sm text-text-muted">
-                          {entry.contextWindow
-                            ? `${(entry.contextWindow / 1000).toFixed(0)}K`
-                            : "—"}
-                        </td>
-                        <td className="py-3">
-                          <div className="flex gap-1">
-                            {entry.capabilities?.tools && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
-                                {t("capTools")}
-                              </span>
-                            )}
-                            {entry.capabilities?.vision && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">
-                                {t("capVision")}
-                              </span>
-                            )}
-                            {entry.capabilities?.thinking && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">
-                                {t("capThinking")}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          <span
-                            className={`text-xs px-2 py-1 rounded ${
-                              entry.tos === "ok"
-                                ? "bg-green-500/10 text-green-400"
-                                : entry.tos === "caution"
-                                  ? "bg-yellow-500/10 text-yellow-400"
-                                  : entry.tos === "avoid"
-                                    ? "bg-red-500/10 text-red-400"
-                                    : "bg-gray-500/10 text-gray-400"
-                            }`}
-                          >
-                            {entry.tos}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+            <RadarCatalogTable
+              entries={entries}
+              refreshCatalog={refreshCatalogSilently}
+              onError={setError}
+            />
           )}
         </>
       )}

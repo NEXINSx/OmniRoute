@@ -8,8 +8,12 @@ const geminiHelper = await import("../../open-sse/translator/helpers/geminiHelpe
 const toolCallHelper = await import("../../open-sse/translator/helpers/toolCallHelper.ts");
 const { FORMATS } = await import("../../open-sse/translator/formats.ts");
 const { translateRequest } = await import("../../open-sse/translator/index.ts");
-const { cacheReasoningByKey, clearReasoningCacheAll, getReasoningCacheServiceStats } =
-  await import("../../open-sse/services/reasoningCache.ts");
+const {
+  buildAssistantMessageCacheKey,
+  cacheReasoningByKey,
+  clearReasoningCacheAll,
+  getReasoningCacheServiceStats,
+} = await import("../../open-sse/services/reasoningCache.ts");
 const { clearModelsDevCapabilities, saveModelsDevCapabilities } =
   await import("../../src/lib/modelsDevSync.ts");
 
@@ -639,8 +643,13 @@ test("translateRequest replays cached reasoning-only messages when interleaved f
       }),
     },
   });
+  const scope = "api-key:test:session:helper-deepseek";
+  const messages = [
+    { role: "user", content: "solve this" },
+    { role: "assistant", content: "answer", reasoning_content: "" },
+  ];
   cacheReasoningByKey(
-    "request:req_reasoning_only:message:1",
+    buildAssistantMessageCacheKey(scope, messages, 1),
     "deepseek",
     "deepseek-v4-flash",
     "cached reasoning only"
@@ -650,16 +659,12 @@ test("translateRequest replays cached reasoning-only messages when interleaved f
     FORMATS.OPENAI,
     FORMATS.OPENAI,
     "deepseek-v4-flash",
-    {
-      _reasoningCacheRequestId: "req_reasoning_only",
-      messages: [
-        { role: "user", content: "solve this" },
-        { role: "assistant", content: "answer", reasoning_content: "" },
-      ],
-    },
+    { messages },
     false,
     null,
-    "deepseek"
+    "deepseek",
+    null,
+    { reasoningCacheScope: scope }
   );
 
   assert.equal(result.messages[1].reasoning_content, "cached reasoning only");
@@ -670,8 +675,13 @@ test("translateRequest replays cached reasoning-only messages when interleaved f
 
 test("translateRequest does not replay reasoning-only messages for non-DeepSeek models", () => {
   clearReasoningCacheAll();
+  const scope = "api-key:test:session:helper-kimi";
+  const messages = [
+    { role: "user", content: "solve this" },
+    { role: "assistant", content: "answer", reasoning_content: "" },
+  ];
   cacheReasoningByKey(
-    "request:req_kimi_reasoning_only:message:0",
+    buildAssistantMessageCacheKey(scope, messages, 1),
     "kimi",
     "kimi-k2.6",
     "cached kimi reasoning"
@@ -681,16 +691,12 @@ test("translateRequest does not replay reasoning-only messages for non-DeepSeek 
     FORMATS.OPENAI,
     FORMATS.OPENAI,
     "kimi-k2.6",
-    {
-      _reasoningCacheRequestId: "req_kimi_reasoning_only",
-      messages: [
-        { role: "user", content: "solve this" },
-        { role: "assistant", content: "answer", reasoning_content: "" },
-      ],
-    },
+    { messages },
     false,
     null,
-    "kimi"
+    "kimi",
+    null,
+    { reasoningCacheScope: scope }
   );
 
   assert.equal(result.messages[1].reasoning_content, undefined);

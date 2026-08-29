@@ -21,7 +21,7 @@
  *
  * Ported from decolua/9router PR #2328 (open-sse/executors/zed.js),
  * adapted to TypeScript + OmniRoute's BaseExecutor/translator conventions.
- * Like WindsurfExecutor, this overrides execute() entirely rather than
+ * Like DevinDesktopExecutor, this overrides execute() entirely rather than
  * using BaseExecutor's default Claude-Code-oriented pipeline, because the
  * Zed wire request/response shape (thread envelope, LLM-token exchange,
  * NDJSON status frames) doesn't fit the generic transformRequest/buildUrl
@@ -38,14 +38,29 @@ import { openaiToOpenAIResponsesRequest } from "../translator/request/openai-res
 import { claudeToOpenAIResponse } from "../translator/response/claude-to-openai.ts";
 import { geminiToOpenAIResponse } from "../translator/response/gemini-to-openai.ts";
 import { openaiResponsesToOpenAIResponse } from "../translator/response/openai-responses.ts";
-import { ZED_HEADERS, resolveZedModels, zedLlmFetch, type ZedCredentials } from "../shared/zedAuth.ts";
+import {
+  ZED_HEADERS,
+  resolveZedModels,
+  zedLlmFetch,
+  type ZedCredentials,
+} from "../shared/zedAuth.ts";
 import { resolveSuppressThinkClose, THINKING_MARKER_HEADER } from "../utils/thinkCloseMarker.ts";
 
+// Wire values for the `provider` field of POST /completions. These are NOT
+// display names: cloud.zed.dev matches them exactly, and an unrecognized value
+// fails the whole request with `500 {"message":"An internal server error
+// occurred."}` before the model is ever looked at — which is why every model id,
+// including invalid ones, produced an identical 500.
+//
+// The spellings come from Zed's own GET /models catalog, which reports
+// `anthropic`, `open_ai` and `google` (note the underscore); `x_ai` follows the
+// same convention. Feeding a catalog value back through normalizeZedProvider is
+// therefore identity, as it must be.
 const ZED_PROVIDER = {
-  anthropic: "Anthropic",
-  openai: "OpenAi",
-  google: "Google",
-  xai: "XAi",
+  anthropic: "anthropic",
+  openai: "open_ai",
+  google: "google",
+  xai: "x_ai",
 } as const;
 
 type ZedProviderName = (typeof ZED_PROVIDER)[keyof typeof ZED_PROVIDER];
@@ -345,7 +360,8 @@ export class ZedHostedExecutor extends BaseExecutor {
           "Content-Type": "application/json",
           Accept: "application/x-ndjson, text/event-stream, */*",
           "User-Agent": `OmniRoute/zed-hosted`,
-          "x-zed-version": (this.config as Record<string, unknown>)?.appVersion?.toString() || "0.200.0",
+          "x-zed-version":
+            (this.config as Record<string, unknown>)?.appVersion?.toString() || "0.200.0",
           [ZED_HEADERS.clientSupportsStatus]: "true",
           [ZED_HEADERS.clientSupportsStreamEnded]: "true",
         },
@@ -381,7 +397,10 @@ export class ZedHostedExecutor extends BaseExecutor {
     const errorObj = (parsed?.error as Record<string, unknown>) || undefined;
     const code = (parsed?.code as string) || (errorObj?.code as string) || "";
     const rawMessage =
-      (parsed?.message as string) || (errorObj?.message as string) || bodyText || response.statusText;
+      (parsed?.message as string) ||
+      (errorObj?.message as string) ||
+      bodyText ||
+      response.statusText;
     if (code === "trial_blocked") {
       return {
         status: response.status,

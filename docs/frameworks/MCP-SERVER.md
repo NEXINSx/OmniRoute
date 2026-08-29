@@ -1,14 +1,14 @@
 ---
 title: "OmniRoute MCP Server Documentation"
-version: 3.8.40
-lastUpdated: 2026-06-28
+version: 3.8.50
+lastUpdated: 2026-08-08
 ---
 
 # OmniRoute MCP Server Documentation
 
-> Model Context Protocol server with 104 tools across routing, cache, compression, memory, skills, proxy, pool, and context source operations.
+> Model Context Protocol server with 110 tools across routing, cache, compression, memory, skills, proxy, pool, Radar, and context source operations.
 >
-> Source of truth: `open-sse/mcp-server/server.ts` computes **104 unique tools** with `countUniqueMcpTools()`: 42 canonical definitions (including the six CCR lifecycle tools and the agent-skills trio), plus memory (3), skills (4), GitHub skills (3), pool (6), gamification (8), plugins (8), Notion (6), Obsidian (22), and two RTK-only compression tools.
+> Source of truth: `open-sse/mcp-server/server.ts` computes **110 unique tools** with `countUniqueMcpTools()`: 45 canonical definitions (including the six CCR lifecycle tools, the agent-skills trio, `omniroute_radar_catalog`, and `omniroute_x_search`), plus memory (3), skills (4), GitHub skills (3), pool (6), gamification (8), plugins (8), Notion (6), Obsidian (22), local corpus (3), and two RTK-only compression tools.
 
 ## Installation
 
@@ -64,24 +64,24 @@ Cursor, Cline, and compatible MCP client setup.
 
 ---
 
-## Essential Tools (8) — Phase 1
+## Essential Tools (13) — Phase 1
 
-| Tool                            | Scopes                | Description                                                   |
-| :------------------------------ | :-------------------- | :------------------------------------------------------------ |
-| `omniroute_get_health`          | `read:health`         | Uptime, memory, circuit breakers, rate limits, cache stats    |
-| `omniroute_list_combos`         | `read:combos`         | All configured combos with strategies (optional metrics)      |
-| `omniroute_get_combo_metrics`   | `read:combos`         | Performance metrics for a specific combo                      |
-| `omniroute_switch_combo`        | `write:combos`        | Activate or deactivate a combo                                |
-| `omniroute_check_quota`         | `read:quota`          | Quota used/total, percent remaining, reset time, token health |
-| `omniroute_route_request`       | `execute:completions` | Send a chat completion through OmniRoute routing              |
-| `omniroute_cost_report`         | `read:usage`          | Cost report by period (session/day/week/month)                |
-| `omniroute_list_models_catalog` | `read:models`         | Full model catalog with capabilities, status, pricing         |
-
-## Phase 1 — Search
-
-| Tool                   | Scopes           | Description                                                                                                                        |
-| :--------------------- | :--------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| `omniroute_web_search` | `execute:search` | Web search through OmniRoute search gateway (Serper/Brave/Perplexity/Exa/Tavily/Google PSE/Linkup/SearchAPI/SearXNG) with failover |
+| Tool                            | Scopes                | Description                                                                                                                    |
+| :------------------------------ | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| `omniroute_get_health`          | `read:health`         | Uptime, memory, circuit breakers, rate limits, cache stats                                                                     |
+| `omniroute_list_combos`         | `read:combos`         | All configured combos with strategies (optional metrics)                                                                       |
+| `omniroute_get_combo_metrics`   | `read:combos`         | Performance metrics for a specific combo                                                                                       |
+| `omniroute_switch_combo`        | `write:combos`        | Activate or deactivate a combo                                                                                                 |
+| `omniroute_create_combo`        | `write:combos`        | Create a validated combo through the existing combo API                                                                        |
+| `omniroute_check_quota`         | `read:quota`          | Quota used/total, percent remaining, reset time, token health                                                                  |
+| `omniroute_route_request`       | `execute:completions` | Send a chat completion through OmniRoute routing                                                                               |
+| `omniroute_cost_report`         | `read:usage`          | Cost report by period (session/day/week/month)                                                                                 |
+| `omniroute_list_models_catalog` | `read:models`         | Full model catalog with capabilities, status, pricing                                                                          |
+| `omniroute_radar_catalog`       | `read:radar`          | Local signed Radar catalog; optional provider/family filters                                                                   |
+| `omniroute_tool_search`         | `read:tools`          | Discover tools from the registered MCP catalog                                                                                 |
+| `omniroute_web_search`          | `execute:search`      | Web search through the configured search providers. Not X/Twitter.                                                             |
+| `omniroute_x_search`            | `execute:search`      | Search X through xAI/SuperGrok, or choose `xquik-search` for Xquik API results. Requires credentials for the selected backend. |
+| `omniroute_web_fetch`           | `execute:search`      | Fetch web content through the configured fetch providers                                                                       |
 
 ## Advanced Tools (11) — Phase 2
 
@@ -227,7 +227,7 @@ See [AGENT-SKILLS.md](./AGENT-SKILLS.md) for the full catalog and how external a
 
 ## Related Frameworks (v3.8.0)
 
-The MCP tool inventory above (104 unique tools, computed by `countUniqueMcpTools()`) is intentionally
+The MCP tool inventory above (110 unique tools, computed by `countUniqueMcpTools()`) is intentionally
 scoped to runtime routing/cache/compression/memory/skills/proxy/context-source operations. Two adjacent
 frameworks ship alongside the MCP server in v3.8.0 and are documented separately:
 
@@ -348,6 +348,8 @@ per-key path take precedence once it is. stdio has no per-caller identity (see
 | `OMNIROUTE_MCP_SCOPES`                  | (empty)                            | Comma-separated allowlist of scopes considered "available" by default (used when caller does not provide its own scopes) |
 | `OMNIROUTE_MCP_COMPRESS_DESCRIPTIONS`   | (unset = on)                       | When set to `0/false/off/no`, disables MCP description compression at registration time                                  |
 | `OMNIROUTE_MCP_DESCRIPTION_COMPRESSION` | (unset = on)                       | Alternate alias for the same toggle as above                                                                             |
+| `OMNIROUTE_MCP_FETCH_TIMEOUT_MS`        | `10000`                            | Abort budget for internal management reads (health, resilience, combos, quota, usage)                                    |
+| `OMNIROUTE_MCP_UPSTREAM_TIMEOUT_MS`     | `60000`                            | Abort budget for hops that wait on a provider (`route_request`, `web_search`, `web_fetch`)                               |
 | `MCP_TOOL_DENY`                         | (unset = no filter)                | Comma-separated tool names to drop from `tools/list` (tool-cardinality reduction — see below)                            |
 | `MCP_TOOL_ALLOW`                        | (unset = no filter)                | Comma-separated tool names to keep exclusively (allow-list mode — see below)                                             |
 | `DATA_DIR`                              | `~/.omniroute`                     | Heartbeat file is written to `${DATA_DIR}/runtime/mcp-heartbeat.json`                                                    |
@@ -369,7 +371,7 @@ MCP tool, prompt, and resource registries can compress descriptions at registrat
 
 Description compression shrinks each tool's metadata; **tool-cardinality reduction** goes one step further by reducing _how many_ tools are announced at all. Advertising fewer tools in the `tools/list` manifest cuts the per-request token cost the client's model pays for the tool catalog ("layer 5" compression). The implementation is a pure, stateless filter in `open-sse/mcp-server/toolCardinality.ts` (`reduceToolManifest`), wired into the registration loop in `createMcpServer()` (`open-sse/mcp-server/server.ts`).
 
-**Opt-in, off by default.** The filter only runs when at least one of two environment variables is set; with neither set, all 104 tools are announced unchanged.
+**Opt-in, off by default.** The filter only runs when at least one of two environment variables is set; with neither set, all 110 tools are announced unchanged.
 
 | Variable         | Mode                                                                                    |
 | :--------------- | :-------------------------------------------------------------------------------------- |

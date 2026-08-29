@@ -68,11 +68,15 @@ function renderHook(params: UseModelImportHandlersParams): { get: () => HookResu
   };
 }
 
-function conn(id: string, active: boolean, autoSync?: boolean) {
+function conn(
+  id: string,
+  active: boolean,
+  settings: { autoSync?: boolean; autoFetchModels?: boolean } = {}
+) {
   return {
     id,
     isActive: active,
-    providerSpecificData: autoSync === undefined ? {} : { autoSync },
+    providerSpecificData: settings,
   };
 }
 
@@ -95,17 +99,21 @@ afterEach(() => {
 describe("useModelImportHandlers — master autoSync", () => {
   it("isAutoSyncEnabled is true only when every active connection has autoSync on", () => {
     const mixed = renderHook(
-      buildParams({ connections: [conn("a", true, true), conn("b", true, false)] })
+      buildParams({ connections: [conn("a", true, { autoSync: true }), conn("b", true)] })
     );
     expect(mixed.get().isAutoSyncEnabled).toBe(false);
 
     const allOn = renderHook(
-      buildParams({ connections: [conn("a", true, true), conn("b", true, true)] })
+      buildParams({
+        connections: [conn("a", true, { autoSync: true }), conn("b", true, { autoSync: true })],
+      })
     );
     expect(allOn.get().isAutoSyncEnabled).toBe(true);
 
     const oneOff = renderHook(
-      buildParams({ connections: [conn("a", true, true), conn("b", false, true)] })
+      buildParams({
+        connections: [conn("a", true, { autoSync: true }), conn("b", false, { autoSync: true })],
+      })
     );
     expect(oneOff.get().isAutoSyncEnabled).toBe(true);
   });
@@ -114,7 +122,7 @@ describe("useModelImportHandlers — master autoSync", () => {
     const fetchConnections = vi.fn().mockResolvedValue(undefined);
     const hook = renderHook(
       buildParams({
-        connections: [conn("conn-a", true, false), conn("conn-b", true, false)],
+        connections: [conn("conn-a", true), conn("conn-b", true)],
         fetchConnections,
       })
     );
@@ -142,7 +150,7 @@ describe("useModelImportHandlers — master autoSync", () => {
   it("excludes inactive connections from the fan-out", async () => {
     const hook = renderHook(
       buildParams({
-        connections: [conn("conn-a", true, false), conn("conn-inactive", false, false)],
+        connections: [conn("conn-a", true), conn("conn-inactive", false)],
       })
     );
     const fetchMock = vi.mocked(fetch);
@@ -163,7 +171,7 @@ describe("useModelImportHandlers — master autoSync", () => {
   it("toggling from a mixed state (one on, one off) turns all active connections on", async () => {
     const hook = renderHook(
       buildParams({
-        connections: [conn("conn-a", true, true), conn("conn-b", true, false)],
+        connections: [conn("conn-a", true, { autoSync: true }), conn("conn-b", true)],
       })
     );
     const fetchMock = vi.mocked(fetch);
@@ -196,7 +204,7 @@ describe("useModelImportHandlers — master autoSync", () => {
     const fetchConnections = vi.fn().mockResolvedValue(undefined);
     const hook = renderHook(
       buildParams({
-        connections: [conn("conn-a", true, false), conn("conn-b", true, false)],
+        connections: [conn("conn-a", true), conn("conn-b", true)],
         fetchConnections,
       })
     );
@@ -217,7 +225,7 @@ describe("useModelImportHandlers — master autoSync", () => {
   it("notifies error when every fan-out PUT fails", async () => {
     const hook = renderHook(
       buildParams({
-        connections: [conn("conn-a", true, false), conn("conn-b", true, false)],
+        connections: [conn("conn-a", true), conn("conn-b", true)],
       })
     );
     const fetchMock = vi.mocked(fetch);
@@ -233,7 +241,7 @@ describe("useModelImportHandlers — master autoSync", () => {
   });
 
   it("no-ops without a PUT or notification when there are no active connections", async () => {
-    const hook = renderHook(buildParams({ connections: [conn("conn-a", false, false)] }));
+    const hook = renderHook(buildParams({ connections: [conn("conn-a", false)] }));
     const fetchMock = vi.mocked(fetch);
 
     await act(async () => {
@@ -243,5 +251,46 @@ describe("useModelImportHandlers — master autoSync", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(notify.success).not.toHaveBeenCalled();
     expect(notify.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("useModelImportHandlers — upstream model auto-fetch", () => {
+  it("defaults to off until every active connection explicitly enables it", () => {
+    const defaultOff = renderHook(buildParams({ connections: [conn("a", true)] }));
+    expect(defaultOff.get().isAutoFetchModelsEnabled).toBe(false);
+
+    const allOn = renderHook(
+      buildParams({
+        connections: [
+          conn("a", true, { autoFetchModels: true }),
+          conn("b", true, { autoFetchModels: true }),
+        ],
+      })
+    );
+    expect(allOn.get().isAutoFetchModelsEnabled).toBe(true);
+  });
+
+  it("enables auto-fetch on every active connection", async () => {
+    const fetchConnections = vi.fn().mockResolvedValue(undefined);
+    const hook = renderHook(
+      buildParams({ connections: [conn("conn-a", true), conn("conn-b", true)], fetchConnections })
+    );
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({ ok: true } as Response);
+
+    await act(async () => {
+      await hook.get().handleToggleAutoFetchModels();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init).toEqual(
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ providerSpecificData: { autoFetchModels: true } }),
+        })
+      );
+    }
+    expect(fetchConnections).toHaveBeenCalled();
   });
 });

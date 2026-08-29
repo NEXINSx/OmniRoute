@@ -170,8 +170,8 @@ export function buildCodexEnv(baseEnv, authToken) {
  * @param {string} baseUrl  OmniRoute root URL (no /v1)
  * @returns {string[]}
  */
-export function buildCodexProviderArgs(baseUrl) {
-  return [
+export function buildCodexProviderArgs(baseUrl, model) {
+  const args = [
     "-c",
     tomlAssign("model_provider", "omniroute"),
     "-c",
@@ -185,6 +185,15 @@ export function buildCodexProviderArgs(baseUrl) {
     "-c",
     tomlAssign("model_providers.omniroute.requires_openai_auth", false),
   ];
+
+  if (model) {
+    const normalized = String(model).trim();
+    if (normalized) {
+      args.push("-c", tomlAssign("model_providers.omniroute.model", normalized));
+    }
+  }
+
+  return args;
 }
 
 /**
@@ -207,7 +216,7 @@ export async function runLaunchCodexCommand(opts = {}, codexArgs = []) {
 
   // Provider injected via -c (works without config.toml); then the profile (model),
   // then the user's pass-through args.
-  const providerArgs = buildCodexProviderArgs(baseUrl);
+  const providerArgs = buildCodexProviderArgs(baseUrl, opts.model);
   const profileArgs = opts.profile ? ["--profile", opts.profile] : [];
   const extraArgs = [...providerArgs, ...profileArgs, ...codexArgs];
   const env = buildCodexEnv(process.env, authToken);
@@ -220,18 +229,45 @@ export async function runLaunchCodexCommand(opts = {}, codexArgs = []) {
       stdio: "inherit",
       shell: shellValue,
     });
+    let settled = false;
+    const signalExitCode = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 };
+    const signalHandlers = {};
+    const cleanupSignalHandlers = () => {
+      for (const signal of Object.keys(signalExitCode)) {
+        process.removeListener(signal, signalHandlers[signal]);
+      }
+    };
+    const finish = (code) => {
+      if (settled) return;
+      settled = true;
+      cleanupSignalHandlers();
+      resolve(code);
+    };
+    for (const signal of Object.keys(signalExitCode)) {
+      signalHandlers[signal] = () => {
+        try {
+          child.kill(signal);
+        } catch {
+          // The child may have already exited between the signal and cleanup.
+        }
+        finish(signalExitCode[signal]);
+      };
+      process.once(signal, signalHandlers[signal]);
+    }
     child.on("error", (err) => {
       if (err?.code === "ENOENT") {
         console.error(
           "The 'codex' CLI was not found in PATH. Install with:\n  npm install -g @openai/codex"
         );
-        resolve(127);
+        finish(127);
       } else {
         console.error(String(err?.message || err));
-        resolve(1);
+        finish(1);
       }
     });
-    child.on("exit", (code) => resolve(code ?? 0));
+    child.on("exit", (code, signalName) => {
+      finish(code ?? signalExitCode[signalName] ?? 0);
+    });
   });
 }
 

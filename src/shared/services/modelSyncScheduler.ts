@@ -11,6 +11,7 @@
 import { randomUUID } from "node:crypto";
 import { Agent, buildConnector, fetch as undiciFetch, type Dispatcher } from "undici";
 import { getSettings, updateSettings } from "@/lib/localDb";
+import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { getRuntimePorts } from "@/lib/runtime/ports";
 
 const DEFAULT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -155,6 +156,11 @@ async function getAutoSyncConnections(): Promise<
     const autoSyncConnections: Array<{ id: string; provider: string; name?: string }> = [];
     for (const conn of connections) {
       if (!conn.isActive && conn.isActive !== undefined) continue;
+      if (
+        typeof conn.id === "string" &&
+        (await isConnectionUnavailableToAuxiliaryActivity(conn.id))
+      )
+        continue;
       const psd =
         conn.providerSpecificData && typeof conn.providerSpecificData === "object"
           ? (conn.providerSpecificData as Record<string, unknown>)
@@ -176,8 +182,12 @@ async function getAutoSyncConnections(): Promise<
 
 /**
  * Sync models for a single connection via the internal sync-models endpoint.
+ *
+ * Shared by the scheduled auto-sync cycle and the reactive trigger
+ * (src/lib/providerModels/reactiveModelSync.ts) that runs a discovery sync
+ * after an upstream model-not-found 404.
  */
-async function syncConnectionModels(
+export async function syncConnectionModels(
   connectionId: string,
   provider: string,
   baseUrl: string

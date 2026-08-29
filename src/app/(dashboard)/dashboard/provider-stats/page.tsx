@@ -9,8 +9,10 @@
 
 import { useState, useEffect, useCallback, Fragment } from "react";
 import { useTranslations } from "next-intl";
-import { Card } from "@/shared/components";
+
 import { useProviderNodeMap, resolveProviderName } from "@/lib/display/useProviderNodeMap";
+import { formatComboSuccessRate } from "@/lib/usage/providerStatsFormatters";
+import { Card } from "@/shared/components";
 
 interface ProviderStat {
   provider: string;
@@ -493,7 +495,7 @@ export default function ProviderStatsPage() {
                     </td>
                     <td className="py-2 px-3 text-right tabular-nums">
                       {typeof m.successRate === "number"
-                        ? `${(m.successRate * 100).toFixed(1)}%`
+                        ? formatComboSuccessRate(m.successRate)
                         : "—"}
                     </td>
                   </tr>

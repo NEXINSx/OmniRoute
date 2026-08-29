@@ -53,8 +53,10 @@ reports/mutation
 # Local caches and quality-gate artifacts (all gitignored). `_*` does not match
 # dot-prefixed names, so these need explicit entries.
 .artifacts
-.eslintcache
-.eslintcache-complexity
+.eslintcache*
+.fakebin-*
+MAX
+quality-ratchet/
 
 # Documentation
 # Issue #2348: The Dashboard Docs viewer reads markdown from `/app/docs` at

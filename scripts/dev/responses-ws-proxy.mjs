@@ -317,6 +317,17 @@ function getAuthHeaders(requestUrl, requestHeaders) {
   if (isText(requestHeaders["x-forwarded-for"])) {
     headers["x-forwarded-for"] = requestHeaders["x-forwarded-for"];
   }
+  for (const key of [
+    "session-id",
+    "session_id",
+    "x-codex-installation-id",
+    "x-codex-window-id",
+    "x-codex-turn-metadata",
+    "originator",
+    "user-agent",
+  ]) {
+    if (isText(requestHeaders[key])) headers[key] = requestHeaders[key];
+  }
   return headers;
 }
 

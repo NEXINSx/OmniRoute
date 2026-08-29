@@ -25,13 +25,19 @@ const core = await import("@/lib/db/core.ts");
 const { createCombo } = await import("@/lib/db/combos");
 const { executeImageCombo } = await import("@omniroute/open-sse/services/imageCombo");
 
+type LogEntry = { level: string; tag: unknown; msg: unknown };
+
 function createLog() {
-  const entries: any[] = [];
+  const entries: LogEntry[] = [];
+  const record =
+    (level: string) =>
+    (tag: unknown, msg: unknown): number =>
+      entries.push({ level, tag, msg });
   return {
-    info: (tag: any, msg: any) => entries.push({ level: "info", tag, msg }),
-    warn: (tag: any, msg: any) => entries.push({ level: "warn", tag, msg }),
-    error: (tag: any, msg: any) => entries.push({ level: "error", tag, msg }),
-    debug: (tag: any, msg: any) => entries.push({ level: "debug", tag, msg }),
+    info: record("info"),
+    warn: record("warn"),
+    error: record("error"),
+    debug: record("debug"),
     entries,
   };
 }
@@ -52,13 +58,13 @@ function createMockAuth() {
 }
 
 async function cleanupTestDataDir() {
-  let lastError: any;
+  let lastError: unknown;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       core.resetDbInstance();
-      fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+      fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
       return;
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
@@ -214,7 +220,10 @@ test("non-combo bare model names pass through model resolution unchanged", async
   assert.equal(response.status, 400);
   const body = await response.json();
   const bodyStr = JSON.stringify(body);
-  assert.ok(bodyStr.includes("not found") || bodyStr.includes("not a valid"), "Combo not found error");
+  assert.ok(
+    bodyStr.includes("not found") || bodyStr.includes("not a valid"),
+    "Combo not found error"
+  );
 });
 
 test("provider/model format (with slash) is not treated as a combo name", async () => {

@@ -71,8 +71,10 @@ export const RERANK_PROVIDERS = {
     authType: "apikey",
     authHeader: "bearer",
     models: [
+      { id: "jina-reranker-v3.5", name: "Jina Reranker v3.5" },
       { id: "jina-reranker-v3", name: "Jina Reranker v3" },
       { id: "jina-reranker-m0", name: "Jina Reranker m0" },
+      { id: "jina-reranker-v2-base-multilingual", name: "Jina Reranker v2 Base Multilingual" },
     ],
   },
 

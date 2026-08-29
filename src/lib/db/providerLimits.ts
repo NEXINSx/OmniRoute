@@ -1,4 +1,7 @@
-import { sanitizeGrokBillingStatus, type GrokBillingStatus } from "@/shared/utils/grokBilling";
+import {
+  sanitizeProviderBillingStatus,
+  type ProviderBillingStatus,
+} from "@/shared/utils/providerBilling";
 import { getDbInstance, isBuildPhase, isCloud } from "./core";
 
 type JsonRecord = Record<string, unknown>;
@@ -26,7 +29,7 @@ export interface ProviderLimitsCacheEntry {
   fetchedAt: string;
   source?: string | null;
   bankedResetCredits?: number;
-  billing?: GrokBillingStatus;
+  billing?: ProviderBillingStatus;
 }
 
 const PROVIDER_LIMITS_CACHE_NAMESPACE = "providerLimitsCache";
@@ -45,7 +48,7 @@ function toRecord(value: unknown): JsonRecord | null {
 
 function sanitizeCacheEntryForStorage(entry: ProviderLimitsCacheEntry): ProviderLimitsCacheEntry {
   const { billing: rawBilling, ...rest } = entry;
-  const billing = sanitizeGrokBillingStatus(rawBilling);
+  const billing = sanitizeProviderBillingStatus(rawBilling);
   return billing ? { ...rest, billing } : rest;
 }
 
@@ -58,7 +61,7 @@ function normalizeCacheEntry(value: unknown): ProviderLimitsCacheEntry | null {
   if (!fetchedAt) return null;
 
   const bankedResetCredits = Number(record.bankedResetCredits);
-  const billing = sanitizeGrokBillingStatus(record.billing);
+  const billing = sanitizeProviderBillingStatus(record.billing);
 
   return {
     quotas: toRecord(record.quotas),

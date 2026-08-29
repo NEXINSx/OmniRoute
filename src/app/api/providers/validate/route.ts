@@ -12,6 +12,7 @@ import { getProxyForLevel, resolveProxyForProvider } from "@/lib/localDb";
 import { validateProviderApiKeySchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { runWithProxyContextOrDirect } from "@omniroute/open-sse/utils/proxyFetch.ts";
+import { rejectRetiredCommonChatGptWebProvider } from "@/lib/providers/chatgptWebRetirementResponse";
 
 function sanitizeAuditUrl(url: string | null | undefined) {
   if (!url) return null;
@@ -56,11 +57,16 @@ export async function POST(request) {
       customUserAgent,
       baseUrl: bodyBaseUrl,
       region,
+      accessKeyId,
+      sessionToken,
       cx,
       runtimeKey,
       tunnelId,
       connectorName,
     } = validation.data;
+
+    const retirementResponse = rejectRetiredCommonChatGptWebProvider(provider);
+    if (retirementResponse) return retirementResponse;
 
     let providerSpecificData: any = { validationModelId };
     if (customUserAgent) {
@@ -71,6 +77,12 @@ export async function POST(request) {
     }
     if (region) {
       providerSpecificData.region = region;
+    }
+    if (accessKeyId) {
+      providerSpecificData.accessKeyId = accessKeyId;
+    }
+    if (sessionToken) {
+      providerSpecificData.sessionToken = sessionToken;
     }
     if (cx) {
       providerSpecificData.cx = cx;

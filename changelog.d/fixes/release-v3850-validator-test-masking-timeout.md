@@ -1,1 +1,0 @@
-- Let the release-green validator finish the test-masking gate on loaded runners while preserving the existing timeout for every other full-CI gate, and report Node.js `ETIMEDOUT` errors as explicit timeout failures.

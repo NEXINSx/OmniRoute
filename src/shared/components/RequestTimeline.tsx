@@ -3,134 +3,35 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getHttpStatusStyle } from "@/shared/constants/colors";
 import { copyToClipboard } from "@/shared/utils/clipboard";
 import RequestLoggerDetail from "@/shared/components/RequestLoggerDetail";
+import useEmailPrivacyStore from "@/store/emailPrivacyStore";
+import {
+  type TimelineLog,
+  type ViewMode,
+  VISIBLE_WINDOW_MS,
+  BAR_HEIGHT,
+  LANE_GAP,
+  LANE_HEIGHT,
+  HEADER_HEIGHT,
+  AXIS_HEIGHT,
+  MIN_BAR_WIDTH,
+  DEFAULT_LIST_POLL_SECONDS,
+  TIMELINE_LIST_POLL_STORAGE_KEY,
+  FOLLOW_LINE_X,
+  LIVE_LINE_FRACTION,
+  computeBarRange,
+  MODE_META,
+  formatTimeAxis,
+  getStatusColor,
+  CONVERSATION_LANE_REUSE_STORAGE_KEY,
+  allocateLanes,
+  truncateModel,
+  formatDateLabel,
+} from "@/shared/components/RequestTimeline.utils";
 
-interface TimelineLog {
-  id: string;
-  timestamp: string;
-  status: number;
-  model: string | null;
-  provider: string | null;
-  account: string | null;
-  duration: number;
-  tokens: { in: number; out: number };
-  active?: boolean;
-  completed?: boolean;
-  error?: string | null;
-  path?: string | null;
-}
-
-interface Lane {
-  startMs: number;
-  endMs: number;
-}
-
-type ViewMode = "follow" | "live" | "pan";
-
-const VISIBLE_WINDOW_MS = 5 * 60 * 1000;
-const BAR_HEIGHT = 28;
-const LANE_GAP = 4;
-const LANE_HEIGHT = BAR_HEIGHT + LANE_GAP;
-const HEADER_HEIGHT = 48;
-const AXIS_HEIGHT = 32;
-const MIN_BAR_WIDTH = 3;
-const POLL_INTERVAL_MS = 2000;
-const FOLLOW_LINE_X = 0.75;
-const LIVE_LINE_FRACTION = 0.9;
-
-function computeBarRange(log: TimelineLog, nowMs: number): { startMs: number; endMs: number } {
-  const ts = new Date(log.timestamp).getTime();
-  if (log.active) return { startMs: ts, endMs: nowMs };
-  if (log.completed) return { startMs: ts, endMs: ts + (log.duration || 0) };
-  return { startMs: ts - (log.duration || 0), endMs: ts };
-}
-
-const MODE_META: Record<ViewMode, { labelKey: string; descriptionKey: string }> = {
-  follow: {
-    labelKey: "follow",
-    descriptionKey: "followDescription",
-  },
-  live: {
-    labelKey: "now",
-    descriptionKey: "nowDescription",
-  },
-  pan: {
-    labelKey: "pan",
-    descriptionKey: "panDescription",
-  },
-};
-
-function formatTimeAxis(ms: number): string {
-  const d = new Date(ms);
-  const h = d.getHours().toString().padStart(2, "0");
-  const m = d.getMinutes().toString().padStart(2, "0");
-  const s = d.getSeconds().toString().padStart(2, "0");
-  return `${h}:${m}:${s}`;
-}
-
-function getStatusColor(status: number, active: boolean | undefined): string {
-  if (active) return "#6366F1";
-  return getHttpStatusStyle(status).bg;
-}
-
-function allocateLanes(items: TimelineLog[], nowMs: number): Map<string, number> {
-  const lanes: Lane[] = [];
-  const laneMap = new Map<string, number>();
-
-  const sorted = [...items].sort((a, b) => {
-    const aStart = new Date(a.timestamp).getTime();
-    const bStart = new Date(b.timestamp).getTime();
-    return aStart - bStart;
-  });
-
-  for (const item of sorted) {
-    const { startMs, endMs } = computeBarRange(item, nowMs);
-
-    let placed = false;
-    for (let i = 0; i < lanes.length; i++) {
-      if (lanes[i].endMs < startMs) {
-        lanes[i] = { startMs, endMs };
-        laneMap.set(item.id, i);
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      laneMap.set(item.id, lanes.length);
-      lanes.push({ startMs, endMs });
-    }
-  }
-
-  return laneMap;
-}
-
-function truncateModel(model: string | null): string {
-  if (!model) return "";
-  const parts = model.split("/");
-  const short = parts[parts.length - 1];
-  return short.length > 16 ? short.slice(0, 15) + "\u2026" : short;
-}
-
-function formatDateLabel(ms: number): string {
-  const d = new Date(ms);
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
-}
+export type { TimelineLog } from "@/shared/components/RequestTimeline.utils";
+export { allocateLanes } from "@/shared/components/RequestTimeline.utils";
 
 export default function RequestTimeline({
   initialSelectedId,
@@ -152,9 +53,31 @@ export default function RequestTimeline({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartOffset, setDragStartOffset] = useState(0);
+  const { emailsVisible } = useEmailPrivacyStore();
   const [selectedLog, setSelectedLog] = useState<TimelineLog | null>(null);
   const [detailData, setDetailData] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoggingEnabled, setDetailLoggingEnabled] = useState(false);
+  const [conversationLaneReuseMinutes, setConversationLaneReuseMinutes] = useState(() => {
+    if (globalThis.window === undefined) return 2;
+    try {
+      const saved = localStorage.getItem(CONVERSATION_LANE_REUSE_STORAGE_KEY);
+      const parsed = saved ? Number(saved) : 2;
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 2;
+    } catch {
+      return 2;
+    }
+  });
+  const [listPollSeconds, setListPollSeconds] = useState(() => {
+    if (globalThis.window === undefined) return DEFAULT_LIST_POLL_SECONDS;
+    try {
+      const saved = localStorage.getItem(TIMELINE_LIST_POLL_STORAGE_KEY);
+      const parsed = saved ? Number(saved) : DEFAULT_LIST_POLL_SECONDS;
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_LIST_POLL_SECONDS;
+    } catch {
+      return DEFAULT_LIST_POLL_SECONDS;
+    }
+  });
   const canvasRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   // Guards the ?id= deep-link mount effect below. Also armed by any manual
@@ -163,6 +86,16 @@ export default function RequestTimeline({
   // still reflect the just-closed id on the very next render) can never
   // reopen the modal right after the user closed it.
   const initialOpenedRef = useRef(false);
+
+  useEffect(() => {
+    fetch("/api/logs/detail?limit=1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setDetailLoggingEnabled(data.enabled === true);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,12 +114,12 @@ export default function RequestTimeline({
         .then((res) => (res.ok ? res.json() : []))
         .then((data) => setLogs(data))
         .catch(() => {});
-    }, POLL_INTERVAL_MS);
+    }, listPollSeconds * 1000);
     return () => {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [listPollSeconds]);
 
   useEffect(() => {
     if (!canvasRef.current) return undefined;
@@ -252,7 +185,10 @@ export default function RequestTimeline({
     });
   }, [logs, timeStart, timeEnd, nowMs]);
 
-  const laneMap = useMemo(() => allocateLanes(logs, nowMs), [logs, nowMs]);
+  const laneMap = useMemo(
+    () => allocateLanes(logs, nowMs, conversationLaneReuseMinutes * 60 * 1000),
+    [logs, nowMs, conversationLaneReuseMinutes]
+  );
   const maxLane = useMemo(() => (laneMap.size > 0 ? Math.max(...laneMap.values()) : 0), [laneMap]);
 
   const barElements = useMemo(() => {
@@ -272,6 +208,39 @@ export default function RequestTimeline({
       return { log, leftPct, widthPct, topPx, color, opacity };
     });
   }, [visibleLogs, timeStart, timeEnd, nowMs, laneMap, canvasWidth]);
+
+  // One connector per consecutive pair of bars sharing a conversation id AND
+  // lane (i.e. allocateLanes actually treated them as one continuous
+  // conversation, not two bars that just happen to be adjacent).
+  const connectorElements = useMemo(() => {
+    const byConversation = new Map<string, typeof barElements>();
+    for (const el of barElements) {
+      const cid = el.log.sessionTag;
+      if (!cid) continue;
+      const list = byConversation.get(cid);
+      if (list) list.push(el);
+      else byConversation.set(cid, [el]);
+    }
+
+    const connectors: { id: string; x1: number; x2: number; y: number }[] = [];
+    for (const els of byConversation.values()) {
+      const sorted = [...els].sort(
+        (a, b) => new Date(a.log.timestamp).getTime() - new Date(b.log.timestamp).getTime()
+      );
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const a = sorted[i];
+        const b = sorted[i + 1];
+        if (a.topPx !== b.topPx) continue; // different lanes — reuse window lapsed
+        connectors.push({
+          id: `${a.log.id}-${b.log.id}`,
+          x1: a.leftPct + a.widthPct,
+          x2: b.leftPct,
+          y: a.topPx + BAR_HEIGHT / 2,
+        });
+      }
+    }
+    return connectors;
+  }, [barElements]);
 
   const axisTicks = useMemo(() => {
     const totalMs = timeEnd - timeStart;
@@ -374,33 +343,43 @@ export default function RequestTimeline({
 
   // Deep-link support: open the request from ?id= on mount without waiting for
   // it to show up in the polled `logs` list (mirrors RequestLoggerV2's openDetail).
-  const openById = useCallback(async (id: string) => {
-    setDetailLoading(true);
-    try {
-      const res = await fetch(`/api/logs/${id}`, { cache: "no-store" });
-      const data = res.ok ? await res.json() : null;
-      if (data) {
-        setSelectedLog({
-          id: data.id ?? id,
-          timestamp: data.timestamp,
-          status: data.status ?? 0,
-          model: data.model ?? null,
-          provider: data.provider ?? null,
-          account: data.account ?? null,
-          duration: data.duration ?? 0,
-          tokens: data.tokens ?? { in: 0, out: 0 },
-          active: data.active,
-          error: data.error ?? null,
-          path: data.path ?? null,
-        });
-        setDetailData(data);
+  const openById = useCallback(
+    async (id: string) => {
+      try {
+        const url = new URL(globalThis.location.href);
+        url.searchParams.set("id", id);
+        router.replace(url.pathname + url.search);
+      } catch {
+        // ignore navigation errors
       }
-    } catch {
-      // ignore fetch errors
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
+      setDetailLoading(true);
+      try {
+        const res = await fetch(`/api/logs/${id}`, { cache: "no-store" });
+        const data = res.ok ? await res.json() : null;
+        if (data) {
+          setSelectedLog({
+            id: data.id ?? id,
+            timestamp: data.timestamp,
+            status: data.status ?? 0,
+            model: data.model ?? null,
+            provider: data.provider ?? null,
+            account: data.account ?? null,
+            duration: data.duration ?? 0,
+            tokens: data.tokens ?? { in: 0, out: 0 },
+            active: data.active,
+            error: data.error ?? null,
+            path: data.path ?? null,
+          });
+          setDetailData(data);
+        }
+      } catch {
+        // ignore fetch errors
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [router]
+  );
 
   useEffect(() => {
     if (!initialSelectedId || initialOpenedRef.current) return;
@@ -576,6 +555,51 @@ export default function RequestTimeline({
           >
             {t("reset")}
           </button>
+          {/* Conversation lane-reuse window: how long a lane stays reserved
+              for its conversation before falling back to normal packing. */}
+          <label
+            className="flex items-center gap-1 px-2 py-1 text-[11px] text-text-muted bg-bg-subtle rounded-md border border-border"
+            title="Requests sharing a conversation id stay on the same timeline row as long as the gap between them is under this many minutes."
+          >
+            <span>Lane reuse</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={conversationLaneReuseMinutes}
+              onChange={(e) => {
+                const next = Math.max(1, Number(e.target.value) || 1);
+                setConversationLaneReuseMinutes(next);
+                try {
+                  localStorage.setItem(CONVERSATION_LANE_REUSE_STORAGE_KEY, String(next));
+                } catch {}
+              }}
+              className="w-10 bg-transparent text-center font-mono focus:outline-none"
+            />
+            <span>min</span>
+          </label>
+          {/* How often the timeline re-polls /api/usage/call-logs for new rows. */}
+          <label
+            className="flex items-center gap-1 px-2 py-1 text-[11px] text-text-muted bg-bg-subtle rounded-md border border-border"
+            title="How often the timeline re-fetches the request list from the server."
+          >
+            <span>Auto-refresh</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={listPollSeconds}
+              onChange={(e) => {
+                const next = Math.max(1, Number(e.target.value) || 1);
+                setListPollSeconds(next);
+                try {
+                  localStorage.setItem(TIMELINE_LIST_POLL_STORAGE_KEY, String(next));
+                } catch {}
+              }}
+              className="w-10 bg-transparent text-center font-mono focus:outline-none"
+            />
+            <span>s</span>
+          </label>
           {/* Zoom */}
           <div className="flex items-center gap-1 rounded-lg border border-border overflow-hidden">
             <button
@@ -668,6 +692,47 @@ export default function RequestTimeline({
               </div>
             </div>
           ))}
+
+          {/* Conversation connectors — one arrow per consecutive same-conversation
+              bar pair sharing a lane. */}
+          <svg
+            className="absolute left-0 right-0 pointer-events-none text-primary/60"
+            style={{
+              top: AXIS_HEIGHT,
+              height: (maxLane + 1) * LANE_HEIGHT,
+              width: "100%",
+              zIndex: 1,
+            }}
+            viewBox={`0 0 100 ${(maxLane + 1) * LANE_HEIGHT}`}
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <marker
+                id="conversation-connector-arrow"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="5"
+                markerHeight="5"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+              </marker>
+            </defs>
+            {connectorElements.map(({ id, x1, x2, y }) => (
+              <line
+                key={id}
+                x1={x1}
+                y1={y}
+                x2={x2}
+                y2={y}
+                stroke="currentColor"
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+                markerEnd="url(#conversation-connector-arrow)"
+              />
+            ))}
+          </svg>
         </div>
 
         {/* NOW line — full height of the canvas, outside content div */}
@@ -828,8 +893,8 @@ export default function RequestTimeline({
           log={selectedLog as any}
           detail={detailData}
           loading={detailLoading}
-          debugEnabled={false}
-          emailsVisible={false}
+          debugEnabled={selectedLog?.active ? true : detailLoggingEnabled}
+          emailsVisible={emailsVisible}
           onClose={closeDetail}
           onCopy={copyToClipboard}
           onPrevious={undefined}

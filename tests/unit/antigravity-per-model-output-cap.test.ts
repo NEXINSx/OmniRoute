@@ -82,6 +82,21 @@ test("an unknown model id falls back to the conservative ceiling", () => {
   assert.equal(clampFor("no-such-model-xyz", 65535), MAX_ANTIGRAVITY_OUTPUT_TOKENS);
 });
 
+test("retired Antigravity Flash ids cannot inherit provider-neutral output caps", () => {
+  for (const modelId of [
+    "gemini-3.6-flash-low",
+    "gemini-3.6-flash-medium",
+    "gemini-3.6-flash-high",
+    "gemini-3.5-flash-extra-low",
+    "gemini-3.5-flash-low",
+    "gemini-3.5-flash-medium",
+    "gemini-3.5-flash-high",
+    "gemini-3-flash-agent",
+  ]) {
+    assert.equal(clampFor(modelId, 65536), MAX_ANTIGRAVITY_OUTPUT_TOKENS, modelId);
+  }
+});
+
 test("a missing or empty model id falls back too", () => {
   assert.equal(clampFor(undefined, 65535), MAX_ANTIGRAVITY_OUTPUT_TOKENS);
   assert.equal(clampFor(null, 65535), MAX_ANTIGRAVITY_OUTPUT_TOKENS);
@@ -211,7 +226,7 @@ test("a provider-prefixed model id resolves to the model's ceiling, not the fall
   const cases: Array<[string, number]> = [
     ["agy/gemini-3.1-pro-high", 65535],
     ["antigravity/gemini-3.1-pro-high", 65535],
-    ["agy/gemini-3.6-flash-high", 65536],
+    ["agy/gemini-3.7-flash-high", 65536],
     ["agy/gpt-oss-120b-medium", 32768],
   ];
 

@@ -61,6 +61,10 @@ const IGNORE_FROM_CODE = new Set([
   "APPDATA",
   "LOCALAPPDATA",
   "XDG_CONFIG_HOME",
+  // systemd-injected notify socket path (sd_notify protocol, see
+  // scripts/dev/systemd-notify.mjs) — set by systemd only when running under
+  // a unit, never user config.
+  "NOTIFY_SOCKET",
   // XDG Base Directory cache root — read (never defined by OmniRoute) so the
   // Android/Termux serve path can honor an operator-set cache location (#8519).
   "XDG_CACHE_HOME",
@@ -91,6 +95,12 @@ const IGNORE_FROM_CODE = new Set([
   // CI providers (set by the runner).
   "GITHUB_BASE_REF",
   "GITHUB_BASE_SHA",
+  // Set by the Actions runner; the ts7 ratchet appends its job summary there
+  // (scripts/check/check-ts7-diagnostics-ratchet.mjs) — never OmniRoute runtime config (#9985).
+  "GITHUB_STEP_SUMMARY",
+  // Same class as BASE_REF: CI passes the PR base ref to the ts7 diagnostics ratchet
+  // (scripts/check/check-ts7-diagnostics-ratchet.mjs) — a check signal, not runtime config (#9985).
+  "TS7_BASE_REF",
   // CI passes BASE_REF=${{ github.base_ref }} to the OpenAPI breaking-change gate
   // (scripts/check/check-openapi-breaking.mjs) — a build/check signal, not OmniRoute runtime config.
   "BASE_REF",
@@ -116,6 +126,10 @@ const IGNORE_FROM_CODE = new Set([
   // ("http://192.168.0.15:20128" / null), never OmniRoute runtime config (#5151).
   "COMBO_LIVE_BASE_URL",
   "COMBO_LIVE_API_KEY",
+  // Ad-hoc mesh/coverage scripts under scripts/ad-hoc/*.mjs (mesh-send, mesh-run,
+  // verify-coverage). Operator-supplied script secrets, not OmniRoute runtime config.
+  "BOT_TOKEN",
+  "BOT_URL",
   // Homologation E2E suite (npm run homolog) vars — configured via the dedicated
   // .env.homolog file (template: .env.homolog.example), never in the runtime .env.
   // Test/ops-only signals against the homologation VPS, same class as COMBO_LIVE_*.
@@ -142,8 +156,11 @@ const IGNORE_FROM_CODE = new Set([
   // X11/Wayland display server vars used by tray heuristic (isTraySupported).
   "DISPLAY",
   "WAYLAND_DISPLAY",
-  // Build-time override for OpenAPI spec path used by generate-api-commands.mjs.
+  // Build-time overrides for generate-api-commands.mjs (spec input / commands output dir).
+  // OPENAPI_OUT_DIR exists so tests/unit/cli-api-generator-ref-params.test.ts can regenerate
+  // into a scratch dir instead of the real bin/cli/api-commands/ tree.
   "OPENAPI_SPEC",
+  "OPENAPI_OUT_DIR",
   // Aliases for documented vars handled via fallback ordering.
   "API_KEY",
   "APP_URL",
@@ -191,6 +208,10 @@ const IGNORE_FROM_CODE = new Set([
   // NVIDIA diagnostic/test helpers used only by ad-hoc scripts.
   "NVIDIA_BASE_URL",
   "NVIDIA_MODEL",
+  // Discord integration ad-hoc script (scripts/ad-hoc/mesh-send.mjs) —
+  // operator-supplied bot credentials, not user-facing OmniRoute config.
+  "BOT_TOKEN",
+  "BOT_URL",
   // XDG standard data directory — set by OS/desktop session, not OmniRoute config.
   // Read by setup-open-code.mjs to locate platform-specific OpenCode data dir.
   "XDG_DATA_HOME",

@@ -27,6 +27,12 @@ interface VideoProvider {
   authHeader: string;
   format: string;
   models: VideoModel[];
+  // #10285 — set when a provider is registered (so parseVideoModel/getVideoProvider
+  // still resolve it for a clear diagnostic) but must NOT be advertised as a working
+  // model in /v1/models or getAllVideoModels(). Keep unsupportedReason short and
+  // stable — handlers may surface it verbatim in the fail-fast error message.
+  unsupported?: boolean;
+  unsupportedReason?: string;
 }
 
 export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
@@ -119,6 +125,18 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
       { id: "veo-3.1-fast-generate", name: "Veo 3.1 Fast (Google Flow)" },
       { id: "veo-3.0-generate", name: "Veo 3.0 (Google Flow)" },
     ],
+    // #10285 — live-validated: the submit/poll paths above (/v1:generateVideo,
+    // /v1:fetchOperation) are 404 on aisandbox-pa; the reporter's measured working
+    // path (POST /v1/video:batchAsyncGenerateVideoText) is undocumented and, even
+    // reached, rejects the stored Cloud Code OAuth bearer (401 UNAUTHENTICATED —
+    // the cclog/cloud-platform scopes do not grant aisandbox-pa). gflow-cli confirms
+    // only a headed-browser reCAPTCHA session works for mutation endpoints. De-listed
+    // until a viable server-side transport is confirmed live (see plan-file #10285).
+    unsupported: true,
+    unsupportedReason:
+      "Google Flow video generation requires a browser-session transport " +
+      "(Flow/Cloud Code session with reCAPTCHA) and is not supported over the stored " +
+      "OAuth bearer. Generate video via labs.google/flow directly for now.",
   },
 
   kie: {
@@ -399,17 +417,19 @@ export function parseVideoModel(modelStr: string | null) {
  * Get all video models as a flat list
  */
 export function getAllVideoModels() {
-  return Object.entries(VIDEO_PROVIDERS).flatMap(([providerId, config]) =>
-    [providerId, config.alias]
-      .filter((prefix): prefix is string => Boolean(prefix))
-      .flatMap((prefix) =>
-        config.models.map((model) => ({
-          id: `${prefix}/${model.id}`,
-          name: model.name,
-          provider: providerId,
-          supportedSizes: model.supportedSizes || [],
-          mediaCapabilities: model.mediaCapabilities,
-        }))
-      )
-  );
+  return Object.entries(VIDEO_PROVIDERS)
+    .filter(([, config]) => !config.unsupported)
+    .flatMap(([providerId, config]) =>
+      [providerId, config.alias]
+        .filter((prefix): prefix is string => Boolean(prefix))
+        .flatMap((prefix) =>
+          config.models.map((model) => ({
+            id: `${prefix}/${model.id}`,
+            name: model.name,
+            provider: providerId,
+            supportedSizes: model.supportedSizes || [],
+            mediaCapabilities: model.mediaCapabilities,
+          }))
+        )
+    );
 }

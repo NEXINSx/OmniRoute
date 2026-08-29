@@ -11,6 +11,7 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     color: "#10A37F",
     textIcon: "OA",
     website: "https://platform.openai.com",
+    serviceKinds: ["llm", "imageToText"],
   },
   reka: {
     id: "reka",
@@ -52,6 +53,7 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     color: "#D97757",
     textIcon: "AN",
     website: "https://platform.claude.com",
+    serviceKinds: ["llm", "imageToText"],
   },
   gemini: {
     id: "gemini",
@@ -63,7 +65,8 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     website: "https://aistudio.google.com",
     hasFree: true,
     freeNote:
-      "Free forever: 1,500 req/day for Gemini 2.5 Flash — no credit card, get key at aistudio.google.com",
+      "Free tier available through Google AI Studio; current per-model quotas and regional limits apply",
+    serviceKinds: ["llm", "imageToText"],
   },
   groq: {
     id: "groq",
@@ -75,6 +78,7 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     website: "https://groq.com",
     hasFree: true,
     freeNote: "Free tier: 30 RPM / 14.4K RPD — no credit card",
+    serviceKinds: ["llm", "imageToText"],
   },
   blackbox: {
     id: "blackbox",
@@ -85,7 +89,13 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     textIcon: "BB",
     website: "https://blackbox.ai",
     hasFree: true,
-    freeNote: "Free tier: unlimited basic chat plus Minimax-M2.5, no credit card required",
+    freeNote:
+      "Limited free access is available through Blackbox; model availability and account limits apply",
+    subscriptionRisk: true,
+    riskNoticeVariant: "deprecated",
+    deprecated: true,
+    deprecationReason:
+      "api.blackbox.ai returns HTTP 404 on every path variant (sweep 2026-08-21); the public inference surface has moved to the gated enterprise.blackbox.ai/v1 endpoint.",
   },
   xai: {
     id: "xai",
@@ -95,6 +105,14 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     color: "#1DA1F2",
     textIcon: "XA",
     website: "https://x.ai",
+    serviceKinds: ["llm", "imageToText"],
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
+    authHint:
+      "Use an official xAI API key, or sign in with xAI OAuth. Grok Build JWT sessions remain a separate provider.",
+    // The dashboard presents xAI as one dual-auth provider while preserving
+    // the separate backend OAuth provider ID for token refresh and quota flow.
+    oauthProviderId: "xai-oauth",
   },
   mistral: {
     id: "mistral",
@@ -106,6 +124,7 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     website: "https://mistral.ai",
     hasFree: true,
     freeNote: "Free Experiment tier: rate-limited access to all models, no credit card required",
+    serviceKinds: ["llm", "imageToText"],
   },
   perplexity: {
     id: "perplexity",

@@ -54,8 +54,7 @@ Complete guide for configuring providers, creating combos, integrating CLI tools
 | **💰 CHEAP**        | GLM-4.7           | $0.6/1M     | Daily 10AM     | Budget backup        |
 |                     | MiniMax M2.1      | $0.2/1M     | 5-hour rolling | Cheapest option      |
 |                     | Kimi K2           | $9/mo flat  | 10M tokens/mo  | Predictable cost     |
-| **🆓 FREE**         | Qoder             | $0          | Unlimited      | 8 models free        |
-|                     | Qwen              | $0          | Unlimited      | 3 models free        |
+| **🆓 FREE**         | Qoder             | $0          | Provider limits apply | Verify current catalog |
 |                     | Kiro              | $0          | ~50 credits/mo | Claude free          |
 
 ---
@@ -81,12 +80,12 @@ vs. $20 + hitting limits = frustration
 **Problem:** Can't afford subscriptions, need reliable AI coding
 
 ```
-Combo: "free-forever"
-  1. if/kimi-k2.7-code          (unlimited free)
+Combo: "zero-cost"
+  1. if/kimi-k2.7-code          (listed free access; rate limits may apply)
   2. kr/qwen3-coder-next        (Kiro free fallback)
 
 Monthly cost: $0
-Quality: Production-ready models
+Quality: verify the model, limits, privacy, and SLA for your workload
 ```
 
 ### Case 3: "I need 24/7 coding, no interruptions"
@@ -99,9 +98,9 @@ Combo: "always-on"
   2. cx/gpt-5.5                (second subscription)
   3. glm/glm-4.7               (cheap, resets daily)
   4. minimax/MiniMax-M2.1      (cheapest, 5h reset)
-  5. if/deepseek-v4-flash       (free unlimited)
+  5. if/deepseek-v4-flash       (listed free access; rate limits may apply)
 
-Result: 5 layers of fallback = zero downtime
+Result: 5 fallback layers broaden resilience; upstream availability is not guaranteed
 Monthly cost: $20-200 (subscriptions) + $10-20 (backup)
 ```
 
@@ -111,9 +110,9 @@ Monthly cost: $20-200 (subscriptions) + $10-20 (backup)
 
 ```
 Combo: "openclaw-free"
-  1. if/qwen3.8-max-preview     (unlimited free)
-  2. if/deepseek-v4-flash       (unlimited free)
-  3. if/kimi-k2.7-code          (unlimited free)
+  1. if/qwen3.8-max-preview     (listed free access; rate limits may apply)
+  2. if/deepseek-v4-flash       (listed free access; rate limits may apply)
+  3. if/kimi-k2.7-code          (listed free access; rate limits may apply)
 
 Monthly cost: $0
 Access via: WhatsApp, Telegram, Slack, Discord, iMessage, Signal...
@@ -213,7 +212,7 @@ removes its models from `/v1/models`.
 #### Qoder (9 FREE models)
 
 ```bash
-Dashboard → Connect Qoder → OAuth login → Unlimited usage
+Dashboard → Connect Qoder → OAuth login → Access is subject to current provider limits
 
 Models: if/qwen3.8-max-preview, if/qwen3.7-max, if/qwen3.7-plus, if/kimi-k3, if/kimi-k2.7-code, if/glm-5.2, if/deepseek-v4-pro, if/deepseek-v4-flash, if/minimax-m3
 ```
@@ -251,10 +250,10 @@ Use in CLI: premium-coding
 ```
 Name: free-combo
 Models:
-  1. if/kimi-k2.7-code (unlimited)
+  1. if/kimi-k2.7-code (listed free access; provider limits may apply)
   2. kr/qwen3-coder-next (Kiro free fallback)
 
-Cost: $0 forever!
+Cost: currently listed as $0; terms and availability may change
 ```
 
 ---
@@ -263,12 +262,18 @@ Cost: $0 forever!
 
 ### Cursor IDE
 
+**Using Cursor as an OmniRoute client** (route Cursor chat through OmniRoute):
+
 ```
 Settings → Models → Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
   OpenAI API Key: [from omniroute dashboard]
   Model: cc/claude-opus-4-7
 ```
+
+**Using OmniRoute as a Cursor provider** (OmniRoute calls Cursor upstream): prefer
+**Dashboard → Providers → Cursor → Login with Cursor**. In Docker, see
+[`docs/providers/CURSOR-DOCKER.md`](../providers/CURSOR-DOCKER.md).
 
 ### Claude Code
 
@@ -350,6 +355,49 @@ omniroute --port 3000
 ```
 
 The CLI automatically loads `.env` from `~/.omniroute/.env` or `./.env`.
+
+### Tray mode
+
+Start OmniRoute in the system tray:
+
+```bash
+omniroute serve --tray
+```
+
+The command returns after the server and tray are ready.
+
+The server continues without the terminal.
+
+Tray mode supports macOS, Windows, and graphical Linux sessions. Tray mode does not open the dashboard automatically.
+
+Use the tray menu for these actions:
+
+- Open the dashboard.
+- Open `/dashboard/logs`.
+- Change auto-start.
+- Stop OmniRoute.
+
+Do not combine `--tray` with these options:
+
+- `--daemon`
+- `--log`
+- `--no-recovery`
+
+These modes require different process ownership.
+
+Enable startup at the next machine login:
+
+```bash
+omniroute autostart enable
+```
+
+Auto-start uses tray mode on macOS, Windows, and graphical Linux sessions. Headless Linux uses the existing systemd user service.
+
+Disable startup at login:
+
+```bash
+omniroute autostart disable
+```
 
 ### Uninstalling
 
@@ -778,7 +826,7 @@ Configure via **Dashboard → Settings → Routing**. The dashboard exposes the 
 - `p2c` (Power of Two Choices)
 - `least-used` and `cost-optimized`
 - `auto` — score-driven across all candidates
-- `lkgp` (Last Known Good Provider) — sticks to the last successful model per session
+- `lkgp` (Last Known Good Provider) — pins to the last successful provider, then falls back to rules
 - `context-optimized` — picks the model with the largest free context window
 - `context-relay` — chains long-context models for follow-up turns
 
@@ -895,15 +943,15 @@ curl -X POST http://localhost:20128/api/db-backups/import \
 
 The settings page is organized into **7 tabs** for easy navigation:
 
-| Tab            | Contents                                                                                                                                                 |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **General**    | System storage tools, default behavior, Endpoint tunnel visibility                                                                                       |
-| **Appearance** | Theme controls (light/dark/system), sidebar visibility, panel toggles for Cloudflare/Tailscale/ngrok tunnel cards                                        |
-| **AI**         | Thinking budget configuration, global system prompt injection, prompt cache stats                                                                        |
-| **Security**   | Login/Password settings, IP Access Control, API auth for `/models`, Provider Blocking, prompt-injection guard                                            |
-| **Routing**    | Global routing strategy (Fill First / Round Robin / P2C / Random / Least Used / Cost Optimized), wildcard model aliases, fallback chains, combo defaults |
-| **Resilience** | Request queue, connection cooldown, provider breaker config, and wait-for-cooldown behavior                                                              |
-| **Advanced**   | Global proxy configuration (HTTP/SOCKS5), per-provider proxy overrides                                                                                   |
+| Tab            | Contents                                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General**    | System storage tools, default behavior, Endpoint tunnel visibility                                                                                        |
+| **Appearance** | Theme controls (light/dark/system), sidebar visibility, panel toggles for Cloudflare/Tailscale/ngrok tunnel cards                                         |
+| **AI**         | Thinking budget (passthrough / auto-strip / custom / adaptive — see [THINKING_BUDGET.md](./THINKING_BUDGET.md)), global system prompt, prompt cache stats |
+| **Security**   | Login/Password settings, IP Access Control, API auth for `/models`, Provider Blocking, prompt-injection guard                                             |
+| **Routing**    | Global routing strategy (Fill First / Round Robin / P2C / Random / Least Used / Cost Optimized), wildcard model aliases, fallback chains, combo defaults  |
+| **Resilience** | Request queue, connection cooldown, provider breaker config, and wait-for-cooldown behavior                                                               |
+| **Advanced**   | Global proxy configuration (HTTP/SOCKS5), per-provider proxy overrides                                                                                    |
 
 General no longer duplicates read-only logging and cache notes. Database retention and
 optimization settings are persisted through `/api/settings/database`; manual cache clearing uses
@@ -948,8 +996,11 @@ Content-Type: multipart/form-data
 curl -X POST http://localhost:20128/v1/audio/transcriptions \
   -H "Authorization: Bearer your-api-key" \
   -F "file=@audio.mp3" \
-  -F "model=deepgram/nova-3"
+  -F "model=openai/whisper-1"
 ```
+
+`deepgram/nova-3` is the native Deepgram route and needs a Deepgram API key.
+If only OpenRouter is configured, use `openrouter/deepgram/nova-3`.
 
 **Speech-to-Text (transcription)** providers:
 
@@ -975,7 +1026,6 @@ curl -X POST http://localhost:20128/v1/audio/transcriptions \
 - `kie/`
 - `aws-polly/`
 - `xiaomi-mimo/`
-- `edgetts/` (Microsoft Edge "Read Aloud" — free, no API key; unofficial/reverse-engineered endpoint)
 - `coqui/`, `tortoise/`
 - `qwen/`
 
@@ -1036,15 +1086,15 @@ Access via **Dashboard → Health**. Real-time system health overview with 6 car
 
 OmniRoute ships with a **score-driven auto-router** that picks the best model for each request across every connected provider — no combo to maintain. Just send the request with one of the `auto/*` prefixes and OmniRoute will assemble a virtual combo on the fly, scoring candidates on latency, cost, success rate, context fit, model fitness for the task, recent failures, quota, and circuit-breaker state.
 
-| Prefix         | Optimizes for                                                                 |
-| -------------- | ----------------------------------------------------------------------------- |
-| `auto`         | Balanced default (latency × cost × success rate)                              |
-| `auto/coding`  | Coding tasks: prefers Claude, GPT-5, GLM, Kimi, Qwen Coder, DeepSeek coders   |
-| `auto/cheap`   | Lowest $/token, accepts higher latency                                        |
-| `auto/fast`    | Lowest latency, ignores cost                                                  |
-| `auto/offline` | Local-only providers (Ollama, vLLM, llama.cpp) — useful for air-gapped setups |
-| `auto/smart`   | Reasoning quality first (Opus, GPT-5 xhigh, R1, GLM 5.1 reasoning)            |
-| `auto/lkgp`    | "Last Known Good Provider" — sticky to the most recently successful target    |
+| Prefix         | Optimizes for                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| `auto`         | Balanced default (latency × cost × success rate)                                            |
+| `auto/coding`  | Coding tasks: prefers Claude, GPT-5, GLM, Kimi, Qwen Coder, DeepSeek coders                 |
+| `auto/cheap`   | Lowest $/token, accepts higher latency                                                      |
+| `auto/fast`    | Lowest latency, ignores cost                                                                |
+| `auto/offline` | Local-only providers (Ollama, vLLM, llama.cpp) — useful for air-gapped setups               |
+| `auto/smart`   | Reasoning quality first (Opus, GPT-5 xhigh, R1, GLM 5.1 reasoning)                          |
+| `auto/lkgp`    | "Last Known Good Provider" — pins to the last successful provider, then falls back to rules |
 
 Example:
 
@@ -1094,7 +1144,7 @@ Use the SSE URL `http://localhost:20128/api/mcp/sse` and a Bearer API key genera
 
 ### Scopes
 
-MCP tools are grouped into 10 scopes: `analytics`, `auth`, `billing`, `combos`, `health`, `keys`, `memory`, `models`, `providers`, `system`. Each Bearer key can be limited to specific scopes — see [MCP-SERVER.md](../frameworks/MCP-SERVER.md) for the full tool catalog and [A2A-SERVER.md](../frameworks/A2A-SERVER.md) for the JSON-RPC schema.
+MCP currently defines 32 named scopes. Each Bearer key can be limited to specific scopes — see [MCP-SERVER.md](../frameworks/MCP-SERVER.md) for the authoritative scope and tool inventory and [A2A-SERVER.md](../frameworks/A2A-SERVER.md) for the JSON-RPC schema.
 
 ---
 

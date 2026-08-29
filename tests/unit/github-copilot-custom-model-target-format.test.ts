@@ -15,10 +15,14 @@ import assert from "node:assert/strict";
 import { GithubExecutor } from "../../open-sse/executors/github.ts";
 import { resolveExecutionCredentials } from "../../open-sse/handlers/chatCore/executionCredentials.ts";
 
+// NOTE: the "custom model" id must stay ABSENT from the gh registry for these
+// tests to exercise the override path — #9050 (ea4bbdf7c0) promoted the original
+// gpt-5.6-terra/luna ids into the curated registry with
+// targetFormat:"openai-responses", so we use a fictional gpt-5.7-nova instead.
 test("BUG: GithubExecutor.buildUrl ignores a per-model targetFormat:'openai-responses' override and still returns the chat/completions URL", () => {
   const executor = new GithubExecutor();
   const credentialsWithoutOverride = { apiKey: "test-token" };
-  const url = executor.buildUrl("gpt-5.6-terra", false, 0, credentialsWithoutOverride);
+  const url = executor.buildUrl("gpt-5.7-nova", false, 0, credentialsWithoutOverride);
   assert.ok(
     !url.endsWith("/responses"),
     "sanity check: with no override and a non-codex custom model id, buildUrl falls back to chat/completions"
@@ -31,7 +35,7 @@ test("FIX: GithubExecutor.buildUrl honors providerSpecificData.targetFormat:'ope
     apiKey: "test-token",
     providerSpecificData: { targetFormat: "openai-responses" },
   };
-  const url = executor.buildUrl("gpt-5.6-terra", false, 0, credentialsWithOverride);
+  const url = executor.buildUrl("gpt-5.7-nova", false, 0, credentialsWithOverride);
   assert.ok(
     url.endsWith("/responses"),
     `expected the /responses endpoint when the override is set, got: ${url}`

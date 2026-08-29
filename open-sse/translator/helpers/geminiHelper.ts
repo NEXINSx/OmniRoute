@@ -21,6 +21,12 @@ export const GEMINI_UNSUPPORTED_SCHEMA_KEYS = new Set([
   // do this by default). Gemini's function_declarations schema doesn't recognize
   // it and 400s the same way ("Unknown name \"strict\" ... Cannot find field").
   "strict",
+  // Codex's multi-agent collaboration tools (spawn_agent / send_message /
+  // followup_task) mark their `message` parameter schema with a non-standard
+  // `encrypted: true` annotation (JsonSchema::with_encrypted). Gemini's
+  // function_declarations schema doesn't recognize it and 400s the same way
+  // ("Unknown name \"encrypted\" ... Cannot find field").
+  "encrypted",
   // NOTE: `pattern` is intentionally NOT in this set. Antigravity (Gemini-derived
   // surface) accepts `pattern` on string constraints, and glob/grep/file-search
   // tools depend on it to express their argument regex. Removing it produced
@@ -52,6 +58,11 @@ export const GEMINI_UNSUPPORTED_SCHEMA_KEYS = new Set([
   "contains",
   "minContains",
   "maxContains",
+  // #9617: array uniqueness keyword — agentic-CLI tool schemas (JSON-Schema
+  // generators) set this routinely and Gemini's schema parser has no field for
+  // it, rejecting the whole request with "Unknown name \"uniqueItems\"".
+  // Upstream 9router already strips it alongside `contains` for the same error.
+  "uniqueItems",
   // Complex schema keywords (handled by flattenAnyOfOneOf/mergeAllOf)
   "anyOf",
   "oneOf",
@@ -702,10 +713,7 @@ export function cleanJSONSchemaForAntigravity(schema: unknown): unknown {
     }
 
     const record = obj as JsonRecord;
-    if (
-      !record.type &&
-      (record.properties !== undefined || record.required !== undefined)
-    ) {
+    if (!record.type && (record.properties !== undefined || record.required !== undefined)) {
       record.type = "object";
     }
 
@@ -718,6 +726,34 @@ export function cleanJSONSchemaForAntigravity(schema: unknown): unknown {
   }
 
   injectObjectType(cleaned);
+
+  // Phase 8: Ensure array types have an items schema (#10578).
+  // Gemini strictly requires array parameters to define their `items` schema.
+  // If an MCP tool defines an array but forgets the items, inject a safe default.
+  function ensureArrayItems(obj: unknown): void {
+    if (!obj || typeof obj !== "object") return;
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        ensureArrayItems(item);
+      }
+      return;
+    }
+
+    const record = obj as JsonRecord;
+    if (record.type === "array" && !record.items) {
+      record.items = { type: "string" };
+    }
+
+    // Recurse into remaining values.
+    for (const value of Object.values(record)) {
+      if (value && typeof value === "object") {
+        ensureArrayItems(value);
+      }
+    }
+  }
+
+  ensureArrayItems(cleaned);
 
   return cleaned;
 }

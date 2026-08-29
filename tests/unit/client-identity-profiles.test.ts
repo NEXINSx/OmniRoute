@@ -24,7 +24,7 @@ const core = await import("../../src/lib/db/core.ts");
 
 test.after(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("getClientIdentityProfileHeaders: default profile adds no headers", () => {
@@ -43,7 +43,7 @@ test("getClientIdentityProfileHeaders: known CLI profiles expose their preset he
   assert.equal(claudeCli["X-App"], "cli");
 
   const codexCli = getClientIdentityProfileHeaders("codex-cli");
-  assert.equal(codexCli["User-Agent"], "codex_cli_rs/0.146.0");
+  assert.equal(codexCli["User-Agent"], "codex_cli_rs/0.149.0");
   assert.equal(codexCli.originator, "codex_cli_rs");
 
   const geminiCli = getClientIdentityProfileHeaders("gemini-cli");
@@ -80,7 +80,7 @@ test("a selected profile's headers land in providerSpecificData.customHeaders", 
     customHeaders: { ...profileHeaders, "X-Operator-Set": "keep-me" },
   };
 
-  assert.equal(providerSpecificData.customHeaders["User-Agent"], "codex_cli_rs/0.146.0");
+  assert.equal(providerSpecificData.customHeaders["User-Agent"], "codex_cli_rs/0.149.0");
   assert.equal(providerSpecificData.customHeaders.originator, "codex_cli_rs");
   assert.equal(providerSpecificData.customHeaders["X-Operator-Set"], "keep-me");
 });

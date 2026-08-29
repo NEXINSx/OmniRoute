@@ -60,6 +60,7 @@ import { registerAutostart } from "./autostart.mjs";
 import { registerRepl } from "./repl.mjs";
 import { registerLaunch } from "./launch.mjs";
 import { registerLaunchCodex } from "./launch-codex.mjs";
+import { registerRun } from "./run.mjs";
 import { registerSetupCodex } from "./setup-codex.mjs";
 import { registerSetupClaude } from "./setup-claude.mjs";
 import { registerSetupOpencode } from "./setup-opencode.mjs";
@@ -78,6 +79,8 @@ import { registerTokens } from "./tokens.mjs";
 import { registerConfigure } from "./configure.mjs";
 import { registerApiCommands } from "../api-commands/registry.mjs";
 import { registerPlugin } from "./plugin.mjs";
+import { registerRadar } from "./radar.mjs";
+import { registerPacks } from "./packs.mjs";
 
 export function registerCommands(program) {
   registerMemory(program);
@@ -143,6 +146,7 @@ export function registerCommands(program) {
   registerRepl(program);
   registerLaunch(program);
   registerLaunchCodex(program);
+  registerRun(program);
   registerSetupCodex(program);
   registerSetupClaude(program);
   registerSetupOpencode(program);
@@ -161,4 +165,6 @@ export function registerCommands(program) {
   registerConfigure(program);
   registerApiCommands(program);
   registerPlugin(program);
+  registerRadar(program);
+  registerPacks(program);
 }

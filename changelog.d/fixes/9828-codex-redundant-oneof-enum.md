@@ -1,1 +1,0 @@
-- **fix(executors):** prevent intermittent Codex `upstream_empty_response` errors for tool schemas that combine `oneOf` const branches with a matching sibling `enum` by removing only the semantically redundant `oneOf`; bare, narrowing, non-matching, and type-discriminated `oneOf` schemas remain unchanged. ([#9828](https://github.com/diegosouzapw/OmniRoute/pull/9828))

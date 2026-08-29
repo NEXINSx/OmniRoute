@@ -46,7 +46,7 @@ A boolean flag is considered **enabled** when its effective value is `"true"`,
 
 ## Flag Catalog
 
-38 flags across 6 categories. **Default** is the definition default — the value
+37 flags across 6 categories. **Default** is the definition default — the value
 used when neither a DB override nor an environment variable is present.
 
 ### Security (7)
@@ -82,7 +82,7 @@ used when neither a DB override nor an environment variable is present.
 | ----------------------------------------- | ------- | ---------- | ------- | ---------------------------------------------------------------------- |
 | `TOOL_POLICY_MODE`                        | enum    | `disabled` |         | Tool-use policy enforcement mode. Values: `disabled`, `warn`, `block`. |
 | `RATE_LIMIT_AUTO_ENABLE`                  | boolean | `false`    |         | Automatically enable rate limiting based on usage patterns.            |
-| `ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE` | boolean | `false`    | ✓       | Allow multiple connections per compatibility node.                     |
+| `DISABLE_CONTEXT_WINDOW_CHECKS`           | boolean | `false`    |         | Skip OmniRoute's local context-window / max-input-token check for direct single-model requests. Upstream limits still apply. |
 
 ### Runtime (11)
 

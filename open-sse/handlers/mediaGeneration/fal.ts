@@ -244,6 +244,12 @@ async function runFalQueue({
   const startTime = Date.now();
   const baseUrl = providerConfig.baseUrl.replace(/\/$/, "");
   const token = getToken(credentials);
+  // Missing-credential guard — do not send an unauthenticated request upstream.
+  // The standalone falHandler.ts this module superseded (#9982/#10198 over
+  // #9969) returned this local 401; preserve that contract.
+  if (!token) {
+    return { success: false, status: 401, error: "Fal API key is required" };
+  }
   const headers = {
     Authorization: `Key ${token}`,
     "Content-Type": "application/json",

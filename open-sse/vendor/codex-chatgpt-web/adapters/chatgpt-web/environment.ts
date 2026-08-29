@@ -237,12 +237,15 @@ function trustedEnvironmentText(parsed: CodexParsedRequest): string {
 }
 
 function decodeXmlText(value: string): string {
+  // `&amp;` MUST be decoded last: decoding it first produces a bare `&` that the
+  // later passes re-consume, so `&amp;quot;` would collapse to `"` instead of the
+  // literal `&quot;` (double-unescape — CodeQL js/double-escaping).
   return value
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">")
-    .replaceAll("&amp;", "&")
     .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'");
+    .replaceAll("&#39;", "'")
+    .replaceAll("&amp;", "&");
 }
 
 function uniqueAbsolutePaths(values: string[], field: string): string[] {

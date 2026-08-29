@@ -195,7 +195,7 @@ describe("EditConnectionModal — encrypted Responses reasoning", () => {
     expect(onSave.mock.calls[0][0].providerSpecificData?.preserveEncryptedReasoning).toBe(false);
   });
 
-  it("defaults off and persists an opt-in for first-party OpenAI", async () => {
+  it("hides the redundant opt-in for first-party OpenAI and removes stale state on save", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const el = render({
       providerId: "openai",
@@ -203,19 +203,19 @@ describe("EditConnectionModal — encrypted Responses reasoning", () => {
         id: "conn-openai",
         provider: "openai",
         authType: "apikey",
-        providerSpecificData: {},
+        providerSpecificData: { preserveEncryptedReasoning: true },
       },
       onSave,
     });
-    const toggle = el.querySelector<HTMLButtonElement>(PRESERVE_TOGGLE)!;
-    expect(toggle.getAttribute("aria-checked")).toBe("false");
-    act(() => toggle.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(el.querySelector(PRESERVE_TOGGLE)).toBeNull();
     const saveBtn = Array.from(el.querySelectorAll("button")).find(
       (button) => button.textContent?.trim() === "save"
     )!;
     act(() => saveBtn.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await waitFor(() => onSave.mock.calls.length > 0);
-    expect(onSave.mock.calls[0][0].providerSpecificData?.preserveEncryptedReasoning).toBe(true);
+    expect(onSave.mock.calls[0][0].providerSpecificData).not.toHaveProperty(
+      "preserveEncryptedReasoning"
+    );
   });
 
   it("is absent for a chat-only compatible connection", () => {
@@ -244,7 +244,7 @@ describe("EditConnectionModal — encrypted Responses reasoning", () => {
     expect(el.querySelector(PRESERVE_TOGGLE)?.getAttribute("aria-checked")).toBe("false");
   });
 
-  it("keeps Codex controls and persists the opt-in on its OAuth save path", async () => {
+  it("hides the redundant opt-in for Codex while keeping its effective controls", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const el = render({
       providerId: "codex",
@@ -256,22 +256,19 @@ describe("EditConnectionModal — encrypted Responses reasoning", () => {
       },
       onSave,
     });
-    expect(el.querySelector(PRESERVE_TOGGLE)?.getAttribute("aria-checked")).toBe("true");
+    expect(el.querySelector(PRESERVE_TOGGLE)).toBeNull();
     expect(el.textContent).toContain("defaultThinkingStrengthLabel");
     expect(
       el.querySelector('button[role="switch"][aria-label="openaiResponsesStoreLabel"]')
     ).toBeTruthy();
-    const cooldownToggle = el.querySelector<HTMLButtonElement>(
-      'button[role="switch"][aria-label="disableCoolingLabel"]'
-    )!;
-    const reasoningToggle = el.querySelector<HTMLButtonElement>(PRESERVE_TOGGLE)!;
-    expect(reasoningToggle.parentElement?.nextElementSibling).toBe(cooldownToggle.parentElement);
     const saveBtn = Array.from(el.querySelectorAll("button")).find(
       (button) => button.textContent?.trim() === "save"
     )!;
     act(() => saveBtn.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await waitFor(() => onSave.mock.calls.length > 0);
-    expect(onSave.mock.calls[0][0].providerSpecificData?.preserveEncryptedReasoning).toBe(true);
+    expect(onSave.mock.calls[0][0].providerSpecificData).not.toHaveProperty(
+      "preserveEncryptedReasoning"
+    );
   });
 });
 

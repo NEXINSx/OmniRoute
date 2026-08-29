@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
+
 import Modal from "./Modal";
 import Button from "./Button";
 import Input from "./Input";
@@ -50,15 +51,8 @@ const DEVICE_CODE_PROVIDERS = new Set([
   "grok-cli",
 ]);
 
-const TOKEN_PASTE_PROVIDERS = new Set(["windsurf", "devin-cli", "grok-cli"]);
-
-/**
- * Phase 1 hotfix (2026-05-29): windsurf & devin-cli only support import-token.
- * Their PKCE flow targeting app.devin.ai/editor/signin returned 404 post-rebrand.
- * Phase 2 will reintroduce browser login via Firebase OAuth + RegisterUser.
- * Spec: _tasks/superpowers/specs/2026-05-29-windsurf-login-fix-design.md.
- */
-const IMPORT_TOKEN_ONLY_PROVIDERS = new Set(["windsurf", "devin-cli"]);
+const TOKEN_PASTE_PROVIDERS = new Set(["devin-desktop", "devin-cli", "grok-cli"]);
+const IMPORT_TOKEN_ONLY_PROVIDERS = new Set(["devin-desktop", "devin-cli"]);
 
 // POST a bare Codex access token to the access-token-only import endpoint
 // (#1290); shared by the bare-JWT and session-JSON paste branches (#6636).
@@ -277,7 +271,7 @@ export default function OAuthModal({
     [authData, provider, onSuccess, reauthConnection, t]
   );
 
-  // Save a raw API token directly (windsurf / devin-cli import-token path).
+  // Save a raw API token directly (Devin Desktop / Devin CLI import-token path).
   // For grok-cli, require the full auth.json object so refresh_token is persisted (#7610).
   const handleSaveToken = useCallback(async () => {
     const raw = pasteToken.trim();
@@ -294,7 +288,7 @@ export default function OAuthModal({
         }
         token = parsed.token;
       }
-      // POST to /import-token. Grok accepts full auth.json; windsurf/devin accept bare keys.
+      // POST to /import-token. Grok accepts full auth.json; Devin accepts bare keys.
       const res = await fetch(`/api/oauth/${provider}/import-token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -436,13 +430,17 @@ export default function OAuthModal({
           const verifyUrl = data.verification_uri_complete || data.verification_uri;
           if (typeof verifyUrl === "string" && verifyUrl) window.open(verifyUrl, "oauth_verify");
 
-          // Start polling - pass extraData for Kiro (contains _clientId, _clientSecret)
+          // Start polling - pass extraData for Kiro (contains _clientId, _clientSecret).
+          // _authMethod must be forwarded too: pollToken falls back to "builder-id" without it,
+          // which makes postExchange skip the Q Developer profile lookup. An IdC connection then
+          // gets persisted with no profileArn and every usage call returns 403.
           const extraData =
             provider === "kiro" || provider === "amazon-q"
               ? {
                   _clientId: data._clientId,
                   _clientSecret: data._clientSecret,
                   _region: data._region,
+                  _authMethod: data._authMethod,
                 }
               : provider === "ghe-copilot" && gheUrl.trim()
                 ? { gheUrl: gheUrl.trim() }
@@ -462,16 +460,24 @@ export default function OAuthModal({
         // Claude Code and Cline OAuth flows can finish on provider-hosted pages that
         // show an auth code instead of redirecting back to OmniRoute.
         // Start directly in manual mode so users always have an input to paste code/url.
-        // zed-hosted's native-app sign-in always redirects the browser to a local
-        // 127.0.0.1:<port> callback that OmniRoute never listens on (the port is
-        // arbitrary and unrelated to the dashboard's own port) — nothing can
-        // auto-close the popup, so always show the manual paste-URL input.
-        if (provider === "claude" || provider === "cline" || provider === "zed-hosted") {
+        // zed-hosted's native-app sign-in redirects the browser to a local
+        // 127.0.0.1:<native_app_port> callback. On true localhost that port IS the
+        // dashboard's own (buildAuthUrl reuses it), so the redirect lands on the
+        // /callback relay and the popup flow auto-completes. Elsewhere (LAN/remote)
+        // the port is unreachable — nothing can auto-close the popup, so always
+        // show the manual paste-URL input.
+        if (
+          provider === "claude" ||
+          provider === "cline" ||
+          (provider === "zed-hosted" && !isTrueLocalhost)
+        ) {
           forceManual = true;
         }
 
-        // PKCE callback server providers (Codex, Windsurf, Devin CLI): true localhost spins
-        // up a callback server + polls; a LAN IP warns (#8046); remote falls through below.
+        // PKCE callback server providers (Codex and Grok Build):
+        // On localhost, spin up a local callback server and poll for the result.
+        // Each provider owns its registered loopback callback. A LAN IP warns (#8046).
+        // On remote the server is unreachable — fall through to standard manual flow.
         if (PKCE_CALLBACK_SERVER_PROVIDERS.has(provider)) {
           if (isTrueLocalhost) {
             try {
@@ -536,11 +542,13 @@ export default function OAuthModal({
         // Authorization code flow
         // Redirect URI strategy:
         // - Codex/OpenAI: always port 1455 (registered in OAuth app)
-        // - Windsurf/Devin CLI (remote fallback; true localhost handled above): localhost:port
-        // - Google OAuth providers (antigravity/agy): default to loopback (127.0.0.1 preferred —
-        //   Google docs flag localhost firewall/name-resolution edge cases) so bundled
-        //   native/desktop credentials keep working; the authorize route upgrades this to the
-        //   public callback when custom Google web credentials + a public base URL are configured.
+        // - Devin Desktop/CLI retain the legacy localhost callback path as a fallback
+        // - Google OAuth providers (antigravity/agy): default to loopback so the
+        //   bundled native/desktop credentials keep working. Prefer 127.0.0.1 over
+        //   localhost for the Google native-app handoff; Google documents that localhost
+        //   can run into local firewall/name-resolution edge cases. The authorize route
+        //   upgrades this to the public callback when custom Google web credentials plus
+        //   NEXT_PUBLIC_BASE_URL or OMNIROUTE_PUBLIC_BASE_URL are configured.
         // - Other providers on remote: use actual origin (supports PUBLIC_URL env var)
         // - Localhost: use localhost:port
         let redirectUri: string;
@@ -550,9 +558,8 @@ export default function OAuthModal({
           // Fixed native-app loopback callback, distinct ports so both can run concurrently (#7013).
           const grokBuildPort = provider === "xai-oauth" ? 56121 : 56122;
           redirectUri = `http://127.0.0.1:${grokBuildPort}/callback`;
-        } else if (provider === "windsurf" || provider === "devin-cli") {
-          // Remote fallback: use OmniRoute's port with the /auth/callback path Windsurf expects.
-          // On true localhost this code is never reached (callback server handles the flow above).
+        } else if (provider === "devin-desktop" || provider === "devin-cli") {
+          // Retained callback-path fallback for the retired browser flow.
           const port = window.location.port || "20128";
           redirectUri = `http://localhost:${port}/auth/callback`;
         } else if (GOOGLE_OAUTH_PROVIDERS.has(provider)) {
@@ -883,6 +890,17 @@ export default function OAuthModal({
       }
 
       const input = callbackUrl.trim();
+
+      // zed-hosted: the native-app callback (http://127.0.0.1:<port>/?user_id=...&access_token=...)
+      // carries no ?code= param — the FULL pasted URL (or JSON/query blob) is the
+      // payload. zed-hosted's exchangeToken parses user_id/access_token out of it
+      // and RSA-decrypts the token with the private key held in codeVerifier, so
+      // skip the generic code/state extraction below.
+      if (provider === "zed-hosted") {
+        await exchangeTokens(input, authData?.state || null);
+        return;
+      }
+
       let code = null;
       let state = authData?.state || null;
       let errorParam = null;
@@ -979,12 +997,12 @@ export default function OAuthModal({
           </div>
         )}
 
-        {/* Paste-token form (Windsurf / Devin CLI) */}
+        {/* Paste-token form (Devin Desktop / Devin CLI) */}
         {supportsTokenPaste && showPasteToken && step !== "success" && (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-text-muted">
-              {provider === "windsurf"
-                ? t("windsurfPasteDescription")
+              {provider === "devin-desktop"
+                ? t("devinDesktopPasteDescription")
                 : provider === "grok-cli"
                   ? t("grokAuthJsonDescription")
                   : t("devinPasteDescription")}

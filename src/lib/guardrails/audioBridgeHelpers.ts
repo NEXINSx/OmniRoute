@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { AUDIO_TRANSCRIPTION_PROVIDERS } from "@omniroute/open-sse/config/audioRegistry.ts";
 import { detectMediaParts } from "@omniroute/open-sse/utils/mediaParts";
 
@@ -201,10 +203,25 @@ export async function callAudioTranscription(
       (detectedMime?.startsWith("audio/") ? detectedMime : undefined) ??
       AUDIO_FORMAT_MIME[format] ??
       "application/octet-stream";
-    const file = new Blob([Uint8Array.from(bytes)], { type: mime });
-    const form = new FormData();
-    form.set("file", file, `audio.${format.replace(/[^a-z0-9]/g, "") || "wav"}`);
-    form.set("model", config.model);
+    const safeMime = /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/i.test(mime)
+      ? mime
+      : "application/octet-stream";
+    const fileName = `audio.${format.replace(/[^a-z0-9]/g, "") || "wav"}`;
+    const boundary = `----OmniRouteAudioBridge${randomUUID().replace(/-/g, "")}`;
+    const CRLF = "\r\n";
+    const multipartBody = Buffer.concat([
+      Buffer.from(
+        `--${boundary}${CRLF}` +
+          `Content-Disposition: form-data; name="file"; filename="${fileName}"${CRLF}` +
+          `Content-Type: ${safeMime}${CRLF}${CRLF}`
+      ),
+      bytes,
+      Buffer.from(
+        `${CRLF}--${boundary}${CRLF}` +
+          `Content-Disposition: form-data; name="model"${CRLF}${CRLF}` +
+          `${config.model}${CRLF}--${boundary}--${CRLF}`
+      ),
+    ]);
 
     const port = (deps.getPort ?? (() => getRuntimePorts().port))();
     const bearer = (deps.getBearer ?? resolveSelfLoopBearer)();
@@ -216,8 +233,9 @@ export async function callAudioTranscription(
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${bearer}`,
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
         },
-        body: form,
+        body: multipartBody,
       }
     );
     if (!response.ok) {

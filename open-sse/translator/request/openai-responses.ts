@@ -8,6 +8,7 @@ import { isOpenAIResponsesStoreEnabled } from "@/lib/providers/requestDefaults";
 import { FORMATS } from "../formats.ts";
 import { register } from "../registry.ts";
 import { normalizeResponsesInputForChat } from "../../utils/responsesInputNormalization.ts";
+import { extractReplayableResponsesReasoningText } from "../../services/reasoningInputPolicy.ts";
 import {
   getRegisteredProviders,
   requiresPlainStringContent,
@@ -71,14 +72,6 @@ function toolOutputContentToString(output: unknown): string {
     }
   }
   return parts.join("\n");
-}
-
-function getReasoningSummaryText(item: JsonRecord): string {
-  if (!Array.isArray(item.summary)) return "";
-  return item.summary
-    .map((part) => toString(toRecord(part).text))
-    .filter((text) => text.length > 0)
-    .join("\n\n");
 }
 
 function appendReasoningContent(current: unknown, next: string): string {
@@ -235,21 +228,23 @@ export function openaiResponsesToOpenAIRequest(
 
     if (itemType === "message") {
       const role = toString(item.role);
-      // Flush pending assistant message with tool calls
-      if (currentAssistantMsg) {
-        messages.push(currentAssistantMsg);
-        currentAssistantMsg = null;
-      }
-      if (role !== "assistant" && pendingReasoningContent) {
-        messages.push({
-          role: "assistant",
-          content: null,
-          reasoning_content: pendingReasoningContent,
-        });
-        pendingReasoningContent = "";
+
+      if (role !== "assistant") {
+        if (currentAssistantMsg) {
+          messages.push(currentAssistantMsg);
+          currentAssistantMsg = null;
+        }
+        if (pendingReasoningContent) {
+          messages.push({
+            role: "assistant",
+            content: null,
+            reasoning_content: pendingReasoningContent,
+          });
+          pendingReasoningContent = "";
+        }
       }
 
-      // Flush pending tool results
+      // Flush pending tool results before the next explicit message boundary.
       if (pendingToolResults.length > 0) {
         for (const toolResult of pendingToolResults) {
           messages.push(toolResult);
@@ -292,12 +287,29 @@ export function openaiResponsesToOpenAIRequest(
           })
         : item.content;
 
-      const message: JsonRecord = { role, content };
-      if (role === "assistant" && pendingReasoningContent) {
-        message.reasoning_content = pendingReasoningContent;
-        pendingReasoningContent = "";
+      if (role === "assistant") {
+        if (!currentAssistantMsg) {
+          currentAssistantMsg = { role, content };
+        } else if (currentAssistantMsg.content == null && content != null) {
+          currentAssistantMsg.content = content;
+        } else if (content != null) {
+          const existingContent = currentAssistantMsg.content;
+          currentAssistantMsg.content = [
+            ...(Array.isArray(existingContent) ? existingContent : [existingContent]),
+            ...(Array.isArray(content) ? content : [content]),
+          ];
+        }
+        if (pendingReasoningContent) {
+          currentAssistantMsg.reasoning_content = appendReasoningContent(
+            currentAssistantMsg.reasoning_content,
+            pendingReasoningContent
+          );
+          pendingReasoningContent = "";
+        }
+        continue;
       }
-      messages.push(message);
+
+      messages.push({ role, content });
       continue;
     }
 
@@ -437,10 +449,11 @@ export function openaiResponsesToOpenAIRequest(
     }
 
     if (itemType === "reasoning") {
-      // Responses reasoning summaries are normally display metadata. Preserve them only
-      // when the routed upstream explicitly requires prior reasoning to continue a turn.
+      // Only genuine plaintext reasoning can cross into Chat reasoning_content.
+      // Opaque encrypted state and its display summary have no Chat replay form,
+      // so opaque-only items are dropped while mixed items replay their plaintext.
       if (preserveReasoningContent) {
-        const reasoning = getReasoningSummaryText(item);
+        const reasoning = extractReplayableResponsesReasoningText(item);
         if (reasoning) {
           if (currentAssistantMsg) {
             currentAssistantMsg.reasoning_content = appendReasoningContent(

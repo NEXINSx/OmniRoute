@@ -2,6 +2,7 @@
  * Vision Bridge helper functions for image processing.
  */
 import { detectMediaParts, type MediaPart } from "@omniroute/open-sse/utils/mediaParts";
+import { normalizeDataUri } from "@omniroute/open-sse/utils/imageNormalize";
 import { fetchRemoteImage } from "@/shared/network/remoteImageFetch";
 import { getRuntimePorts } from "@/lib/runtime/ports";
 import { resolveSelfLoopBearer } from "@/shared/middleware/chatBodyAdmission";
@@ -161,7 +162,9 @@ export interface RequestMessage {
 
 export type RequestContentPart =
   | { type: "text"; text: string }
+  | { type: "input_text"; text: string }
   | { type: "image_url"; image_url: { url: string; detail?: string } }
+  | { type: "input_image"; image_url: string; detail?: string }
   | {
       type: "image";
       source: { type: "base64"; media_type: string; data: string } | { type: "url"; url: string };
@@ -312,7 +315,12 @@ async function fetchRemoteImageAsDataUri(
     fetchImpl,
   });
   const mediaType = remoteImage.contentType.split(";")[0]?.trim() || "image/png";
-  return `data:${mediaType};base64,${remoteImage.buffer.toString("base64")}`;
+  const dataUri = `data:${mediaType};base64,${remoteImage.buffer.toString("base64")}`;
+  // Downscale to the long-edge cap before handing the image to the vision
+  // model self-call — scoped to this bridge-fetched image only, never the
+  // user's raw passthrough payload (opt-in principle, HR#20).
+  // `normalizeDataUri` never throws and is a passthrough for non-image bytes.
+  return normalizeDataUri(dataUri);
 }
 
 async function normalizeVisionImageInput(
@@ -338,8 +346,14 @@ export interface VisionModelConfig {
   prompt: string;
   timeoutMs: number;
   maxImages: number;
+  /** Route catalog models through OmniRoute so provider connections remain authoritative. */
+  routeThroughOmniRoute?: boolean;
+  /** Optional parent deadline/abort propagated by multi-step media bridges. */
+  signal?: AbortSignal;
   /** Injectable fetch (tests). Defaults to undici fetch to bypass the runtime's hooked global fetch. */
   fetchImpl?: typeof fetch;
+  /** Receives the actual successful model while the public return value remains a string. */
+  onModelUsed?: (model: string) => void;
 }
 
 /** Task-aware focus hint (codex-vision-proxy pattern): steer the description
@@ -367,6 +381,10 @@ export async function callVisionModel(
   routerConfig?: Partial<import("./visionBridgeRouter").VisionBridgeRouterConfig>,
   deps?: import("./visionBridgeRouter").VisionBridgeRouterDeps
 ): Promise<string> {
+  if (config.signal?.aborted) {
+    throw new Error("Vision model call aborted");
+  }
+
   // Auto-select the best vision model. `deps` is the router's existing
   // injectable credential-check seam — without forwarding it, tests (and any
   // embedder) cannot keep model selection away from the live connections DB.
@@ -390,6 +408,9 @@ export async function callVisionModel(
   const maxAttempts = Math.min(modelsToTry.length, routerConfig?.maxFallbackAttempts ?? 3);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (config.signal?.aborted) {
+      throw lastError ?? new Error("Vision model call aborted");
+    }
     const currentModel = modelsToTry[attempt];
     const attemptStart = Date.now();
     try {
@@ -399,10 +420,18 @@ export async function callVisionModel(
         apiKey
       );
       recordLatency(currentModel, Date.now() - attemptStart, true);
+      try {
+        config.onModelUsed?.(currentModel);
+      } catch {
+        // Observability callbacks must never turn a successful caption into a retry.
+      }
       return result;
     } catch (error) {
       recordLatency(currentModel, Date.now() - attemptStart, false);
       lastError = error instanceof Error ? error : new Error(String(error));
+      if (config.signal?.aborted) {
+        throw lastError;
+      }
       // Continue to next model on failure
     }
   }
@@ -497,6 +526,11 @@ function parseSseVisionBody(rawBody: string): unknown {
     if (typeof delta?.reasoning_content === "string" && delta.reasoning_content.length > 0) {
       reasoningParts.push(delta.reasoning_content);
     }
+    // opencode-routed gateways (e.g. mimo-v2.5-free) stream chain-of-thought in
+    // `delta.reasoning` instead of `reasoning_content` (#6623).
+    if (typeof delta?.reasoning === "string" && delta.reasoning.length > 0) {
+      reasoningParts.push(delta.reasoning);
+    }
 
     // Some providers put a full message (not a delta) in the final chunk.
     const message = choice?.message as Record<string, unknown> | undefined;
@@ -505,6 +539,9 @@ function parseSseVisionBody(rawBody: string): unknown {
     }
     if (typeof message?.reasoning_content === "string" && message.reasoning_content.length > 0) {
       reasoningParts.push(message.reasoning_content);
+    }
+    if (typeof message?.reasoning === "string" && message.reasoning.length > 0) {
+      reasoningParts.push(message.reasoning);
     }
 
     // Anthropic-style streaming: `content_block_delta` with `delta.text`.
@@ -573,13 +610,17 @@ async function readVisionResponseBody(response: Response): Promise<unknown> {
 
 /**
  * Extract the description text from an OpenAI-compatible vision response.
- * Falls back to `reasoning_content` when `content` is empty — reasoning models
- * (e.g. xiaomi/mimo-v2.5) can exhaust `max_tokens` on chain-of-thought and
- * return `content: null` with a complete analysis in `reasoning_content`.
+ * Falls back to `reasoning_content` then `reasoning` when `content` is empty —
+ * reasoning models (e.g. xiaomi/mimo-v2.5, opencode/mimo-v2.5-free) can exhaust
+ * `max_tokens` on chain-of-thought and return `content: null` with a complete
+ * analysis in a reasoning field. opencode-routed gateways name that field
+ * `reasoning` rather than `reasoning_content` (#6623 / #10809).
  */
 function extractOpenAICompatibleContent(data: unknown): string {
   const record = data as {
-    choices?: Array<{ message?: { content?: unknown; reasoning_content?: unknown } }>;
+    choices?: Array<{
+      message?: { content?: unknown; reasoning_content?: unknown; reasoning?: unknown };
+    }>;
     error?: { message?: string };
   } | null;
 
@@ -596,7 +637,11 @@ function extractOpenAICompatibleContent(data: unknown): string {
   if (content) return content;
 
   const reasoning =
-    typeof message?.reasoning_content === "string" ? message.reasoning_content.trim() : "";
+    typeof message?.reasoning_content === "string"
+      ? message.reasoning_content.trim()
+      : typeof message?.reasoning === "string"
+        ? message.reasoning.trim()
+        : "";
   if (reasoning) return reasoning;
 
   throw new Error("Vision API returned empty or invalid response");
@@ -612,6 +657,9 @@ async function callVisionModelSingle(
 ): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
+  const signal = config.signal
+    ? AbortSignal.any([config.signal, controller.signal])
+    : controller.signal;
 
   // Resolve API key based on provider
   const resolvedApiKey = resolveProviderApiKey(config.model, apiKey);
@@ -625,7 +673,8 @@ async function callVisionModelSingle(
   // body reaches the backend as a data URI (the OpenAI→claude translator only
   // preserves data URIs as base64; remote URLs become source.url which these
   // backends reject).
-  const isAnthropic = config.model.startsWith("anthropic/");
+  const routeThroughOmniRoute = config.routeThroughOmniRoute === true;
+  const isAnthropic = !routeThroughOmniRoute && config.model.startsWith("anthropic/");
   const requiresBase64 = isAnthropic || isClaudeWireFormatModel(config.model);
 
   try {
@@ -634,7 +683,7 @@ async function callVisionModelSingle(
     const normalizedImageInput = await normalizeVisionImageInput(
       imageDataUri,
       requiresBase64,
-      controller.signal,
+      signal,
       fetchImpl
     );
 
@@ -656,7 +705,7 @@ async function callVisionModelSingle(
 
       response = await fetchImpl(`${anthropicBaseUrl}/v1/messages`, {
         method: "POST",
-        signal: controller.signal,
+        signal,
         headers: {
           "x-api-key": resolvedApiKey,
           "anthropic-version": "2023-06-01",
@@ -691,15 +740,18 @@ async function callVisionModelSingle(
       // VISION_BRIDGE_BASE_URL so the vision-bridge call can be routed through
       // OmniRoute itself or any other OpenAI-compatible endpoint instead of
       // hardcoded api.openai.com.
-      const baseUrl = resolveVisionBridgeBaseUrl(config.model);
+      const baseUrl = routeThroughOmniRoute
+        ? `http://localhost:${getRuntimePorts().port}/v1`
+        : resolveVisionBridgeBaseUrl(config.model);
 
       // When routing through the OmniRoute self-loop (non-standard provider),
       // keep the full provider-prefixed model ID so OmniRoute can resolve the
       // correct provider backend. Only strip the prefix for direct OpenAI calls.
       const useFullModelId =
-        baseUrl.startsWith("http://localhost") &&
-        config.model.includes("/") &&
-        !config.model.startsWith("openai/");
+        routeThroughOmniRoute ||
+        (baseUrl.startsWith("http://localhost") &&
+          config.model.includes("/") &&
+          !config.model.startsWith("openai/"));
       const requestModel = useFullModelId ? config.model : modelName;
 
       // Build headers with optional recursion guard for self-loop calls.
@@ -719,7 +771,9 @@ async function callVisionModelSingle(
         Authorization: `Bearer ${selfLoopApiKey}`,
       };
       if (useFullModelId) {
-        headers["x-omniroute-disabled-guardrails"] = "vision-bridge";
+        headers["x-omniroute-disabled-guardrails"] = routeThroughOmniRoute
+          ? "vision-bridge,video-bridge"
+          : "vision-bridge";
         // Internal self-loop sub-request: the parent request already holds the
         // single heavyweight admission lease (`CHAT_MAX_HEAVY_IN_FLIGHT=1`), so a
         // large base64-image describe body would be rejected with 503
@@ -740,7 +794,7 @@ async function callVisionModelSingle(
 
       response = await fetchImpl(`${baseUrl}/chat/completions`, {
         method: "POST",
-        signal: controller.signal,
+        signal,
         headers,
         body: JSON.stringify({
           model: requestModel,
@@ -750,10 +804,26 @@ async function callVisionModelSingle(
               role: "user",
               content: [
                 {
+                  // Global, not OpenCode-scoped: this is OmniRoute's own internal
+                  // describe self-loop (VisionBridgeGuardrail), called for every
+                  // caller/provider when the target model lacks vision support —
+                  // there is no client-identity signal at this layer to gate on
+                  // (unlike the OpenCode-only `isOpencodeClient` default in
+                  // `chatCore/upstreamBody.ts`, which forwards the *caller's own*
+                  // image_url.detail and is deliberately scoped). "high" is
+                  // requested unconditionally because the describe prompt asks
+                  // the vision model to transcribe visible text
+                  // (`modalityBridgeVisionTaskAware`, see docs/security/GUARDRAILS.md)
+                  // — low-detail sampling degrades OCR accuracy for every
+                  // describe call, not just OpenCode-originated ones. This path
+                  // only affects the OpenAI-compatible wire format branch; the
+                  // Anthropic branch above has no `detail` concept and is
+                  // unaffected (see the "unaffected for Anthropic" compat
+                  // assertion in visionBridgeHelpers.callVisionModel.test.ts).
                   type: "image_url",
                   image_url: {
                     url: normalizedImageInput,
-                    detail: "low",
+                    detail: "high",
                   },
                 },
                 { type: "text", text: config.prompt },
@@ -805,7 +875,9 @@ async function callVisionModelSingle(
     clearTimeout(timeoutId);
 
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Vision model call timed out");
+      throw new Error(
+        config.signal?.aborted ? "Vision model call aborted" : "Vision model call timed out"
+      );
     }
 
     throw error;
@@ -815,6 +887,7 @@ async function callVisionModelSingle(
 export interface RequestBody {
   model?: string;
   messages?: RequestMessage[];
+  input?: RequestMessage[];
   [key: string]: unknown;
 }
 
@@ -834,14 +907,23 @@ export function replaceImageParts(
 
   const result = structuredClone(body) as RequestBody;
 
-  if (!Array.isArray(result.messages)) {
+  const usesResponsesInput = !Array.isArray(result.messages) && Array.isArray(result.input);
+  const requestMessages = Array.isArray(result.messages)
+    ? result.messages
+    : usesResponsesInput
+      ? result.input
+      : null;
+
+  if (!requestMessages) {
     return result;
   }
 
+  const replacementTextType: "text" | "input_text" = usesResponsesInput ? "input_text" : "text";
+
   let descriptionIndex = 0;
 
-  for (let msgIdx = 0; msgIdx < result.messages.length; msgIdx++) {
-    const message = result.messages[msgIdx];
+  for (let msgIdx = 0; msgIdx < requestMessages.length; msgIdx++) {
+    const message = requestMessages[msgIdx];
     if (!message || !Array.isArray(message.content)) {
       continue;
     }
@@ -863,7 +945,10 @@ export function replaceImageParts(
             // image so a vision-capable upstream can still process it.
             newContent.push(part as RequestContentPart);
           } else {
-            newContent.push({ type: "text", text: description });
+            newContent.push({
+              type: replacementTextType,
+              text: description,
+            } as RequestContentPart);
           }
         }
       } else {

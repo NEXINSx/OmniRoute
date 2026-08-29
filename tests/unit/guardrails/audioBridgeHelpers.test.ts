@@ -9,6 +9,33 @@ import {
   type AudioPart,
 } from "../../../src/lib/guardrails/audioBridgeHelpers.ts";
 
+function assertMultipartFile(
+  init: RequestInit | undefined,
+  expectedFileName: string,
+  expectedMime: string,
+  expectedBytes: Buffer
+): void {
+  const contentType = new Headers(init?.headers).get("content-type");
+  assert.match(contentType ?? "", /^multipart\/form-data; boundary=/);
+  const boundary = contentType?.split("boundary=", 2)[1];
+  assert.ok(boundary);
+  assert.ok(Buffer.isBuffer(init?.body));
+  const body = init?.body as Buffer;
+  assert.ok(
+    body.includes(
+      Buffer.concat([
+        Buffer.from(
+          `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="file"; filename="${expectedFileName}"\r\n` +
+            `Content-Type: ${expectedMime}\r\n\r\n`
+        ),
+        expectedBytes,
+        Buffer.from("\r\n"),
+      ])
+    )
+  );
+}
+
 test("fixed STT model is honored when its credential is usable", async () => {
   const checked: string[] = [];
   const selected = await selectAudioBridgeModel("deepgram/nova-2", async (model) => {
@@ -62,13 +89,20 @@ test("input_audio is posted as multipart to the authenticated transcription self
   assert.equal(capturedUrl, "http://localhost:3210/v1/audio/transcriptions");
   assert.equal(capturedInit?.method, "POST");
   assert.equal(new Headers(capturedInit?.headers).get("authorization"), "Bearer internal-test-key");
-
-  const form = capturedInit?.body as FormData;
-  assert.equal(form.get("model"), "deepgram/nova-3");
-  const file = form.get("file") as File;
-  assert.equal(file.name, "audio.wav");
-  assert.equal(file.type, "audio/wav");
-  assert.equal(Buffer.from(await file.arrayBuffer()).toString(), "RIFF test audio");
+  const contentType = new Headers(capturedInit?.headers).get("content-type");
+  const boundary = contentType?.split("boundary=", 2)[1];
+  assert.ok(boundary);
+  assertMultipartFile(capturedInit, "audio.wav", "audio/wav", Buffer.from("RIFF test audio"));
+  const body = capturedInit?.body as Buffer;
+  assert.ok(
+    body.includes(
+      Buffer.from(
+        `--${boundary}\r\n` +
+          'Content-Disposition: form-data; name="model"\r\n\r\n' +
+          `deepgram/nova-3\r\n--${boundary}--\r\n`
+      )
+    )
+  );
 });
 
 test("audio extraction and replacement cover the full history without dropping failed clips", () => {
@@ -127,7 +161,7 @@ test("audio extraction and replacement cover the full history without dropping f
 });
 
 test("audio_url data URIs are decoded before multipart upload", async () => {
-  let uploaded: File | null = null;
+  let uploaded: RequestInit | undefined;
   await callAudioTranscription(
     {
       messageIndex: 0,
@@ -139,7 +173,7 @@ test("audio_url data URIs are decoded before multipart upload", async () => {
     { model: "deepgram/nova-3", timeoutMs: 1_000 },
     {
       fetchImpl: async (_input, init) => {
-        uploaded = (init?.body as FormData).get("file") as File;
+        uploaded = init;
         return Response.json({ text: "ok" });
       },
       getPort: () => 3210,
@@ -147,14 +181,12 @@ test("audio_url data URIs are decoded before multipart upload", async () => {
     }
   );
 
-  assert.ok(uploaded);
-  assert.equal(uploaded.type, "audio/mpeg");
-  assert.equal(Buffer.from(await uploaded.arrayBuffer()).toString(), "ID3");
+  assertMultipartFile(uploaded, "audio.mp3", "audio/mpeg", Buffer.from("ID3"));
 });
 
 test("remote audio_url uses the guarded remote fetch before self-loop upload", async () => {
   let fetchedUrl = "";
-  let uploaded: File | null = null;
+  let uploaded: RequestInit | undefined;
   await callAudioTranscription(
     {
       messageIndex: 0,
@@ -174,7 +206,7 @@ test("remote audio_url uses the guarded remote fetch before self-loop upload", a
         };
       },
       fetchImpl: async (_input, init) => {
-        uploaded = (init?.body as FormData).get("file") as File;
+        uploaded = init;
         return Response.json({ text: "ok" });
       },
       getPort: () => 3210,
@@ -183,6 +215,5 @@ test("remote audio_url uses the guarded remote fetch before self-loop upload", a
   );
 
   assert.equal(fetchedUrl, "https://media.example.test/clip.ogg");
-  assert.ok(uploaded);
-  assert.equal(Buffer.from(await uploaded.arrayBuffer()).toString(), "OggS remote audio");
+  assertMultipartFile(uploaded, "audio.ogg", "audio/ogg", Buffer.from("OggS remote audio"));
 });

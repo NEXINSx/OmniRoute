@@ -39,7 +39,12 @@ import {
   escapeHistoricalContextAttribute,
   escapeHistoricalContextContent,
   buildHistoricalToolResultContext,
+  type GeminiPart,
+  type GeminiContent,
+  mergeConsecutiveSameRoleContents,
 } from "./openai-to-gemini/helpers.ts";
+
+export { mergeConsecutiveSameRoleContents, type GeminiContent, type GeminiPart };
 
 // Observed Antigravity wrapper output cap, not an underlying model capability.
 // Keep this bridge-local: Antigravity currently caps visible output around 16K.
@@ -55,9 +60,6 @@ const GEMINI_BUILTIN_TOOL_NAMES = new Set<string>([
   "search_web",
   "googleSearch",
 ]);
-
-type GeminiPart = Record<string, unknown>;
-type GeminiContent = { role: string; parts: GeminiPart[] };
 
 type GeminiFunctionDeclaration = {
   name: string;
@@ -157,29 +159,6 @@ type GeminiToolNameOptions = {
   /** Antigravity supports the thoughtSignature field. Standard Gemini rejects it with 400. */
   supportsSignatureBypass?: boolean;
 };
-
-// Gemini-family APIs (incl. Antigravity / Vertex) reject a `contents[]` array that
-// has two adjacent entries with the same role:
-//   400 INVALID_ARGUMENT "Request contains consecutive messages with the same role".
-// Client history that carries consecutive user turns — or a tool-result turn (mapped
-// to role:"user") immediately followed by a plain user turn — would otherwise leak
-// that invalid alternation through. Merge adjacent same-role entries by concatenating
-// their parts, the same normalization the Kiro and Claude request paths already apply
-// (9router#2191).
-export function mergeConsecutiveSameRoleContents(contents: GeminiContent[]): GeminiContent[] {
-  const merged: GeminiContent[] = [];
-  for (const entry of contents) {
-    const last = merged[merged.length - 1];
-    if (last && last.role === entry.role) {
-      last.parts.push(...entry.parts);
-    } else {
-      // Shallow-copy the entry and its `parts` array so a later same-role merge
-      // (`last.parts.push(...)`) never mutates the caller's input objects.
-      merged.push({ ...entry, parts: [...entry.parts] });
-    }
-  }
-  return merged;
-}
 
 // Core: Convert OpenAI request to Gemini format (base for all variants)
 function openaiToGeminiBase(
@@ -404,7 +383,6 @@ function openaiToGeminiBase(
         if (toolCalls && Array.isArray(toolCalls)) {
           const toolCallIds: string[] = [];
           const resolvedSignatures = new Map<string, string>();
-          let firstPersistedSignature: string | undefined;
           for (const tc of toolCalls) {
             const id = tc.id as string;
             const resolved = resolveGeminiThoughtSignature(
@@ -413,11 +391,9 @@ function openaiToGeminiBase(
             );
             if (typeof resolved === "string" && resolved.length > 0) {
               resolvedSignatures.set(id, resolved);
-              firstPersistedSignature ??= resolved;
             }
           }
 
-          let shouldUseEmbeddedSignature = !parts.some((p) => p.thoughtSignature);
           const signaturelessToolCallMode = toolNameOptions.signaturelessToolCallMode;
           const stringifySignaturelessToolCalls = signaturelessToolCallMode === "text";
           const contextualizeSignaturelessToolResponses =
@@ -454,13 +430,14 @@ function openaiToGeminiBase(
             }
 
             const args = tryParseJSON(fn.arguments || "{}");
-            const embeddedThoughtSignature = shouldUseEmbeddedSignature
-              ? firstPersistedSignature || signatureForToolCall
-              : undefined;
-
-            if (embeddedThoughtSignature) {
-              shouldUseEmbeddedSignature = false;
-            }
+            // #11510: each functionCall part carries its OWN resolved
+            // thoughtSignature — a parallel (multi tool_calls) turn can have a
+            // real, individually-valid signature per tool call, and Gemini 3.x
+            // rejects the request if any functionCall in the turn is missing
+            // one. Previously only the first functionCall of the message kept
+            // its signature; this dropped valid signatures for every
+            // subsequent parallel tool call in the same turn.
+            const embeddedThoughtSignature = signatureForToolCall;
 
             // Gemini expects the signature on the functionCall part itself.
             // If we are in a mode where missing signatures cause 400s (and we couldn't find one),
@@ -532,18 +509,12 @@ function openaiToGeminiBase(
               name = sanitizeToolName(name);
 
               const resp = toolResponses[fid];
-              let parsedResp = tryParseJSON(resp);
-              if (parsedResp === null) {
-                parsedResp = { result: resp };
-              } else if (typeof parsedResp !== "object") {
-                parsedResp = { result: parsedResp };
-              }
 
               toolParts.push({
                 functionResponse: {
                   ...(toolNameOptions.stripFunctionCallId ? {} : { id: fid }),
                   name: name,
-                  response: { result: parsedResp },
+                  response: { result: resp },
                 },
               });
             }

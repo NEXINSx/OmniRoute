@@ -15,6 +15,10 @@ import { FLOW_EDGE_COLORS } from "../../../src/shared/components/flow/edgeStyles
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
+// ProviderTopology navigates on node click; jsdom has no Next router context.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 vi.mock("@/shared/components/ProviderIcon", () => ({
   default: () => <span data-testid="icon" />,
 }));

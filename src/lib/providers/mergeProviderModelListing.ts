@@ -5,6 +5,7 @@
  */
 
 import { ensureCursorAutoCatalogEntry } from "@/lib/providerModels/cursorAutoCatalog";
+import { mergeModelsWithCustomPrecedence } from "@/lib/providers/modelMetadataPrecedence";
 import {
   providerUsesCuratedModelsOnly,
   providerUsesExclusiveSyncedListing,
@@ -57,23 +58,20 @@ export function mergeProviderModelListing(
         source: "imported",
       }))
     );
-    const knownIds = new Set(withAuto.map((m) => m.id));
-    const customExtras = custom
-      .filter((cm) => cm.id && !knownIds.has(cm.id))
-      .map((cm) => ({
-        ...cm,
-        id: cm.id,
-        name: cm.name || cm.id,
-        source: normalizeCustomSource(cm.source),
-      }));
-    return dedupeById([...withAuto, ...customExtras]);
+    const normalizedCustom = custom.map((model) => ({
+      ...model,
+      id: model.id,
+      name: model.name || model.id,
+      source: normalizeCustomSource(model.source),
+    }));
+    return dedupeById(mergeModelsWithCustomPrecedence(withAuto, normalizedCustom));
   }
 
   const builtInModels = input.registryModels.map((model) => ({
     ...model,
     source: "system",
   }));
-  const registryIds = new Set(builtInModels.map((m) => m.id));
+  const registryIds = new Set(builtInModels.map((model) => model.id));
   const syncedExtras = synced
     .filter((model) => model.id && !registryIds.has(model.id))
     .map((model) => ({
@@ -82,15 +80,14 @@ export function mergeProviderModelListing(
       name: model.name || model.id,
       source: "imported",
     }));
-  const knownIds = new Set([...registryIds, ...syncedExtras.map((m) => m.id)]);
-  const customExtras = custom
-    .filter((cm) => cm.id && !knownIds.has(cm.id))
-    .map((cm) => ({
-      ...cm,
-      id: cm.id,
-      name: cm.name || cm.id,
-      source: normalizeCustomSource(cm.source),
-    }));
+  const normalizedCustom = custom.map((model) => ({
+    ...model,
+    id: model.id,
+    name: model.name || model.id,
+    source: normalizeCustomSource(model.source),
+  }));
 
-  return dedupeById([...builtInModels, ...syncedExtras, ...customExtras]);
+  return dedupeById(
+    mergeModelsWithCustomPrecedence([...builtInModels, ...syncedExtras], normalizedCustom)
+  );
 }

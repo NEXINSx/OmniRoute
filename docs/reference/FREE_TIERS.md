@@ -1,7 +1,7 @@
 ---
 title: "Free Tiers & Free-Token Budget"
-version: 3.8.40
-lastUpdated: 2026-07-31
+version: 3.8.50
+lastUpdated: 2026-08-26
 ---
 
 # Free Tiers & Free-Token Budget
@@ -21,13 +21,13 @@ lastUpdated: 2026-07-31
 | **+ deposit-unlock boost**                  | **+~24M**         | A one-time **$10** OpenRouter top-up raises its free pool from 50 → 1000 req/day. Reported separately so it never inflates the steady number.                                                                                                          |
 | Theoretical ceiling (all rate limits, 24/7) | ~10B              | Sum of every provider rate limit extrapolated to non-stop use. **Not a guarantee** — do not headline this.                                                                                                                                             |
 
-**Honest headline:** _OmniRoute aggregates **~1.51B documented free tokens per month** (up to ~2.13B in your first month with signup credits) across 42 free-tier pools — plus a long tail of permanently-free, no-cap providers — and RTK + Caveman compression (15–95% token savings) stretches that further._
+**Honest headline:** _OmniRoute aggregates **~1.51B documented free tokens per month** (up to ~2.13B in your first month with signup credits) across 39 free-tier pools — plus a long tail of permanently-free, no-cap providers — and RTK + Caveman compression (15–95% token savings) stretches that further._
 
 > **Why this dropped from the previous ~1.94B.** The 2026-06-17 refresh is an honesty correction, not a loss: `gemini` is now pool-deduped (was inflated by counting each Flash variant separately, 462M → 60M), `cloudflare-ai` corrected to its real 10k-Neurons/day (122M → 30M), `doubao` reclassified as a one-time signup credit (not recurring), and shut-down tiers removed (`chutes`/`phind`/`kluster` discontinued). Partly offset by `llm7` (correct 5M/day → 150M) and new free providers (Kilo, OpenCode Zen, Z.AI GLM-Flash).
 >
 > **Further corrected to ~1.37B in v3.8.42:** `longcat` was reclassified from a 150M/mo recurring grant to a one-time 10M signup credit after its free preview ended. Same honesty rule — no provider was dropped by mistake.
 >
-> **Updated to ~1.51B after removing a retired provider:** the pool count is now 42 after mapping free tiers that were documented upstream but missing from the catalog (`requesty`, `ovhcloud`, `agnes`, `glm`) plus new providers `navy` and `aihorde` (#7840). This is the live, CI-gated number (`check:docs-counts` fails the build if this drifts from `computeFreeModelTotals()`).
+> **Updated on 2026-08-26 after retiring Felo Web:** the source now reports 39 recurring pool keys. Felo Web is excluded while its GPL-derived provenance/licensing remains on HOLD. This is the live, CI-gated number (`check:docs-counts` fails the build if this drifts from `computeFreeModelTotals()`).
 
 Biggest **documented** contributors: `mistral` 1.00B, `llm7` 150M, `groq` 117M, `gemini` 60M, `cerebras` 30M, `cloudflare-ai` 30M, `sambanova` 30M. (`longcat` is excluded — its 10M LongCat-2.0 grant is a one-time, KYC-gated signup credit, not a recurring monthly budget.)
 
@@ -65,7 +65,7 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 
 > A quick read on each provider's terms for a self-hosted, single-user personal proxy. `caution` = a personal-use or proxy clause worth checking; `ambiguous` = unclear; `ok` = explicitly permitted. Informational, not legal advice — you decide.
 
-### ⚠️ Caution — personal-use / proxy clauses worth checking (19)
+### ⚠️ Caution — personal-use / proxy clauses worth checking (16)
 
 > Their free access is real and OmniRoute can route to them; the clauses below are just worth knowing. The OAuth/keyless ones aren't token-quantifiable, so they're not in the headline number (not because they're unusable).
 
@@ -86,7 +86,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `muse-spark-web` | Meta ToS explicitly prohibits automated access without prior permission, reverse engineering without written permission, and circumventing technologi… |
 | `nlpcloud`       | ToS explicitly prohibits "setting up a proxy or other device that allows others to access the Service through it" and grants only a non-transferable,… |
 | `opencode`       | ToS (Anomaly Innovations, Inc.) explicitly restricts use to "your own internal use, and not on behalf of or for the benefit of any third party" — ope… |
-| `qwen-web`       | No ToS permits a self-hosted proxy using session tokens against chat.qwen.ai; automated/programmatic access remains high-risk.                         |
 | `t3-web`         | ToS explicitly restricts accounts to personal use only, prohibits credential sharing with third parties, and bans automated/bot/scraping access — a s… |
 
 ### ✅ Generally permissive — caution / ambiguous / ok (the rest)
@@ -120,7 +119,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `firecrawl`      | caution   | Cloud API ToS has no explicit personal-proxy prohibition found, but the open-source self-hosted version is AGPL-3.0 (re… |
 | `gemini`         | caution   | ToS explicitly states the free tier is for "developers building with Google AI models for professional or business purp… |
 | `groq`           | caution   | Services Agreement §6.3 prohibits reselling, sublicensing, or distributing API access; §3.2 bars reselling/leasing acco… |
-| `hackclub`       | caution   | Service is explicitly scoped to Hack Club teen members building projects/learning; no public ToS found explicitly permi… |
 | `huggingchat`    | caution   | Hugging Face ToS does not explicitly ban personal self-hosted proxies, but supplemental terms (referenced but not fully… |
 | `huggingface`    | caution   | ToS grants a limited license to access/use the service; the document does not explicitly permit or forbid a single-user… |
 | `hyperbolic`     | caution   | ToS grants API access "solely for your own personal or internal business purposes" and explicitly prohibits licensing, … |
@@ -140,7 +138,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `pollinations`   | caution   | MIT License cited in API docs suggests liberal reuse; no explicit prohibition on self-hosted proxying found. However, u… |
 | `predibase`      | caution   | Predibase is positioned as an enterprise fine-tuning/serving platform; the free trial is explicitly for exploration and… |
 | `publicai`       | caution   | ToS (publicai.co/tc) designates services as "primarily for research and educational use"; no explicit proxy or resale p… |
-| `puter`          | caution   | Puter ToS forbids using services for "commercial purpose" without written consent; a self-hosted personal proxy consumi… |
 | `qoder`          | caution   | ToS page returned no readable content; Qoder is a coding IDE client (not a public API), and third-party proxy wrappers … |
 | `reka`           | caution   | Business Terms prohibit sublicensing or distributing access to third parties; a personal single-user proxy is likely fi… |
 | `sambanova`      | caution   | ToS Section 1.5(c) explicitly prohibits reselling, sublicensing, or making the service available to third parties; a se… |
@@ -223,7 +220,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `duckduckgo-web` | keyless       | —                | —                  | avoid     | 6      |
 | `freemodel-dev`  | keyless       | —                | —                  | unknown   | 4      |
 | `friendliai`     | keyless       | —                | —                  | avoid     | 2      |
-| `hackclub`       | keyless       | —                | —                  | caution   | 3      |
 | `iflytek`        | keyless       | —                | —                  | avoid     | 1      |
 | `inference-net`  | keyless       | —                | —                  | caution   | 3      |
 | `liquid`         | keyless       | —                | —                  | unknown   | 1      |
@@ -235,8 +231,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `opencode`       | keyless       | —                | —                  | avoid     | 7      |
 | `pollinations`   | keyless       | —                | —                  | caution   | 31     |
 | `publicai`       | keyless       | —                | —                  | caution   | 3      |
-| `puter`          | keyless       | —                | —                  | caution   | 33     |
-| `qwen-web`       | keyless       | —                | —                  | avoid     | 3      |
 | `reka`           | keyless       | —                | —                  | caution   | 2      |
 | `sensenova`      | keyless       | —                | —                  | caution   | 1      |
 | `sparkdesk`      | keyless       | —                | —                  | caution   | 1      |
@@ -282,7 +276,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 - **`gitlawb`** — The shipped freeNote "Free tier available" is effectively stale. The original free MiMo access was removed in May 2026; the only remaining "free" option is a temporary promotional model (Nemotron 3 U…
 - **`gitlawb-gmi`** — Partially still accurate — free tier exists but is now narrowed to a single model (Nemotron 3 Ultra) after MiMo free access was revoked in late May 2026. The shipped note "Free tier available" unders…
 - **`groq`** — The shipped freeNote "30 RPM / 14.4K RPD" is accurate only for llama-3.1-8b-instant. Most other models (including llama-3.3-70b-versatile) have a much lower 1K RPD cap. The note omits model-specific …
-- **`hackclub`** — The "30+ models" count appears accurate and still matches. The core offering remains free for Hack Club members. No evidence of tightening — still "$0 ALWAYS FREE" per the homepage. The freeNote omit…
 - **`huggingchat`** — The shipped freeNote ("Free LLM chat — no subscription required. Rate limits apply.") is partially accurate but significantly understates the restrictions. The free tier now operates on a hard $0.10/…
 - **`huggingface`** — Significantly tightened. The shipped freeNote ("Free Inference API for thousands of models") implied unlimited/generous free access, but as of mid-2025 the free tier is capped at $0.10/month in recur…
 - **`hyperbolic`** — Our shipped freeNote says "$1-5 trial credits on signup" — the $1 trial credit portion is accurate, but the "$5" figure refers to the minimum deposit required to unlock GPU rental (not free credits g…
@@ -306,9 +299,8 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 - **`pollinations`** — Partially matches — the "no API key required" claim is still true for anonymous access, but the catalog freeNote omits that: (1) rate limits do apply (interval throttle of ~1 req/6-15s for anonymous …
 - **`predibase`** — The shipped freeNote ($25 free trial credits, 30-day validity) still matches current documentation. However, the catalog omits the concurrent 20,000 tokens/day serverless rate limit that applies duri…
 - **`publicai`** — The shipped freeNote ("Free community inference tier") is broadly accurate but understates the specificity: the 20 RPM rate limit is now documented. No major tightening found; the service remains fre…
-- **`puter`** — Partially matches: the "500+ models" count is still accurate. However "users pay via Puter account" understates the reality — free accounts receive an undocumented starting credit that can be exhaust…
+- **`puter`** — **Fully removed** from the catalog (registry, executor, free-model catalog and API-key entry) at the request of Puter's owner (Nariman Jelveh) — see the dead-service-removal precedent above (`phind`).
 - **`qoder`** — Our catalog ships freeNote "(none)", but Qoder does have a free tier: a Community Edition with unlimited basic-model completions (daily-capped, unspecified limit) plus a one-time 14-day/300-credit Pr…
-- **`qwen-web`** — Session-token access against chat.qwen.ai is not a dependable free-provider path and may be rejected upstream.
 - **`sambanova`** — Our shipped note only described the one-time $5 credit (30-day validity). The current reality includes a permanent recurring free tier with documented rate limits (20 RPM, 20 RPD, 200k TPD) that pers…
 - **`sensenova`** — Our shipped freeNote says "Free SenseTime models" which is vague but directionally correct — free access does exist. However, reality is more nuanced: free access is a time-limited public beta (Token…
 - **`serper-search`** — The shipped freeNote says "(none)" which is partially accurate — there is no recurring free plan — but Serper does offer 2,500 one-time trial credits on signup. The catalog note could be more precise…

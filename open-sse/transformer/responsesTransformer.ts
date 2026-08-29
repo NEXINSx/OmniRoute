@@ -7,6 +7,15 @@ import {
 } from "../utils/reasoningPlaceholder.ts";
 import * as fs from "fs";
 import * as path from "path";
+
+// #10223: threshold for detecting corrupted request_id fields. Normal
+// request IDs are <100 chars. DeepSeek's SSE encoder bug produces 200+
+// char values with response-ID fragments. The 100-char gap between normal
+// (<100) and threshold (200) provides safety margin for providers that
+// use moderately longer IDs. The transformer never reads request_id, so
+// stripping it has no functional impact on the output.
+const CORRUPTED_REQUEST_ID_THRESHOLD = 200;
+
 /**
  * Responses API Transformer
  * Converts OpenAI Chat Completions SSE to Codex Responses API SSE format
@@ -209,6 +218,12 @@ export function createResponsesApiTransformStream(
     funcItemTypes: {},
     funcArgsDone: {},
     funcItemDone: {},
+    // Cached at first computation (see toolCallOutputIndexBase) so every
+    // added/delta/done event for a given tool call — including ones emitted
+    // later from the finish_reason handler or flush(), where the reasoning/
+    // message state used to derive the base is no longer meaningful to
+    // recompute — shares exactly the same output_index.
+    funcOutputIndex: {} as Record<string, number>,
     completedOutputItems: [] as Array<{
       output_index: number;
       item: Record<string, unknown>;
@@ -225,6 +240,11 @@ export function createResponsesApiTransformStream(
   };
 
   const encoder = new TextEncoder();
+  // #10223: a stream:false TextDecoder recreated per transform() chunk has no
+  // cross-call state, so a multi-byte UTF-8 character (CJK/emoji) split across
+  // two TCP chunks got truncated to U+FFFD, corrupting the deltas. A single
+  // persistent decoder with { stream: true } carries pending bytes between chunks.
+  const decoder = new TextDecoder();
   const nextSeq = () => ++state.seq;
 
   // Normalize output_index to a non-negative integer (replaces fragile parseInt calls)
@@ -380,6 +400,27 @@ export function createResponsesApiTransformStream(
     }
   };
 
+  // Tool calls sit after reasoning (if any) AND after a text message (if one
+  // was actually emitted this turn). The provider's own tool_calls[].index is
+  // scoped only to the tool_calls array and legitimately restarts at 0 — using
+  // it directly as the Responses API output_index collides with whatever
+  // reasoning/message item already claimed that slot, and a client that
+  // tracks response items by output_index silently drops the tool call.
+  //
+  // Computed once per tcIdx (from the chunk's own choice index, `chunkIdx`)
+  // and cached in state.funcOutputIndex so every added/delta/done event for
+  // that call — including ones emitted later from the finish_reason handler
+  // or flush(), which have no fresh chunk/reasoning/message state to
+  // recompute from — shares exactly the same output_index.
+  const computeToolCallOutputIndex = (chunkIdx, tcIdx) => {
+    if (state.funcOutputIndex[tcIdx] === undefined) {
+      const msgIdx = state.reasoningId ? state.reasoningIndex + 1 : chunkIdx;
+      const base = state.msgItemAdded[msgIdx] ? msgIdx + 1 : msgIdx;
+      state.funcOutputIndex[tcIdx] = base + normalizeOutputIndex(tcIdx);
+    }
+    return state.funcOutputIndex[tcIdx];
+  };
+
   const emitToolCallAdded = (controller, idx) => {
     if (state.funcItemAdded[idx] || !state.funcCallIds[idx]) return false;
 
@@ -390,7 +431,7 @@ export function createResponsesApiTransformStream(
 
     emit(controller, "response.output_item.added", {
       type: "response.output_item.added",
-      output_index: idx,
+      output_index: state.funcOutputIndex[idx],
       item: {
         id: `fc_${state.funcCallIds[idx]}`,
         type: itemType,
@@ -406,7 +447,7 @@ export function createResponsesApiTransformStream(
   const closeToolCall = (controller, idx, recordAsCompleted = true) => {
     const callId = state.funcCallIds[idx];
     if (callId && !state.funcItemDone[idx]) {
-      const normalizedIndex = normalizeOutputIndex(idx);
+      const normalizedIndex = state.funcOutputIndex[idx];
       let args = state.funcArgsBuf[idx] || "{}";
       const toolName = state.funcNames[idx] || "";
       emitToolCallAdded(controller, idx);
@@ -550,7 +591,7 @@ export function createResponsesApiTransformStream(
         (state.keepaliveTimer as { unref?: () => void })?.unref?.();
       },
       transform(chunk, controller) {
-        const text = new TextDecoder().decode(chunk);
+        const text = decoder.decode(chunk, { stream: true });
         logger?.logInput(text.trim());
         state.buffer += text;
 
@@ -571,6 +612,21 @@ export function createResponsesApiTransformStream(
             parsed = JSON.parse(dataStr);
           } catch {
             continue;
+          }
+
+          // #10223: strip request_id when it looks corrupted (suspiciously
+          // long — normal request IDs are <100 chars). Some providers
+          // (DeepSeek) have SSE encoder bugs that leak response-ID fragments
+          // into this field, producing 200+ char values. Well-behaved
+          // providers' request_id is preserved.
+          if (
+            typeof parsed.request_id === "string" &&
+            parsed.request_id.length >= CORRUPTED_REQUEST_ID_THRESHOLD
+          ) {
+            logger?.logInput(
+              `[ResponsesTransformer] stripped corrupted request_id (${parsed.request_id.length} chars)`
+            );
+            delete parsed.request_id;
           }
 
           if (parsed.usage) {
@@ -750,6 +806,7 @@ export function createResponsesApiTransformStream(
 
             for (const tc of delta.tool_calls) {
               const tcIdx = tc.index ?? 0;
+              const outputIndex = computeToolCallOutputIndex(idx, tcIdx);
               const newCallId = tc.id;
               const funcName = tc.function?.name;
 
@@ -765,6 +822,10 @@ export function createResponsesApiTransformStream(
                 delete state.funcItemTypes[tcIdx];
                 delete state.funcArgsDone[tcIdx];
                 delete state.funcItemDone[tcIdx];
+                // Deliberately keep funcOutputIndex[tcIdx]: the replacement call
+                // reuses the same positional slot, so it should keep the same
+                // output_index rather than recomputing (which could drift if
+                // msgItemAdded state shifted mid-turn).
               }
 
               if (funcName) state.funcNames[tcIdx] = funcName;
@@ -786,7 +847,7 @@ export function createResponsesApiTransformStream(
                   emit(controller, "response.function_call_arguments.delta", {
                     type: "response.function_call_arguments.delta",
                     item_id: `fc_${state.funcCallIds[tcIdx]}`,
-                    output_index: tcIdx,
+                    output_index: outputIndex,
                     delta: state.funcArgsBuf[tcIdx],
                   });
                 }
@@ -825,7 +886,7 @@ export function createResponsesApiTransformStream(
                   emit(controller, "response.function_call_arguments.delta", {
                     type: "response.function_call_arguments.delta",
                     item_id: `fc_${refCallId}`,
-                    output_index: tcIdx,
+                    output_index: outputIndex,
                     delta: emittedDelta,
                   });
                 }
@@ -855,6 +916,11 @@ export function createResponsesApiTransformStream(
       },
 
       flush(controller) {
+        // #10223: stream-end flush — drain any bytes the persistent decoder is
+        // still holding. With { stream:true } complete multi-byte chars are
+        // emitted within transform(), so normally there is nothing left; this
+        // only releases a terminating truncated byte and frees the decoder.
+        state.buffer += decoder.decode();
         // Clear keepalive timer
         if (state.keepaliveTimer) {
           clearInterval(state.keepaliveTimer);

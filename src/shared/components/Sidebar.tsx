@@ -33,6 +33,7 @@ import {
   applyItemOrder,
   getSidebarIconAccent,
   isSidebarItemVisibleForFlags,
+  resolveRuntimeSidebarSections,
   type SidebarSectionId,
   type SidebarItemDefinition,
   type SidebarItemGroup,
@@ -104,6 +105,7 @@ export default function Sidebar({
   // Fails open (see isSidebarItemVisibleForFlags) so a missing key never
   // hides an unrelated item — only set once /api/settings resolves.
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
+  const [radarAdminUrl, setRadarAdminUrl] = useState<unknown>(null);
   const [sidebarSectionOrder, setSidebarSectionOrder] = useState<SidebarSectionId[]>([]);
   const [sidebarItemOrder, setSidebarItemOrder] = useState<SidebarItemOrder>({});
   const [customAppName, setCustomAppName] = useState<string | null>(null);
@@ -155,6 +157,7 @@ export default function Sidebar({
       if (typeof data?.radarEnabled === "boolean") {
         setFeatureFlags((prev) => ({ ...prev, RADAR_ENABLED: data.radarEnabled }));
       }
+      setRadarAdminUrl(data?.radarAdminUrl ?? null);
     };
 
     fetch("/api/settings")
@@ -228,8 +231,9 @@ export default function Sidebar({
   const hiddenSidebarSet = new Set(hiddenSidebarItems);
   const hiddenSidebarGroupLabelsSet = new Set(hiddenSidebarGroupLabels);
 
+  const runtimeSections = resolveRuntimeSidebarSections(SIDEBAR_SECTIONS, { radarAdminUrl });
   const orderedSections = applySectionOrder(
-    SIDEBAR_SECTIONS.filter((section) => section.visibility !== "debug" || showDebug),
+    runtimeSections.filter((section) => section.visibility !== "debug" || showDebug),
     sidebarSectionOrder
   );
 

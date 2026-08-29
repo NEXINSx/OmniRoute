@@ -229,7 +229,6 @@ v1/
 ├── audio/{speech, transcriptions}/      TTS + STT
 ├── batches/[id]/{cancel}、batches/      OpenAI Batches API
 ├── chat/completions/                    聊天補全（主要端點）
-├── chatgpt-web/                         ChatGPT-Web 相容層
 ├── completions/                         舊版文字補全
 ├── embeddings/                          嵌入向量
 ├── files/[id]/、files/                  檔案 API
@@ -451,7 +450,7 @@ open-sse/
 ├── transformer/            Responses API ↔ Chat Completions 串流轉換器
 ├── services/               80+ 個服務模組（combo、備援、配額、身分識別……）
 ├── utils/                  串流輔助程式、TLS 客戶端、AWS SigV4、代理請求……
-└── mcp-server/             MCP 伺服器（3 種傳輸方式、30 個範圍、94 個工具）
+└── mcp-server/             MCP 伺服器（3 種傳輸方式、32 個範圍、107 個工具）
 ```
 
 ### 4.1 `open-sse/handlers/`
@@ -476,16 +475,16 @@ open-sse/
 
 ### 4.2 `open-sse/executors/`
 
-84 個提供者執行器，每個都繼承 `BaseExecutor`（`base.ts`）：
+107 個提供者執行器，每個都繼承 `BaseExecutor`（`base.ts`）：
 
-`antigravity`、`azure-openai`、`blackbox-web`、`chatgpt-web`、`cliproxyapi`、
-`cloudflare-ai`、`codex`、`commandCode`、`cursor`、`default`、`devin-cli`、
+`antigravity`、`azure-openai`、`blackbox-web`、`cliproxyapi`、
+`chatgpt-web-codex`、`cloudflare-ai`、`codex`、`commandCode`、`cursor`、`default`、`devin-cli`、
 `muse-spark-web`、`nlpcloud`、`opencode`、`perplexity-web`、`petals`、
-`pollinations`、`puter`、`qoder`、`vertex`、`windsurf`，加上 `claudeIdentity.ts`
+`pollinations`、`qoder`、`vertex`、`windsurf`，加上 `claudeIdentity.ts`
 （共用身分識別輔助程式）和 `index.ts`（註冊表）。
 
 > 注意：未列在此處的提供者由 `default.ts` 使用通用的
-> 與 OpenAI 相容的執行器處理。完整提供者目錄（268 個條目）位於
+> 與 OpenAI 相容的執行器處理。完整的 351 項提供者目錄位於
 > `src/shared/constants/providers.ts`。
 
 ### 4.3 `open-sse/translator/`
@@ -518,7 +517,7 @@ open-sse/
 
 | 面向             | 檔案                                                                                                                                                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Combo 路由       | `combo.ts`（17 種策略）、`comboConfig.ts`、`comboMetrics.ts`、`comboManifestMetrics.ts`、`comboAgentMiddleware.ts`                                                                                                                                |
+| Combo 路由       | `combo.ts`（19 種公開策略）、`comboConfig.ts`、`comboMetrics.ts`、`comboManifestMetrics.ts`、`comboAgentMiddleware.ts`                                                                                                                            |
 | Auto Combo 引擎  | `autoCombo/` — `engine.ts`、`scoring.ts`、`taskFitness.ts`、`virtualFactory.ts`、`modePacks.ts`、`autoPrefix.ts`、`persistence.ts`、`providerDiversity.ts`、`providerRegistryAccessor.ts`、`routerStrategy.ts`、`selfHealing.ts`、`index.ts`      |
 | 韌性             | `accountFallback.ts`（冷卻 + 鎖定）、`errorClassifier.ts`、`emergencyFallback.ts`、`rateLimitManager.ts`、`rateLimitSemaphore.ts`、`accountSemaphore.ts`、`accountSelector.ts`                                                                    |
 | 配額             | `quotaMonitor.ts`、`quotaPreflight.ts`、`bailianQuotaFetcher.ts`、`codexQuotaFetcher.ts`、`deepseekQuotaFetcher.ts`、`openrouterQuotaFetcher.ts`、`openrouterFreeWindow.ts`、`crofUsageFetcher.ts`、`antigravityCredits.ts`                       |
@@ -537,7 +536,7 @@ open-sse/
 - **31 個已註冊工具**，在 `server.ts` 中接線（12 個定義於 `schemas/tools.ts` 範圍下，
   5 個壓縮工具、3 個記憶體工具、4 個技能工具，加上透過 `advancedTools.ts` 新增的進階工具）。
 - **3 種傳輸方式**：stdio、HTTP Streamable、SSE。
-- **13 個範圍**，宣告於 `src/shared/constants/mcpScopes.ts`。
+- **32 個範圍**，宣告於 `src/shared/constants/mcpScopes.ts`。
 - 稽核資料表：`mcp_tool_audit`（由 `audit.ts` 填充）。
 - 檔案：`server.ts`、`index.ts`、`httpTransport.ts`、`audit.ts`、`scopeEnforcement.ts`、
   `runtimeHeartbeat.ts`、`descriptionCompressor.ts`、`schemas/{tools, a2a, audit, index}.ts`、
@@ -627,17 +626,17 @@ bin/
 
 ## 7. `tests/`
 
-| 目錄                                                                           | 類型                                                                                     |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `tests/unit/`                                                                  | 透過 Node 原生測試執行器的單元測試（1821 個檔案，加上 `api/`、`auth/`、`authz/` 子目錄） |
-| `tests/integration/`                                                           | 跨模組 + 資料庫狀態測試                                                                  |
-| `tests/e2e/`                                                                   | Playwright UI 測試                                                                       |
-| `tests/protocols-e2e/`                                                         | MCP/A2A 協定 e2e 測試                                                                    |
-| `tests/translator/`                                                            | 翻譯器專用測試                                                                           |
-| `tests/security/`                                                              | 安全性回歸測試                                                                           |
-| `tests/load/`                                                                  | 負載/壓力測試                                                                            |
-| `tests/golden-set/`                                                            | 翻譯器回歸測試的參考輸出                                                                 |
-| `tests/helpers/`、`tests/fixtures/`、`tests/manual/`、`tests/scratch_test.mjs` | 支援                                                                                     |
+| 目錄                                                 | 類型                                                                                     |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `tests/unit/`                                        | 透過 Node 原生測試執行器的單元測試（1821 個檔案，加上 `api/`、`auth/`、`authz/` 子目錄） |
+| `tests/integration/`                                 | 跨模組 + 資料庫狀態測試                                                                  |
+| `tests/e2e/`                                         | Playwright UI 測試                                                                       |
+| `tests/protocols-e2e/`                               | MCP/A2A 協定 e2e 測試                                                                    |
+| `tests/translator/`                                  | 翻譯器專用測試                                                                           |
+| `tests/security/`                                    | 安全性回歸測試                                                                           |
+| `tests/load/`                                        | 負載/壓力測試                                                                            |
+| `tests/golden-set/`                                  | 翻譯器回歸測試的參考輸出                                                                 |
+| `tests/helpers/`、`tests/fixtures/`、`tests/manual/` | 支援                                                                                     |
 
 常用命令：
 

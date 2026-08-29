@@ -25,7 +25,6 @@ import { dedupeTargetsByExecutionKey, isRecord } from "./comboData.ts";
 import { isComboModelVisible } from "./comboVisibility.ts";
 import { getTargetProvider, MAX_COMBO_DEPTH } from "./comboPredicates.ts";
 import { evaluateContextLimit } from "./contextOverrideGate.ts";
-import { hasEstimableContent } from "./knownContextOverflow.ts";
 import {
   normalizeModelEntry,
   orderTargetsForWeightedFallback,
@@ -47,7 +46,7 @@ import type {
  * #8488 / #5240: web-cookie (and similar) providers honestly advertise
  * registry toolCalling:false but still run the prompt-emulated tool shim.
  * Combo tools filters must keep those targets eligible so fail-closed does
- * not regress emulation-only combos (e.g. all chatgpt-web).
+ * not regress emulation-only web-provider combos.
  */
 export function providerSupportsEmulatedToolCalling(
   providerIdOrAlias: string | null | undefined
@@ -478,6 +477,13 @@ function requestRequiresStructuredOutput(body: Record<string, unknown>): boolean
   const responseFormat = isRecord(body.response_format) ? body.response_format : null;
   const type = typeof responseFormat?.type === "string" ? responseFormat.type : null;
   return type === "json_object" || type === "json_schema";
+}
+
+export function hasEstimableContent(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return true;
 }
 
 function estimateRequestInputTokens(body: Record<string, unknown>): number {

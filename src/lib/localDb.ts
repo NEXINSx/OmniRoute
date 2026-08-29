@@ -96,6 +96,7 @@ export * from "./db/compressionContextBudget";
 export * from "./db/compressionRunTelemetry";
 export * from "./db/jobRegistryDb";
 export * from "./db/modelContextOverrides";
+export * from "./db/responsesContinuationStore";
 
 export {
   getApiKeys,
@@ -111,6 +112,7 @@ export {
   pickApiKeyForInternalUse,
   clearApiKeyCaches,
   resetApiKeyState,
+  ApiKeyPolicyInvariantError,
 } from "./db/apiKeys";
 
 export {
@@ -144,6 +146,7 @@ export {
   // LKGP (Last Known Good Provider) (#919)
   getLKGP,
   setLKGP,
+  clearLKGP,
 
   // Pricing
   getPricing,
@@ -171,6 +174,8 @@ export {
 } from "./db/databaseSettings";
 
 export type { UserDatabaseSettings } from "./db/databaseSettings";
+
+export * from "./db/exclusiveConnectionLeases";
 
 export {
   // Proxy Registry
@@ -613,6 +618,7 @@ export {
   listPools,
   getPool,
   getPoolsByGroup,
+  ensurePool,
   createPool,
   updatePool,
   deletePool,
@@ -765,7 +771,7 @@ export type {
 } from "./db/usageAnalytics";
 
 // ---------------------------------------------------------------------------
-// usage_logs — auto-routing analytics (#3500 slice 4)
+// call_logs auto-routing analytics (#3500 slice 4)
 // ---------------------------------------------------------------------------
 export {
   getAutoRoutingTotalCount,
@@ -818,6 +824,27 @@ export {
   getRadarSettings,
   setRadarOptIn,
   setRadarKey,
+  getRadarReferralsCache,
+  setRadarReferralsCache,
+  getRadarOffersCache,
+  setRadarOffersCache,
+  getRadarIntelCache,
+  setRadarIntelCache,
+  listRadarLocalModelState,
+  setRadarLocalModelOverride,
+  clearRadarLocalModelOverride,
+  setRadarModelTombstone,
+  getRadarLocalMergeState,
 } from "./db/radar";
-export type { RadarCache, RadarSettings } from "./db/radar";
+export type {
+  RadarCache,
+  RadarSettings,
+  RadarReferralsCache,
+  RadarOffersCache,
+  RadarIntelCache,
+  RadarLocalModelState,
+  RadarLocalModelOverridePatch,
+  RadarLocalMergeState,
+} from "./db/radar";
 export * from "./db/conductorBridge"; // OmniConductor hub mirror — SSE cursor (PRD Conductor RF1)
+export * from "./db/agenticConversations"; // Multi-turn conversation id tracking (X-ConversationId)

@@ -1,3 +1,20 @@
+/**
+ * Stale-while-revalidate for the /v1/models catalog cache (#8728).
+ *
+ * Contract note: #8728 originally shipped an injectable `CatalogCachePolicy`
+ * (a per-call SWR accessor + refresh scheduler) and an unbounded
+ * `CATALOG_STALE_WHILE_REVALIDATE_MS = Number.POSITIVE_INFINITY`. #9199 landed
+ * afterwards and deliberately replaced both: the window is now a fixed 30 s
+ * constant and the refresh is scheduled internally via `setTimeout(…, 0)`.
+ * See catalogCache.ts — an unbounded window let a refresh that kept failing pin
+ * an ancient catalog forever.
+ *
+ * These tests were left asserting the removed API, which is what broke the
+ * production build (catalog.ts re-exported three symbols that no longer exist).
+ * They are realigned here to the shipped contract: the BEHAVIOR #8728 added —
+ * an expired-but-recent successful entry is served immediately while a refresh
+ * runs behind it — is still fully covered.
+ */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -9,8 +26,6 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 
 const readCache = await import("../../src/lib/db/readCache.ts");
 const catalogCache = await import("../../src/app/api/v1/models/catalogCache.ts");
-
-type RefreshTask = () => Promise<void>;
 
 function request() {
   return new Request("http://localhost/v1/models");
@@ -25,28 +40,11 @@ function payload(body: string, status = 200): catalogCache.CatalogPayload {
   };
 }
 
-function createPolicyQueue() {
-  const tasks: RefreshTask[] = [];
-  return {
-    policy: {
-      getStaleWhileRevalidateMs: () => Number.POSITIVE_INFINITY,
-      scheduleBackgroundRefresh: (task: RefreshTask) => {
-        tasks.push(task);
-      },
-    },
-    tasks,
-  };
-}
-
-async function resolve(
-  build: (request: Request) => Promise<catalogCache.CatalogPayload>,
-  policy = createPolicyQueue().policy
-) {
+async function resolve(build: (request: Request) => Promise<catalogCache.CatalogPayload>) {
   return catalogCache.resolveCachedCatalogResponse(
     request(),
     { corsHeaders: {}, diagnosticHeaders: {} },
-    build,
-    policy
+    build
   );
 }
 
@@ -55,149 +53,91 @@ test.beforeEach(() => {
 });
 
 test.after(() => {
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
-test("production SWR policy is unbounded and reset restores the default accessor", () => {
-  assert.equal(catalogCache.CATALOG_STALE_WHILE_REVALIDATE_MS, Number.POSITIVE_INFINITY);
-  assert.equal(catalogCache.getCatalogStaleWhileRevalidateMs(), Number.POSITIVE_INFINITY);
-
-  catalogCache.__setCatalogStaleWhileRevalidateAccessorForTest(() => 0);
-  assert.equal(catalogCache.getCatalogStaleWhileRevalidateMs(), 0);
-
-  catalogCache.__resetCatalogBuilderRunsForTest();
-  assert.equal(catalogCache.getCatalogStaleWhileRevalidateMs(), Number.POSITIVE_INFINITY);
+test("the SWR window is a bounded constant, not an unbounded accessor", () => {
+  // #9199 replaced the injectable POSITIVE_INFINITY accessor with this bound so a
+  // refresh that keeps failing cannot pin an old catalog forever.
+  assert.equal(catalogCache.CATALOG_STALE_WHILE_REVALIDATE_MS, 30_000);
+  assert.ok(Number.isFinite(catalogCache.CATALOG_STALE_WHILE_REVALIDATE_MS));
 });
 
-test("reset detaches scheduled work before it can run", async () => {
-  const { policy, tasks } = createPolicyQueue();
-  await resolve(async () => payload("old"), policy);
-  catalogCache.__expireCatalogCacheForTest();
-  await resolve(async () => payload("detached"), policy);
-  assert.equal(tasks.length, 1);
-
-  catalogCache.__resetCatalogBuilderRunsForTest();
-  await tasks[0]();
-
-  assert.equal(catalogCache.__getCatalogBuilderRunsForTest(), 0);
-});
-
-test("ordinary TTL expiry serves the last success indefinitely and schedules one refresh per key", async () => {
-  const { policy, tasks } = createPolicyQueue();
-  const initial = await resolve(async () => payload("old"), policy);
-  assert.equal(await initial.text(), "old");
-  catalogCache.__expireCatalogCacheForTest(7 * 24 * 60 * 60 * 1000);
-
-  const staleResponses = await Promise.all(
-    Array.from({ length: 5 }, () => resolve(async () => payload("new"), policy))
-  );
-
-  assert.deepEqual(
-    await Promise.all(staleResponses.map((response) => response.text())),
-    Array(5).fill("old")
-  );
-  assert.equal(tasks.length, 1, "concurrent stale reads must schedule exactly one refresh");
+test("a fresh entry is replayed without running the builder again", async () => {
+  const first = await resolve(async () => payload("fresh"));
+  assert.equal(await first.text(), "fresh");
   assert.equal(catalogCache.__getCatalogBuilderRunsForTest(), 1);
 
-  await tasks[0]();
-
-  const refreshed = await resolve(async () => payload("unexpected"), policy);
-  assert.equal(await refreshed.text(), "new");
-  assert.equal(catalogCache.__getCatalogBuilderRunsForTest(), 2);
+  const second = await resolve(async () => payload("SHOULD NOT BUILD"));
+  assert.equal(await second.text(), "fresh");
+  assert.equal(catalogCache.__getCatalogBuilderRunsForTest(), 1);
 });
 
-test("unsuccessful cold payloads are returned but never cached", async () => {
-  const first = await resolve(async () => payload("temporary failure", 503));
-  assert.equal(first.status, 503);
-  assert.equal(await first.text(), "temporary failure");
-
-  const second = await resolve(async () => payload("recovered"));
-  assert.equal(second.status, 200);
-  assert.equal(await second.text(), "recovered");
-  assert.equal(catalogCache.__getCatalogBuilderRunsForTest(), 2);
-});
-
-test("failed background refresh retains the prior successful snapshot and permits retry", async (t) => {
-  t.mock.method(console, "error", () => {});
-  const { policy, tasks } = createPolicyQueue();
-  assert.equal(await (await resolve(async () => payload("old"), policy)).text(), "old");
+test("an expired successful entry is served immediately while a refresh runs behind it", async () => {
+  await resolve(async () => payload("old"));
   catalogCache.__expireCatalogCacheForTest();
 
-  assert.equal(
-    await (
-      await resolve(async () => {
-        throw new Error("temporary failure");
-      }, policy)
-    ).text(),
-    "old"
-  );
-  await tasks.shift()!();
+  // The stale body comes back on THIS call — the caller never waits for the rebuild.
+  const stale = await resolve(async () => payload("new"));
+  assert.equal(await stale.text(), "old", "the expired-but-recent entry must be served as-is");
 
-  assert.equal(
-    await (await resolve(async () => payload("temporary failure", 503), policy)).text(),
-    "old"
-  );
-  assert.equal(tasks.length, 1, "a failed refresh must release single-flight state for retry");
-  await tasks.shift()!();
+  await catalogCache.__flushCatalogBackgroundRefreshForTest();
 
-  assert.equal(await (await resolve(async () => payload("new"), policy)).text(), "old");
-  assert.equal(tasks.length, 1, "an unsuccessful payload must also permit another refresh");
-  await tasks.shift()!();
-
-  assert.equal(await (await resolve(async () => payload("unused"), policy)).text(), "new");
+  const refreshed = await resolve(async () => payload("SHOULD NOT BUILD"));
+  assert.equal(await refreshed.text(), "new", "the background refresh must replace the snapshot");
 });
 
-test("hard invalidation drops snapshots, detaches old work, and guards old-generation writeback", async () => {
-  let resolveOld!: (value: catalogCache.CatalogPayload) => void;
-  const oldPayload = new Promise<catalogCache.CatalogPayload>((resolvePromise) => {
-    resolveOld = resolvePromise;
-  });
-  let currentBuildStarted = false;
-  let resolveCurrent!: (value: catalogCache.CatalogPayload) => void;
-  const currentPayload = new Promise<catalogCache.CatalogPayload>((resolvePromise) => {
-    resolveCurrent = resolvePromise;
-  });
+test("an entry aged past the SWR window is not served stale", async () => {
+  await resolve(async () => payload("ancient"));
+  catalogCache.__expireCatalogCacheForTest(catalogCache.CATALOG_STALE_WHILE_REVALIDATE_MS + 1_000);
 
-  const oldRequest = resolve(async () => oldPayload);
-  await Promise.resolve();
-
-  readCache.invalidateModelCatalogCache();
-  const currentRequest = resolve(async () => {
-    currentBuildStarted = true;
-    return currentPayload;
-  });
-  await Promise.resolve();
-
-  assert.equal(currentBuildStarted, true, "the first post-write read must start a current build");
-
-  resolveCurrent(payload("current"));
-  assert.equal(await (await currentRequest).text(), "current");
-
-  resolveOld(payload("old"));
-  assert.equal(await (await oldRequest).text(), "old");
-
-  const cached = await resolve(async () => payload("unexpected"));
-  assert.equal(await cached.text(), "current", "old completion must not overwrite current cache");
-  assert.equal(catalogCache.__getCatalogBuilderRunsForTest(), 2);
+  const rebuilt = await resolve(async () => payload("rebuilt"));
+  assert.equal(await rebuilt.text(), "rebuilt", "past the window the caller must wait for a build");
 });
 
-test("hard invalidation clears a completed snapshot and makes the next read block", async () => {
-  assert.equal(await (await resolve(async () => payload("old"))).text(), "old");
-  readCache.invalidateModelCatalogCache();
-
-  let resolveCurrent!: (value: catalogCache.CatalogPayload) => void;
-  const currentPayload = new Promise<catalogCache.CatalogPayload>((resolvePromise) => {
-    resolveCurrent = resolvePromise;
-  });
-  let settled = false;
-  const next = resolve(async () => currentPayload).then((response) => {
-    settled = true;
-    return response;
+test("a cached non-200 is never replayed as stale", async () => {
+  // Replaying a cached error as "stale" would mask an intermittent failure behind
+  // a fake success forever.
+  catalogCache.__setCatalogCacheEntryForTest(request(), {
+    body: "boom",
+    headers: {},
+    status: 500,
+    expiresAt: Date.now() - 1,
   });
 
-  await Promise.resolve();
-  assert.equal(settled, false, "post-write reads may block and must not serve the old snapshot");
+  const res = await resolve(async () => payload("recovered"));
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), "recovered");
+});
 
-  resolveCurrent(payload("current"));
-  assert.equal(await (await next).text(), "current");
+test("concurrent cold requests share a single builder run", async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  const build = async () => {
+    await gate;
+    return payload("coalesced");
+  };
+
+  const inFlight = [resolve(build), resolve(build), resolve(build)];
+  release();
+  const bodies = await Promise.all((await Promise.all(inFlight)).map((r) => r.text()));
+
+  assert.deepEqual(bodies, ["coalesced", "coalesced", "coalesced"]);
+  assert.equal(
+    catalogCache.__getCatalogBuilderRunsForTest(),
+    1,
+    "identical concurrent requests must coalesce onto one in-flight build (#6408)"
+  );
+});
+
+test("a state change invalidates the cache so the next read rebuilds", async () => {
+  await resolve(async () => payload("before"));
+
+  readCache.invalidateDbCache();
+
+  const after = await resolve(async () => payload("after"));
+  assert.equal(await after.text(), "after", "a write must be reflected on the very next read");
 });

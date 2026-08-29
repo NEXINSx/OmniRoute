@@ -1,3 +1,13 @@
+// ENVIRONMENT NOTE (sandbox better-sqlite3 / glibc limitation, not a code defect):
+// This test constructs or exercises a real better-sqlite3-backed SQLite database.
+// better-sqlite3 is a native addon; production and CI load it normally, but some
+// sandboxes/dev boxes ship a system glibc older than the prebuilt binary requires
+// ("GLIBC_2.29 not found"), so the native module fails to dlopen and any test that
+// reaches better-sqlite3 directly (or asserts stdout that the load-failure warning
+// would pollute) fails HERE while passing in CI. This is a known environment
+// limitation, not a defect in the code under test: the OmniRoute runtime itself
+// cascades to node:sqlite/sql.js when better-sqlite3 is unavailable. See
+// tests/unit/_helpers/betterSqlite3Availability.ts for a guard helper.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -122,9 +132,9 @@ test(
       }, "first serve must not abort on a fresh setup DB that only has the 001 seed (#9934)");
 
       // Prove the fresh DB actually got migrated past 001 to the latest version.
-      const maxRow = db.prepare(
-        "SELECT MAX(CAST(version AS INTEGER)) AS maxV FROM _omniroute_migrations"
-      ).get();
+      const maxRow = db
+        .prepare("SELECT MAX(CAST(version AS INTEGER)) AS maxV FROM _omniroute_migrations")
+        .get();
       assert.ok(
         (maxRow?.maxV ?? 0) > 1,
         `expected migrations beyond 001 to run, got max=${maxRow?.maxV}`
@@ -132,7 +142,7 @@ test(
     } finally {
       if (originalDataDir === undefined) delete process.env.DATA_DIR;
       else process.env.DATA_DIR = originalDataDir;
-      fs.rmSync(dataDir, { recursive: true, force: true });
+      fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   }
 );

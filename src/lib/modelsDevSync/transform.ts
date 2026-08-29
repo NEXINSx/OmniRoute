@@ -165,7 +165,6 @@ export const MODELS_DEV_PROVIDER_MAP: Record<string, string[]> = {
   "minimax-cn": ["minimax-cn"],
   longcat: ["lc", "longcat"],
   pollinations: ["pol", "pollinations"],
-  puter: ["pu", "puter"],
   cloudflare: ["cf"],
   scaleway: ["scw"],
   ollama: ["ollamacloud", "ollama-cloud"],

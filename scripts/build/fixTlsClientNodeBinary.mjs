@@ -10,7 +10,7 @@
  * even when it does run, silently no-ops on a rate-limited/failed GitHub API
  * call instead of raising — so `node_modules/tls-client-node/bin/` can end
  * up empty with no visible signal until the first live request throws
- * TlsClientUnavailableError (chatgpt-web/claude-web/grok-web/lmarena/
+ * TlsClientUnavailableError (claude-web/grok-web/lmarena/
  * perplexity-web all share this transport).
  *
  * This module:
@@ -123,7 +123,7 @@ export async function fixTlsClientNodeBinary({
           "(GitHub API rate-limited or unreachable after retries)."
       );
       console.warn(
-        "     chatgpt-web/claude-web/grok-web/lmarena/perplexity-web will raise a clear " +
+        "     claude-web/grok-web/lmarena/perplexity-web will raise a clear " +
           "TlsClientUnavailableError on first use until this is resolved."
       );
       console.warn(

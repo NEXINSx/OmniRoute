@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Delete all completed batches",
     "batchListBatchesTable": "Batches",
     "changelogViewerLoading": "Loading changelog from GitHub...",
+    "profile": "Profile",
     "profileLoading": "Loading profile...",
     "profileHowToEarn": "How to earn",
     "bootstrapBannerDismiss": "Dismiss",
@@ -805,6 +806,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -980,6 +988,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Advertise claude/&lt;provider&gt;/&lt;model&gt; mirror ids on /v1/models so Claude Code gateway model discovery lists non-Claude models. Warning: doubles catalog entries for all clients when enabled globally.",
+  "featureFlagChatVirtualLanesEnabledDescription": "Enable per-tenant adaptive virtual admission lanes for provider dispatch (#9654): one tenant's burst no longer 503s another. The OMNIROUTE_CHAT_VIRTUAL_LANES env var wins over this dashboard override; changes take effect at server restart.",
   "sidebar": {
     "home": "Home",
     "dashboard": "Dashboard",
@@ -1011,7 +1020,7 @@
     "apiManager": "API Keys",
     "apiManagerSubtitle": "Manage API keys and access",
     "embeddedServices": "Embedded Services",
-    "embeddedServicesSubtitle": "Manage local proxy services",
+    "embeddedServicesSubtitle": "Optional local services",
     "logs": "Logs",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Get notified of events",
@@ -1164,6 +1173,8 @@
     "consoleLogs": "Console Logs",
     "logsTimeline": "Timeline",
     "logsTimelineSubtitle": "Visual request timeline",
+    "conversations": "Conversations",
+    "conversationsSubtitle": "Multi-turn agentic conversations",
     "globalRouting": "Global Routing",
     "mitmProxy": "MITM Proxy",
     "oneProxy": "1Proxy",
@@ -1256,7 +1267,8 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Intercept IDE agent traffic",
     "trafficInspector": "Traffic Inspector",
-    "trafficInspectorSubtitle": "Monitor LLM calls + debug any HTTPS traffic",
+    "trafficInspectorSubtitle": "Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Code tools pointing to OmniRoute",
     "cliAgents": "CLI Agents",
@@ -1289,7 +1301,8 @@
       "navigate": "navigate",
       "open": "open",
       "close": "close"
-    }
+    },
+    "noResults": "No results"
   },
   "webhooks": {
     "title": "Webhooks",
@@ -1735,6 +1748,8 @@
     "quotaShare": "Quota Share",
     "discovery": "Discovery",
     "freeProviderRankings": "Free Provider Rankings",
+    "radar": "Radar",
+    "setup": "Setup",
     "freeTiers": "Free Tiers",
     "gamification": "Gamification",
     "leaderboard": "Leaderboard",
@@ -1794,6 +1809,11 @@
     "updateStarted": "Update started...",
     "reloadingPageAutomatically": "Reloading page automatically...",
     "providerTopology": "Provider Topology",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Download DMG (macOS)",
     "downloadDmgDescription": "A new version of the OmniRoute desktop app is available. Please download and install the macOS DMG installer to update (current: v{version}).",
     "downloadExe": "Download EXE (Windows)",
@@ -1850,7 +1870,16 @@
     "directDownloadHint": "Or download the respective installer format directly:",
     "releaseNotes": "Release Notes",
     "readMore": "Read More",
-    "noAuthLabel": "No Auth"
+    "noAuthLabel": "No Auth",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "Analytics",
@@ -2187,7 +2216,8 @@
     "searchAnalyticsEmptyDescription": "Use <code>POST /v1/search</code> to start routing web searches.",
     "searchAnalyticsFreeTier": "<strong>Free tier available:</strong> Serper (2,500/mo), Brave (2,000/mo), Exa (1,000/mo), Tavily (1,000/mo) — total 6,500+ free searches/month with automatic failover.",
     "autoRoutingNoDataAvailable": "No auto-routing analytics available. Make requests using the auto/ prefix to see metrics.",
-    "defaultVariantLabel": "Default"
+    "defaultVariantLabel": "Default",
+    "freeTierAvailable": "Free tier available"
   },
   "apiManager": {
     "title": "API Keys",
@@ -2211,6 +2241,10 @@
     "fullAccess": "Full Access",
     "keyManagement": "API Key Management",
     "keyManagementDesc": "Create and manage API keys for authenticating requests to your endpoint",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Total Keys",
     "restricted": "Restricted",
     "totalRequests": "Total Requests",
@@ -2476,7 +2510,9 @@
     "providerCount": "{count} providers",
     "imageToTextBridgeAvailable": "Modality Bridge can describe images for text-only models now. The inline playground will be available when <code>/api/v1/images/understanding</code> is implemented.",
     "imageToTextBridgeCta": "Configure the Image→Text bridge in Modality Bridge settings",
-    "sttBridgeCta": "Configure the Speech→Text bridge in Modality Bridge settings"
+    "sttBridgeCta": "Configure the Speech→Text bridge in Modality Bridge settings",
+    "existingConnection": "Existing connection",
+    "openrouterSttDescription": "OpenRouter speech-to-text models use your configured OpenRouter connection. No separate credential is required."
   },
   "search": {
     "searchQuery": "Search Query",
@@ -2887,6 +2923,7 @@
       "interpreter": "Open Interpreter autonomous coding agent CLI",
       "omp": "Oh My Pi terminal coding agent",
       "letta": "Letta CLI agent with persistent memory and tool use",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Warp AI terminal with custom provider support",
       "agent-deck": "Agent Deck multi-agent orchestrator"
     },
@@ -3597,6 +3634,10 @@
     "wizardStep3Desc": "Pick how requests are distributed across your models - 14 strategies available",
     "wizardStep4Title": "Review & Save",
     "wizardStep4Desc": "Review your configuration and activate the combo",
+    "usageGuideInvokeTitle": "How to call this combo",
+    "usageGuideInvokeDesc": "Send the combo's exact name as the model, e.g. model: \"my-combo\" (or combo/my-combo).",
+    "usageGuideInvokeAutoNote": "auto and auto/* are a separate zero-config router that does not use your combos (unless a combo is literally named auto).",
+    "usageGuideInvokeOpenrouterNote": "openrouter/auto is a real paid OpenRouter product (Auto Best Available), not an OmniRoute alias — exclude it via Settings → Routing → Hide paid models.",
     "emailVisibilityStateOn": "On",
     "emailVisibilityStateOff": "Off",
     "reorderHandle": "Drag to reorder",
@@ -3708,7 +3749,13 @@
     "errorTitle": "Failed to load combos",
     "errorDescription": "We could not load combo data right now. Check your connection and try again.",
     "errorId": "Error ID: {id}",
-    "errorRetry": "Try Again"
+    "errorRetry": "Try Again",
+    "comboLabel": "Combo",
+    "duplicateAutoComboConfirm": "Create a static combo from \"{name}\"?",
+    "duplicateAutoComboSnapshotMsg": "This will snapshot the currently connected providers/models that match this template into an editable combo.",
+    "duplicateAutoComboFailedPrefix": "Failed to duplicate auto-combo:",
+    "duplicateAutoComboUnknownError": "Unknown error",
+    "duplicateAutoComboTitle": "Create a static combo from {name}"
   },
   "costs": {
     "title": "Costs",
@@ -3803,6 +3850,9 @@
   },
   "endpoint": {
     "title": "API Endpoint",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Available Endpoints",
     "cloudProxy": "Cloud Proxy",
     "disableConfirm": "Are you sure you want to disable cloud proxy?",
@@ -4438,7 +4488,9 @@
       "cleaning": "Cleaning...",
       "cleanNow": "Clean now",
       "cleanupSuccess": "{count} point(s) removed",
-      "cleanupFailed": "Cleanup failed"
+      "cleanupFailed": "Cleanup failed",
+      "hostLabel": "Host",
+      "collectionLabel": "Collection"
     },
     "rerank": {
       "enableLabel": "Enable Rerank",
@@ -4581,6 +4633,13 @@
     "retry": "Retry",
     "allOperational": "All systems operational",
     "issuesDetected": "System issues detected",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Updated {time}",
     "latency": "Latency",
     "latencyP50": "p50",
@@ -4896,7 +4955,9 @@
     "multiProvider": "Multi-Provider",
     "usageTracking": "Usage Tracking",
     "securityDesc": "Set a password to protect your dashboard, or skip for now.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Connect your first AI provider. You can add more later.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "API Key (required)",
     "customUrlOptional": "Custom URL (optional)",
     "testDesc": "Let's verify your provider connection works.",
@@ -5085,6 +5146,7 @@
     "deprecatedProvider": "This provider has been deprecated",
     "riskNotice": {
       "title": "Before continuing",
+      "detailsTitle": "Usage caveats",
       "tooltip": "Provider with usage caveats — click for details",
       "oauth": "This provider uses your official product session/OAuth, which is not authorized for proxy/router use. We don't recommend intensive autonomous agent usage (OpenCloud-style, long multi-step flows, large batches) — the upstream may react by restricting or banning the account. Use at your own risk.",
       "webCookie": "This provider authenticates through your web session cookies. The upstream service may invalidate the session at any time, requiring you to log in again. Not recommended for long unattended operations. Use at your own risk.",
@@ -5092,6 +5154,11 @@
       "dontShowAgain": "Don't show this again for this provider",
       "understand": "I understand, continue",
       "cancel": "Cancel"
+    },
+    "warningNotice": {
+      "tooltip": "{count} connection(s) flagged — up to {maxFailures} recent failures{lastFailureSuffix}. Click to view connection health.",
+      "lastFailureSuffix": " (last failure {time})",
+      "ariaLabel": "View connection health details, {count} warning(s)"
     },
     "disabled": "Disabled",
     "enableProvider": "Enable provider",
@@ -5215,6 +5282,17 @@
     "skippingExistingModels": "Skipping {count} existing models",
     "autoSync": "Auto-Sync",
     "autoSyncShort": "Sync",
+    "autoFetchModels": "Auto-fetch upstream models",
+    "autoFetchModelsTooltip": "Fetch and cache upstream models when needed",
+    "autoFetchModelsEnabled": "Upstream model auto-fetch enabled",
+    "autoFetchModelsDisabled": "Upstream model auto-fetch disabled",
+    "autoFetchModelsToggleFailed": "Failed to toggle upstream model auto-fetch",
+    "autoFetchModelsPartialFailure": "Some connections updated, but upstream model auto-fetch was not changed everywhere",
+    "overridesUpstreamModel": "Overrides upstream",
+    "overridesUpstreamModelHint": "Your settings override this upstream model",
+    "resetToUpstreamDefaults": "Restore upstream defaults",
+    "resetToUpstreamDefaultsSuccess": "Restored upstream model defaults",
+    "resetToUpstreamDefaultsFailed": "Failed to restore upstream model defaults",
     "autoSyncTooltip": "Automatically refresh model list every 24h (configurable via MODEL_SYNC_INTERVAL_HOURS)",
     "autoSyncEnabled": "Auto-sync enabled — models will refresh periodically",
     "autoSyncDisabled": "Auto-sync disabled",
@@ -5647,8 +5725,8 @@
     "aggregatorsGateways": "Aggregators Gateways",
     "enterpriseCloud": "Enterprise & Cloud",
     "apiFormatLabel": "Api Format Label",
-    "apiKeyOptionalHint": "Api Key Optional Hint",
-    "apiKeyOptionalLabel": "Api Key Optional Label",
+    "apiKeyOptionalHint": "Leave empty if your local setup or provider does not require authentication.",
+    "apiKeyOptionalLabel": "API Key (optional)",
     "apiRegionChina": "Api Region China",
     "apiRegionHint": "Api Region Hint",
     "apiRegionInternational": "Api Region International",
@@ -5790,6 +5868,8 @@
     "rateLimitOverridesSection": "Rate Limit Overrides",
     "rateLimitOverridesMaxConcurrentHint": "Max concurrent requests override for this connection. Overrides the account-level cap.",
     "rateLimitOverridesMaxConcurrentLabel": "Max Concurrent (Rate Limit)",
+    "rateLimitOverridesMaxWaitMsHint": "Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimum time (ms) between requests. Overrides the default rate limiter delay.",
     "rateLimitOverridesMinTimeLabel": "Min Interval (ms)",
     "rateLimitOverridesRpmHint": "Max requests per minute for this connection. Overrides the provider default.",
@@ -6067,7 +6147,6 @@
       "glmt": "Preset GLM profile with higher token budget, thinking enabled, and longer timeout.",
       "getgoapi": "Connect GoAPI with an API key.",
       "groq": "Free tier: 30 RPM / 14.4K RPD — no credit card",
-      "hackclub": "Sign in with your Hack Club account at ai.hackclub.com.",
       "haiper": "Get API key at haiper.ai/haiper-api",
       "heroku": "Connect Heroku AI with an API key.",
       "hcnsec": "Get API key at api.hcnsec.cn",
@@ -6079,8 +6158,8 @@
       "inception": "Inception Labs is OpenAI-compatible at https://api.inceptionlabs.ai/v1. mercury-2 is the first diffusion LLM (dLLM) in the catalog — 5-10x faster generation than comparable autoregressive models, with tool calling, json_mode, and structured outputs.",
       "inference-net": "$25 free credits on signup plus research grants available",
       "internlm": "Free monthly quota ~1M input / 3M output tokens (~10 RPM)",
-      "jina-ai": "Bearer API key for the Jina AI rerank API.",
-      "jina-reader": "Connect Jina Reader with an API key.",
+      "jina-ai": "Bearer API key for api.jina.ai (embeddings, rerank, classify, segment, search). Not the Reader / r.jina.ai card. Dashboard keys take precedence over JINA_AI_API_KEY.",
+      "jina-reader": "Bearer API key for r.jina.ai URL-to-markdown only. Does not serve /v1/embeddings or /v1/rerank. The same Jina token as Foundation API works.",
       "kenari": "Kenari exposes an OpenAI-compatible chat completions endpoint at https://kenari.id/v1/chat/completions, plus a live /v1/models catalog covering Claude, GPT, DeepSeek, GLM, Kimi and more. OmniRoute uses the OpenAI protocol and lists models via passthrough.",
       "kie": "Connect KIE.AI with an API key.",
       "kilo-gateway": "Connect Kilo Gateway with an API key.",
@@ -6129,7 +6208,6 @@
       "poe": "Poe exposes OpenAI-compatible chat and responses on https://api.poe.com/v1, with authenticated balance checks on /usage/current_balance.",
       "pollinations": "Free keyless tier: openai, openai-fast, openai-large, qwen-coder, mistral, deepseek, grok, gemini-flash-lite-3.1, perplexity-fast, perplexity-reasoning. Premium models (claude, gemini, midijourney) require a Pollinations API key from enter.pollinations.ai.",
       "publicai": "Requires an API key — one-time signup credit, then paid",
-      "puter": "Get token at puter.com/dashboard → Copy Auth Token",
       "qiniu": "Create a Qiniu AI inference API key at https://portal.qiniu.com/ai-inference/api-key, then paste it here as a Bearer token. OpenAI-compatible endpoint at https://api.qnaigc.com/v1, proxying DeepSeek, Claude, Kimi and more behind one key.",
       "recraft": "Connect Recraft with an API key.",
       "reka": "Reka Chat is OpenAI-compatible on /v1. OmniRoute probes /v1/models and routes chat traffic to /v1/chat/completions.",
@@ -6177,13 +6255,13 @@
       "galadriel": "Connect Galadriel with an API key.",
       "predibase": "$25 free trial credits (30-day validity)",
       "chenzk": "OpenAI-compatible gateway with a live model catalog at chenzk.top.",
-      "freepik": "Generate images with Freepik's Mystic API.",
+      "magnific": "Generate images with Magnific Mystic.",
       "freetheai": "Free OpenAI-compatible gateway with passthrough model support.",
-      "g4f-gemini": "Free no-key g4f.space reverse proxy to Gemini, limited to 5 requests per minute.",
-      "g4f-groq": "Free no-key g4f.space reverse proxy to Groq, limited to 5 requests per minute.",
-      "g4f-nvidia": "Free no-key g4f.space reverse proxy to NVIDIA NIM, limited to 5 requests per minute.",
-      "g4f-ollama": "Free no-key hosted Ollama gateway from g4f.space, limited to 5 requests per minute.",
-      "g4f-pollinations": "Free no-key g4f.space reverse proxy to Pollinations, limited to 5 requests per minute.",
+      "g4f-gemini": "Remote g4f.space gateway to Gemini. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-groq": "Remote g4f.space gateway to Groq. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-nvidia": "Remote g4f.space gateway to NVIDIA NIM. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-ollama": "Remote g4f.space gateway to Ollama. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-pollinations": "Remote g4f.space gateway to Pollinations. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
       "mixedbread": "Create embeddings with the Mixedbread API.",
       "segmind": "Generate images and videos with Segmind's hosted models.",
       "amazon-q": "Uses the same AWS Builder ID or imported refresh-token flow as Kiro, but keeps Amazon Q connections separate.",
@@ -6192,6 +6270,7 @@
       "claude": "Connect Claude Code with the existing OAuth flow.",
       "cline": "Connect Cline with the existing OAuth flow.",
       "cursor": "Connect Cursor IDE with the existing OAuth flow.",
+      "cursor-api": "Connect Cursor with a user API key (crsr_...) from cursor.com/dashboard/api; no IDE session needed.",
       "github": "Connect GitHub Copilot with the existing OAuth flow.",
       "gitlab-duo": "OAuth application with ai_features + read_user scopes. Configure GITLAB_DUO_OAUTH_CLIENT_ID and optionally GITLAB_DUO_OAUTH_CLIENT_SECRET on this OmniRoute instance.",
       "kilocode": "Connect Kilo Code with the existing OAuth flow.",
@@ -6224,6 +6303,20 @@
     "webSessionGuideStep3": "Copy the required credential from the provider's own domain. For cookies, copy only the Cookie header value and omit Cookie:.",
     "webSessionGuideStep3Manual": "Manual path: open the browser developer tools (F12 → Network), refresh the page, open an authenticated request, and copy the Cookie header value from Request Headers — omit the Cookie: prefix.",
     "webSessionGuideStep4": "Paste it here and check the connection. If it stops working, sign in again and replace it with a fresh value.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Treat this like a password: it may access your signed-in web account until it expires or is revoked.",
     "webNoAuthGuideTitle": "No credential required",
     "webNoAuthGuideBody": "{provider} does not need an API key or cookie. Save the connection to use its free web endpoint.",
@@ -6254,6 +6347,15 @@
     "cheaperInferenceSupporterBadge": "Open Source Friend",
     "cheaperInferenceSupporterTooltip": "Cheaper Inference backs OmniRoute as an Open Source Friend",
     "kimiPartnerLinkNote": "Partner link — supports OmniRoute at no extra cost to you",
+    "codexQuotaPools": "Codex quota pools",
+    "codexPoolAvailable": "Available",
+    "codexPoolPartiallyLimited": "Partially limited",
+    "codexPoolFullyLimited": "Fully limited",
+    "codexPoolLimited": "{count} limited",
+    "codexPoolQuotaExhausted": "Quota exhausted",
+    "codexPoolCoolingDown": "Cooling down",
+    "codexPoolUsed": "used",
+    "codexPoolUntil": "Until {value}",
     "anonymousFallbackTitle": "Anonymous fallback",
     "anonymousFallbackDesc": "When all configured connections are exhausted (quota, credits, or expiry), temporarily use this provider's keyless tier. Turn off to skip this provider instead of sending anonymous requests — recommended when the keyless tier rejects them (401).",
     "anonymousFallbackEnabled": "Anonymous fallback enabled for {provider}",
@@ -6548,6 +6650,12 @@
     "autoDisableDescription": "Permanently mark provider connections as deactivated if they return specific terminal ban signals (e.g. HTTP 403 'verify your account'). This removes them from the combo rotation.",
     "autoDisableThreshold": "Ban Threshold",
     "autoDisableThresholdDesc": "Consecutive ban signals required before permanent deactivation.",
+    "autoDisableBannedScope": "Apply auto-disable to",
+    "autoDisableBannedScopeDesc": "Login seats (paid subscriptions and free accounts) can be locked by the upstream if OmniRoute keeps retrying after a ban. Paid prepaid API keys do not have that risk — leave them in the pool so fill-first can use the next key.",
+    "autoDisableBannedScopeAll": "All connections",
+    "autoDisableBannedScopeAllDesc": "Deactivate every connection that returns a permanent ban signal, including prepaid API keys.",
+    "autoDisableBannedScopeSubscription": "Login / subscription accounts only",
+    "autoDisableBannedScopeSubscriptionDesc": "Deactivate OAuth, cookie, session, and web-login seats (paid or free). Prepaid API keys stay active so routing can fail over.",
     "customBannedSignals": "Banned Keywords",
     "customBannedSignalsDesc": "Additional keywords that trigger permanent account ban detection. Built-in keywords always apply.",
     "customBannedSignalsPlaceholder": "e.g. api key revoked",
@@ -6603,6 +6711,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter without disabling any features",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when all of its entries are hidden",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Hide Health Check Logs",
     "hideHealthLogsDesc": "When ON, suppress [HealthCheck] messages in server console",
     "themeAccent": "Theme color",
@@ -6766,7 +6886,7 @@
     "denoRelayOrgDomainRequired": "Organization domain is required",
     "denoRelayDeployFailed": "Deno Deploy failed",
     "denoRelayTokenHint": "Organization token (prefix ddo_) from console.deno.com → Organization → Settings → Organization Tokens. Used once for deploy and never stored.",
-    "denoRelayOrgDomainHint": "Your Deno Deploy organization's default domain (e.g. acme.deno.net). The relay will be reachable at https://<app-name>.<org-slug>.deno.net.",
+    "denoRelayOrgDomainHint": "Your Deno Deploy organization's default domain (e.g. acme.deno.net). The relay will be reachable at https://&lt;app-name&gt;.&lt;org-slug&gt;.deno.net.",
     "proxyFreePoolFilterProtocol": "Filter by protocol",
     "proxyFreePoolProtocol": "Protocol",
     "proxyFreePoolCountryPlaceholder": "Country (e.g. US)",
@@ -6814,9 +6934,18 @@
     "afterPromptPlaceholder": "Instructions inserted after agent/provider prompt...",
     "chars": "{count} chars",
     "thinkingBudgetTitle": "Thinking Budget",
-    "thinkingBudgetDesc": "Control AI reasoning token usage across all requests",
+    "thinkingBudgetDesc": "Controls whether OmniRoute rewrites client thinking/reasoning parameters before requests go upstream. This is separate from compression, prompt cache, and API-key token limits.",
+    "thinkingBudgetIndependenceHint": "Compression, routing, and token-limit features keep working in every mode. Auto does not mean “auto-show thinking” — it strips client reasoning fields.",
     "passthrough": "Passthrough",
     "passthroughDesc": "No changes — client controls thinking budget",
+    "thinkingModePassthrough": "Passthrough",
+    "thinkingModePassthroughDesc": "Leave client reasoning unchanged (effort, summary, thinking blocks). Required for Codex/Desktop visible thinking. Default.",
+    "thinkingModeAuto": "Auto (strip)",
+    "thinkingModeAutoDesc": "Strip all client thinking/reasoning fields (reasoning, reasoning_effort, Claude thinking, Gemini thinking_config) and let the provider invent defaults. Can hide thinking panels and break client summary requests.",
+    "thinkingModeCustom": "Custom",
+    "thinkingModeCustomDesc": "Overwrite every request with a fixed thinking token budget you set below.",
+    "thinkingModeAdaptive": "Adaptive",
+    "thinkingModeAdaptiveDesc": "Scale thinking budget from a base effort using message count, tools, and prompt length.",
     "auto": "Auto Combo",
     "autoDesc": "Self-healing smart routing pool (Performance optimized)",
     "custom": "Custom",
@@ -6830,7 +6959,7 @@
     "tokenBudget": "Token Budget",
     "tokens": "tokens",
     "baseEffortLevel": "Base Effort Level",
-    "adaptiveHint": "Adaptive mode scales from this base level based on message count, tool usage, and prompt length.",
+    "adaptiveHint": "Adaptive mode scales from this base level based on message count, tool usage, and prompt length. Does not decrypt provider encrypted reasoning blobs.",
     "requireLogin": "Require login",
     "requireLoginDesc": "When ON, dashboard requires password. When OFF, access without login.",
     "currentPassword": "Current Password",
@@ -7146,6 +7275,7 @@
     "configured": "configured",
     "none": "None",
     "modelOverrideValuePlaceholder": "Numeric value",
+    "modelOverrideReasoningEffortsPlaceholder": "English comma-separated, e.g. low, medium, high",
     "addKeyValue": "Add key value",
     "noModelOverrides": "No overrides configured for this model.",
     "modelOverrideLoadFailed": "Failed to load model overrides",
@@ -7421,6 +7551,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Maximum queue wait time",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -7717,6 +7849,10 @@
         "label": "Ponytail (lazy senior dev)",
         "description": "Lazy senior-dev discipline: climb the YAGNI ladder, fix root cause, smallest working diff."
       },
+      "i-have-adhd": {
+        "label": "I have ADHD (action-first)",
+        "description": "Action-first output: next action leads, steps numbered, one concrete next step, no preamble."
+      },
       "terse-cjk": {
         "label": "Terse CJK (文言)",
         "description": "Classical-Chinese ultra-terse style (available only for Chinese)."
@@ -7905,9 +8041,9 @@
     "resilienceEnableServerWaitDesc": "When enabled, OmniRoute waits for the first cooldown to expire and retries automatically.",
     "resilienceMaxAttempts": "Maximum attempts",
     "resilienceMaxWaitPerAttempt": "Maximum wait per attempt",
-    "resilienceComboCooldownWaitTitle": "Quota-share combo cooldown wait",
-    "resilienceComboCooldownWaitDesc": "For quota-share combos only: wait out a short transient cooldown and re-dispatch instead of returning a 429 immediately. Never waits on quota_exhausted.",
-    "resilienceComboCooldownWaitToggleDesc": "Quota-share combos only; never waits on quota_exhausted.",
+    "resilienceComboCooldownWaitTitle": "Combo cooldown wait",
+    "resilienceComboCooldownWaitDesc": "For all combo strategies: wait out a short transient cooldown and re-dispatch instead of returning a 429 immediately. Never waits on quota_exhausted.",
+    "resilienceComboCooldownWaitToggleDesc": "All combo strategies; never waits on quota_exhausted.",
     "resilienceComboCooldownMaxWaitMs": "Maximum wait per attempt",
     "resilienceComboCooldownBudgetMs": "Total wait budget",
     "resilienceQuotaShareConcurrencyTitle": "Quota-share per-connection concurrency",
@@ -7997,13 +8133,17 @@
     "disableSessionStickinessDesc": "Round-robin and random combos rotate to a different connection on every request instead of pinning a whole conversation to one connection by the first-message hash. Leave off to preserve prompt-cache hits for multi-turn chats. Per-combo overrides take precedence.",
     "promptCacheAffinity": "Prompt-cache locality routing",
     "promptCacheAffinityDesc": "Prefer the same provider account for matching prompt-cache keys while preserving health and quota failover.",
+    "reasoningTokenBuffer": "Reasoning token buffer",
+    "reasoningTokenBufferDesc": "Allow combo routing to add max_tokens headroom only for known reasoning models when the full buffer fits inside a known output cap.",
+    "zeroLatencyOptimizations": "Zero-latency optimizations",
+    "zeroLatencyOptimizationsDesc": "Opt in to hedging, predictive TTFT skips, and proactive fallback compression. Leave off to prevent these latency features from racing targets or compressing fallback requests.",
     "credentialRedaction": "Credential Redaction",
     "credentialRedactionDesc": "Redact API keys, tokens, and secrets from context sent to providers and from responses.",
     "enableCredentialRedaction": "Enable credential redaction",
     "enableCredentialRedactionDesc": "Scrubs API keys, tokens, private keys, and JWTs from messages, tool calls, and responses.",
     "pricingAutoSyncDisabled": "Automatic Sync Disabled",
     "pricingAutoSyncEnabled": "Automatic Sync Enabled",
-    "modalityBridgeIntro": "Bridge multimodal content to text before it reaches text-only models. Vision is live; Audio arrives with the AudioBridge; Video is on the roadmap.",
+    "modalityBridgeIntro": "Bridge multimodal content to text before it reaches text-only models. Vision, Audio, and Video bridges are available and configurable.",
     "modalityBridgeVisionTab": "Vision",
     "modalityBridgeAudioTab": "Audio",
     "modalityBridgeVideoTab": "Video",
@@ -8025,6 +8165,8 @@
     "modalityBridgeAdvanced": "Advanced",
     "modalityBridgeTimeoutMs": "Timeout (ms)",
     "modalityBridgeMaxImages": "Max images per request",
+    "visionMaxCharsLabel": "Max description characters",
+    "visionMaxCharsHint": "Cap the vision model's description length. 0 = unlimited — raise for detail-heavy OCR tasks.",
     "modalityBridgeCacheEnabled": "Cache descriptions",
     "modalityBridgeCacheEnabledDesc": "Reuse descriptions for identical images (SHA-256 keyed, in-memory).",
     "modalityBridgeCacheTtlMinutes": "Cache TTL (minutes)",
@@ -8041,7 +8183,6 @@
     "modalityBridgeTestNoop": "Bridge did not activate (model may support vision natively or bridge is disabled)",
     "modalityBridgeTestError": "Test failed: {message}",
     "modalityBridgeAudioComingSoon": "The Audio bridge (speech → text via /v1/audio/transcriptions) ships in the next release. Its settings keys are already reserved.",
-    "modalityBridgeVideoComingSoon": "Video bridging (frame sampling + captioning) is on the backlog — see issue #9760.",
     "modalityBridgeMovedTitle": "Vision Bridge moved",
     "modalityBridgeMovedBody": "Vision Bridge settings now live in the dedicated Modality Bridge page.",
     "modalityBridgeMovedCta": "Open Modality Bridge settings",
@@ -8057,6 +8198,17 @@
     "modalityBridgeAudioTestOk": "Audio Bridge OK — {count} clip(s) transcribed by {model}",
     "modalityBridgeAudioTestNoop": "Audio Bridge did not activate (the target may support audio, no STT provider is connected, or the bridge is disabled)",
     "modalityBridgeAudioTestError": "Audio test failed: {message}",
+    "modalityBridgeVideoTitle": "Video Bridge",
+    "modalityBridgeVideoDesc": "Sample video frames, describe them with a vision model, and continue with the chosen text model.",
+    "modalityBridgeVideoRuntimeReady": "Runtime ready",
+    "modalityBridgeVideoRuntimeUnavailable": "Runtime unavailable",
+    "modalityBridgeVideoRuntimeInstall": "Install FFmpeg and ffprobe on the server PATH to enable video extraction.",
+    "modalityBridgeVideoEnabled": "Enable Video Bridge",
+    "modalityBridgeVideoEnabledDesc": "Replace video parts with timestamped frame descriptions when the target model cannot process video.",
+    "modalityBridgeVideoModel": "Frame description model",
+    "modalityBridgeVideoModelInherited": "Inherit the Vision Bridge model",
+    "modalityBridgeVideoFrameCount": "Frames per video",
+    "modalityBridgeVideoMaxVideos": "Max videos per request",
     "modelRoutingDescriptionPlaceholder": "Route Opus models to frontier combo",
     "cliproxyapiFallbackCodes": "Cliproxyapi Fallback Codes",
     "cliproxyapiFallbackDescription": "Cliproxyapi Fallback Description",
@@ -8134,7 +8286,13 @@
     "routingJsonEditorImportExport": "Import / export JSON",
     "routingJsonEditorLabel": "JSON (edit and apply, or paste to import)",
     "routingApplyJson": "Apply JSON",
-    "routingTransformsFootnote": "All transform ops are idempotent on re-run. Changes take effect immediately on the next request."
+    "routingTransformsFootnote": "All transform ops are idempotent on re-run. Changes take effect immediately on the next request.",
+    "cliproxyapiUnknown": "Unknown",
+    "cliproxyapiVersion": "Version",
+    "cliproxyapiHealth": "Health",
+    "cliproxyapiPort": "Port",
+    "qdrantHost": "Host",
+    "qdrantCollection": "Collection"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -8499,13 +8657,13 @@
   },
   "omniglyph": {
     "preview": "Preview",
-    "description": "Context-as-image compression. Renders the system prompt, tool documentation, and dense history as compact PNG pages that Claude Fable 5 reads instead of text. Image tokens are billed by dimensions rather than characters, so the converted block costs about 10× less. Direct Anthropic route only.",
+    "description": "Context-as-image compression. Renders the system prompt, tool documentation, and dense history as compact PNG pages for the measured Claude Fable 5 path. The published OmniGlyph package also exposes native GPT 5.6 transformers, but OmniRoute keeps those routes fail-closed until provider fidelity and reading receipts exist.",
     "economicsTitle": "The economics",
     "economics": {
       "fewerTokens": "fewer tokens on the converted block",
       "savings": "end-to-end savings (measured)",
       "imageTokens": "image tokens for a 1568×728 page (about 28k characters)",
-      "accuracy": "reading accuracy on Fable 5 (n=30)"
+      "accuracy": "scoped Fable 5 reading receipt"
     },
     "beforeAfterTitle": "Before → after",
     "blockSavings": "−{percent}% tokens on this block",
@@ -8518,18 +8676,18 @@
     "gates": {
       "model": {
         "label": "Model",
-        "pass": "claude-fable-5",
-        "why": "Only Fable 5 reads dense pages at 100% accuracy (measured, n=30). GPT-5.5 and Gemini 2.5 Flash are blocked."
+        "pass": "claude-fable-5 (measured); gpt-5.6 (HOLD)",
+        "why": "Only the measured Fable 5 path is enabled in OmniRoute. GPT 5.6 is structurally supported by the package but remains blocked until its provider receipt; unverified families such as Grok stay text-only."
       },
       "transport": {
         "label": "Transport",
-        "pass": "direct Anthropic",
-        "why": "Aggregators resample images and destroy legibility — only the direct route is authoritative."
+        "pass": "direct provider",
+        "why": "Aggregators may resample images and destroy legibility — only a direct provider route is authoritative."
       },
       "format": {
         "label": "Format",
-        "pass": "native Claude",
-        "why": "The body must use Claude format and must never put a system role inside messages."
+        "pass": "native Claude/OpenAI",
+        "why": "The body must match the provider wire: Claude Messages, OpenAI Chat Completions, or native OpenAI Responses input[]."
       },
       "profitable": {
         "label": "Profitable",
@@ -8538,14 +8696,36 @@
       }
     },
     "enableTitle": "Enable the engine",
-    "enableDescription": "Runs last in the stack (after RTK/Caveman cleans the text, OmniGlyph converts the remainder to images) and also runs standalone through <code>omniglyph</code> mode. This is a preview and remains off by default until end-to-end validation is complete.",
+    "enableDescription": "Runs last in the stack after text engines clean the request, using the native provider wire; OpenAI Chat/Responses requests are compressed after translation so their shape is preserved. It also runs standalone through <code>omniglyph</code> mode. This is a preview and remains off by default until end-to-end validation is complete.",
+    "profileTitle": "Compression profile",
+    "profileDescription": "The profile is a ceiling, not a floor: a stricter profile cannot be reopened by a per-step override. Measured on this codebase: with coding-safe or balanced, a session that has not accumulated history yet compresses nothing, because both raise the minimum-characters threshold and keep the system prompt, tool schemas and tool results native.",
+    "profiles": {
+      "aggressive": {
+        "label": "Aggressive (default)",
+        "description": "The policy the published receipts measured. Images the system prompt, tool documentation and dense history."
+      },
+      "balanced": {
+        "label": "Balanced",
+        "description": "Keeps live state native and protects the last 8 turns; only collapses older closed history."
+      },
+      "codingSafe": {
+        "label": "Coding-safe",
+        "description": "Keeps authority, tool schemas and live tool output native, protecting the last 12 turns. Compresses nothing until the session accumulates history."
+      },
+      "passthrough": {
+        "label": "Passthrough",
+        "description": "Routes without transforming. The engine is skipped and the request is forwarded untouched."
+      }
+    },
+    "profileAria": "Select the OmniGlyph compression profile",
     "saved": "Saved.",
     "saveFailed": "Could not save.",
-    "enableAria": "Enable the OmniGlyph engine"
+    "enableAria": "Enable the OmniGlyph engine",
+    "title": "OmniGlyph"
   },
   "embeddedServices": {
     "title": "Embedded Services",
-    "description": "Local engines managed on demand — CLIProxyAPI, 9Router, Mux, and Bifrost. Accessible on loopback only.",
+    "description": "Optional helpers that run on your machine. Most users can start without them — install one only when an integration needs it.",
     "stateRunning": "Running",
     "stateStopped": "Stopped",
     "stateStarting": "Starting",
@@ -8744,7 +8924,7 @@
     "featureMissingToolResponse": "Tool Response Injection",
     "featureMissingToolResponseDesc": "Injects empty tool_result messages when clients send tool_calls without corresponding responses.",
     "featureThinkingBudget": "Thinking Budget",
-    "featureThinkingBudgetDesc": "Automatically manages thinking config. Removes thinking parameters when the last message is not from the user.",
+    "featureThinkingBudgetDesc": "Proxy-level control of thinking/reasoning request fields: passthrough (client controls), auto (strip all thinking params), custom (fixed budget), or adaptive (scale by complexity). Independent of compression and routing. Does not decrypt encrypted reasoning content.",
     "featureDirectPaths": "Direct Translation Paths",
     "featureDirectPathsDesc": "Some format pairs (Claude→Gemini) have direct translators that bypass the OpenAI hub, producing more accurate output.",
     "featureImageMapping": "Image Size Mapping",
@@ -9007,6 +9187,16 @@
     "grokAutoTopUpMax": "max",
     "grokAutoTopUpMonth": "month",
     "grokAdditionalCredits": "Additional Credits",
+    "kimiExtraUsageCredits": "Extra Usage Credits",
+    "kimiExtraUsage": "Extra Usage",
+    "kimiExtraUsageEnabled": "Enabled",
+    "kimiExtraUsageDisabled": "Disabled",
+    "kimiExtraUsageFrozen": "Frozen",
+    "kimiExtraUsageUnavailable": "Unavailable",
+    "kimiMonthlyUsed": "Used this month",
+    "kimiMonthlyLimit": "Monthly limit",
+    "kimiMonthlyLimitUnlimited": "Unlimited",
+    "kimiAdditionalCredits": "Additional Credits",
     "loggerTab": "Logger",
     "proxyTab": "Proxy",
     "budgetManagement": "Budget Management",
@@ -9630,7 +9820,23 @@
     "traeAuthorizationSuccess": "Trae authorization ✓",
     "traeAuthorizationFailed": "Trae authorization failed",
     "closeAuthorizationWindow": "You can close this window.",
-    "returnToDashboard": "Return to the dashboard."
+    "returnToDashboard": "Return to the dashboard.",
+    "resetViaAppData": "Reset via App Data",
+    "deleteSettingsToReset": "Delete the settings file from the app data directory to reset your password:",
+    "quitAppCompletely": "Quit the OmniRoute desktop app completely",
+    "navigateToAppData": "Navigate to the app data directory",
+    "checkAppDataFolder": "Check your system app data folder",
+    "deleteSettingsJson": "Delete",
+    "relaunchAppFresh": "Relaunch the OmniRoute desktop app — it will start fresh setup",
+    "alternativeSetPassword": "Alternative: Set New Password",
+    "setNewPasswordViaEnv": "Set a new initial password via the server environment file:",
+    "openServerEnv": "Open",
+    "inDataDirectory": "in the data directory",
+    "addOrUpdate": "Add or update",
+    "deleteAndRelaunch": "Delete",
+    "settingsJson": "settings.json",
+    "fromDataDir": "from the data directory",
+    "relaunchApp": "Relaunch the OmniRoute desktop app"
   },
   "landing": {
     "brandName": "OmniRoute",
@@ -10470,6 +10676,7 @@
     "tabPasteApiKey": "Paste API Key",
     "windsurfPasteDescription": "In the Windsurf / VS Code IDE, run the \"Windsurf: Provide Auth Token\" command from the command palette (or click the Jupyter \"Get Windsurf Authentication Token\" button), then copy the shown token and paste it below. Opening windsurf.com/show-auth-token directly only shows a \"Redirecting\" page — the IDE must initiate the flow.",
     "grokAuthJsonDescription": "Paste the FULL contents of ~/.grok/auth.json (not just the JWT \"key\" field). A bare JWT has no refresh_token, so the connection dies after expiry (#7610). Prefer the dedicated Import auth.json modal when available.",
+    "devinDesktopPasteDescription": "Paste an existing Devin API key from an authenticated Devin session. Key export availability and steps vary by Devin version and account.",
     "devinPasteDescription": "Provide your WINDSURF_API_KEY (obtained via `devin auth login`, or via the Windsurf IDE \"Windsurf: Provide Auth Token\" command).",
     "grokAuthJsonPlaceholder": "{\"https://auth.x.ai::clientId\": {\"key\": \"eyJ...\", \"refresh_token\": \"...\"}}",
     "grokAuthJsonLabel": "Grok Build auth.json",
@@ -10484,16 +10691,27 @@
     "gitlabDuoSetupTitle": "GitLab Duo OAuth setup",
     "gitlabDuoSetupMessage": "GitLab Duo OAuth is not configured. Register an OAuth application at {applicationsUrl} with redirect URI {redirectUri} and scopes \"{scopes}\", then set {clientIdEnv} (and optionally {clientSecretEnv}) and restart.",
     "gitlabDuoSetupDescription": "After the application is registered and the env vars are set on this OmniRoute instance, click Continue to start the OAuth login.",
-    "continue": "Continue",
-    "googleOAuthWarning": "Remote access + Google OAuth: bundled credentials only accept loopback redirects like <code>127.0.0.1</code>. The browser that approves Google must be able to reach OmniRoute on that local port, usually by opening OmniRoute locally or using an SSH/local-forward tunnel. Recommended for remote installs: on your own computer run <code>npx omniroute login antigravity</code> and paste the credential blob it prints into the field below. For fully remote use without this local callback, <a>configure your own OAuth credentials</a>."
+    "continue": "Continue"
   },
   "cursorAuthModal": {
-    "title": "Connect Cursor IDE",
+    "title": "Connect Cursor",
+    "tabLogin": "Login with Cursor",
+    "tabImport": "Import token",
+    "loginDescription": "Opens Cursor's browser login. Works in Docker — approve in your host browser, then return here.",
+    "loginWithCursor": "Login with Cursor",
+    "startingLogin": "Starting…",
+    "waitingApproval": "Waiting for Cursor login approval…",
+    "openUrlHint": "If the browser did not open:",
+    "openLoginLink": "Open login page",
+    "cancelLogin": "Cancel login",
     "autoDetecting": "Auto-detecting tokens...",
     "readingFromCursor": "Reading from Cursor IDE or cursor-agent",
     "tokensAutoDetected": "Tokens successfully auto-detected from Cursor IDE!",
-    "cursorNotDetected": "Cursor IDE not detected. Please manually paste your token.",
+    "cursorNotDetected": "Cursor IDE not detected. Paste your access token (and refresh token if available).",
+    "dockerImportHint": "Running in Docker? Prefer Login with Cursor. IDE auto-import and cursor-agent are usually unavailable inside the container. See docs/providers/CURSOR-DOCKER.md.",
     "accessToken": "Access Token",
+    "refreshToken": "Refresh Token",
+    "refreshTokenPlaceholder": "Optional — enables automatic token refresh",
     "required": "*",
     "accessTokenPlaceholder": "Access token will auto-populate...",
     "machineId": "Machine ID",
@@ -10505,7 +10723,10 @@
     "errorAutoDetect": "Unable to auto-detect tokens",
     "errorAutoDetectFailed": "Auto-detect tokens failed",
     "errorEnterToken": "Please enter access token",
-    "errorImportFailed": "Import failed"
+    "errorImportFailed": "Import failed",
+    "errorLoginStart": "Failed to start Cursor login",
+    "errorLoginPoll": "Cursor login failed",
+    "errorLoginTimeout": "Cursor login timed out — try again"
   },
   "pricingModal": {
     "title": "Pricing Configuration",
@@ -10995,7 +11216,8 @@
       "compressed": "Compression",
       "tps": "TPS",
       "duration": "Duration",
-      "time": "Time"
+      "time": "Time",
+      "conversation": "Conversation"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -11095,7 +11317,9 @@
       "noPayload": "No payload data available for this log entry.",
       "correlationId": "Correlation ID",
       "correlationIdValue": "Correlation ID: {id}",
-      "detailedPayloadInfo": "Enable detailed logging first if you want the four-stage client/provider payload view for new requests."
+      "detailedPayloadInfo": "Enable detailed logging first if you want the four-stage client/provider payload view for new requests.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -11855,7 +12079,8 @@
       },
       "acp": {
         "title": "ACP Agents",
-        "phrase": "CLIs that OmniRoute spawns as execution backend (reverse flow)",
+        "phrase": "Run complex, long-running logic in the backend",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Client → OmniRoute → spawn CLI (stdio/ACP) → response",
         "seeOther": "See →"
       }
@@ -12047,7 +12272,7 @@
       },
       "omni-webhooks": {
         "name": "Webhooks",
-        "description": "Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, provider.error, budget.exceeded, etc.) and manage delivery retries."
+        "description": "Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP Server",
@@ -12265,7 +12490,12 @@
     "typeApikey": "API Key",
     "sortTypeFirst": "Easiest first",
     "sortTypeFirstHelp": "Group by signup effort (No Signup → OAuth Login → API Key), keeping quality order within each group",
-    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier"
+    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier",
+    "colReliability": "Reliability",
+    "colReliabilityHelp": "Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provider Discovery",
@@ -12387,6 +12617,11 @@
       "rare": "Rare achievements"
     },
     "badges": {
+      "radar-supporter": {
+        "name": "Radar Supporter",
+        "description": "Verified a live OmniRoute Radar supporter feed",
+        "criteria": "Verify a signed live Radar supporter feed."
+      },
       "first-token": {
         "name": "First Token",
         "description": "Made your first API request",
@@ -12611,6 +12846,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Allow multiple connections for each compatibility node."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Remove internal commentary-phase output items from Responses API passthrough streams before forwarding them to clients. Disable this flag to receive raw upstream commentary."
       },
@@ -12677,6 +12916,18 @@
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Enable network access in the skills sandbox."
       }
+    }
+  },
+  "combo": {
+    "sort": {
+      "label": "Sort by",
+      "method": {
+        "manual": "Manual",
+        "provider": "Provider",
+        "score": "Score (free models)",
+        "name": "Name"
+      },
+      "scoreHint": "Score ranking applies to free providers only; others stay in place."
     }
   },
   "comboControl": {
@@ -12827,7 +13078,9 @@
       "avoid": "ToS-restricted — review terms",
       "caution": "Caution — personal-use / proxy clauses",
       "ok": "Generally permissive"
-    }
+    },
+    "allProviders": "All providers",
+    "noApiKeyRequired": "No API key required"
   },
   "providerHealthAutopilot": {
     "title": "Provider Health Autopilot",
@@ -13023,10 +13276,17 @@
     "testFailed": "Test failed"
   },
   "kimiSponsorBanner": {
-    "title": "Kimi (Moonshot AI) is now an official sponsor of OmniRoute",
-    "description": "Kimi K3 brings a 1M-token context window and frontier coding performance to OmniRoute at a fraction of the cost.",
-    "cta": "Get Kimi Code",
+    "foundingFriendTitle": "Kimi (Moonshot AI) is OmniRoute's founding Open Source Friend",
+    "description": "New users get 15% extra API credits on their first top-up. Use Kimi K3 in OmniRoute through the official Kimi API.",
+    "cta": "Get a Kimi API Key",
     "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
+  },
+  "vscodeCopilotBanner": {
+    "title": "OmniRoute now runs inside VS Code Copilot Chat",
+    "description": "Install the free OmniCopilot extension and every OmniRoute model shows up right in the Copilot Chat model picker you already use.",
+    "cta": "Get the Extension",
+    "secondaryNote": "Also on Open VSX (Cursor, Windsurf, VSCodium…)",
     "dismissAriaLabel": "Dismiss"
   },
   "featureFlagExposeFunctionalGatewayMirrorsDescription": "Advertise <gateway-alias>/<model> mirror ids on /v1/models for models whose canonical owner has no active credential but a passthrough gateway with an active credential routes them. Warning: adds catalog entries for all clients when enabled globally.",
@@ -13084,7 +13344,39 @@
     "campaignsTitle": "Limited-time campaigns",
     "campaignsEmpty": "No active campaigns right now — check back later.",
     "campaignsUpsellCommunity": "Limited-time campaigns are a supporter extra. Everything on this page's fixed links stays free for everyone.",
-    "campaignsValidUntil": "Valid until {date}"
+    "campaignsValidUntil": "Valid until {date}",
+    "colActions": "Actions",
+    "localBadge": "local",
+    "editModel": "Edit",
+    "saveModel": "Save",
+    "cancelEdit": "Cancel",
+    "resetModel": "Reset local changes",
+    "hideModel": "Hide",
+    "restoreModel": "Restore",
+    "hiddenModelsTitle": "Hidden models",
+    "modelDisplayName": "Local display name",
+    "modelEnabled": "Enabled locally",
+    "localStateSaveFailed": "Failed to save local Radar settings",
+    "guidedCombos": "Guided combos",
+    "offers": "Offers",
+    "intel": "Intel"
+  },
+  "radarCombosPage": {
+    "title": "Radar guided combos",
+    "subtitle": "Create priority fallbacks from equivalent free models curated by Radar.",
+    "backToRadar": "Back to Radar",
+    "loading": "Loading combo suggestions...",
+    "familyLabel": "Model family",
+    "modelsLabel": "Priority order",
+    "strategyReason": "Priority uses the largest recurring free budget first, then falls back across active providers.",
+    "generateButton": "Generate combo",
+    "generating": "Generating...",
+    "alreadyCreated": "Already created",
+    "created": "Combo created",
+    "noSuggestions": "No eligible model family currently has active connections to at least two providers.",
+    "catalogRequired": "Sync the Radar catalog first to load curated model families.",
+    "loadFailed": "Failed to load Radar combo suggestions.",
+    "createFailed": "Failed to create the combo. Review your provider connections and try again."
   },
   "radarSetupPage": {
     "title": "Provider Setup",
@@ -13113,6 +13405,13 @@
   },
   "resilienceConnections": {
     "title": "Connection Resilience",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Status",
       "provider": "Provider",
@@ -13199,17 +13498,18 @@
     "pollErrorLocalOnly": "This page is only accessible from localhost or LAN (LOCAL_ONLY).",
     "pollErrorStopped": "Polling stopped: the server rejected the request (404/403).",
     "pollErrorTransient": "Error fetching data: retrying automatically.",
-    "degraded": "Partial data: unavailable sources: {sources}",
-    "degraded.source.database": "Database",
-    "degraded.source.circuitBreaker": "Circuit Breaker",
-    "degraded.source.modelLockouts": "Model Lockouts",
-    "degraded.source.count": "Connection Count"
+    "degraded": {
+      "message": "Partial data: unavailable sources: {sources}",
+      "source": {
+        "database": "Database",
+        "circuitBreaker": "Circuit Breaker",
+        "modelLockouts": "Model Lockouts",
+        "count": "Connection Count"
+      }
+    }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Reject requests before dispatch when the target model lacks required capabilities (vision, tools, structured output, context window). Protects direct single-provider requests that bypass the combo-layer compatibility filter.",
-  "capabilityFilter.visionMismatch": "Provider does not support vision for this image request",
-  "capabilityFilter.toolsMismatch": "Provider does not support tool calling",
-  "capabilityFilter.structuredOutputMismatch": "Provider does not support structured output",
-  "capabilityFilter.contextWindowMismatch": "Request exceeds provider context window",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Page not found",
@@ -13576,5 +13876,80 @@
     "sttFailed": "Transcription failed (check the STT model/provider)",
     "ttsFailed": "Speech synthesis failed (check the TTS model/provider)",
     "micDenied": "Microphone unavailable or permission denied"
+  },
+  "cliproxyProviderExposure": {
+    "title": "Provider Exposure",
+    "description": "Expose CLIProxyAPI models as a routing target under the <prefix>cliproxyapi/</prefix> prefix.",
+    "label": "Expose as <prefix>cliproxyapi/...</prefix>",
+    "hint": "When enabled, discovered models appear in provider selects across OmniRoute.",
+    "updateFailed": "Failed to update (HTTP {status})",
+    "networkError": "Network error — could not update provider exposure setting"
+  },
+  "radarOffersPage": {
+    "title": "Supporter offers",
+    "subtitle": "Official discounts, credits, trials, and reviewed partner benefits from Radar.",
+    "backToRadar": "Back to Radar",
+    "loading": "Loading offers...",
+    "refresh": "Refresh offers",
+    "refreshing": "Refreshing...",
+    "loadFailed": "We couldn't refresh offers. The last verified local cache is kept.",
+    "empty": "No active offers are available right now.",
+    "keyRequiredTitle": "A supporter key is required",
+    "keyRequiredDescription": "Offers are a live Radar benefit. Add an existing supporter key on the Radar screen, verify your contributor status, or support the project to obtain one.",
+    "contributorButton": "I'm a contributor",
+    "supporterButton": "Support the project",
+    "partnerBadge": "Partner",
+    "officialBadge": "Official",
+    "conditionsLabel": "Conditions:",
+    "validUntil": "Valid until {date}",
+    "noExpiry": "No announced expiry",
+    "openOffer": "View offer",
+    "trialDays": "{days, plural, one {# day} other {# days}}"
+  },
+  "radarIntelPage": {
+    "title": "Radar Intel",
+    "subtitle": "Radar-owned ELO rankings and factual catalog movement.",
+    "backToRadar": "Back to Radar",
+    "loading": "Loading Intel...",
+    "refresh": "Refresh Intel",
+    "syncing": "Refreshing...",
+    "loadFailed": "We could not refresh Intel. The last verified local cache is kept.",
+    "empty": "No verified Intel snapshot is available yet.",
+    "supporterBadge": "Radar Supporter",
+    "methodology": "Methodology",
+    "eloMethod": "ELO, initial {initial}, K={factor}",
+    "freshness": "Catalog freshness",
+    "ageDays": "{days, plural, one {# day old} other {# days old}}",
+    "trend": "Catalog trend",
+    "modelDelta": "{current} models, +{added} / -{removed}",
+    "ranking": "Model ranking",
+    "noRankings": "No confirmed comparisons are available yet.",
+    "model": "Model",
+    "category": "Category",
+    "rating": "Rating",
+    "matches": "Matches",
+    "freshnessValues": {
+      "fresh": "Fresh",
+      "aging": "Aging",
+      "stale": "Stale"
+    },
+    "trendValues": {
+      "growing": "Growing",
+      "stable": "Stable",
+      "shrinking": "Shrinking"
+    }
+  },
+  "capabilityFilter": {
+    "visionMismatch": "Provider does not support vision for this image request",
+    "toolsMismatch": "Provider does not support tool calling",
+    "structuredOutputMismatch": "Provider does not support structured output",
+    "contextWindowMismatch": "Request exceeds provider context window"
+  },
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

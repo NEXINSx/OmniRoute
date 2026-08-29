@@ -281,9 +281,11 @@ test("AntigravityExecutor.transformRequest auto-discovers a missing projectId vi
   }
 });
 
-// #2334: when loadCodeAssist also finds no project (truly un-onboarded account), the
-// structured 422 must still be returned so the dashboard can prompt a reconnect.
-test("AntigravityExecutor.transformRequest still 422s when loadCodeAssist finds no project (#2334)", async () => {
+// #8491: when loadCodeAssist also finds no project and Google marks the
+// account BYOP (no automatic project creation for standard-tier accounts),
+// the fast 422 GCP_PROJECT_REQUIRED must be returned so the dashboard can
+// prompt the user to enter a GCP Project ID.
+test("AntigravityExecutor.transformRequest fast-422s with GCP_PROJECT_REQUIRED when loadCodeAssist finds no project (#8491)", async () => {
   clearAntigravityProjectCache();
   seedAntigravityIdeVersionCache("2.1.1");
   const executor = new AntigravityExecutor();
@@ -305,7 +307,8 @@ test("AntigravityExecutor.transformRequest still 422s when loadCodeAssist finds 
     if (!(result instanceof Response)) throw new Error("Expected a 422 Response");
     assert.equal(result.status, 422);
     const payload = (await result.json()) as ErrorPayload;
-    assert.equal(payload.error.code, "missing_project_id");
+    assert.equal(payload.error.code, "gcp_project_required");
+    assert.match(payload.error.message, /GCP_PROJECT_REQUIRED/);
   } finally {
     globalThis.fetch = originalFetch;
     clearAntigravityProjectCache();
@@ -513,7 +516,7 @@ test("AntigravityExecutor.collectStreamToResponse converts textual tool call SSE
 
   const result = await executor.collectStreamToResponse(
     response,
-    "gemini-3.5-flash-low",
+    "gemini-3.7-flash-low",
     "https://example.com",
     { Authorization: "Bearer ag-token" },
     { request: {} }
@@ -842,11 +845,12 @@ test("AntigravityExecutor.execute bounds a persistent short-retry 429 instead of
   const calls: string[] = [];
   seedAntigravityIdeVersionCache("2.1.1");
 
-  // "rate limited" classifies as rate_limited → decide429 returns 60s
-  // (≤ LONG_RETRY_THRESHOLD_MS), i.e. the short-retry branch. A persistent 429
-  // must NOT loop forever on one endpoint — it must exhaust MAX_AUTO_RETRIES per
-  // endpoint, advance through every base URL, then return the 429 so the
-  // account-fallback layer can switch accounts.
+  // "rate limited" with no parseable retry hint classifies as rate_limited →
+  // decide429 returns short_cooldown_switch_auth (60s default). Since #9351 the
+  // switchAuth signal is propagated to the retry guard, which declines the
+  // same-URL sleep branch entirely: one attempt per base URL, then the 429 is
+  // returned so the account-fallback layer can switch accounts immediately
+  // instead of sleeping 60s × MAX_AUTO_RETRIES against a rate-limited account.
   globalThis.fetch = async (url) => {
     calls.push(String(url));
     return new Response(JSON.stringify({ error: { message: "rate limited" } }), {
@@ -871,8 +875,9 @@ test("AntigravityExecutor.execute bounds a persistent short-retry 429 instead of
     // Returns the 429 rather than hanging.
     assert.equal(result.response.status, 429);
 
-    // Bounded: 2 live runtime endpoints × (1 initial + MAX_AUTO_RETRIES=3) = 8 attempts total.
-    assert.equal(calls.length, 8);
+    // Bounded: switchAuth declines same-URL retries → 2 live runtime endpoints
+    // × 1 attempt each = 2 attempts total (#9351).
+    assert.equal(calls.length, 2);
 
     // Tried every distinct live runtime base URL before giving up.
     const distinctHosts = new Set(calls.map((u) => new URL(u).host));

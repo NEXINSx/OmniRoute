@@ -35,7 +35,10 @@ export {
 } from "./proxies/guards";
 export { extractRelayAuth, redactProxySecrets } from "./proxies/mappers";
 export { addProxiesToScopePool } from "./proxySubscriptions";
-export { bumpProxyRegistryGeneration, getProxyRegistryGeneration } from "./proxies/registryGeneration";
+export {
+  bumpProxyRegistryGeneration,
+  getProxyRegistryGeneration,
+} from "./proxies/registryGeneration";
 import {
   normalizeRotationScopeId,
   clearRotationState,
@@ -269,9 +272,7 @@ export async function listProxies(options?: {
     params.push(limit, offset);
   }
   const rows = db.prepare(sql).all(...params) as unknown[];
-  const total = (
-    db.prepare("SELECT count(*) as cnt FROM proxy_registry").get() as CountResult
-  ).cnt;
+  const total = (db.prepare("SELECT count(*) as cnt FROM proxy_registry").get() as CountResult).cnt;
   const proxies = rows.map(mapProxyRow);
   return { items: includeSecrets ? proxies : proxies.map(redactProxySecrets), total };
 }
@@ -685,7 +686,6 @@ export async function deleteProxyById(id: string, options?: { force?: boolean })
   return result.changes > 0;
 }
 
-
 export async function migrateLegacyProxyConfigToRegistry(options?: { force?: boolean }) {
   const force = options?.force === true;
   const db = getDbInstance();
@@ -770,6 +770,7 @@ export async function getProxyHealthStats(options?: { hours?: number }) {
          p.type as proxy_type,
          p.host as proxy_host,
          p.port as proxy_port,
+         p.status as proxy_status,
          COUNT(l.id) as total_requests,
          SUM(CASE WHEN l.status = 'success' THEN 1 ELSE 0 END) as success_count,
          SUM(CASE WHEN l.status = 'error' THEN 1 ELSE 0 END) as error_count,
@@ -800,6 +801,7 @@ export async function getProxyHealthStats(options?: { hours?: number }) {
       type: String(row.proxy_type || "http"),
       host: String(row.proxy_host || ""),
       port: Number(row.proxy_port || 0),
+      status: String(row.proxy_status || "active"),
       totalRequests: total,
       successCount: success,
       errorCount: error,

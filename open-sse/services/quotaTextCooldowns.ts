@@ -11,6 +11,7 @@
  */
 
 import { RateLimitReason } from "../config/constants.ts";
+import { parseDayGranularityResetMs } from "./quotaResetParsing.ts";
 
 type RateLimitReasonValue = (typeof RateLimitReason)[keyof typeof RateLimitReason];
 
@@ -38,8 +39,7 @@ export function isSubscriptionQuotaText(lower: string, provider?: string | null)
     // Native Claude OAuth uses this otherwise-generic 429 wording for an
     // exhausted subscription window. Keep it provider-scoped: other upstreams
     // can use the same phrase for a short RPM throttle.
-    (provider === "claude" &&
-      lower.includes("this request would exceed your account's rate limit"))
+    (provider === "claude" && lower.includes("this request would exceed your account's rate limit"))
   );
 }
 
@@ -97,16 +97,33 @@ export function isWeeklyUsageLimitText(lower: string): boolean {
   return (
     lower.includes("weekly usage limit") ||
     lower.includes("weekly limit reached") ||
-    lower.includes("reached your weekly")
+    lower.includes("reached your weekly") ||
+    lower.includes("1-week quota") ||
+    lower.includes("week quota") ||
+    lower.includes("weekly/monthly limit") ||
+    (lower.includes("weekly") && lower.includes("quota") && lower.includes("exhaust"))
   );
 }
 
-export function buildWeeklyQuotaFallback(errorStr: string): QuotaTextFallback | null {
+const MAX_WEEKLY_QUOTA_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function buildWeeklyQuotaFallback(
+  errorStr: string,
+  nowMs: number = Date.now()
+): QuotaTextFallback | null {
   if (!isWeeklyUsageLimitText(errorStr.toLowerCase())) return null;
+  const parsedResetMs = parseDayGranularityResetMs(errorStr, MAX_WEEKLY_QUOTA_COOLDOWN_MS, nowMs);
+  const cooldownMs =
+    typeof parsedResetMs === "number" && parsedResetMs > 0
+      ? parsedResetMs
+      : WEEKLY_QUOTA_COOLDOWN_MS;
   return {
     shouldFallback: true,
-    cooldownMs: WEEKLY_QUOTA_COOLDOWN_MS,
+    cooldownMs,
     reason: RateLimitReason.QUOTA_EXHAUSTED,
+    usedUpstreamRetryHint: typeof parsedResetMs === "number" && parsedResetMs > 0,
+    quotaResetHintMs:
+      typeof parsedResetMs === "number" && parsedResetMs > 0 ? parsedResetMs : undefined,
   };
 }
 

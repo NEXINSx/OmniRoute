@@ -114,24 +114,30 @@ export function isBetterSqliteBinaryValid() {
 
 export function npmInstallRuntime(pkgs, opts = {}) {
   const cwd = ensureRuntimeDir();
-  // Persist to the runtime package.json (exact version) instead of --no-save so a later
-  // install of a sibling runtime dep (e.g. systray2 from trayRuntime.ts, which writes to the
-  // same runtime dir) does not prune this package as "extraneous" — that pruning otherwise
-  // reproduces "No SQLite driver available" after a tray install removes better-sqlite3.
-  const npmArgs = [
-    "install",
-    ...pkgs,
-    "--no-audit",
-    "--no-fund",
-    "--prefer-online",
-    "--save-exact",
-  ];
-  // On Windows .cmd files cannot be executed without a shell; use cmd.exe /c explicitly
-  // so we never set shell:true (which would propagate env and enable injection).
   const isWin = platform() === "win32";
-  const [exe, args] = isWin ? ["cmd.exe", ["/c", "npm", ...npmArgs]] : ["npm", npmArgs];
+  const isBun = Boolean(process.versions.bun);
+
+  let exe, args, displayCmd;
+  if (isBun) {
+    const bunArgs = ["add", ...pkgs, "--trust"];
+    [exe, args] = isWin ? ["cmd.exe", ["/c", "bun", ...bunArgs]] : ["bun", bunArgs];
+    displayCmd = `bun ${bunArgs.join(" ")}`;
+  } else {
+    const npmArgs = [
+      "install",
+      ...pkgs,
+      "--no-audit",
+      "--no-fund",
+      "--prefer-online",
+      "--save-exact",
+      ...pkgs.map((pkg) => `--allow-scripts=${pkg}`),
+    ];
+    [exe, args] = isWin ? ["cmd.exe", ["/c", "npm", ...npmArgs]] : ["npm", npmArgs];
+    displayCmd = `npm ${npmArgs.join(" ")}`;
+  }
+
   if (!opts.silent) {
-    process.stdout.write(`[omniroute][runtime] npm ${npmArgs.join(" ")}\n`);
+    process.stdout.write(`[omniroute][runtime] ${displayCmd}\n`);
   }
   const res = spawnSync(exe, args, {
     cwd,

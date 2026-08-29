@@ -1,5 +1,4 @@
 import { getEmbeddingProvider } from "@omniroute/open-sse/config/embeddingRegistry.ts";
-import { getRerankProvider } from "@omniroute/open-sse/config/rerankRegistry.ts";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
 import {
   isClaudeCodeCompatibleProvider,
@@ -8,6 +7,7 @@ import {
   isOpenAICompatibleProvider,
   isSelfHostedChatProvider,
   providerAllowsOptionalApiKey,
+  resolveProviderId,
   WEB_COOKIE_PROVIDERS,
 } from "@/shared/constants/providers";
 import { MODAL_DEFAULT_VALIDATION_MODEL_ID } from "@/shared/constants/modal";
@@ -29,9 +29,7 @@ import {
 import { toValidationErrorResult } from "./validation/transport";
 import {
   validateDeepSeekWebProvider,
-  validateQwenWebProvider,
   validateGrokWebProvider,
-  validateChatGptWebProvider,
   validatePerplexityWebProvider,
   validateBlackboxWebProvider,
   validateKimiWebProvider,
@@ -76,15 +74,18 @@ import {
   validateRekaProvider,
   validateMaritalkProvider,
   validateNlpCloudProvider,
+  validateOneMinAiProvider,
   validateRunwayProvider,
   validateNousResearchProvider,
   validatePoeProvider,
 } from "./validation/audioMiscProviders";
 import { validateChatGptWebCodexProvider } from "./validation/chatgptWebCodex";
+import { validateZaiWebProvider } from "./validation/zaiWeb";
 import { validateSearchProvider, SEARCH_VALIDATOR_CONFIGS } from "./validation/searchProviders";
 import {
   validateClarifaiProvider,
   validateEmbeddingApiProvider,
+  validateJinaFoundationProvider,
   validateRerankApiProvider,
 } from "./validation/embeddingProviders";
 import {
@@ -105,9 +106,13 @@ import {
   bytezValidationResultFromStatus,
   validateBytezProvider,
 } from "./validation/webCookie";
+import { validateAiHordeProvider } from "./validation/aihorde";
+import { validateDifyProvider } from "./validation/dify";
+import { validateAdobeFireflyProvider } from "./validation/adobeFirefly";
 import {
   validateV0VercelProvider,
   validateAuggieProvider,
+  validateCursorApiProvider,
   validateQoderProvider,
   validateKiroProvider,
   validateGitlabProvider,
@@ -135,7 +140,43 @@ export { validateWebCookieProvider, bytezValidationResultFromStatus };
 // validateKiroApiKeyRuntimeProbe now live in ./validation/webCookie and ./validation/kiro.
 // They are re-exported above to preserve the historical public surface.
 
+export async function validateFreebuffProvider({ apiKey }: { apiKey: string }) {
+  if (!apiKey) {
+    return { valid: false, error: "Freebuff Auth Token required", unsupported: false };
+  }
+  try {
+    const res = await fetch("https://www.codebuff.com/api/v1/freebuff/session", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "User-Agent": "codebuff/0.1.0 (darwin-arm64)",
+        "x-freebuff-model": "deepseek/deepseek-v4-flash",
+      },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (res.ok || res.status === 409) {
+      return { valid: true, error: null };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return { valid: false, error: "Invalid or expired Freebuff Auth Token", unsupported: false };
+    }
+    const errText = await res.text().catch(() => "");
+    return {
+      valid: false,
+      error: `Freebuff validation returned ${res.status}: ${errText.slice(0, 100)}`,
+      unsupported: false,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { valid: false, error: `Freebuff validation network error: ${msg}`, unsupported: false };
+  }
+}
+
 export async function validateProviderApiKey({ provider, apiKey, providerSpecificData = {} }: any) {
+  provider = typeof provider === "string" ? resolveProviderId(provider) : provider;
   const requiresApiKey = !providerAllowsOptionalApiKey(provider);
   const isLocal = isLocalProvider(provider);
 
@@ -181,10 +222,22 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
     // for parity with the "jules" cloud-agent entry above — see #6142.
     devin: validateDevinCloudAgentProvider,
     auggie: validateAuggieProvider,
+    "cursor-api": validateCursorApiProvider,
+    aihorde: validateAiHordeProvider,
+    // #10522: registered under both the canonical id and the short alias — Firefly
+    // connections are commonly stored as "firefly" (same prefix as firefly/<model>
+    // routing ids), not the canonical "adobe-firefly" WEB_COOKIE_PROVIDERS key.
+    "adobe-firefly": validateAdobeFireflyProvider,
+    firefly: validateAdobeFireflyProvider,
     qoder: validateQoderProvider,
     kiro: validateKiroProvider,
+    freebuff: validateFreebuffProvider,
     "command-code": validateCommandCodeProvider,
     huggingface: validateHuggingFaceProvider,
+    // #11002: Dify serves no OpenAI-compatible route — only POST /v1/chat-messages.
+    // The generic OpenAI-like probe 404s on /v1/models and /v1/chat/completions,
+    // so every real app key was misreported as "endpoint not supported".
+    dify: validateDifyProvider,
     // #5422: auth-only probe — Bytez 404s on every chat model until the account adds it to
     // its catalog, so the generic chat probe can't validate a fresh key.
     bytez: validateBytezProvider,
@@ -202,6 +255,8 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
       validateImageProviderApiKey({ provider: "recraft", apiKey, providerSpecificData }),
     topaz: ({ apiKey, providerSpecificData }: any) =>
       validateImageProviderApiKey({ provider: "topaz", apiKey, providerSpecificData }),
+    magnific: ({ apiKey, providerSpecificData }: any) =>
+      validateImageProviderApiKey({ provider: "magnific", apiKey, providerSpecificData }),
     elevenlabs: validateElevenLabsProvider,
     inworld: validateInworldProvider,
     kie: validateKieProvider,
@@ -227,7 +282,7 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
           error:
             "Modal requires a Base URL pointing to your OpenAI-compatible Modal app " +
             "(e.g. https://<workspace>--<app>.modal.run/v1). " +
-            "Fill in the \"Base URL override\" field.",
+            'Fill in the "Base URL override" field.',
         };
       }
       return validateOpenAILikeProvider({
@@ -245,14 +300,14 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
     reka: validateRekaProvider,
     maritalk: validateMaritalkProvider,
     nlpcloud: validateNlpCloudProvider,
+    oneminai: validateOneMinAiProvider,
     runwayml: validateRunwayProvider,
     snowflake: validateSnowflakeProvider,
     gigachat: validateGigachatProvider,
     "deepseek-web": validateDeepSeekWebProvider,
+    "zai-web": validateZaiWebProvider,
     "grok-web": validateGrokWebProvider,
-    "qwen-web": validateQwenWebProvider,
     "kimi-web": validateKimiWebProvider,
-    "chatgpt-web": validateChatGptWebProvider,
     "chatgpt-web-codex": validateChatGptWebCodexProvider,
     "perplexity-web": validatePerplexityWebProvider,
     "blackbox-web": validateBlackboxWebProvider,
@@ -277,15 +332,8 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
         modelId: embeddingProvider?.models?.[0]?.id || "voyage-4-lite",
       });
     },
-    "jina-ai": ({ apiKey, providerSpecificData }: any) => {
-      const rerankProvider = getRerankProvider("jina-ai");
-      return validateRerankApiProvider({
-        apiKey,
-        providerSpecificData,
-        url: rerankProvider?.baseUrl,
-        modelId: rerankProvider?.models?.[0]?.id || "jina-reranker-v3",
-      });
-    },
+    "jina-ai": ({ apiKey, providerSpecificData }: any) =>
+      validateJinaFoundationProvider({ apiKey, providerSpecificData }),
     gitlab: ({ apiKey, providerSpecificData }: any) =>
       validateGitlabProvider({ apiKey, providerSpecificData, isLocal }),
     vertex: validateVertexProvider,
@@ -328,12 +376,17 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
 
   // Web-cookie providers WITHOUT a dedicated specialty validator above fall back to the generic
   // session-ping check (AUTH_007 SESSION_EXPIRED on 401/403). Providers that DO have a rich
-  // per-provider validator (grok-web, chatgpt-web, claude-web, …) are handled by
+  // per-provider validator (grok-web, perplexity-web, claude-web, etc.) are handled by
   // SPECIALTY_VALIDATORS first and must not be shadowed by this generic probe (issue: the
   // #4023 dispatch was placed too early and intercepted every web-cookie provider).
-  if (WEB_COOKIE_PROVIDERS[provider]) {
+  const canonicalProvider = resolveProviderId(provider);
+  if (WEB_COOKIE_PROVIDERS[canonicalProvider]) {
     try {
-      return await validateWebCookieProvider({ provider, apiKey, providerSpecificData });
+      return await validateWebCookieProvider({
+        provider: canonicalProvider,
+        apiKey,
+        providerSpecificData,
+      });
     } catch (error: any) {
       return toValidationErrorResult(error);
     }

@@ -1,1 +1,0 @@
-- **feat(providers):** add Naga.ac and ChatAnywhere aggregator gateway providers (#6674 — thanks @chirag127)

@@ -35,7 +35,10 @@ test("sanitizeChatRequestBody: Responses target maps max_completion_tokens → m
 });
 
 test("sanitizeChatRequestBody: Responses target maps max_tokens → max_output_tokens", () => {
-  const out = sanitizeChatRequestBody({ max_tokens: 128 }, FORMATS.OPENAI_RESPONSES, FORMATS.OPENAI);
+  // #9161: token-field selection keys on the OUTBOUND (target) protocol only — a
+  // Responses-shaped SOURCE no longer forces max_output_tokens (see
+  // codex-responses-to-chat-9161.test.ts for that direction).
+  const out = sanitizeChatRequestBody({ max_tokens: 128 }, FORMATS.OPENAI, FORMATS.OPENAI_RESPONSES);
   assert.equal(out.max_output_tokens, 128);
   assert.equal(out.max_tokens, undefined);
 });

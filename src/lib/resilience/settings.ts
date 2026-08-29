@@ -58,6 +58,7 @@ export const DEFAULT_RESILIENCE_SETTINGS: ResilienceSettings = {
     requestsPerMinute: DEFAULT_API_LIMITS.requestsPerMinute,
     minTimeBetweenRequestsMs: DEFAULT_API_LIMITS.minTimeBetweenRequests,
     concurrentRequests: DEFAULT_API_LIMITS.concurrentRequests,
+    globalConcurrentRequests: 0,
     maxWaitMs: DEFAULT_REQUEST_QUEUE_MAX_WAIT_MS,
     maxQueueDepth: DEFAULT_REQUEST_QUEUE_MAX_DEPTH,
   },
@@ -208,6 +209,8 @@ function buildLegacyFallback(settings: JsonRecord): ResilienceSettings {
         DEFAULT_RESILIENCE_SETTINGS.requestQueue.concurrentRequests,
         { min: 1, max: 10_000 }
       ),
+      globalConcurrentRequests:
+        DEFAULT_RESILIENCE_SETTINGS.requestQueue.globalConcurrentRequests,
       maxWaitMs: DEFAULT_RESILIENCE_SETTINGS.requestQueue.maxWaitMs,
       maxQueueDepth: DEFAULT_RESILIENCE_SETTINGS.requestQueue.maxQueueDepth,
     },

@@ -44,6 +44,40 @@ export function claudeToOpenAIResponse(chunk, state) {
       state.messageId = chunk.message?.id || `msg_${Date.now()}`;
       state.model = chunk.message?.model;
       state.toolCallIndex = 0;
+      const startUsage = chunk.message?.usage;
+      if (startUsage && typeof startUsage === "object") {
+        const inputTokens =
+          typeof startUsage.input_tokens === "number"
+            ? startUsage.input_tokens
+            : typeof startUsage.prompt_tokens === "number"
+              ? startUsage.prompt_tokens
+              : 0;
+        const outputTokens =
+          typeof startUsage.output_tokens === "number"
+            ? startUsage.output_tokens
+            : typeof startUsage.completion_tokens === "number"
+              ? startUsage.completion_tokens
+              : 0;
+        const cacheRead =
+          typeof startUsage.cache_read_input_tokens === "number"
+            ? startUsage.cache_read_input_tokens
+            : 0;
+        const cacheCreation =
+          typeof startUsage.cache_creation_input_tokens === "number"
+            ? startUsage.cache_creation_input_tokens
+            : 0;
+        if (inputTokens > 0 || outputTokens > 0 || cacheRead > 0 || cacheCreation > 0) {
+          const billableInputTokens = inputTokens + cacheRead;
+          state.usage = {
+            prompt_tokens: billableInputTokens,
+            completion_tokens: outputTokens,
+            input_tokens: billableInputTokens,
+            output_tokens: outputTokens,
+          };
+          if (cacheRead > 0) state.usage.cache_read_input_tokens = cacheRead;
+          if (cacheCreation > 0) state.usage.cache_creation_input_tokens = cacheCreation;
+        }
+      }
       results.push(createChunk(state, { role: "assistant" }));
       break;
     }
@@ -298,6 +332,8 @@ export function claudeToOpenAIResponse(chunk, state) {
       if (!state.finishReasonSent) {
         const finishReason =
           state.finishReason || (state.toolCalls?.size > 0 ? "tool_calls" : "stop");
+        const cachedTokens = state.usage?.cache_read_input_tokens || 0;
+        const cacheCreationTokens = state.usage?.cache_creation_input_tokens || 0;
         const usageObj =
           state.usage && typeof state.usage === "object"
             ? {
@@ -310,6 +346,16 @@ export function claudeToOpenAIResponse(chunk, state) {
                         reasoning_tokens: state.usage.reasoning_tokens,
                         completion_tokens_details: {
                           reasoning_tokens: state.usage.reasoning_tokens,
+                        },
+                      }
+                    : {}),
+                  ...(cachedTokens > 0 || cacheCreationTokens > 0
+                    ? {
+                        prompt_tokens_details: {
+                          ...(cachedTokens > 0 ? { cached_tokens: cachedTokens } : {}),
+                          ...(cacheCreationTokens > 0
+                            ? { cache_creation_tokens: cacheCreationTokens }
+                            : {}),
                         },
                       }
                     : {}),

@@ -46,22 +46,22 @@ Repository map and Reference Documentation sections below.
 
 ## Project at a Glance
 
-**OmniRoute** — unified AI proxy/router. One endpoint, 291 LLM providers, auto-fallback.
+**OmniRoute** — unified AI proxy/router. One endpoint, 351 LLM providers, auto-fallback.
 
-| Layer         | Location                | Purpose                                                                                                                                                 |
-| ------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API Routes    | `src/app/api/v1/`       | Next.js App Router — entry points                                                                                                                       |
-| Handlers      | `open-sse/handlers/`    | Request processing (chat, embeddings, etc)                                                                                                              |
-| Executors     | `open-sse/executors/`   | Provider-specific HTTP dispatch                                                                                                                         |
-| Translators   | `open-sse/translator/`  | Format conversion (OpenAI↔Claude↔Gemini)                                                                                                                |
-| Transformer   | `open-sse/transformer/` | Responses API ↔ Chat Completions                                                                                                                        |
-| Services      | `open-sse/services/`    | Combo routing, rate limits, caching, etc                                                                                                                |
-| Database      | `src/lib/db/`           | SQLite domain modules (130 migrations)                                                                                                                  |
-| Domain/Policy | `src/domain/`           | Policy engine, cost rules, fallback logic                                                                                                               |
-| MCP Server    | `open-sse/mcp-server/`  | 105 tools (42 base + memory/skill/agentSkill/pool/notion/obsidian/gamification/plugin modules), 3 transports (stdio / SSE / Streamable HTTP), 31 scopes |
-| A2A Server    | `src/lib/a2a/`          | JSON-RPC 2.0 agent protocol                                                                                                                             |
-| Skills        | `src/lib/skills/`       | Extensible skill framework                                                                                                                              |
-| Memory        | `src/lib/memory/`       | Persistent conversational memory                                                                                                                        |
+| Layer         | Location                | Purpose                                                                                                                                                                   |
+| ------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API Routes    | `src/app/api/v1/`       | Next.js App Router — entry points                                                                                                                                         |
+| Handlers      | `open-sse/handlers/`    | Request processing (chat, embeddings, etc)                                                                                                                                |
+| Executors     | `open-sse/executors/`   | Provider-specific HTTP dispatch                                                                                                                                           |
+| Translators   | `open-sse/translator/`  | Format conversion (OpenAI↔Claude↔Gemini)                                                                                                                                  |
+| Transformer   | `open-sse/transformer/` | Responses API ↔ Chat Completions                                                                                                                                          |
+| Services      | `open-sse/services/`    | Combo routing, rate limits, caching, etc                                                                                                                                  |
+| Database      | `src/lib/db/`           | SQLite domain modules (166 migrations)                                                                                                                                    |
+| Domain/Policy | `src/domain/`           | Policy engine, cost rules, fallback logic                                                                                                                                 |
+| MCP Server    | `open-sse/mcp-server/`  | 110 tools (44 canonical + memory/skill/GitHub/pool/gamification/plugin/Notion/Obsidian/local-corpus/RTK modules), 3 transports (stdio / SSE / Streamable HTTP), 33 scopes |
+| A2A Server    | `src/lib/a2a/`          | JSON-RPC 2.0 agent protocol                                                                                                                                               |
+| Skills        | `src/lib/skills/`       | Extensible skill framework                                                                                                                                                |
+| Memory        | `src/lib/memory/`       | Persistent conversational memory                                                                                                                                          |
 
 Monorepo: `src/` (Next.js 16 app), `open-sse/` (streaming engine workspace), `electron/` (desktop app), `tests/`, `bin/` (CLI entry point).
 
@@ -83,7 +83,7 @@ Client → /v1/chat/completions (Next.js route)
 
 API routes follow a consistent pattern: `Route → CORS preflight → Zod body validation → Optional auth (extractApiKey/isValidApiKey) → API key policy enforcement → Handler delegation (open-sse)`. No global Next.js middleware — interception is route-specific.
 
-**Combo routing** (`open-sse/services/combo.ts`): 19 public strategies (priority, weighted, fill-first, round-robin, p2c, random, least-used, cost-optimized, reset-aware, reset-window, headroom, strict-random, auto, lkgp, context-optimized, cache-optimized, context-relay, fusion, pipeline). Each target calls `handleSingleModel()` which wraps `handleChatCore()` with per-target error handling and circuit breaker checks. The `fusion` strategy is the exception: it fans out to a panel of models in parallel, then a judge model synthesizes one final answer (`open-sse/services/fusion.ts`). See `docs/routing/AUTO-COMBO.md` for the 13-factor Auto-Combo scoring + the full strategy table and `docs/architecture/RESILIENCE_GUIDE.md` for the 3 resilience layers.
+**Combo routing** (`open-sse/services/combo.ts`): 19 public strategies (priority, weighted, fill-first, round-robin, p2c, random, least-used, cost-optimized, reset-aware, reset-window, headroom, strict-random, auto, lkgp, context-optimized, cache-optimized, context-relay, fusion, pipeline). Each target calls `handleSingleModel()` which wraps `handleChatCore()` with per-target error handling and circuit breaker checks. The `fusion` strategy is the exception: it fans out to a panel of models in parallel, then a judge model synthesizes one final answer (`open-sse/services/fusion.ts`). See `docs/routing/AUTO-COMBO.md` for the 15-factor Auto-Combo scoring + the full strategy table and `docs/architecture/RESILIENCE_GUIDE.md` for the 3 resilience layers.
 
 ---
 
@@ -118,11 +118,18 @@ upstream/service level, so one unhealthy provider does not slow down every reque
 - `HALF_OPEN`: reset timeout has elapsed; allow a probe request. Success closes the
   breaker, failure opens it again.
 
-**Defaults** (`open-sse/config/constants.ts`):
+**Defaults** (`open-sse/config/constants.ts` → `PROVIDER_PROFILES`). Two thresholds live side by
+side — do not confuse them:
 
-- OAuth providers: threshold `3`, reset timeout `60s`.
-- API-key providers: threshold `5`, reset timeout `30s`.
-- Local providers: threshold `2`, reset timeout `15s`.
+| Profile | `providerFailureThreshold` (whole provider) | `providerCooldownMs` | `circuitBreakerThreshold` (one connection) | `circuitBreakerReset` |
+| ------- | ------------------------------------------: | -------------------: | -----------------------------------------: | --------------------: |
+| OAuth   |                                        `10` |               `5min` |                                        `8` |                 `60s` |
+| API key |                                        `15` |              `10min` |                                       `12` |                 `30s` |
+| Local   |                                         `2` |               `1min` |                                        `2` |                 `15s` |
+
+The provider-level thresholds were scaled up for deployments with 500+ connections (OAuth was
+`3`, API key was `5`); every default is overridable through the `OMNIROUTE_PROVIDER_BREAKER_*`
+and `OMNIROUTE_CIRCUIT_BREAKER_*` env vars.
 
 Only provider-level failure statuses should trip the provider breaker:
 
@@ -190,7 +197,7 @@ baseCooldownMs * 2 ** failureIndex;
 The anti-thundering-herd guard prevents concurrent failures on the same connection from
 repeatedly extending the cooldown or double-incrementing `backoffLevel`.
 
-Terminal states are not cooldowns. `banned`, `expired`, and `credits_exhausted` are
+Terminal states are not cooldowns. `banned`, `expired` (which becomes terminal only after N bounded retries via `EXPIRED_RETRY_MAX`), and `credits_exhausted` are
 intended to stay unavailable until credentials/settings change or an operator resets
 them. Do not overwrite terminal states with transient cooldown state.
 
@@ -247,16 +254,25 @@ Read the nearest `AGENTS.md` and the linked deep-dive before making a non-trivia
 ## File placement & repo-root hygiene
 
 - **Test files**: ALL unit tests, integration tests, ecosystem tests, or Vitest files MUST strictly be placed within the `tests/` directory (e.g., `tests/unit/`, `tests/integration/`). NEVER create test files in the project root (`/`).
-- **Scripts and utilities**: ALL maintenance, debugging, generation, or experimental scripts (`.cjs`, `.mjs`, `.js`, `.ts`) MUST be placed strictly inside one of the `scripts/` subfolders (`build/`, `dev/`, `check/`, `docs/`, `i18n/`, `ad-hoc/`). One-shot or experimental code goes under `scripts/ad-hoc/`. NEVER dump loose scripts in the project root (`/`) or the top-level `scripts/` folder.
+- **Scripts and utilities**: ALL maintenance, debugging, generation, or experimental scripts (`.cjs`, `.mjs`, `.js`, `.ts`) MUST be placed strictly inside one of the `scripts/` subfolders (`build/`, `dev/`, `check/`, `docs/`, `i18n/`, `ad-hoc/`, `quality/`, `release/`, `ci/`, `ops/`, `perf/`, `research/`, `sre/`, `vps/`, `homolog/`, `raycast/`, `skills/`, `test/`, `cli/`, `compression/`, `compression-eval/`, `devin-bridge/`, `docker/`, `features/`, `router-eval/`). One-shot or experimental code goes under `scripts/ad-hoc/`. NEVER dump loose scripts in the project root (`/`) or the top-level `scripts/` folder.
 
 **The project root MUST ONLY contain:**
 
 - Configuration files (`vitest.config.ts`, `next.config.mjs`, `eslint.config.mjs`, `tsconfig*.json`, `playwright.config.ts`, `prettier.config.mjs`, `postcss.config.mjs`, `sonar-project.properties`, `fly.toml`, `docker-compose*.yml`, `Dockerfile`)
 - Dependency files (`package.json`, `package-lock.json`)
-- Documentation files (`README.md`, `CHANGELOG.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `llm.txt`, `Tuto_Qdrant.md`)
+- Documentation files (`README.md`, `CHANGELOG.md`, `ROADMAP.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `llm.txt`, `Tuto_Qdrant.md`)
 - CI/CD files and ignore definitions (`.gitignore`, `.dockerignore`, `.npmignore`, `.npmrc`, `.node-version`, `.nvmrc`, `.env.example`)
 
 When creating _any_ validation tests or one-off logic scripts, default to `scripts/ad-hoc/` or `tests/unit/` according to your goals. Do not pollute the `/` root context.
+
+- **Root `_*` paths are private and NEVER tracked** (`_tasks/`, `_references/`, `_mono_repo/`,
+  `_ideia/`, `_cache/` and any future `_<name>`): they live on disk only, are gitignored by the
+  anchored patterns `/_*/` + `/_*`, and some are full git repositories of their own (`_tasks` →
+  private remote `_tasks_omniroute`). Never `git add` anything inside them (a plain `add` is
+  already blocked by the ignore; never use `-f`), and never "clean them up" from the main repo —
+  untracking is done with `git rm --cached` so the disk content stays. The
+  `check:tracked-artifacts` gate (pre-commit + CI) fails on ANY tracked root path starting with
+  `_`, present or future. See Hard Rule #23 for the `_tasks` specifics.
 
 ---
 
@@ -291,7 +307,7 @@ When creating _any_ validation tests or one-off logic scripts, default to `scrip
 - Encrypt credentials at rest (AES-256-GCM); never log SQLite encryption keys
 - Sanitize user HTML with DOMPurify
 - Upstream header denylist: `src/shared/constants/upstreamHeaders.ts` — keep sanitize, Zod schemas, and unit tests aligned when editing
-- **Public upstream credentials** (Gemini/Antigravity/Windsurf-style OAuth client_id/secret + Firebase Web keys extracted from public CLIs): **MUST** be embedded via `resolvePublicCred()` from `open-sse/utils/publicCreds.ts` — **never** as string literals. See `docs/security/PUBLIC_CREDS.md` for the mandatory pattern.
+- **Public upstream credentials** (for example, OAuth client_id/secret values or Firebase Web keys extracted from public CLIs): **MUST** be embedded via `resolvePublicCred()` from `open-sse/utils/publicCreds.ts` — **never** as string literals. See `docs/security/PUBLIC_CREDS.md` for the mandatory pattern.
 - **Error responses** (HTTP / SSE / executor / MCP handler): **MUST** route through `buildErrorBody()` or `sanitizeErrorMessage()` from `open-sse/utils/error.ts` — **never** put raw `err.stack` or `err.message` in a response body. See `docs/security/ERROR_SANITIZATION.md`.
 - **Shell commands built from variables**: when calling `exec()`/`spawn()` with a script that needs runtime values, pass them via the `env` option (shell-escaped automatically) — **never** string-interpolate untrusted/external paths into the script body. Reference: `src/mitm/cert/install.ts::updateNssDatabases`.
 - **Secure-by-default libraries** ([tldrsec/awesome-secure-defaults](https://github.com/tldrsec/awesome-secure-defaults)): prefer Helmet.js, DOMPurify, ssrf-req-filter, safe-regex, Google Tink over custom implementations whenever adding new security-sensitive surfaces.
@@ -395,7 +411,7 @@ For any non-trivial change, read the matching deep-dive first:
 | Repo navigation                               | `docs/architecture/REPOSITORY_MAP.md`                   |
 | Architecture                                  | `docs/architecture/ARCHITECTURE.md`                     |
 | Engineering reference                         | `docs/architecture/CODEBASE_DOCUMENTATION.md`           |
-| Auto-Combo (13-factor scoring, 19 strategies) | `docs/routing/AUTO-COMBO.md`                            |
+| Auto-Combo (15-factor scoring, 19 strategies) | `docs/routing/AUTO-COMBO.md`                            |
 | Resilience (3 mechanisms)                     | `docs/architecture/RESILIENCE_GUIDE.md`                 |
 | Reasoning replay                              | `docs/routing/REASONING_REPLAY.md`                      |
 | Skills framework                              | `docs/frameworks/SKILLS.md`                             |
@@ -417,24 +433,25 @@ For any non-trivial change, read the matching deep-dive first:
 | Provider catalog (auto-generated)             | `docs/reference/PROVIDER_REFERENCE.md`                  |
 | Tunnels                                       | `docs/ops/TUNNELS_GUIDE.md`                             |
 | Electron desktop app                          | `docs/guides/ELECTRON_GUIDE.md`                         |
+| VS Code Copilot Chat (OmniCopilot extension)  | `docs/guides/VSCODE-COPILOT.md`                         |
 | Release flow                                  | `docs/ops/RELEASE_CHECKLIST.md`                         |
 | Embedded services                             | `docs/frameworks/EMBEDDED-SERVICES.md`                  |
-| Quality gates (~48 scripts, allowlist policy) | `docs/architecture/QUALITY_GATES.md`                    |
+| Quality gates (~80 scripts, allowlist policy) | `docs/architecture/QUALITY_GATES.md`                    |
 
 ---
 
 ## Testing
 
-| What                    | Command                                                                     |
-| ----------------------- | --------------------------------------------------------------------------- |
-| Unit tests              | `npm run test:unit`                                                         |
-| Single file             | `node --import tsx/esm --test tests/unit/your-file.test.ts`                 |
-| Vitest (MCP, autoCombo) | `npm run test:vitest`                                                       |
-| E2E (Playwright)        | `npm run test:e2e`                                                          |
-| Protocol E2E (MCP+A2A)  | `npm run test:protocols:e2e`                                                |
-| Ecosystem               | `npm run test:ecosystem`                                                    |
-| Coverage gate           | `npm run test:coverage` (60/60/60/60 — statements/lines/functions/branches) |
-| Coverage report         | `npm run coverage:report`                                                   |
+| What                    | Command                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| Unit tests              | `npm run test:unit`                                                           |
+| Single file             | `node --import tsx/esm --test tests/unit/your-file.test.ts`                   |
+| Vitest (MCP, autoCombo) | `npm run test:vitest`                                                         |
+| E2E (Playwright)        | `npm run test:e2e`                                                            |
+| Protocol E2E (MCP+A2A)  | `npm run test:protocols:e2e` (CI job `test-protocols-e2e`, advisory — #10049) |
+| Ecosystem               | `npm run test:ecosystem` (CI job `test-ecosystem`, blocking)                  |
+| Coverage gate           | `npm run test:coverage` (60/60/60/60 — statements/lines/functions/branches)   |
+| Coverage report         | `npm run coverage:report`                                                     |
 
 **PR rule**: If you change production code in `src/`, `open-sse/`, `electron/`, or `bin/`, you must include or update tests in the same PR.
 
@@ -577,6 +594,18 @@ inside your feature branch (a base-red fix is its own freeze-gated `fix/release-
 PR); and if you must open a PR anyway, add `⚠️ base-red inherited: #<issue>` to the PR body so
 reviewers and CI babysitters do not chase ghosts.
 
+### Sync-back landings are fast-forward, never squash
+
+A `main → release/vX+1` sync-back (Phase 5 of `/generate-release`, or any later "bring main's
+post-release commits over" PR) must reach the release branch as the merge commit it already is:
+`git merge-base --is-ancestor origin/release/vX+1 <head>` then
+`git push origin <head>:refs/heads/release/vX+1` (GitHub marks the PR merged). Squash-merging it
+drops `main` from the release branch's ancestry and the next sync-back re-conflicts on every file
+main touched (551 conflicts on the v3.8.50 → v3.8.51 sync before the two-step merge). After
+landing, `git merge-base --is-ancestor origin/main origin/release/vX+1` must be true — and check
+that `config/quality/eslint-suppressions.json` / `quality-baseline.json` carried main's freezes
+(they merge as "ours" silently). Details: `.agents/skills/generate-release/phases/phase-5-next-cycle.md`.
+
 ---
 
 ## Upstream contributions
@@ -611,7 +640,7 @@ focused checks, and use a Conventional Commit message (for example, `docs: slim 
 
 ## Quality Gates & Ratchets
 
-OmniRoute has **~48 quality-gate scripts** (`scripts/check/` + `scripts/quality/`) wired
+OmniRoute has **~80 quality-gate scripts** (`scripts/check/` + `scripts/quality/`) wired
 across **9 gate-running jobs** in `.github/workflows/ci.yml` (`lint`, `quality-gate`,
 `quality-extended`, `docs-sync-strict`, `i18n-ui-coverage`, `i18n`, `pr-test-policy`,
 `test-vitest`, `sonarqube`), plus the `quality.yml` fast-gates job (PR→`release/**`) and
@@ -662,6 +691,18 @@ the stale-enforcement added in Fase 6A.3.
 22. **Cross-session safety — this repo is worked by MANY parallel sessions/agents at once; never step on another's in-flight work.** Two absolute bans, both recurring incidents (this rule exists because they keep happening):
     - **(a) Never `git stash` / `git stash pop` — ANYWHERE in this repo, including inside an isolated worktree, and including inside any subagent you dispatch.** `git stash` operates on the **shared repository object store**, not the per-worktree working tree — so a stash pushed or popped in one session can silently clobber or resurrect another parallel session's uncommitted changes. This is not hypothetical: 2026-07-02 a `#5923` quotaCache change leaked into the unrelated `#2296` worktree via a global `stash pop`, and the same class reincided through a **subagent**. To compare working changes against a base ref **without** stashing, use `git show <ref>:<path>` or `git diff <ref> -- <path>`; to confirm a typecheck/lint error is pre-existing on the base, inspect the base ref directly (`git show origin/release/vX.Y.Z:<path>`) — never stash your tree away to "get it clean". **Put this ban verbatim in the prompt of every subagent that touches git** (agents don't inherit this file's context — the recurrence was a subagent).
     - **(b) Never merge, push, rebase, or force-push a PR / branch / worktree that another session is actively working.** An open PR whose head is a live fix worktree in `.claude/worktrees/` you did **not** create (e.g. `fix-5852`/`fix-5923` carrying fresh commits, even when they share your `diegosouzapw` identity), or any branch another session owns, is **off-limits — HOLD**, and let the owning session merge it. **Before** merging or pushing to any PR you did not create _this_ session, run `git worktree list` to check for a matching in-flight worktree and re-check `gh pr view <N> --json state,headRefOid`. Only the owning session merges its own in-flight PR; mid-flight merges race the owner and re-trigger the exact commit/CHANGELOG races Rule #19 and Rule #21 guard against. (Reinforces Rule #19.)
+23. **`_tasks/` é INTOCÁVEL como estrutura — append/edit-only.** É um repositório git SEPARADO
+    (remote privado `diegosouzapw/_tasks_omniroute`) montado como diretório real na raiz do
+    checkout principal. Regras absolutas: (a) NUNCA mover, renomear, deletar, esvaziar ou
+    transformar `_tasks` em symlink; sessões só podem CRIAR ou EDITAR arquivos dentro dele;
+    (b) NUNCA rastrear `_tasks` (nem como symlink) no repo principal — o blob rastreado foi a
+    causa-raiz de DOIS wipes (2026-08-08 e 2026-08-10: `git reset --hard` materializou o
+    symlink rastreado por cima do diretório real e o git apagou todo o conteúdo ignorado sem
+    aviso); (c) após qualquer escrita relevante, `git -C _tasks add -A && git -C _tasks commit
+&& git -C _tasks push` — o push frequente é o backup real; (d) repetir esta proibição
+    VERBATIM no prompt de todo subagente que toque git; (e) se `_tasks` aparecer como symlink
+    quebrado, NÃO commitar nada — restaurar do remote e avisar o operador. O gate
+    `check:tracked-artifacts` (pre-commit + CI) bloqueia `_tasks` rastreado em qualquer forma.
 
 ---
 
@@ -689,3 +730,13 @@ The dashboard is reachable at the operator's chosen URL/port (default `http://lo
 - **Local VPS / shared dev environments**: ask the operator for the URL and current credentials — they live in their personal vault, NOT in this repo.
 
 > Any credential observed in a previous version of this file was a non-production demo value; treat it as compromised and do not reuse it.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

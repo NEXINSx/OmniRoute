@@ -16,11 +16,9 @@ import assert from "node:assert/strict";
 
 import { WEB_COOKIE_PROVIDERS } from "../../src/shared/constants/providers/web-cookie.ts";
 import { REGISTRY } from "../../open-sse/config/providers/index.ts";
-import { getExecutor, TinyCmsExecutor } from "../../open-sse/executors/index.ts";
-import {
-  setupDomMocks,
-  type DomMockRestore,
-} from "../../open-sse/executors/tinycmsSigner.ts";
+import { getExecutor } from "../../open-sse/executors/index.ts";
+import { TinyCmsExecutor } from "../../open-sse/executors/tinycms.ts";
+import { setupDomMocks, type DomMockRestore } from "../../open-sse/executors/tinycmsSigner.ts";
 
 // tinycmsSigner.ts intentionally does NOT install its window/document/canvas
 // shims as a module-load side effect (see setupDomMocks() there) — doing so
@@ -41,9 +39,10 @@ after(() => {
 // ── Catalog / WEB_COOKIE_PROVIDERS ────────────────────────────────────────────
 
 test("tinycms-web is present in WEB_COOKIE_PROVIDERS", () => {
-  const p = (WEB_COOKIE_PROVIDERS as Record<string, unknown>)[
-    "tinycms-web"
-  ] as Record<string, unknown>;
+  const p = (WEB_COOKIE_PROVIDERS as Record<string, unknown>)["tinycms-web"] as Record<
+    string,
+    unknown
+  >;
   assert.ok(p, "WEB_COOKIE_PROVIDERS['tinycms-web'] must exist");
   assert.equal(p.id, "tinycms-web");
   assert.equal(p.alias, "tcw");
@@ -51,9 +50,10 @@ test("tinycms-web is present in WEB_COOKIE_PROVIDERS", () => {
 });
 
 test("tinycms-web WEB_COOKIE_PROVIDERS entry is marked as free-tier", () => {
-  const p = (WEB_COOKIE_PROVIDERS as Record<string, unknown>)[
-    "tinycms-web"
-  ] as Record<string, unknown>;
+  const p = (WEB_COOKIE_PROVIDERS as Record<string, unknown>)["tinycms-web"] as Record<
+    string,
+    unknown
+  >;
   assert.equal(p.hasFree, true);
   assert.ok(typeof p.freeNote === "string" && (p.freeNote as string).length > 0);
   assert.ok(typeof p.authHint === "string" && (p.authHint as string).length > 0);
@@ -75,18 +75,33 @@ test("tinycms-web is present in the provider REGISTRY with correct shape", () =>
 test("tinycms-web registry has all expected models", () => {
   const r = REGISTRY["tinycms-web"];
   assert.ok(r.models && r.models.length > 0, "must have at least one model");
-  const ids = r.models.map((m) => m.id);
-
-  assert.ok(ids.includes("gpt-5-free"), "gpt-5-free must be registered");
-  assert.ok(ids.includes("gpt-5.3-free"), "gpt-5.3-free must be registered");
-  assert.ok(
-    ids.includes("gpt-5.3-thinking-free"),
-    "gpt-5.3-thinking-free must be registered"
+  assert.deepEqual(
+    r.models.map((m) => m.id),
+    [
+      "claude-fable-5",
+      "claude-opus-5",
+      "claude-sonnet-5",
+      "gpt-5.6-sol",
+      "gpt-5.6-luna",
+      "gpt-5.5",
+      "gpt-5.4-mini",
+      "gpt-5.4-nano",
+      "gpt-5.3-thinking-free",
+      "gpt-5.3-free",
+      "gpt-oss-120b",
+      "gemini-3.6-flash",
+      "gemini-3.1-pro-preview",
+      "gemini-3.1-flash-lite-preview",
+      "grok-4.5",
+      "deepseek-v4-pro",
+      "deepseek-v4-flash",
+      "kimi-k3",
+      "glm-5.2",
+      "qwen3.6-plus",
+      "mimo-v2.5-pro",
+      "mimo-v2.5",
+    ]
   );
-  assert.ok(ids.includes("deepseek-v4-flash"), "deepseek-v4-flash must be registered");
-  assert.ok(ids.includes("claude-sonnet-5"), "claude-sonnet-5 must be registered");
-  assert.ok(ids.includes("gemini-3.5-flash"), "gemini-3.5-flash must be registered");
-  assert.equal(r.models.length, 16, "must have exactly 16 models");
 });
 
 test("tinycms-web model names are human-readable strings", () => {
@@ -109,13 +124,13 @@ test("supportsReasoning is set on gpt-5.3-thinking-free", () => {
 
 // ── Executor ──────────────────────────────────────────────────────────────────
 
-test("getExecutor returns TinyCmsExecutor for 'tinycms-web'", () => {
-  const e = getExecutor("tinycms-web");
+test("getExecutor returns TinyCmsExecutor for 'tinycms-web'", async () => {
+  const e = await getExecutor("tinycms-web");
   assert.ok(e instanceof TinyCmsExecutor, "executor must be TinyCmsExecutor");
 });
 
-test("getExecutor returns TinyCmsExecutor for 'tcw' alias", () => {
-  const e = getExecutor("tcw");
+test("getExecutor returns TinyCmsExecutor for 'tcw' alias", async () => {
+  const e = await getExecutor("tcw");
   assert.ok(e instanceof TinyCmsExecutor, "alias 'tcw' must resolve to TinyCmsExecutor");
 });
 
@@ -136,14 +151,11 @@ test("TinyCmsExecutor returns 401 when UUID is missing", async () => {
     credentials: {},
     signal: AbortSignal.timeout(5000),
   });
-  assert.ok(result.response, "response must be present");
+  assert.ok("response" in result, "response must be present");
   assert.equal(result.response.status, 401);
   const body = await result.response.json();
   const errMsg = body?.error?.message || "";
-  assert.ok(
-    errMsg.includes("Invalid or missing device UUID"),
-    "error must mention missing UUID"
-  );
+  assert.ok(errMsg.includes("Invalid or missing device UUID"), "error must mention missing UUID");
   // Hard Rule #12: must NOT leak stack traces
   assert.ok(!errMsg.includes("at /"), "error must not contain a stack trace path");
 });
@@ -157,25 +169,64 @@ test("TinyCmsExecutor returns 401 when UUID does not start with 'R'", async () =
     credentials: { apiKey: "abc123" }, // does not start with 'R'
     signal: AbortSignal.timeout(5000),
   });
-  assert.ok(result.response, "response must be present");
+  assert.ok("response" in result, "response must be present");
   assert.equal(result.response.status, 401);
   const body = await result.response.json();
   const errMsg = body?.error?.message || "";
-  assert.ok(
-    errMsg.includes("Invalid or missing device UUID"),
-    "error must mention missing UUID"
-  );
+  assert.ok(errMsg.includes("Invalid or missing device UUID"), "error must mention missing UUID");
   assert.ok(!errMsg.includes("at /"), "error must not contain a stack trace path");
+});
+
+test("TinyCmsExecutor returns the standard executor response envelope on success", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (new URL(url).hostname === "api64.ipify.org") {
+      return new Response(JSON.stringify({ ip: "127.0.0.1" }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (url.includes("/api/challenge")) {
+      return new Response(
+        JSON.stringify({
+          challenge: "test",
+          challengeId: "challenge-id",
+          expiresAt: Date.now() + 60_000,
+          version: "1",
+          difficulty: 0,
+        }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
+    return new Response("upstream body", {
+      status: 200,
+      headers: { "X-TinyCMS-Test": "yes" },
+    });
+  };
+
+  try {
+    const requestBody = { messages: [{ role: "user", content: "hi" }] };
+    const result = await new TinyCmsExecutor().execute({
+      model: "gpt-5-free",
+      body: requestBody,
+      stream: false,
+      credentials: { apiKey: "Rtest-device" },
+    });
+
+    assert.ok(!(result instanceof Response), "TinyCMS must preserve executor metadata");
+    assert.equal(result.response.status, 200);
+    assert.equal(result.headers?.["x-tinycms-test"], "yes");
+    assert.deepEqual(result.transformedBody, requestBody);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 // ── WASM initialization ───────────────────────────────────────────────────────
 
 test("initTinyCmsWasm module exports expected functions", async () => {
   const signer = await import("../../open-sse/executors/tinycmsSigner.ts");
-  assert.ok(
-    typeof signer.initTinyCmsWasm === "function",
-    "must export initTinyCmsWasm function"
-  );
+  assert.ok(typeof signer.initTinyCmsWasm === "function", "must export initTinyCmsWasm function");
   assert.ok(
     typeof signer.generateSecurePayload === "function",
     "must export generateSecurePayload function"
@@ -206,13 +257,10 @@ test("TinyCmsExecutor sanitizes errors (no stack traces in error response)", asy
     signal: AbortSignal.timeout(5000),
   });
 
-  assert.ok(result.response, "response must be present");
+  assert.ok("response" in result, "response must be present");
   const body = await result.response.json();
   const errMsg = body?.error?.message || "";
-  assert.ok(
-    errMsg.includes("Invalid or missing device UUID"),
-    "error must mention missing UUID"
-  );
+  assert.ok(errMsg.includes("Invalid or missing device UUID"), "error must mention missing UUID");
   assert.ok(!errMsg.includes("at /"), "error must not contain a stack trace path (Hard Rule #12)");
 });
 
@@ -229,12 +277,6 @@ test("tinycms-web credential requirement is kind: token with app-config-uuid", a
   assert.equal(req.credentialName, "app-config-uuid");
   assert.equal(req.acceptsFullCookieHeader, false);
   assert.ok(Array.isArray(req.storageKeys), "must have storageKeys array");
-  assert.ok(
-    (req.storageKeys as string[]).includes("apiKey"),
-    "apiKey must be in storageKeys"
-  );
-  assert.ok(
-    (req.storageKeys as string[]).includes("uuid"),
-    "uuid must be in storageKeys"
-  );
+  assert.ok((req.storageKeys as string[]).includes("apiKey"), "apiKey must be in storageKeys");
+  assert.ok((req.storageKeys as string[]).includes("uuid"), "uuid must be in storageKeys");
 });

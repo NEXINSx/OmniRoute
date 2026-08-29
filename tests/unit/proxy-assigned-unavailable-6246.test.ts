@@ -28,7 +28,7 @@ const providersDb = await import("../../src/lib/db/providers.ts");
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -51,7 +51,7 @@ async function makeConnection(): Promise<string> {
 
 test.after(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("BLOCKS: an account proxy assigned but marked inactive (the IP-leak case)", async () => {
@@ -149,10 +149,10 @@ test("BLOCKS: a dead no-auth provider proxy assignment", async () => {
     port: 9005,
   });
   await proxiesDb.updateProxy(proxy!.id, { status: "inactive" });
-  await proxiesDb.assignProxyToScope("provider", "mimocode", proxy!.id);
+  await proxiesDb.assignProxyToScope("provider", "opencode", proxy!.id);
 
   assert.equal(
-    proxiesDb.hasBlockingProxyAssignment("noauth", "mimocode"),
+    proxiesDb.hasBlockingProxyAssignment("noauth", "opencode"),
     true,
     "a dead no-auth provider proxy must block instead of allowing direct egress"
   );
