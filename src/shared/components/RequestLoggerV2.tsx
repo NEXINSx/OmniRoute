@@ -71,6 +71,15 @@ function formatTps(tps: number): string {
   return tps.toFixed(1);
 }
 
+export function formatCachePercentage(
+  tokensIn: number | null | undefined,
+  cacheRead: number | null | undefined
+): number {
+  if (!tokensIn || tokensIn <= 0) return 0;
+  if (!cacheRead || cacheRead <= 0) return 0;
+  return Math.min(100, Math.round((cacheRead / tokensIn) * 100));
+}
+
 function getCacheSourceMeta(cacheSource: unknown) {
   if (cacheSource === "semantic") {
     return {
@@ -1572,7 +1581,8 @@ const RequestLoggerV2 = forwardRef<RequestLoggerV2Handle, { initialSelectedId?: 
                                       className="text-sky-700 dark:text-sky-400"
                                       title={tCache("cachedTokensCol")}
                                     >
-                                      {log.tokens.cacheRead.toLocaleString()}
+                                      {log.tokens.cacheRead.toLocaleString()} (
+                                      {formatCachePercentage(log.tokens.in, log.tokens.cacheRead)}%)
                                     </span>
                                   </>
                                 )}
