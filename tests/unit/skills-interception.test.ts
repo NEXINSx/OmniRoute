@@ -10,7 +10,7 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 const coreDb = await import("../../src/lib/db/core.ts");
 const { skillRegistry } = await import("../../src/lib/skills/registry.ts");
 const { skillExecutor } = await import("../../src/lib/skills/executor.ts");
-const { interceptToolCalls, extractToolCalls, handleToolCallExecution } =
+const { interceptToolCalls, extractToolCalls, handleToolCallExecution, buildWebSearchCallItem } =
   await import("../../src/lib/skills/interception.ts");
 const { OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME } =
   await import("../../open-sse/services/webSearchFallback.ts");
@@ -72,6 +72,53 @@ test.after(() => {
   resetRuntime();
   coreDb.resetDbInstance();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
+
+test("buildWebSearchCallItem emits a native web_search_call item only for successful web-search fallback results", () => {
+  const call = { id: "call_search", name: OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME, arguments: {} };
+  const item = buildWebSearchCallItem(call, {
+    success: true,
+    provider: "serper-search",
+    query: "latest omniroute release",
+    results: [
+      {
+        title: "OmniRoute Docs",
+        url: "https://example.com/omniroute",
+        display_url: "example.com/omniroute",
+        snippet: "The OmniRoute documentation",
+      },
+      { url: "https://example.com/no-title" },
+      { title: "No URL", url: "" },
+    ],
+  });
+
+  assert.equal(item?.type, "web_search_call");
+  assert.equal(item?.status, "completed");
+  assert.equal((item?.action as Record<string, unknown>).type, "web_search");
+  assert.equal((item?.action as Record<string, unknown>).query, "latest omniroute release");
+  const sources = (item?.action as Record<string, unknown>).sources as Array<
+    Record<string, string>
+  >;
+  assert.deepEqual(sources, [
+    {
+      title: "OmniRoute Docs",
+      url: "https://example.com/omniroute",
+      caption: "The OmniRoute documentation",
+    },
+    { title: "https://example.com/no-title", url: "https://example.com/no-title", caption: "" },
+  ]);
+
+  // Non-search fallback calls never produce a web_search_call item.
+  assert.equal(
+    buildWebSearchCallItem(
+      { id: "call-1", name: "lookup@1.0.0", arguments: {} },
+      { success: true }
+    ),
+    null
+  );
+  // Failed searches keep the existing function_call_output error only.
+  assert.equal(buildWebSearchCallItem(call, { success: false, error: "quota" }), null);
+  assert.equal(buildWebSearchCallItem(call, null), null);
 });
 
 test("extractToolCalls supports OpenAI, Anthropic and Gemini shapes", () => {
