@@ -12,6 +12,7 @@ process.env.STORAGE_ENCRYPTION_KEY = "log-export-runner-test-key";
 const coreDb = await import("../../src/lib/db/core.ts");
 const destinationsDb = await import("../../src/lib/db/logExportDestinations.ts");
 const source = await import("../../src/lib/usage/callLogExportSource.ts");
+const artifacts = await import("../../src/lib/usage/callLogArtifacts.ts");
 const secrets = await import("../../src/lib/logExport/secrets.ts");
 const runner = await import("../../src/lib/logExport/runner.ts");
 const googleAuth = await import("../../src/lib/logExport/googleServiceAccount.ts");
@@ -318,3 +319,160 @@ function tableExists(name: string): boolean {
     .get(name);
   return row !== undefined && row !== null;
 }
+
+// ---------------------------------------------------------------- payload export
+
+/**
+ * Write a call log that carries payloads, the way a real request does: the summary row
+ * points at an on-disk artifact holding the request/response bodies and the pipeline's
+ * client and provider views.
+ */
+function insertCallLogWithBodies(
+  id: string,
+  bodies: {
+    requestBody?: unknown;
+    responseBody?: unknown;
+    pipeline?: Record<string, unknown>;
+  }
+) {
+  const db = coreDb.getDbInstance();
+  const timestamp = new Date(Date.UTC(2026, 7, 29, 12, 0, 0)).toISOString();
+  const relPath = artifacts.buildArtifactRelativePath(timestamp, id);
+
+  artifacts.writeCallArtifact(
+    {
+      schemaVersion: 5,
+      summary: {
+        id,
+        timestamp,
+        method: "POST",
+        path: "/v1/chat/completions",
+        status: 200,
+        model: "claude-opus-5",
+        requestedModel: "anthropic/claude-opus-5",
+        provider: "anthropic",
+        account: "team@example.com",
+        connectionId: null,
+        duration: 100,
+        tokens: {
+          in: 10,
+          out: 20,
+          cacheRead: null,
+          cacheWrite: null,
+          reasoning: null,
+          compressed: null,
+        },
+        requestType: "chat",
+        sourceFormat: "openai",
+        targetFormat: "anthropic",
+        apiKeyId: null,
+        apiKeyName: null,
+        comboName: null,
+        comboStepId: null,
+        comboExecutionKey: null,
+      },
+      requestBody: bodies.requestBody ?? null,
+      responseBody: bodies.responseBody ?? null,
+      error: null,
+      ...(bodies.pipeline ? { pipeline: bodies.pipeline } : {}),
+    },
+    relPath
+  );
+
+  db.prepare(
+    `INSERT INTO call_logs (id, timestamp, method, path, status, model, provider, duration,
+                            tokens_in, tokens_out, artifact_relpath, detail_state,
+                            has_request_body, has_response_body, has_pipeline_details)
+     VALUES (?, ?, 'POST', '/v1/chat/completions', 200, 'claude-opus-5', 'anthropic', 100, 10, 20,
+             ?, 'ready', 1, 1, ?)`
+  ).run(id, timestamp, relPath, bodies.pipeline ? 1 : 0);
+}
+
+test("runDestinationExport_IncludeBodiesOff_ShipsNoPayloadsAtAll", async () => {
+  insertCallLogWithBodies("with-bodies", {
+    requestBody: { messages: [{ role: "user", content: "secret prompt" }] },
+    responseBody: { choices: [{ message: { content: "secret answer" } }] },
+  });
+  const destination = createBigQueryDestination();
+  const batches = installFetchStub();
+
+  await runner.runDestinationExport(destination);
+
+  const row = batches[0].rows[0].json;
+  assert.equal(row.request_body, null);
+  assert.equal(row.response_body, null);
+  assert.equal(row.bodies_truncated, false);
+  // The summary flags still report that payloads exist, they are just not shipped.
+  assert.equal(row.has_request_body, true);
+  const wire = JSON.stringify(batches);
+  assert.ok(!wire.includes("secret prompt"), "prompt must not leave when includeBodies is off");
+  assert.ok(!wire.includes("secret answer"), "completion must not leave when includeBodies is off");
+});
+
+test("runDestinationExport_IncludeBodiesOn_ShipsClientAndProviderPayloads", async () => {
+  insertCallLogWithBodies("full-detail", {
+    requestBody: { messages: [{ role: "user", content: "what is 2+2" }] },
+    responseBody: { choices: [{ message: { content: "4" } }] },
+    pipeline: {
+      routeDecision: { target: "anthropic/claude-opus-5" },
+      clientRawRequest: { model: "opus", messages: [{ role: "user", content: "what is 2+2" }] },
+      openaiRequest: { model: "claude-opus-5" },
+      providerRequest: { anthropic_version: "2023-06-01" },
+      providerResponse: { content: [{ text: "4" }] },
+      clientResponse: { choices: [{ message: { content: "4" } }] },
+    },
+  });
+  const destination = createBigQueryDestination({ includeBodies: true });
+  const batches = installFetchStub();
+
+  await runner.runDestinationExport(destination);
+
+  const row = batches[0].rows[0].json as Record<string, string | null>;
+  assert.match(String(row.request_body), /what is 2\+2/);
+  assert.match(String(row.response_body), /"4"/);
+  assert.match(String(row.pipeline_route_decision), /claude-opus-5/);
+  assert.match(String(row.pipeline_client_request), /what is 2\+2/);
+  assert.match(String(row.pipeline_openai_request), /claude-opus-5/);
+  assert.match(String(row.pipeline_provider_request), /anthropic_version/);
+  assert.match(String(row.pipeline_provider_response), /"4"/);
+  assert.match(String(row.pipeline_client_response), /"4"/);
+  assert.equal(row.bodies_truncated, false);
+});
+
+test("runDestinationExport_PayloadOverTheCap_TruncatesAndFlagsInsteadOfDropping", async () => {
+  insertCallLogWithBodies("oversized", {
+    requestBody: { messages: [{ role: "user", content: "z".repeat(20_000) }] },
+  });
+  const destination = createBigQueryDestination({ includeBodies: true, maxBodyBytes: 2048 });
+  const batches = installFetchStub();
+
+  await runner.runDestinationExport(destination);
+
+  const row = batches[0].rows[0].json as Record<string, string | boolean | null>;
+  const body = String(row.request_body);
+  assert.ok(body.length < 20_000, "payload must be clipped");
+  assert.ok(body.endsWith("…[truncated]"), `expected a truncation marker, got ${body.slice(-40)}`);
+  assert.equal(row.bodies_truncated, true);
+});
+
+test("runDestinationExport_MissingArtifact_ExportsSummaryRatherThanFailingTheBatch", async () => {
+  // A row that claims an artifact which is not on disk: retention or a manual purge.
+  const db = coreDb.getDbInstance();
+  db.prepare(
+    `INSERT INTO call_logs (id, timestamp, method, path, status, model, provider, duration,
+                            tokens_in, tokens_out, artifact_relpath, detail_state, has_request_body)
+     VALUES ('orphan', ?, 'POST', '/v1/chat/completions', 200, 'claude-opus-5', 'anthropic', 100,
+             10, 20, '2026/08/29/orphan.json', 'ready', 1)`
+  ).run(new Date(Date.UTC(2026, 7, 29, 13, 0, 0)).toISOString());
+
+  const destination = createBigQueryDestination({ includeBodies: true });
+  const batches = installFetchStub();
+
+  const result = await runner.runDestinationExport(destination);
+
+  assert.equal(result.success, true, result.error ?? "");
+  assert.equal(result.exported, 1);
+  const row = batches[0].rows[0].json;
+  assert.equal(row.id, "orphan");
+  assert.equal(row.request_body, null);
+});

@@ -18,6 +18,8 @@ export interface LogExportDestinationView {
   enabled: boolean;
   config: Record<string, unknown>;
   batchSize: number;
+  includeBodies: boolean;
+  maxBodyBytes: number;
   maxRowsPerRun: number;
   cursorRowId: number;
   exportedTotal: number;
@@ -40,6 +42,8 @@ export function toDestinationView(row: LogExportDestinationRow): LogExportDestin
     enabled: row.enabled,
     config: redactDestinationConfig(row.type, row.config),
     batchSize: row.batchSize,
+    includeBodies: row.includeBodies,
+    maxBodyBytes: row.maxBodyBytes,
     maxRowsPerRun: row.maxRowsPerRun,
     cursorRowId: row.cursorRowId,
     exportedTotal: row.exportedTotal,

@@ -14,6 +14,8 @@ interface SubmitPayload {
   enabled: boolean;
   config: Record<string, unknown>;
   batchSize: number;
+  includeBodies: boolean;
+  maxBodyBytes: number;
   maxRowsPerRun: number;
 }
 

@@ -9,13 +9,26 @@
  * moves backwards except on a full purge, which `getMaxCallLogRowId` detects.
  *
  * The projected record mirrors what the Logs dashboard tab renders (same JOINs, same
- * provider/account resolution helpers) minus the request/response payloads, which live
- * in filesystem artifacts and are governed by the no-log and PII rules.
+ * provider/account resolution helpers). Request/response payloads live in filesystem
+ * artifacts and are only attached when the destination opts in (`includeBodies`); they
+ * are read through `getCallLogById`, the same path the Logs detail pane uses, so the
+ * export cannot drift from the UI and inherits its PII sanitisation, secret redaction
+ * and `noLog` handling.
  */
 
 import { getDbInstance } from "../db/core";
-import { applyNodePrefix, resolveProviderDisplay } from "./callLogs";
+import { applyNodePrefix, getCallLogById, resolveProviderDisplay } from "./callLogs";
 import type { LogExportRecord, LogExportSourceRow } from "../logExport/types";
+
+/** Cap applied per payload field when a destination does not set its own. */
+export const DEFAULT_MAX_BODY_BYTES = 262_144;
+
+export interface CallLogExportOptions {
+  /** Attach request/response payloads. Off by default: these carry prompt content. */
+  includeBodies?: boolean;
+  /** Per-field byte cap; oversized payloads are truncated, never dropped. */
+  maxBodyBytes?: number;
+}
 
 const RESOLVED_ACCOUNT_SQL = "COALESCE(NULLIF(pc.name, ''), NULLIF(pc.email, ''), cl.account)";
 
@@ -110,7 +123,100 @@ function mapExportRow(row: ExportSourceRow): LogExportRecord {
     hasRequestBody: toNumberOrNull(row.has_request_body) === 1,
     hasResponseBody: toNumberOrNull(row.has_response_body) === 1,
     hasPipelineDetails: toNumberOrNull(row.has_pipeline_details) === 1,
+    requestBody: null,
+    responseBody: null,
+    pipelineRouteDecision: null,
+    pipelineClientRequest: null,
+    pipelineOpenaiRequest: null,
+    pipelineProviderRequest: null,
+    pipelineProviderResponse: null,
+    pipelineClientResponse: null,
+    pipelineError: null,
+    bodiesTruncated: false,
   };
+}
+
+/**
+ * Serialise one payload for export. Objects become JSON; strings pass through so an
+ * already-serialised body is not double-encoded. Oversized values are truncated rather
+ * than dropped, because a clipped prompt still answers "what was asked" while a null
+ * answers nothing. Truncation is reported back so the row can be flagged.
+ */
+function serialiseBody(
+  value: unknown,
+  maxBytes: number
+): { text: string | null; truncated: boolean } {
+  if (value === null || value === undefined) return { text: null, truncated: false };
+
+  let text: string;
+  if (typeof value === "string") {
+    text = value;
+  } else {
+    try {
+      text = JSON.stringify(value);
+    } catch {
+      // Circular or otherwise unserialisable: record the shape, never throw mid-export.
+      return { text: '{"_export_error":"payload is not serialisable"}', truncated: false };
+    }
+  }
+  if (text === undefined) return { text: null, truncated: false };
+
+  if (Buffer.byteLength(text, "utf8") <= maxBytes) return { text, truncated: false };
+
+  // Slice on a byte boundary, then drop any partial trailing UTF-8 sequence.
+  const clipped = Buffer.from(text, "utf8").subarray(0, maxBytes).toString("utf8");
+  const safe = clipped.endsWith("�") ? clipped.slice(0, -1) : clipped;
+  return { text: `${safe}…[truncated]`, truncated: true };
+}
+
+/**
+ * Attach payloads to already-projected rows. Each row is resolved through
+ * `getCallLogById`, which handles artifact / legacy-inline / missing / corrupt detail
+ * states identically to the dashboard. A row whose detail cannot be read keeps its
+ * summary fields and exports null payloads: a missing artifact must not fail the batch
+ * and strand the cursor.
+ */
+export async function attachExportBodies(
+  rows: LogExportSourceRow[],
+  maxBodyBytes: number = DEFAULT_MAX_BODY_BYTES
+): Promise<LogExportSourceRow[]> {
+  const cap = Math.max(1024, maxBodyBytes);
+
+  return Promise.all(
+    rows.map(async (row) => {
+      let detail: Awaited<ReturnType<typeof getCallLogById>> = null;
+      try {
+        detail = await getCallLogById(row.record.id);
+      } catch {
+        return row;
+      }
+      if (!detail) return row;
+
+      const pipeline = (detail.pipelinePayloads ?? null) as Record<string, unknown> | null;
+      let truncated = false;
+      const take = (value: unknown): string | null => {
+        const result = serialiseBody(value, cap);
+        if (result.truncated) truncated = true;
+        return result.text;
+      };
+
+      const record: LogExportRecord = {
+        ...row.record,
+        requestBody: take(detail.requestBody),
+        responseBody: take(detail.responseBody),
+        pipelineRouteDecision: take(pipeline?.routeDecision),
+        pipelineClientRequest: take(pipeline?.clientRawRequest ?? pipeline?.clientRequest),
+        pipelineOpenaiRequest: take(pipeline?.openaiRequest),
+        pipelineProviderRequest: take(pipeline?.providerRequest),
+        pipelineProviderResponse: take(pipeline?.providerResponse),
+        pipelineClientResponse: take(pipeline?.clientResponse),
+        pipelineError: take(pipeline?.error),
+        bodiesTruncated: false,
+      };
+      record.bodiesTruncated = truncated;
+      return { rowId: row.rowId, record };
+    })
+  );
 }
 
 /** Highest rowid currently in `call_logs`, or 0 when the table is empty. */

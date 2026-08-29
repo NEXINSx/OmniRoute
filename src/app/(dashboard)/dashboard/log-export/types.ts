@@ -26,6 +26,8 @@ export interface LogExportDestination {
   enabled: boolean;
   config: Record<string, unknown>;
   batchSize: number;
+  includeBodies: boolean;
+  maxBodyBytes: number;
   maxRowsPerRun: number;
   cursorRowId: number;
   exportedTotal: number;

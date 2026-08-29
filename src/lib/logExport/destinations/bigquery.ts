@@ -27,6 +27,11 @@ const BIGQUERY_API = "https://bigquery.googleapis.com/bigquery/v2";
 const NAME_PATTERN = /^[A-Za-z0-9_]+$/;
 /** BigQuery's own recommendation for rows per insertAll call. */
 const INSERT_CHUNK_SIZE = 500;
+/**
+ * insertAll rejects a request over 10 MB. Chunks are closed at 9 MB so the JSON
+ * envelope and insertIds still fit inside the real limit.
+ */
+const MAX_INSERT_REQUEST_BYTES = 9 * 1024 * 1024;
 /** Statuses worth another attempt inside the same run; everything else is terminal. */
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 const MAX_INSERT_ATTEMPTS = 3;
@@ -46,6 +51,8 @@ export const bigQueryConfigSchema = z.object({
   location: z.string().min(1).max(64).default("EU"),
   serviceAccountJson: z.string().min(1),
   autoCreate: z.boolean().default(true),
+  /** 0 keeps partitions forever; anything higher sets the table's partition expiry. */
+  partitionExpirationDays: z.number().int().min(0).max(3650).default(0),
 });
 
 export type BigQueryConfig = z.infer<typeof bigQueryConfigSchema>;
@@ -93,7 +100,26 @@ const FIELDS: readonly LogExportConfigField[] = [
     labelFallback: "Create dataset and table if missing",
     type: "boolean",
   },
+  {
+    key: "partitionExpirationDays",
+    labelFallback: "Partition retention (days)",
+    type: "number",
+    helpFallback:
+      "0 keeps every partition. Applied when the table is created; clustering is always api_key_name, provider, model, status.",
+  },
 ];
+
+/**
+ * Clustering keys for the auto-created table, most-filtered first.
+ *
+ * Day partitioning on `timestamp` already bounds a query to the days it asks for;
+ * clustering then sorts each partition so the common filters skip blocks instead of
+ * scanning the day. These four cover how call logs are actually queried: whose key
+ * ran it, against which provider and model, and whether it failed. BigQuery allows at
+ * most four, and the order is significant — a filter on `api_key_name` alone prunes,
+ * a filter on `status` alone does not.
+ */
+export const BIGQUERY_CLUSTERING_FIELDS = ["api_key_name", "provider", "model", "status"] as const;
 
 /** BigQuery table schema, one column per Logs-dashboard field. */
 export const BIGQUERY_TABLE_SCHEMA = {
@@ -134,6 +160,17 @@ export const BIGQUERY_TABLE_SCHEMA = {
     { name: "has_request_body", type: "BOOL", mode: "NULLABLE" },
     { name: "has_response_body", type: "BOOL", mode: "NULLABLE" },
     { name: "has_pipeline_details", type: "BOOL", mode: "NULLABLE" },
+    // Payload columns: populated only when the destination sets includeBodies.
+    { name: "request_body", type: "STRING", mode: "NULLABLE" },
+    { name: "response_body", type: "STRING", mode: "NULLABLE" },
+    { name: "pipeline_route_decision", type: "STRING", mode: "NULLABLE" },
+    { name: "pipeline_client_request", type: "STRING", mode: "NULLABLE" },
+    { name: "pipeline_openai_request", type: "STRING", mode: "NULLABLE" },
+    { name: "pipeline_provider_request", type: "STRING", mode: "NULLABLE" },
+    { name: "pipeline_provider_response", type: "STRING", mode: "NULLABLE" },
+    { name: "pipeline_client_response", type: "STRING", mode: "NULLABLE" },
+    { name: "pipeline_error", type: "STRING", mode: "NULLABLE" },
+    { name: "bodies_truncated", type: "BOOL", mode: "NULLABLE" },
     { name: "exported_at", type: "TIMESTAMP", mode: "NULLABLE" },
   ],
 } as const;
@@ -177,8 +214,33 @@ export function toBigQueryRow(record: LogExportRecord, exportedAt: string) {
     has_request_body: record.hasRequestBody,
     has_response_body: record.hasResponseBody,
     has_pipeline_details: record.hasPipelineDetails,
+    request_body: record.requestBody,
+    response_body: record.responseBody,
+    pipeline_route_decision: record.pipelineRouteDecision,
+    pipeline_client_request: record.pipelineClientRequest,
+    pipeline_openai_request: record.pipelineOpenaiRequest,
+    pipeline_provider_request: record.pipelineProviderRequest,
+    pipeline_provider_response: record.pipelineProviderResponse,
+    pipeline_client_response: record.pipelineClientResponse,
+    pipeline_error: record.pipelineError,
+    bodies_truncated: record.bodiesTruncated,
     exported_at: exportedAt,
   };
+}
+
+/**
+ * Serialised size of one insertAll row, including the insertId wrapper. Used only to
+ * decide where to close a chunk, so an approximation that never under-counts is enough.
+ */
+function estimateRowBytes(record: LogExportRecord, exportedAt: string): number {
+  try {
+    return Buffer.byteLength(
+      JSON.stringify({ insertId: record.id, json: toBigQueryRow(record, exportedAt) }),
+      "utf8"
+    );
+  } catch {
+    return MAX_INSERT_REQUEST_BYTES;
+  }
 }
 
 interface BigQueryResponseBody {
@@ -304,7 +366,14 @@ class BigQueryClient implements LogExportClient {
         tableId: this.config.tableId,
       },
       schema: BIGQUERY_TABLE_SCHEMA,
-      timePartitioning: { type: "DAY", field: "timestamp" },
+      timePartitioning: {
+        type: "DAY",
+        field: "timestamp",
+        ...(this.config.partitionExpirationDays
+          ? { expirationMs: String(this.config.partitionExpirationDays * 86_400_000) }
+          : {}),
+      },
+      clustering: { fields: [...BIGQUERY_CLUSTERING_FIELDS] },
     });
     if (!createdTable.ok && createdTable.status !== 409) {
       throw new Error(describeFailure(createdTable.status, createdTable.json));
@@ -318,9 +387,29 @@ class BigQueryClient implements LogExportClient {
     // The caller's batch size is a cursor unit, not an HTTP limit. insertAll caps a
     // request at 10 MB and BigQuery recommends at most 500 rows per call, so a large
     // configured batch is chunked here rather than constraining the generic runner.
-    for (let offset = 0; offset < records.length; offset += INSERT_CHUNK_SIZE) {
-      await this.insertChunk(records.slice(offset, offset + INSERT_CHUNK_SIZE), exportedAt);
+    //
+    // Row count alone is not enough once payloads are exported: 500 rows carrying
+    // prompts can be tens of MB. Chunks therefore close on whichever limit is reached
+    // first, count or bytes. A single row over the byte budget still ships on its own
+    // rather than wedging the cursor; BigQuery rejects it and the error names the row.
+    let chunk: LogExportRecord[] = [];
+    let chunkBytes = 0;
+
+    for (const record of records) {
+      const rowBytes = estimateRowBytes(record, exportedAt);
+      const wouldExceed = chunk.length > 0 && chunkBytes + rowBytes > MAX_INSERT_REQUEST_BYTES;
+
+      if (wouldExceed || chunk.length >= INSERT_CHUNK_SIZE) {
+        await this.insertChunk(chunk, exportedAt);
+        chunk = [];
+        chunkBytes = 0;
+      }
+
+      chunk.push(record);
+      chunkBytes += rowBytes;
     }
+
+    if (chunk.length > 0) await this.insertChunk(chunk, exportedAt);
   }
 
   /**

@@ -23,6 +23,8 @@ const createDestinationSchema = z.object({
   enabled: z.boolean().optional().default(false),
   config: z.record(z.string(), z.unknown()).optional().default({}),
   batchSize: z.number().int().min(1).max(10_000).optional().default(500),
+  includeBodies: z.boolean().optional().default(false),
+  maxBodyBytes: z.number().int().min(1024).max(5_000_000).optional().default(262_144),
   maxRowsPerRun: z.number().int().min(1).max(1_000_000).optional().default(10_000),
 });
 
@@ -94,6 +96,8 @@ export async function POST(request: Request) {
       enabled: data.enabled,
       config: encryptDestinationConfig(data.type, parsedConfig.data as Record<string, unknown>),
       batchSize: data.batchSize,
+      includeBodies: data.includeBodies,
+      maxBodyBytes: data.maxBodyBytes,
       maxRowsPerRun: data.maxRowsPerRun,
     });
 

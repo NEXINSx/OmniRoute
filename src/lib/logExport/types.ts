@@ -14,8 +14,13 @@ import type { ZodType } from "zod";
 /**
  * One exported call log. Mirrors the shape the Logs dashboard tab renders
  * (`mapSummaryRow` in src/lib/usage/callLogs.ts) so what ships downstream is exactly
- * what the operator sees in the UI. Payload bodies are NOT included: they live in
- * filesystem artifacts and are subject to the no-log / PII rules.
+ * what the operator sees in the UI.
+ *
+ * Payload bodies (the `*Body` / `pipeline*` fields) are only populated when the
+ * destination opts in with `includeBodies`. They carry prompt and completion content,
+ * so they are off by default. When on, they are read through `getCallLogById` — the
+ * same path the Logs detail pane uses — which means they arrive already PII-sanitized
+ * and secret-redacted, and rows written under a `noLog` API key carry none.
  */
 export interface LogExportRecord {
   id: string;
@@ -54,6 +59,26 @@ export interface LogExportRecord {
   hasRequestBody: boolean;
   hasResponseBody: boolean;
   hasPipelineDetails: boolean;
+  /** Client-side request payload (the prompt as the caller sent it). */
+  requestBody: string | null;
+  /** Response payload returned to the caller. */
+  responseBody: string | null;
+  /** Router's target/model decision for the call. */
+  pipelineRouteDecision: string | null;
+  /** Raw request exactly as the client sent it, before normalisation. */
+  pipelineClientRequest: string | null;
+  /** Request after translation into OmniRoute's internal OpenAI shape. */
+  pipelineOpenaiRequest: string | null;
+  /** Request as actually sent upstream, in the provider's own dialect. */
+  pipelineProviderRequest: string | null;
+  /** Raw upstream response, before translation back. */
+  pipelineProviderResponse: string | null;
+  /** Response as handed back to the client. */
+  pipelineClientResponse: string | null;
+  /** Pipeline-level error detail, when the call failed. */
+  pipelineError: string | null;
+  /** True when any of the above hit the destination's `maxBodyBytes` cap. */
+  bodiesTruncated: boolean;
 }
 
 /** A call log row paired with its SQLite rowid, which is the export cursor. */

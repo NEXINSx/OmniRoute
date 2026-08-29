@@ -31,6 +31,7 @@ const CONFIG: BigQueryConfig = {
   location: "EU",
   serviceAccountJson: JSON.stringify(SERVICE_ACCOUNT),
   autoCreate: true,
+  partitionExpirationDays: 0,
 };
 
 const RECORD: LogExportRecord = {
@@ -70,6 +71,16 @@ const RECORD: LogExportRecord = {
   hasRequestBody: true,
   hasResponseBody: true,
   hasPipelineDetails: false,
+  requestBody: null,
+  responseBody: null,
+  pipelineRouteDecision: null,
+  pipelineClientRequest: null,
+  pipelineOpenaiRequest: null,
+  pipelineProviderRequest: null,
+  pipelineProviderResponse: null,
+  pipelineClientResponse: null,
+  pipelineError: null,
+  bodiesTruncated: false,
 };
 
 interface InsertRow {
@@ -81,7 +92,8 @@ interface RequestBody {
   rows?: InsertRow[];
   skipInvalidRows?: boolean;
   location?: string;
-  timePartitioning?: { type: string; field: string };
+  timePartitioning?: { type: string; field: string; expirationMs?: string };
+  clustering?: { fields: string[] };
   schema?: { fields: Array<{ name: string }> };
 }
 
@@ -231,7 +243,16 @@ test("prepare_MissingDatasetAndTable_CreatesBothWithPartitioning", async () => {
   assert.equal(created.length, 2);
   assert.equal(created[0].body.location, "EU");
   assert.equal(created[1].body.timePartitioning?.field, "timestamp");
+  assert.equal(created[1].body.timePartitioning?.type, "DAY");
   assert.equal(created[1].body.schema?.fields.length, bigquery.BIGQUERY_TABLE_SCHEMA.fields.length);
+  assert.deepEqual(created[1].body.clustering?.fields, [
+    "api_key_name",
+    "provider",
+    "model",
+    "status",
+  ]);
+  // No retention configured, so partitions must not carry an expiry.
+  assert.equal(created[1].body.timePartitioning?.expirationMs, undefined);
 });
 
 test("prepare_ExistingTable_CreatesNothing", async () => {
@@ -408,4 +429,104 @@ test("send_MissingTableNotCreatedByThisRun_FailsFastOn404", async () => {
 
   await assert.rejects(() => client.send([RECORD]), /not found/);
   assert.equal(inserts, 1, "a table this run did not create is a real error, not a race");
+});
+
+test("prepare_RetentionConfigured_SetsPartitionExpiry", async () => {
+  const created: Call[] = [];
+  const { fetchImpl } = stubFetch([
+    (call) => {
+      if (call.method === "POST" && /\/(datasets|tables)$/.test(call.url)) {
+        created.push(call);
+        return { status: 200, json: {} };
+      }
+      return null;
+    },
+  ]);
+  const client = bigquery.createBigQueryClientForTest(
+    { ...CONFIG, partitionExpirationDays: 30 },
+    fetchImpl
+  );
+
+  await client.prepare();
+
+  const table = created.find((call) => /\/tables$/.test(call.url));
+  assert.ok(table, "table must be created");
+  // 30 days in milliseconds, as a string — BigQuery rejects a number here.
+  assert.equal(table.body.timePartitioning?.expirationMs, String(30 * 86_400_000));
+});
+
+test("send_PayloadsExceedingTheRequestCap_SplitIntoMultipleInsertAllCalls", async () => {
+  const inserts: Call[] = [];
+  const { fetchImpl } = stubFetch([
+    (call) => {
+      if (call.url.endsWith("/insertAll")) {
+        inserts.push(call);
+        return { status: 200, json: {} };
+      }
+      return null;
+    },
+  ]);
+  const client = bigquery.createBigQueryClientForTest(CONFIG, fetchImpl);
+
+  // Four rows of ~3 MB each: under the 500-row chunk limit, well over the 9 MB
+  // byte budget, so chunking must close on bytes rather than count.
+  const big = "x".repeat(3 * 1024 * 1024);
+  const records = [1, 2, 3, 4].map((n) => ({
+    ...RECORD,
+    id: `big-${n}`,
+    requestBody: big,
+  }));
+
+  await client.send(records);
+
+  assert.ok(inserts.length >= 2, `expected several calls, got ${inserts.length}`);
+  for (const insert of inserts) {
+    const bytes = Buffer.byteLength(JSON.stringify(insert.body), "utf8");
+    assert.ok(bytes < 10 * 1024 * 1024, `chunk of ${bytes} bytes exceeds the insertAll cap`);
+  }
+  // Every row still ships exactly once.
+  const ids = inserts.flatMap((insert) => (insert.body.rows ?? []).map((row) => row.insertId));
+  assert.deepEqual(ids, ["big-1", "big-2", "big-3", "big-4"]);
+});
+
+test("send_SingleRowOverTheByteBudget_StillShipsRatherThanStallingTheCursor", async () => {
+  const inserts: Call[] = [];
+  const { fetchImpl } = stubFetch([
+    (call) => {
+      if (call.url.endsWith("/insertAll")) {
+        inserts.push(call);
+        return { status: 200, json: {} };
+      }
+      return null;
+    },
+  ]);
+  const client = bigquery.createBigQueryClientForTest(CONFIG, fetchImpl);
+
+  await client.send([{ ...RECORD, id: "huge", requestBody: "y".repeat(12 * 1024 * 1024) }]);
+
+  assert.equal(inserts.length, 1);
+  assert.deepEqual(
+    (inserts[0].body.rows ?? []).map((row) => row.insertId),
+    ["huge"]
+  );
+});
+
+test("toBigQueryRow_PayloadFields_MapOntoTheirColumns", () => {
+  const row = bigquery.toBigQueryRow(
+    {
+      ...RECORD,
+      requestBody: '{"messages":[{"role":"user","content":"hi"}]}',
+      pipelineProviderRequest: '{"upstream":true}',
+      pipelineClientResponse: '{"choices":[]}',
+      bodiesTruncated: true,
+    },
+    "2026-08-29T00:00:00.000Z"
+  );
+
+  assert.equal(row.request_body, '{"messages":[{"role":"user","content":"hi"}]}');
+  assert.equal(row.pipeline_provider_request, '{"upstream":true}');
+  assert.equal(row.pipeline_client_response, '{"choices":[]}');
+  assert.equal(row.bodies_truncated, true);
+  // A destination that never opted in leaves them null rather than empty strings.
+  assert.equal(bigquery.toBigQueryRow(RECORD, "2026-08-29T00:00:00.000Z").request_body, null);
 });

@@ -17,6 +17,8 @@ export interface LogExportDestinationRow {
   enabled: boolean;
   config: Record<string, unknown>;
   batchSize: number;
+  includeBodies: boolean;
+  maxBodyBytes: number;
   maxRowsPerRun: number;
   cursorRowId: number;
   exportedTotal: number;
@@ -33,6 +35,8 @@ export interface CreateLogExportDestinationInput {
   enabled?: boolean;
   config: Record<string, unknown>;
   batchSize?: number;
+  includeBodies?: boolean;
+  maxBodyBytes?: number;
   maxRowsPerRun?: number;
 }
 
@@ -41,6 +45,8 @@ export interface UpdateLogExportDestinationInput {
   enabled?: boolean;
   config?: Record<string, unknown>;
   batchSize?: number;
+  includeBodies?: boolean;
+  maxBodyBytes?: number;
   maxRowsPerRun?: number;
 }
 
@@ -61,6 +67,8 @@ function mapRow(row: any): LogExportDestinationRow {
     enabled: row.enabled === 1,
     config,
     batchSize: row.batch_size,
+    includeBodies: row.include_bodies === 1,
+    maxBodyBytes: row.max_body_bytes ?? 262_144,
     maxRowsPerRun: row.max_rows_per_run,
     cursorRowId: row.cursor_row_id ?? 0,
     exportedTotal: row.exported_total ?? 0,
@@ -100,9 +108,10 @@ export function createLogExportDestination(
   const id = randomUUID();
   db.prepare(
     `INSERT INTO log_export_destinations
-       (id, name, type, enabled, config, batch_size, max_rows_per_run,
-        cursor_row_id, exported_total, created_at, updated_at)
-     VALUES (@id, @name, @type, @enabled, @config, @batchSize, @maxRowsPerRun, 0, 0, @now, @now)`
+       (id, name, type, enabled, config, batch_size, include_bodies, max_body_bytes,
+        max_rows_per_run, cursor_row_id, exported_total, created_at, updated_at)
+     VALUES (@id, @name, @type, @enabled, @config, @batchSize, @includeBodies, @maxBodyBytes,
+             @maxRowsPerRun, 0, 0, @now, @now)`
   ).run({
     id,
     name: input.name,
@@ -110,6 +119,8 @@ export function createLogExportDestination(
     enabled: input.enabled ? 1 : 0,
     config: JSON.stringify(input.config ?? {}),
     batchSize: input.batchSize ?? 500,
+    includeBodies: input.includeBodies ? 1 : 0,
+    maxBodyBytes: input.maxBodyBytes ?? 262_144,
     maxRowsPerRun: input.maxRowsPerRun ?? 10_000,
     now,
   });
@@ -130,6 +141,8 @@ export function updateLogExportDestination(
             enabled = @enabled,
             config = @config,
             batch_size = @batchSize,
+            include_bodies = @includeBodies,
+            max_body_bytes = @maxBodyBytes,
             max_rows_per_run = @maxRowsPerRun,
             updated_at = @now
       WHERE id = @id`
@@ -139,6 +152,8 @@ export function updateLogExportDestination(
     enabled: (input.enabled ?? existing.enabled) ? 1 : 0,
     config: JSON.stringify(input.config ?? existing.config),
     batchSize: input.batchSize ?? existing.batchSize,
+    includeBodies: (input.includeBodies ?? existing.includeBodies) ? 1 : 0,
+    maxBodyBytes: input.maxBodyBytes ?? existing.maxBodyBytes,
     maxRowsPerRun: input.maxRowsPerRun ?? existing.maxRowsPerRun,
     now: new Date().toISOString(),
   });

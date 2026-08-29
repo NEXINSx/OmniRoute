@@ -44,8 +44,37 @@ call_logs (SQLite)
 - **Purge recovery** — if `cursor_row_id` ends up above `MAX(rowid)` (the whole table was
   purged and rowids restarted), the runner rewinds to 0 rather than going permanently blind.
 
-Payload bodies are **not** exported. They live in filesystem artifacts and are governed by the
-no-log and PII rules; the export carries the same summary fields the Logs tab renders.
+### Payloads (prompts and completions)
+
+By default the export carries only the summary fields the Logs **list** shows. Turning on
+**Export prompts and responses** (`includeBodies`) additionally ships what the Logs **detail**
+pane shows for each call:
+
+| Field                            | What it holds                                      |
+| -------------------------------- | -------------------------------------------------- |
+| `request_body` / `response_body` | The call payloads as the dashboard renders them    |
+| `pipeline_route_decision`        | Which target and model the router picked           |
+| `pipeline_client_request`        | The raw request exactly as the client sent it      |
+| `pipeline_openai_request`        | After translation into the internal OpenAI shape   |
+| `pipeline_provider_request`      | As actually sent upstream, in the provider dialect |
+| `pipeline_provider_response`     | The raw upstream response                          |
+| `pipeline_client_response`       | What was handed back to the caller                 |
+| `pipeline_error`                 | Pipeline-level error detail for a failed call      |
+| `bodies_truncated`               | True when any field above hit `maxBodyBytes`       |
+
+This is prompt content, so it is **off by default** and deliberately a per-destination choice.
+What ships is what the dashboard shows, because both read through `getCallLogById`: payloads are
+already PII-sanitised and secret-redacted when they are written, and a call made with a
+`noLog` API key stores no payload at all, so there is nothing to export.
+
+Payloads are read per row from the filesystem artifact, so hydration only runs for destinations
+that asked for it. A row whose artifact is missing or corrupt exports its summary with null
+payloads rather than failing the batch and stranding the cursor.
+
+`maxBodyBytes` (default 262144) caps each field. Longer payloads are **truncated rather than
+dropped** — a clipped prompt still answers "what was asked" — and the row is flagged with
+`bodies_truncated`. Streamed chunk-by-chunk deltas are not exported; the assembled response is
+already in `pipeline_provider_response` and `pipeline_client_response`.
 
 ---
 
@@ -134,9 +163,26 @@ Transport is plain REST — a self-signed RS256 assertion is exchanged for an ac
 `https://oauth2.googleapis.com/token`, then rows go to `tabledata.insertAll`. No Google SDK is
 pulled in. Access tokens are cached in-process per (service account, scope).
 
-The created table is day-partitioned on `timestamp` and carries one column per Logs-tab field
-plus `exported_at`. `tests/unit/log-export-bigquery.test.ts` asserts the mapper and the table
-schema stay in lockstep, so a new call-log column cannot be silently dropped on the way out.
+The created table carries one column per Logs-tab field plus `exported_at`, and is laid out for
+how call logs are actually queried:
+
+- **Day-partitioned on `timestamp`**, so a query bounded by date only scans those days.
+- **Clustered by `api_key_name`, `provider`, `model`, `status`** (in that order), so filtering by
+  who ran it, where it went, or whether it failed prunes blocks inside each partition. BigQuery
+  allows at most four clustering columns and the order matters: a filter on `api_key_name` alone
+  prunes, a filter on `status` alone does not.
+- **Optional partition retention** via `partitionExpirationDays` (0 keeps everything), applied
+  when the table is created.
+
+Both settings apply at creation time. An existing table keeps whatever layout it already has, so
+point the destination at a new table id if you want to adopt them.
+
+`tests/unit/log-export-bigquery.test.ts` asserts the mapper and the table schema stay in
+lockstep, so a new call-log column cannot be silently dropped on the way out.
+
+Batches are chunked by **both** row count and serialised bytes. Row count alone is not enough
+once payloads are exported: 500 rows carrying prompts can be tens of megabytes, and insertAll
+rejects a request over 10 MB. Chunks close at 500 rows or 9 MB, whichever comes first.
 
 ---
 

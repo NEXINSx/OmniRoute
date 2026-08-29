@@ -28,6 +28,8 @@ const updateDestinationSchema = z.object({
   enabled: z.boolean().optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   batchSize: z.number().int().min(1).max(10_000).optional(),
+  includeBodies: z.boolean().optional(),
+  maxBodyBytes: z.number().int().min(1024).max(5_000_000).optional(),
   maxRowsPerRun: z.number().int().min(1).max(1_000_000).optional(),
 });
 
@@ -117,6 +119,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       enabled: data.enabled,
       config: nextConfig,
       batchSize: data.batchSize,
+      includeBodies: data.includeBodies,
+      maxBodyBytes: data.maxBodyBytes,
       maxRowsPerRun: data.maxRowsPerRun,
     });
     if (!updated) {

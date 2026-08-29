@@ -15,6 +15,8 @@ export interface DestinationSubmitPayload {
   enabled: boolean;
   config: Record<string, unknown>;
   batchSize: number;
+  includeBodies: boolean;
+  maxBodyBytes: number;
   maxRowsPerRun: number;
 }
 
@@ -65,6 +67,8 @@ function DestinationForm({
   const [typeId, setTypeId] = useState(editing?.type ?? types[0]?.id ?? "");
   const [enabled, setEnabled] = useState(editing?.enabled ?? true);
   const [batchSize, setBatchSize] = useState(String(editing?.batchSize ?? 500));
+  const [includeBodies, setIncludeBodies] = useState(editing?.includeBodies ?? false);
+  const [maxBodyBytes, setMaxBodyBytes] = useState(String(editing?.maxBodyBytes ?? 262144));
   const [maxRowsPerRun, setMaxRowsPerRun] = useState(String(editing?.maxRowsPerRun ?? 10000));
   const [values, setValues] = useState<FormValues>(() =>
     initialValues(
@@ -234,6 +238,28 @@ function DestinationForm({
       </div>
 
       <Checkbox
+        label="Export prompts and responses"
+        checked={includeBodies}
+        onChange={(event) => setIncludeBodies(event.target.checked)}
+      />
+      {includeBodies ? (
+        <div className="flex flex-col gap-2 pl-6">
+          <span className="text-[11px] text-text-muted">
+            Ships the request and response payloads shown in the Logs detail pane, including the
+            client and provider views of each call. Content is PII-sanitised and secret-redacted the
+            same way the dashboard shows it, and calls made with a no-log API key carry none.
+          </span>
+          <Input
+            label="Max payload bytes per field"
+            type="number"
+            hint="Longer payloads are truncated, not dropped"
+            value={maxBodyBytes}
+            onChange={(event) => setMaxBodyBytes(event.target.value)}
+          />
+        </div>
+      ) : null}
+
+      <Checkbox
         label="Enabled — include in the hourly export"
         checked={enabled}
         onChange={(event) => setEnabled(event.target.checked)}
@@ -259,6 +285,8 @@ function DestinationForm({
               enabled,
               config: buildConfig(),
               batchSize: Number(batchSize) || 500,
+              includeBodies,
+              maxBodyBytes: Number(maxBodyBytes) || 262144,
               maxRowsPerRun: Number(maxRowsPerRun) || 10000,
             })
           }
