@@ -28,7 +28,7 @@ function getStaticModel(provider: string) {
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(path.join(TEST_DATA_DIR, "logs/application"), { recursive: true });
   catalog.__resetCatalogBuilderRunsForTest();
 }
@@ -58,7 +58,7 @@ test.beforeEach(resetStorage);
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("active authoritative live catalog suppresses stale static registry models", async () => {
@@ -109,9 +109,11 @@ test("partial discovery provider preserves uncovered static models when synced",
   const uncoveredStaticModel = "deepseek/deepseek-v4-flash";
   const coveredSyncedModel = "claude-opus-4-7";
 
-  await modelsDb.replaceSyncedAvailableModelsForConnection("command-code", connection.id as string, [
-    { id: coveredSyncedModel, name: "Claude Opus 4.7", source: "imported" },
-  ]);
+  await modelsDb.replaceSyncedAvailableModelsForConnection(
+    "command-code",
+    connection.id as string,
+    [{ id: coveredSyncedModel, name: "Claude Opus 4.7", source: "imported" }]
+  );
 
   const ids = await getCatalogIds();
 

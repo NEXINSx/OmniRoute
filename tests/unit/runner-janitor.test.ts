@@ -98,7 +98,7 @@ describe("runner-janitor.sh", () => {
         assert.ok(existsSync(p), `must not delete ${p} when idleness cannot be proven`);
       }
     } finally {
-      rmSync(f.base, { recursive: true, force: true });
+      rmSync(f.base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -130,7 +130,7 @@ describe("runner-janitor.sh", () => {
       assert.match(r.stdout, /zombie builds: 0/);
       assert.match(r.stdout, /done status=0/);
     } finally {
-      rmSync(f.base, { recursive: true, force: true });
+      rmSync(f.base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -146,7 +146,7 @@ describe("runner-janitor.sh", () => {
       assert.ok(existsSync(f.fresh), "a fresh dir must survive");
       assert.ok(existsSync(f.unrelated), "files we did not create must survive even when old");
     } finally {
-      rmSync(f.base, { recursive: true, force: true });
+      rmSync(f.base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -164,7 +164,7 @@ describe("runner-janitor.sh", () => {
       assert.match(body, /TMPFS_MAX_AGE_HOURS:-3\}/, "tmpfs default must stay short — it is RAM");
       assert.match(body, /WORK_TEMP_MAX_AGE_HOURS:-24\}/);
     } finally {
-      rmSync(f.base, { recursive: true, force: true });
+      rmSync(f.base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -185,7 +185,7 @@ describe("runner-janitor.sh", () => {
       assert.match(r.stdout, /ROOT DISK \d+% >= 0%/);
       assert.ok(existsSync(f.staleTar), "alerting never deletes");
     } finally {
-      rmSync(f.base, { recursive: true, force: true });
+      rmSync(f.base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 

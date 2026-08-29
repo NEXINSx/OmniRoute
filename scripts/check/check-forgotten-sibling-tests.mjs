@@ -173,7 +173,7 @@ function arg(name, fallback = "") {
 }
 
 function git(root, args) {
-  return execFileSync("git", args, { cwd: root, encoding: "utf8" });
+  return execFileSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 }
 
 function changedEntries(root, base) {

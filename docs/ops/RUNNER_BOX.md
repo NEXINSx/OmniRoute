@@ -7,13 +7,13 @@ title: Self-Hosted Runner Box Operations
 The self-hosted pool (`self-hosted, omni-release` on all eight runners; `omni-build` on two) runs on the **.113** box.
 Measured 2026-08-28 (v3.8.50 postmortem, Parte III):
 
-| resource  | value                                                            | what it means for scheduling                                                                                                                  |
-| --------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| RAM / CPU | **31 GB / 32 cores** (was 16 GB when this doc was first written) | one `next-build` peaks at **~14 GB** → 2 concurrent heavy builds saturate the box, 3 take it down (2026-08-28 06:42Z: load 56, two jobs lost) |
-| swap      | 15 GB                                                            | it swapped its way through the v3.8.50 publish; pressure shows in `/proc/pressure/memory`                                                     |
-| `/tmp`    | **12 GB tmpfs = RAM**                                            | anything parked there is memory; leftovers are swept after 3 h                                                                                |
-| disk      | 188 GB                                                           | `_work` checkouts of 8 runners reach ~70 GB with no cap                                                                                       |
-| runners   | **10 listeners**: 8 OmniRoute + OmniHeuris + OmniMind            | all share the memory above                                                                                                                    |
+| resource  | value                                                                                  | what it means for scheduling                                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| RAM / CPU | **31 GB / 32 cores** (was 16 GB when this doc was first written)                       | one `next-build` peaks at **~14 GB** → 2 concurrent heavy builds saturate the box, 3 take it down (2026-08-28 06:42Z: load 56, two jobs lost) |
+| swap      | 15 GB                                                                                  | it swapped its way through the v3.8.50 publish; pressure shows in `/proc/pressure/memory`                                                     |
+| `/tmp`    | **12 GB tmpfs = RAM**                                                                  | anything parked there is memory; leftovers are swept after 3 h                                                                                |
+| disk      | 188 GB                                                                                 | `_work` checkouts of 8 runners reach ~70 GB with no cap                                                                                       |
+| runners   | **6 listeners**: 4 OmniRoute (2 `omni-build` + 2 `omni-light`) + OmniHeuris + OmniMind | all share the memory above; `omniroute-113-3/-4/-7/-8` are disabled (`systemctl enable --now` brings one back)                                |
 
 ## Install the janitor (one-time, on the box)
 
@@ -21,7 +21,7 @@ Measured 2026-08-28 (v3.8.50 postmortem, Parte III):
 scp scripts/ops/runner-janitor.sh root@192.168.0.113:/opt/omniroute-ops/runner-janitor.sh
 ssh root@192.168.0.113 'chmod +x /opt/omniroute-ops/runner-janitor.sh; apt-get install -y lsof'
 # cron (root): every 30 min, log to /var/log/runner-janitor.log
-*/30 * * * * MAX_ACTIVE_RUNNERS=8 /opt/omniroute-ops/runner-janitor.sh >> /var/log/runner-janitor.log 2>&1
+*/30 * * * * MAX_ACTIVE_RUNNERS=4 /opt/omniroute-ops/runner-janitor.sh >> /var/log/runner-janitor.log 2>&1
 ```
 
 `lsof` is required: the janitor proves a path is idle with one snapshot of open
@@ -57,6 +57,15 @@ a time, only when idle**, with the idle check and the restart in the same comman
   queues a third build instead of the kernel killing one. Pair with the `heavy-build-*`
   concurrency lanes in `ci.yml`. To add capacity, label another runner — never raise
   the count past what 31 GB holds (one next-build ≈ 14–16 GB).
+- **Light pool: `omni-light` (2026-08-29, #11965).** `omniroute-113` and `omniroute-113-2` carry
+  `omni-light` for jobs that need a backend-only `next build` (~5–6 GB) but not a full one: the
+  nightly Schemathesis, promptfoo, garak and axe-a11y jobs. They ran on the hosted 7 GB runner and
+  died on `release/v3.8.51` with nobody watching. Worst case on the box is 2 heavy + 2 light ≈
+  30 + 12 GB — over 31 GB of RAM, inside the 16 GB of swap; the real fix for headroom is more RAM
+  on the Proxmox VM (`tomni-proxmox-113`), which turns the label ceilings into 3 heavy + 2 light.
+- **Fewer listeners on purpose.** Four OmniRoute units were disabled on 2026-08-29 — with only
+  `ci.yml` `Build` and the nightlies using the box, 8 listeners were idle and each extra one is a
+  potential 14 GB tenant. The janitor ceiling is 4 (`MAX_ACTIVE_RUNNERS=4` in cron).
 - **Never clean `/tmp` or `_work` by hand while any runner is busy.** A
   check-then-delete with a gap between the two is how a live Build job lost its
   `_work` on 2026-08-27. The janitor does the check and the removal in one step;

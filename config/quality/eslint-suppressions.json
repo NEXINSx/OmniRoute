@@ -401,11 +401,6 @@
       "count": 3
     }
   },
-  "open-sse/services/adobeFireflyClient.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "open-sse/services/adobeFireflySession.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -840,6 +835,11 @@
   "open-sse/utils/setupPolyfill.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 5
+    }
+  },
+  "open-sse/utils/socksConnectorWithFamily.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 4
     }
   },
   "open-sse/utils/stream.ts": {
@@ -2564,11 +2564,6 @@
   "src/lib/providers/validation/searchProviders.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    }
-  },
-  "src/lib/providers/validation/webProvidersA.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
     }
   },
   "src/lib/providers/validation/webProvidersB.ts": {
@@ -4957,6 +4952,11 @@
       "count": 20
     }
   },
+  "tests/unit/free-models-isfree.test.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  },
   "tests/unit/functional-gateway-mirrors-append.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -5241,6 +5241,11 @@
     },
     "@typescript-eslint/no-unused-vars": {
       "count": 3
+    }
+  },
+  "tests/unit/models-db-isfree.test.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 18
     }
   },
   "tests/unit/modelsDevSync-extended.test.ts": {
@@ -5540,6 +5545,11 @@
   "tests/unit/provider-validation-specialty.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 4
+    }
+  },
+  "tests/unit/providerModelMutationSchema-isfree.test.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
     }
   },
   "tests/unit/providers-route-managed-catalog.test.ts": {
@@ -6009,6 +6019,16 @@
   "tests/unit/skills-skillssh.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 7
+    }
+  },
+  "tests/unit/socks-connect-timeout-e2e.test.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 11
+    }
+  },
+  "tests/unit/socks-connect-timeout.test.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 18
     }
   },
   "tests/unit/spend-batch-writer.test.ts": {
