@@ -17,19 +17,6 @@ export const WEB_COOKIE_PROVIDERS = {
     riskNoticeVariant: "webCookie",
     toolCalling: "native",
   },
-  "chatgpt-web": {
-    id: "chatgpt-web",
-    alias: "cgpt-web",
-    name: "ChatGPT Web (Plus/Pro)",
-    icon: "auto_awesome",
-    color: "#10A37F",
-    textIcon: "CG",
-    website: "https://chatgpt.com",
-    authHint: "Paste your __Secure-next-auth.session-token cookie value from chatgpt.com",
-    subscriptionRisk: true,
-    riskNoticeVariant: "webCookie",
-    toolCalling: "emulated",
-  },
   "grok-web": {
     id: "grok-web",
     alias: "gw",
@@ -153,19 +140,6 @@ export const WEB_COOKIE_PROVIDERS = {
     website: "https://m365.cloud.microsoft/chat",
     authHint:
       "Sign in at m365.cloud.microsoft/chat, then open DevTools → Network → filter 'WS' → click the Chathub WebSocket connection. Copy both the access_token query parameter AND the account-specific Chathub path segment from its request URL (wss://…/Chathub/<path>?…&access_token=…). It is NOT an Authorization: Bearer header on an XHR/Fetch request. The token is short-lived; this is an unofficial integration. Optional: store a refresh_token in providerSpecificData.refreshToken (any Microsoft device-code/refresh flow for the substrate.office.com/sydney scopes) and OmniRoute pre-flight-refreshes the access token itself — otherwise re-capture after every ~75 min expiry.",
-    subscriptionRisk: true,
-    riskNoticeVariant: "webCookie",
-  },
-  "microsoft-designer-web": {
-    id: "microsoft-designer-web",
-    alias: "msdesigner",
-    name: "Microsoft Designer (Image Generation)",
-    icon: "auto_awesome",
-    color: "#0078D4",
-    textIcon: "MSD",
-    website: "https://designer.microsoft.com",
-    authHint:
-      "Sign in at designer.microsoft.com, then open DevTools → Network, generate an image, and find the request to DallE.ashx?action=GetDallEImagesCogSci. Copy the value of its Authorization: Bearer header (the access_token — no 'Bearer ' prefix). The token is short-lived; this is an unofficial, reverse-engineered integration.",
     subscriptionRisk: true,
     riskNoticeVariant: "webCookie",
   },
@@ -305,7 +279,7 @@ export const WEB_COOKIE_PROVIDERS = {
     // alias. Aliases resolve 1:1 to a provider id, so the dashboard's model-string
     // routing always picked v0-vercel, silently hiding this provider's own
     // credentials. Follows the established secondary-web-variant convention (see
-    // kimi-web / qwen-web / huggingchat in tests/unit/provider-alias-uniqueness.test.ts):
+    // kimi-web / huggingchat in tests/unit/provider-alias-uniqueness.test.ts):
     // the web/secondary variant uses its own id as alias instead of a short prefix.
     alias: "v0-vercel-web",
     name: "v0 Vercel Web (Code Gen)",
@@ -342,39 +316,6 @@ export const WEB_COOKIE_PROVIDERS = {
       "Paste the full Cookie header from www.dola.com. It should include sessionid, ttwid, and s_v_web_id. If s_v_web_id is unavailable, fp=verify_... from a chat/completion request URL can be used as a fallback.",
     subscriptionRisk: true,
     riskNoticeVariant: "webCookie",
-  },
-  "hailuo-web": {
-    id: "hailuo-web",
-    // Distinct alias: avoid colliding with the existing API-key "minimax"/
-    // "minimax-cn" providers (src/shared/constants/providers/apikey/regional.ts).
-    alias: "hailuo-web",
-    name: "Hailuo Web (MiniMax)",
-    icon: "auto_awesome",
-    color: "#5B21B6",
-    textIcon: "HL",
-    website: "https://chat.minimax.io",
-    authHint:
-      "Open hailuo.ai, log in, then open DevTools → Application → Local Storage → copy the " +
-      '"_token" value. device_id/uuid fingerprint fields are derived automatically; if ' +
-      "requests fail, re-capture _token (sessions can expire).",
-    subscriptionRisk: true,
-    riskNoticeVariant: "webCookie",
-  },
-  "qwen-web": {
-    id: "qwen-web",
-    // The web variant uses its own id; the retired `qw` alias is not reassigned.
-    alias: "qwen-web",
-    name: "Qwen Web (Free)",
-    icon: "auto_awesome",
-    color: "#10B981",
-    textIcon: "QW",
-    website: "https://chat.qwen.ai",
-    hasFree: true,
-    freeNote: "Free — Qwen models via chat.qwen.ai with login token. No subscription required.",
-    authHint:
-      "Open chat.qwen.ai, log in, then open DevTools → Application → Local Storage → " +
-      'copy the "token" value (or use tongyi_sso_ticket cookie as Bearer token).',
-    toolCalling: "emulated",
   },
   "gemini-business": {
     id: "gemini-business",

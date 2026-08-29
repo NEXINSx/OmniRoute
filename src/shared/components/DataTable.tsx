@@ -79,6 +79,9 @@ export default function DataTable({
   if (loading) {
     return (
       <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
         style={{
           display: "flex",
           alignItems: "center",
@@ -88,7 +91,12 @@ export default function DataTable({
           fontSize: "14px",
         }}
       >
-        <span style={{ animation: "spin 1s linear infinite", marginRight: "8px" }}>⏳</span>
+        <span
+          aria-hidden="true"
+          style={{ animation: "spin 1s linear infinite", marginRight: "8px" }}
+        >
+          ⏳
+        </span>
         {t("loading")}
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>

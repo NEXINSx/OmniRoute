@@ -1,4 +1,4 @@
-import { getModelInfo, getComboForModel } from "../services/model";
+import { getModelInfo, getComboForModel, getModelInfoOrRetirementResponse } from "../services/model";
 import { clearAccountError, markAccountUnavailable } from "../services/auth";
 import { connectionHasExtraKeys } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import { createBuiltinAutoCombo } from "@omniroute/open-sse/services/autoCombo/builtinCatalog.ts";
@@ -120,7 +120,8 @@ export async function resolveModelOrError(
   endpointPath: string = "",
   requestHeaders: Record<string, unknown> | null | undefined = null
 ) {
-  const modelInfo = await getModelInfo(modelStr);
+  const modelInfo = await getModelInfoOrRetirementResponse(modelStr);
+  if ("error" in modelInfo) return modelInfo;
   const sourceFormat = detectFormatFromEndpoint(body, endpointPath);
 
   if (
@@ -492,9 +493,8 @@ export async function executeChatWithBreaker({
                 expiresIn: newCreds.expiresIn,
                 expiresAt: newCreds.expiresAt,
                 providerSpecificData: newCreds.providerSpecificData,
-                // Cookie/session providers (chatgpt-web) rotate the stored
-                // apiKey blob mid-request — forward it so the DB credential
-                // doesn't go stale after Set-Cookie rotation.
+                // Cookie/session providers may rotate apiKey mid-request; forward it so the DB
+                // credential doesn't go stale after Set-Cookie rotation.
                 apiKey: newCreds.apiKey,
                 testStatus: newCreds.testStatus ?? "active",
                 isActive: newCreds.isActive,

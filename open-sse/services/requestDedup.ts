@@ -141,8 +141,16 @@ function extractSystemContent(body: Record<string, unknown>): unknown {
  *
  * It is a PLAINTEXT prefix rather than digest input, matching
  * `semanticCache.generateSignature` (#3740): the id is an internal namespace
- * key, not a credential, and keeping it out of the digest avoids the
- * false-positive CodeQL js/insufficient-password-hash on a cache/dedup key.
+ * key, not a credential, and a namespace you can read off the key is worth more
+ * than one you cannot when debugging a dedup collision.
+ *
+ * It does NOT dodge the CodeQL js/insufficient-password-hash false positive,
+ * which the #3740 comment claims for its own version and which this comment
+ * claimed too until alert #874 was raised on the `createHash` below anyway.
+ * Once an API-key-derived value reaches this file at all, the query flags the
+ * sibling digest regardless of what actually goes into it. Dismissed per HR#14;
+ * expect it to come back on any edit here, and do not "fix" it with a KDF —
+ * that would break the determinism dedup depends on.
  *
  * Omitting `tenantId` keeps the un-namespaced hash. Keyless local-first
  * deployments have no tenant boundary to preserve, and every such install would

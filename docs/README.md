@@ -163,7 +163,7 @@ Prompt compression engines, rules, and language packs.
 Provider-specific integration guides.
 
 - [CLAUDE_WEB.md](providers/CLAUDE_WEB.md) — Claude Web (cookie-auth) provider.
-- [CHATGPT_WEB.md](providers/CHATGPT_WEB.md) — ChatGPT Web (Plus/Pro + Codex) providers.
+- [CHATGPT_WEB.md](providers/CHATGPT_WEB.md) — ChatGPT Web (Codex) provider and common-provider retirement note.
 - [ALIBABA-QWEN-PROVIDER-FAMILIES.md](providers/ALIBABA-QWEN-PROVIDER-FAMILIES.md) — Alibaba and Qwen provider families.
 - [AGENTROUTER.md](providers/AGENTROUTER.md) — AgentRouter setup.
 - [ZED-DOCKER.md](providers/ZED-DOCKER.md) — Zed IDE integration under Docker.

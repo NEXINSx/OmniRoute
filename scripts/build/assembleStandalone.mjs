@@ -540,7 +540,32 @@ function copyStaticAndPublic({ distDir, relDistDir, projectRoot, resolvedOutDir 
   const publicSrc = path.join(projectRoot, "public");
   if (fsSync.existsSync(publicSrc)) {
     fsSync.cpSync(publicSrc, path.join(resolvedOutDir, "public"), { recursive: true, force: true });
+    stampServiceWorkerBuildId(resolvedOutDir);
   }
+}
+
+/**
+ * The service-worker update algorithm compares the BYTES of the fetched worker
+ * script against the installed worker; a changed query string only busts the
+ * HTTP cache, it does not make the browser install a new generation. So a
+ * build identifier has to be part of the sw.js bytes themselves. Stamp
+ * NEXT_PUBLIC_SW_BUILD_ID (same resolution chain as next.config.mjs) into the
+ * copied sw.js as a comment + CACHE_NAME suffix; the source file in public/
+ * stays generic for dev.
+ */
+function stampServiceWorkerBuildId(resolvedOutDir) {
+  const swDest = path.join(resolvedOutDir, "public", "sw.js");
+  if (!fsSync.existsSync(swDest)) return;
+  const buildId =
+    process.env.OMNIROUTE_SW_BUILD_ID ||
+    process.env.SOURCE_VERSION ||
+    String(Date.now());
+  let sw = fsSync.readFileSync(swDest, "utf8");
+  sw = sw.replace(
+    /^const CACHE_NAME = "omniroute-pwa-v2";$/m,
+    `const CACHE_NAME = "omniroute-pwa-v2-${buildId}"; // build ${buildId}`
+  );
+  fsSync.writeFileSync(swDest, sw);
 }
 
 /**

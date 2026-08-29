@@ -698,7 +698,15 @@ export const v1BatchCreateSchema = z.object({
 export const v1WebFetchSchema = z.object({
   url: z.string().url("url must be a valid URL (http/https)"),
   provider: z
-    .enum(["firecrawl", "jina-reader", "tavily-search", "tinyfish", "context7", "nimble-search"])
+    .enum([
+      "firecrawl",
+      "jina-reader",
+      "tavily-search",
+      "tinyfish",
+      "context7",
+      "nimble-search",
+      "anysearch-search",
+    ])
     .optional(),
   format: z.enum(["markdown", "html", "links", "screenshot"]).default("markdown"),
   depth: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(0),

@@ -29,9 +29,7 @@ import {
 import { toValidationErrorResult } from "./validation/transport";
 import {
   validateDeepSeekWebProvider,
-  validateQwenWebProvider,
   validateGrokWebProvider,
-  validateChatGptWebProvider,
   validatePerplexityWebProvider,
   validateBlackboxWebProvider,
   validateKimiWebProvider,
@@ -166,7 +164,11 @@ export async function validateFreebuffProvider({ apiKey }: { apiKey: string }) {
       return { valid: false, error: "Invalid or expired Freebuff Auth Token", unsupported: false };
     }
     const errText = await res.text().catch(() => "");
-    return { valid: false, error: `Freebuff validation returned ${res.status}: ${errText.slice(0, 100)}`, unsupported: false };
+    return {
+      valid: false,
+      error: `Freebuff validation returned ${res.status}: ${errText.slice(0, 100)}`,
+      unsupported: false,
+    };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { valid: false, error: `Freebuff validation network error: ${msg}`, unsupported: false };
@@ -305,9 +307,7 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
     "deepseek-web": validateDeepSeekWebProvider,
     "zai-web": validateZaiWebProvider,
     "grok-web": validateGrokWebProvider,
-    "qwen-web": validateQwenWebProvider,
     "kimi-web": validateKimiWebProvider,
-    "chatgpt-web": validateChatGptWebProvider,
     "chatgpt-web-codex": validateChatGptWebCodexProvider,
     "perplexity-web": validatePerplexityWebProvider,
     "blackbox-web": validateBlackboxWebProvider,
@@ -376,7 +376,7 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
 
   // Web-cookie providers WITHOUT a dedicated specialty validator above fall back to the generic
   // session-ping check (AUTH_007 SESSION_EXPIRED on 401/403). Providers that DO have a rich
-  // per-provider validator (grok-web, chatgpt-web, claude-web, …) are handled by
+  // per-provider validator (grok-web, perplexity-web, claude-web, etc.) are handled by
   // SPECIALTY_VALIDATORS first and must not be shadowed by this generic probe (issue: the
   // #4023 dispatch was placed too early and intercepted every web-cookie provider).
   const canonicalProvider = resolveProviderId(provider);

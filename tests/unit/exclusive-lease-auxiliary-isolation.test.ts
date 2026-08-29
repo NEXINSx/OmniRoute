@@ -51,7 +51,7 @@ async function markLeaseOnly(connectionId: string): Promise<void> {
 async function resetStorage(): Promise<void> {
   core.resetDbInstance();
   apiKeys.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   externalCalls = 0;
   globalThis.fetch = async () => {
@@ -65,7 +65,7 @@ test.after(() => {
   globalThis.fetch = originalFetch;
   core.resetDbInstance();
   apiKeys.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("translator send excludes a FREE lease-only connection before provider fetch", async () => {

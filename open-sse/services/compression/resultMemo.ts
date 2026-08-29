@@ -4,6 +4,7 @@ import type { CompressionConfig, CompressionMode, CompressionResult } from "./ty
 export const MEMO_CAP = 5_000;
 
 const memoMap = new Map<string, CompressionResult>();
+let lookupCountForTests = 0;
 
 // Opt-IN whitelist (NOT opt-out): cache only engines proven pure + STATELESS across
 // requests. Excluded on purpose: `ccr` and `session-dedup` write to the cross-request
@@ -94,6 +95,7 @@ function boundedSet(key: string, value: CompressionResult): void {
 }
 
 export function memoLookup(key: string): CompressionResult | null {
+  lookupCountForTests++;
   const hit = memoMap.get(key);
   if (!hit) return null;
   // Return a clone so downstream mutation cannot corrupt the cached value.
@@ -110,4 +112,10 @@ export function memoStore(key: string, result: CompressionResult): void {
 /** For tests only — clears the in-process memo store. */
 export function clearMemoStore(): void {
   memoMap.clear();
+  lookupCountForTests = 0;
 }
+export const resultMemoForTests = {
+  get lookupCount(): number {
+    return lookupCountForTests;
+  },
+};

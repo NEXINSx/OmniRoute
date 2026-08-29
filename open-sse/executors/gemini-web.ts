@@ -265,70 +265,6 @@ export function parseStreamResponse(raw: string): string {
   return lastText;
 }
 
-/**
- * Extract generated-image URLs from a Gemini StreamGenerate response (#10466).
- *
- * When the web UI generates images (Nano Banana), the model's answer frames
- * carry the assets in the candidate's extension block, NOT in the text:
- *
- *   inner[4][0][12][7][0]  →  array of generated-image entries
- *   entry[0][3][3]         →  the image URL — either a plain string or a
- *                             list of strings (take the first http(s) one)
- *
- * This path is corroborated by the two maintained reverse-engineered clients
- * (gpt4free's Gemini provider and HanaokaYuzu/Gemini-API's _parse_candidate).
- * Deliberately NOT collected: `inner[4][0][12][1]` — those are web-search
- * result thumbnails, not generated content; mixing them in would serve
- * scraped images as "generated" (#10466 acceptance criteria).
- *
- * Frames are cumulative snapshots, so later frames repeat earlier images;
- * we dedupe while preserving first-seen order. A `=s2048` size suffix is
- * appended (gpt4free's proven heuristic) so callers get full-resolution
- * assets instead of UI thumbnails.
- */
-export function parseStreamResponseImages(raw: string): string[] {
-  const urls: string[] = [];
-  const seen = new Set<string>();
-  const lines = raw.split("\n");
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line === ")]}'" || /^\d+$/.test(line)) continue;
-    if (!line.includes("wrb.fr")) continue;
-    try {
-      const arr = JSON.parse(line);
-      if (!Array.isArray(arr) || !Array.isArray(arr[0]) || arr[0][0] !== "wrb.fr") continue;
-      const payload = arr[0]?.[2];
-      if (typeof payload !== "string") continue;
-      const inner = JSON.parse(payload);
-      const imageEntries = inner?.[4]?.[0]?.[12]?.[7]?.[0];
-      if (!Array.isArray(imageEntries)) continue;
-      for (const entry of imageEntries) {
-        const urlField = entry?.[0]?.[3]?.[3];
-        let url = "";
-        if (typeof urlField === "string") {
-          url = urlField;
-        } else if (Array.isArray(urlField)) {
-          const firstHttp = urlField.find(
-            (u: unknown) => typeof u === "string" && /^https?:\/\//.test(u)
-          );
-          url = typeof firstHttp === "string" ? firstHttp : "";
-        }
-        if (!url || !/^https?:\/\//.test(url)) continue;
-        // Upgrade to full resolution unless a size directive is already present
-        // (googleusercontent size syntax: trailing `=s2048`, `=w1024-h512`, ...).
-        if (!/=[swh]\d+/.test(url)) url += "=s2048";
-        if (seen.has(url)) continue;
-        seen.add(url);
-        urls.push(url);
-      }
-    } catch {
-      // Skip unparseable lines
-    }
-  }
-  return urls;
-}
-
 function readCredentialString(value: unknown): string {
   if (typeof value !== "string") return "";
   const trimmed = value.trim();
@@ -442,7 +378,7 @@ export class GeminiWebExecutor extends BaseExecutor {
    * Google rotated any of the __Secure-1PSID* cookies, forward the merged
    * cookie string through onCredentialsRefreshed so it gets persisted to the
    * encrypted provider_connections.api_key field. Mirrors the rotate-and-
-   * persist pattern already shipped in chatgpt-web.ts. A persistence failure
+   * persist pattern used by other rotating-session executors. A persistence failure
    * must never fail the user-facing response (#7676).
    */
   private async persistRotatedCookies(
@@ -567,52 +503,24 @@ export class GeminiWebExecutor extends BaseExecutor {
 
       const page = await context.newPage();
 
-      // #10466: image mode — the /v1/images/generations handler sets
-      // x_gemini_web_image_mode. Generated images arrive in the candidate's
-      // extension block ([12][7][0]) of the StreamGenerate frames, sometimes
-      // only in a LATER frame of the stream (or a follow-up StreamGenerate
-      // call), so image mode captures every StreamGenerate response, merges
-      // image URLs across frames, and resolves as soon as one is found.
-      // Chat mode keeps the original first-response-only behavior.
-      const imageMode = (body as Record<string, unknown>)?.x_gemini_web_image_mode === true;
-
       // Capture first StreamGenerate response
       let responseText = "";
-      const responseImages: string[] = [];
       let captured = false;
       const responsePromise = new Promise<void>((resolve) => {
         page.on("response", async (resp: any) => {
           if (!resp.url().includes("StreamGenerate")) return;
-          if (!imageMode && captured) return;
-          if (imageMode) {
-            // Image mode: merge text + image URLs across every frame and
-            // resolve as soon as an image appears (images can land in a
-            // later frame than the text).
-            try {
-              const raw = await resp.text();
-              const text = parseStreamResponse(raw);
-              if (text) responseText = text;
-              for (const url of parseStreamResponseImages(raw)) {
-                if (!responseImages.includes(url)) responseImages.push(url);
-              }
-            } catch {
-              /* ignore unreadable frames */
-            }
-            if (responseImages.length > 0) resolve();
-          } else {
-            // Chat mode: byte-for-byte the original first-response capture —
-            // resolve even if reading the body throws, so the flow falls
-            // through to the "No response from Gemini" 502 instead of
-            // burning the full wait window.
-            captured = true;
-            try {
-              const raw = await resp.text();
-              responseText = parseStreamResponse(raw);
-            } catch {
-              /* ignore */
-            }
-            resolve();
+          if (captured) return;
+          // Resolve even if reading the body throws, so the flow falls through
+          // to the "No response from Gemini" 502 instead of burning the full
+          // wait window.
+          captured = true;
+          try {
+            const raw = await resp.text();
+            responseText = parseStreamResponse(raw);
+          } catch {
+            /* ignore */
           }
+          resolve();
         });
       });
 
@@ -631,34 +539,9 @@ export class GeminiWebExecutor extends BaseExecutor {
       await page.waitForTimeout(300);
       await page.keyboard.press("Enter");
 
-      // Wait for response or timeout. Image generation (Nano Banana) is
-      // noticeably slower than text — the UI renders the asset only after
-      // the full generation completes — so image mode gets a wider window.
-      await Promise.race([responsePromise, page.waitForTimeout(imageMode ? 90000 : 30000)]);
+      await Promise.race([responsePromise, page.waitForTimeout(30000)]);
       if (signal?.aborted) {
         throw signal.reason instanceof Error ? signal.reason : new Error("Request aborted");
-      }
-
-      // #10466 image mode: return the captured image URLs to the image
-      // handler via a custom field (same precedent as chatgpt-web's
-      // x_image_resolution_failed). An image-only answer can carry little or
-      // no text, so the empty-text 502 below must not fire when images
-      // were captured.
-      if (imageMode) {
-        await this.persistRotatedCookies(context, cookie, credentials, onCredentialsRefreshed, log);
-        const modelId = model || "gemini-2.5-pro";
-        return {
-          response: new Response(
-            JSON.stringify({
-              ...formatChatCompletion(responseText, modelId),
-              x_gemini_web_image_urls: responseImages,
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          ),
-          url: GEMINI_URL,
-          headers: {},
-          transformedBody: body,
-        };
       }
 
       if (!responseText) {

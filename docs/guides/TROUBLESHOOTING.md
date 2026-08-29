@@ -40,11 +40,11 @@ Common problems and solutions for OmniRoute.
 
 ### Rate Limiting on Free Providers (429 / 400 / 401)
 
-**Symptom**: When using `model: "auto"` with free/no-auth providers (opencode, felo-web, auggie, etc.), you intermittently get `HTTP 429`, `400`, or `401` instead of answers. The requests succeed when retrying the same prompt moments later, but automation (cron jobs, agents, scripts) breaks on the first failure.
+**Symptom**: When using `model: "auto"` with free/no-auth providers (opencode, auggie, etc.), you intermittently get `HTTP 429`, `400`, or `401` instead of answers. The requests succeed when retrying the same prompt moments later, but automation (cron jobs, agents, scripts) breaks on the first failure.
 
 **Root cause**: Three independent failure modes stack up:
 
-1. **Provider rate-limit (`429`)**: Free tiers (notably `felo/felo-chat`) enforce a per-window quota. A burst of parallel calls exhausts it, so the next request is refused until the window resets.
+1. **Provider rate-limit (`429`)**: Free tiers can enforce a per-window quota. A burst of parallel calls exhausts it, so the next request is refused until the window resets.
 2. **Broken model in passthrough (`400`/`401`)**: `auto/*` pools can include passthrough models from `opencode` that are registered in the catalog but have no live credentials (e.g. `oc/north-mini-code-free` → `401`). The auto-router tries one, fails, and the error propagates before fallback kicks in.
 3. **Concurrency amplification (`429` under load)**: When multiple agent/cron sessions hit `auto` at once, the aggregate request rate exceeds what free providers tolerate, so legitimate calls get flagged as abusive.
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-// Regression for issue #11324: adding a custom/manual model connection for a
-// non-curated provider must not force a full upstream /models catalog sync
-// when the caller explicitly opts out via `skipModelSync`.
+// Regression for issue #11324 and the autoFetchModels opt-in contract: adding a
+// connection must not force a full upstream /models catalog sync unless the
+// connection explicitly enables it.
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -97,10 +97,13 @@ describe("useApiKeySave.handleSaveApiKey — full-sync opt-out (#11324)", () => 
     );
     const postedBody = JSON.parse((providersCall?.[1] as RequestInit).body as string);
     expect(postedBody).not.toHaveProperty("skipModelSync");
+    expect(new Headers((providersCall?.[1] as RequestInit).headers).get("x-skip-model-sync")).toBe(
+      "true"
+    );
   });
 
-  it("still auto-triggers the full /sync-models catalog fetch by default (legacy behavior preserved)", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  it("keeps the full /sync-models catalog fetch off when autoFetchModels is omitted", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
       if (url === "/api/providers") return response(true, { connection: { id: "conn-1" } });
       if (url.includes("/sync-models")) {
@@ -121,6 +124,40 @@ describe("useApiKeySave.handleSaveApiKey — full-sync opt-out (#11324)", () => 
     const syncCalls = fetchMock.mock.calls.filter(([input]) =>
       String(input).includes("/sync-models")
     );
+    expect(syncCalls).toHaveLength(0);
+  });
+
+  it("auto-triggers one client-owned sync when autoFetchModels is true", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/providers") return response(true, { connection: { id: "conn-1" } });
+      if (url.includes("/sync-models")) {
+        return response(true, { syncedModels: 3, availableModelsCount: 3, models: [] });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { hookResult, root, container } = renderApiKeySaveHook();
+    roots.push(root);
+    containers.push(container);
+
+    await act(async () => {
+      await hookResult().handleSaveApiKey({
+        apiKey: "sk-test",
+        providerSpecificData: { autoFetchModels: true },
+      });
+    });
+
+    const syncCalls = fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes("/sync-models")
+    );
     expect(syncCalls).toHaveLength(1);
+    const providersCall = fetchMock.mock.calls.find(
+      ([input]) => String(input) === "/api/providers"
+    );
+    expect(new Headers((providersCall?.[1] as RequestInit).headers).get("x-skip-model-sync")).toBe(
+      "true"
+    );
   });
 });
