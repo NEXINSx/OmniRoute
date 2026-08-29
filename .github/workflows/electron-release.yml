@@ -422,7 +422,10 @@ jobs:
           tag_name: ${{ needs.validate.outputs.version }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          # Only on the tag push. A re-attach dispatch runs against a release whose curated
+          # notes already exist, and `true` APPENDS GitHub's auto-generated "What's Changed"
+          # block to them (v3.8.50, run 33238093090: +1,416 chars on a 121 KB body).
+          generate_release_notes: ${{ github.event_name != 'workflow_dispatch' }}
           fail_on_unmatched_files: false
           files: |
             release-assets/*.dmg
