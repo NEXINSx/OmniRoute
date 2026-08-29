@@ -130,6 +130,9 @@ export async function executeWebSearch(
   if (input.provider === "xquik" || input.provider === "xquik_search") {
     input.provider = "xquik-search";
   }
+  if (input.provider === "anysearch" || input.provider === "anysearch_search") {
+    input.provider = "anysearch-search";
+  }
   if (input.provider === "x-search" || input.provider === "xquik-search") input.search_type = "x";
   const searchType = input.search_type || "web";
 
@@ -183,9 +186,26 @@ export async function executeWebSearch(
       );
     }
   } else {
-    credentials = await resolveSearchCredentials(providerConfig.id);
+    // Auto-select: prefer the cheapest non-fallback provider that actually has
+    // credentials. Fallback-only free providers are a last resort, so a
+    // configured paid provider is never skipped just because a cheaper
+    // no-credentials provider appears first in the cost sort (issue #11524).
+    const candidateProviders = Object.values(SEARCH_PROVIDERS)
+      .filter((provider) => !provider.fallbackOnly && supportsSearchType(provider, searchType))
+      .sort((a, b) => a.costPerQuery - b.costPerQuery);
+
+    for (const candidate of candidateProviders) {
+      const candidateCredentials = await resolveSearchCredentials(candidate.id);
+      if (candidateCredentials) {
+        providerConfig = candidate;
+        credentials = candidateCredentials;
+        break;
+      }
+    }
 
     if (!credentials) {
+      // Last resort: fallback-only providers so out-of-the-box search
+      // still works when no credentialed provider is configured.
       const fallbackProviders = Object.values(SEARCH_PROVIDERS)
         .filter((provider) => provider.fallbackOnly && supportsSearchType(provider, searchType))
         .sort((a, b) => a.costPerQuery - b.costPerQuery);
@@ -205,24 +225,6 @@ export async function executeWebSearch(
     }
 
     if (!credentials) {
-      const sortedIds = Object.values(SEARCH_PROVIDERS)
-        .filter((provider) => supportsSearchType(provider, searchType))
-        .sort((a, b) => a.costPerQuery - b.costPerQuery)
-        .map((provider) => provider.id);
-
-      for (const providerId of sortedIds) {
-        if (providerId === providerConfig.id) continue;
-        const altConfig = getSearchProvider(providerId);
-        const altCreds = await resolveSearchCredentials(providerId);
-        if (altConfig && altCreds) {
-          providerConfig = altConfig;
-          credentials = altCreds;
-          break;
-        }
-      }
-    }
-
-    if (!credentials) {
       throw new WebSearchExecutionError(
         `No credentials configured for any search provider. Add an API key for a search provider (${Object.keys(
           SEARCH_PROVIDERS
@@ -231,17 +233,20 @@ export async function executeWebSearch(
       );
     }
 
+    // Exclude fallback-only providers from execution-time alternates.
+    // They are reserved for last-resort primary selection.
     const otherIds = Object.values(SEARCH_PROVIDERS)
-      .filter((provider) => supportsSearchType(provider, searchType))
+      .filter((provider) => !provider.fallbackOnly && supportsSearchType(provider, searchType))
       .sort((a, b) => a.costPerQuery - b.costPerQuery)
       .map((provider) => provider.id)
       .filter((providerId) => providerId !== providerConfig!.id);
 
     for (const providerId of otherIds) {
-      const creds = await resolveSearchCredentials(providerId);
-      if (creds) {
+      const altConfig = getSearchProvider(providerId);
+      const altCreds = await resolveSearchCredentials(providerId);
+      if (altConfig && altCreds) {
         alternateProviderId = providerId;
-        alternateCredentials = creds;
+        alternateCredentials = altCreds;
         break;
       }
     }

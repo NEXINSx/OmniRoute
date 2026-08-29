@@ -118,7 +118,7 @@ async function fetchCatalog(
 
 test.before(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   // requireLogin + requireAuthForModels ON so the API-key surface is gated.
   await localDb.updateSettings({ requireLogin: true, requireAuthForModels: true, password: "" });
@@ -127,7 +127,7 @@ test.before(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test.describe("provider journey — in-process contract (#8330)", () => {
@@ -171,7 +171,7 @@ test.describe("provider journey — in-process contract (#8330)", () => {
     const body = await readJsonObject(response);
 
     assert.equal(response.status, 201, `add connection failed: ${JSON.stringify(body)}`);
-    const connection = body.connection as { id?: string; provider?: string };
+    const connection = body.connection as { id?: string; provider?: string; isActive?: unknown };
     connectionId = connection.id ?? "";
     assert.ok(connectionId, "connection must expose an id");
     assert.equal(connection.provider, nodeId, "connection must bind to the created node");
@@ -187,6 +187,19 @@ test.describe("provider journey — in-process contract (#8330)", () => {
       connections.some((c) => c.id === connectionId && c.provider === nodeId),
       "the created connection must be visible via GET /api/providers"
     );
+
+    // #11446: a newly created connection now starts isActive:false until a passing
+    // connection test verifies it — POST /api/providers fires that test itself, but
+    // fire-and-forget and against the real network, which is exactly what makes it
+    // non-deterministic against this suite's stub host (see STEP 3's note on the
+    // same host). Simulate the operator's test having already passed, the same way
+    // STEP 3 bypasses the real /sync-models HTTP round-trip.
+    assert.equal(
+      connection.isActive,
+      false,
+      "a newly created connection must start inactive until verified (#11446)"
+    );
+    await localDb.updateProviderConnection(connectionId, { isActive: true, testStatus: "active" });
   });
 
   test("STEP 3: sync models — discovered model is persisted for the connection", async () => {

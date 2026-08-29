@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Zachytávať prevádzku agentov IDE",
     "trafficInspector": "Inšpektor prevádzky",
-    "trafficInspectorSubtitle": "Monitorovať volania LLM + ladiť akúkoľvek HTTPS prevádzku",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Nástroje na kódovanie smerujúce na OmniRoute",
     "cliAgents": "CLI agenti",
@@ -6256,11 +6256,11 @@
       "chenzk": "Brána kompatibilná s OpenAI so živým katalógom modelov na chenzk.top.",
       "magnific": "Generujte obrázky pomocou Mystic API od Freepik.",
       "freetheai": "Bezplatná brána kompatibilná s OpenAI s podporou prenosu modelov (passthrough).",
-      "g4f-gemini": "Bezplatný reverzný proxy server g4f.space bez kľúča pre Gemini, obmedzený na 5 požiadaviek za minútu.",
-      "g4f-groq": "Bezplatný reverzný proxy server g4f.space bez kľúča pre Groq, obmedzený na 5 požiadaviek za minútu.",
-      "g4f-nvidia": "Bezplatný reverzný proxy server g4f.space bez kľúča pre NVIDIA NIM, obmedzený na 5 požiadaviek za minútu.",
-      "g4f-ollama": "Bezplatná hostovaná brána Ollama bez kľúča od g4f.space, obmedzená na 5 požiadaviek za minútu.",
-      "g4f-pollinations": "Bezplatný reverzný proxy server g4f.space bez kľúča pre Pollinations, obmedzený na 5 požiadaviek za minútu.",
+      "g4f-gemini": "Vzdialená brána g4f.space k Gemini. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-groq": "Vzdialená brána g4f.space k Groq. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-nvidia": "Vzdialená brána g4f.space k NVIDIA NIM. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-ollama": "Vzdialená brána g4f.space k Ollama. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-pollinations": "Vzdialená brána g4f.space k Pollinations. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
       "mixedbread": "Vytvárajte embeddingy pomocou Mixedbread API.",
       "segmind": "Generujte obrázky a videá pomocou hostovaných modelov od Segmind.",
       "amazon-q": "Používa rovnaké AWS Builder ID alebo importovaný tok obnovovacieho tokenu (refresh-token flow) ako Kiro, ale pripojenia Amazon Q uchováva oddelene.",
@@ -11314,7 +11314,9 @@
       "noPayload": "Žiadne údaje o payload neboli k dispozícii pre tento záznam.",
       "correlationId": "ID korelácie",
       "correlationIdValue": "ID korelácie: {id}",
-      "detailedPayloadInfo": "Najprv povolte podrobné protokolovanie, ak chcete zobrazenie štyroch fáz klienta/poskytovateľa pre nové požiadavky."
+      "detailedPayloadInfo": "Najprv povolte podrobné protokolovanie, ak chcete zobrazenie štyroch fáz klienta/poskytovateľa pre nové požiadavky.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "API kľúč",
     "sortTypeFirst": "Najjednoduchšie ako prvé",
     "sortTypeFirstHelp": "Zoskupiť podľa náročnosti registrácie (Bez registrácie → Prihlásenie cez OAuth → API kľúč), so zachovaním poradia kvality v rámci každej skupiny",
-    "typeLegend": "Bez registrácie = nulové nastavenie · Prihlásenie cez OAuth = prihlásenie pomocou vlastného účtu · API kľúč = vlastný kľúč alebo bezplatný program daného poskytovateľa"
+    "typeLegend": "Bez registrácie = nulové nastavenie · Prihlásenie cez OAuth = prihlásenie pomocou vlastného účtu · API kľúč = vlastný kľúč alebo bezplatný program daného poskytovateľa",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Vyhľadávanie poskytovateľov",

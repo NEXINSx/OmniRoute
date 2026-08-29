@@ -194,11 +194,11 @@ describe("Per-Connection Rotation", () => {
       }
       expect(seenConnections.size).toBeGreaterThanOrEqual(10);
     },
-    // 200 synchronous selectProvider() calls over a 43-connection pool are CPU-bound and
-    // vitest's 5000ms default is too tight under shared-devbox contention (load avg 40+
-    // observed alongside parallel test/tsc/lint runs) — the assertion itself is unchanged,
-    // only the execution-time budget is widened. Refs #9985.
-    20000
+    // 200 synchronous selectProvider() calls over a 43-connection pool are CPU-bound and can
+    // exceed 20s under the full Vitest worker load on the validation VPS, while the isolated
+    // file remains green. The assertion is unchanged; only the execution budget is widened.
+    // Refs #9985.
+    60000
   );
 
   it("different combos maintain independent round-robin state", () => {

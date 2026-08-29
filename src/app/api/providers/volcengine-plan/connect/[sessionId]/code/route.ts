@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
+import { formatValidationMessage, validateBody } from "@/shared/validation/helpers";
+import { volcenginePlanCodeSchema } from "@/shared/validation/schemas/volcenginePlan";
 
 /**
  * POST /api/providers/volcengine-plan/connect/[sessionId]/code
@@ -17,11 +19,23 @@ export async function POST(
   if (auth) return auth;
 
   const { sessionId } = await params;
-  const body = await request.json().catch(() => ({}));
+  const raw = await request.json().catch(() => ({}));
+  // Validate BEFORE the session lookup: a malformed body is the caller's bug
+  // regardless of whether the session happens to exist, and answering 404 for
+  // it (the previous behavior) hides the real cause.
+  const validation = validateBody(volcenginePlanCodeSchema, raw);
+  if (!validation.success) {
+    return NextResponse.json(
+      { success: false, error: formatValidationMessage(validation.error) },
+      { status: 400 }
+    );
+  }
+  const { code, captcha, timeout } = validation.data;
 
   try {
-    const { volcengineConsoleAutoLoginService } =
-      await import("@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts");
+    const { volcengineConsoleAutoLoginService } = await import(
+      "@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts"
+    );
 
     if (!volcengineConsoleAutoLoginService.getStatus(sessionId)) {
       return NextResponse.json(
@@ -30,13 +44,9 @@ export async function POST(
       );
     }
 
-    const timeout = typeof body.timeout === "number" ? body.timeout : undefined;
-    const session = await volcengineConsoleAutoLoginService.submitCode(
-      sessionId,
-      String(body.code ?? ""),
-      typeof body.captcha === "string" ? body.captcha : undefined,
-      { timeout }
-    );
+    const session = await volcengineConsoleAutoLoginService.submitCode(sessionId, code, captcha, {
+      timeout,
+    });
     if (!session) {
       return NextResponse.json(
         { success: false, error: "Unknown or expired Volcano login session" },

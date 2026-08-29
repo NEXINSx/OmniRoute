@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Cegat lalu lintas agen IDE",
     "trafficInspector": "Traffic Inspector",
-    "trafficInspectorSubtitle": "Pantau panggilan LLM + debug lalu lintas HTTPS apa pun",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Alat kode yang mengarah ke OmniRoute",
     "cliAgents": "CLI Agents",
@@ -6256,11 +6256,11 @@
       "chenzk": "Gateway yang kompatibel dengan OpenAI dengan katalog model langsung di chenzk.top.",
       "magnific": "Hasilkan gambar dengan Mystic API dari Freepik.",
       "freetheai": "Gateway gratis yang kompatibel dengan OpenAI dengan dukungan model passthrough.",
-      "g4f-gemini": "Proksi terbalik g4f.space tanpa kunci gratis ke Gemini, dibatasi hingga 5 permintaan per menit.",
-      "g4f-groq": "Proksi terbalik g4f.space tanpa kunci gratis ke Groq, dibatasi hingga 5 permintaan per menit.",
-      "g4f-nvidia": "Proksi terbalik g4f.space tanpa kunci gratis ke NVIDIA NIM, dibatasi hingga 5 permintaan per menit.",
-      "g4f-ollama": "Gateway Ollama ter-host tanpa kunci gratis dari g4f.space, dibatasi hingga 5 permintaan per menit.",
-      "g4f-pollinations": "Proksi terbalik g4f.space tanpa kunci gratis ke Pollinations, dibatasi hingga 5 permintaan per menit.",
+      "g4f-gemini": "Gateway g4f.space jarak jauh ke Gemini. Akses anonim memerlukan kredit proof-of-work dari g4f.dev/chat atau kunci API anggota dari g4f.dev/members.html; batas dapat berubah.",
+      "g4f-groq": "Gateway g4f.space jarak jauh ke Groq. Akses anonim memerlukan kredit proof-of-work dari g4f.dev/chat atau kunci API anggota dari g4f.dev/members.html; batas dapat berubah.",
+      "g4f-nvidia": "Gateway g4f.space jarak jauh ke NVIDIA NIM. Akses anonim memerlukan kredit proof-of-work dari g4f.dev/chat atau kunci API anggota dari g4f.dev/members.html; batas dapat berubah.",
+      "g4f-ollama": "Gateway g4f.space jarak jauh ke Ollama. Akses anonim memerlukan kredit proof-of-work dari g4f.dev/chat atau kunci API anggota dari g4f.dev/members.html; batas dapat berubah.",
+      "g4f-pollinations": "Gateway g4f.space jarak jauh ke Pollinations. Akses anonim memerlukan kredit proof-of-work dari g4f.dev/chat atau kunci API anggota dari g4f.dev/members.html; batas dapat berubah.",
       "mixedbread": "Buat embedding dengan Mixedbread API.",
       "segmind": "Hasilkan gambar dan video dengan model ter-host Segmind.",
       "amazon-q": "Menggunakan AWS Builder ID atau alur refresh-token yang diimpor yang sama dengan Kiro, tetapi menjaga koneksi Amazon Q tetap terpisah.",
@@ -11314,7 +11314,9 @@
       "noPayload": "Tidak ada data payload yang tersedia untuk entri log ini.",
       "correlationId": "ID Korelasi",
       "correlationIdValue": "ID Korelasi: {id}",
-      "detailedPayloadInfo": "Aktifkan logging terperinci terlebih dahulu jika Anda ingin tampilan payload klien/penyedia empat tahap untuk permintaan baru."
+      "detailedPayloadInfo": "Aktifkan logging terperinci terlebih dahulu jika Anda ingin tampilan payload klien/penyedia empat tahap untuk permintaan baru.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "Kunci API",
     "sortTypeFirst": "Termudah dahulu",
     "sortTypeFirstHelp": "Kelompokkan berdasarkan upaya pendaftaran (Tanpa Pendaftaran → Login OAuth → Kunci API), dengan tetap menjaga urutan kualitas dalam setiap kelompok",
-    "typeLegend": "Tanpa Pendaftaran = tanpa penyiapan · Login OAuth = masuk dengan akun Anda sendiri · Kunci API = bawa kunci Anda sendiri atau gunakan tingkat gratis penyedia tersebut"
+    "typeLegend": "Tanpa Pendaftaran = tanpa penyiapan · Login OAuth = masuk dengan akun Anda sendiri · Kunci API = bawa kunci Anda sendiri atau gunakan tingkat gratis penyedia tersebut",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Penemuan Penyedia",

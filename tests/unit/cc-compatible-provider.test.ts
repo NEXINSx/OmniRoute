@@ -34,7 +34,7 @@ const originalAllowLocalProviderUrls = process.env.OMNIROUTE_ALLOW_LOCAL_PROVIDE
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -76,7 +76,7 @@ test.after(() => {
     process.env.OMNIROUTE_ALLOW_LOCAL_PROVIDER_URLS = originalAllowLocalProviderUrls;
   }
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("buildClaudeCodeCompatibleRequest keeps prior role history while dropping trailing assistant prefill", () => {
@@ -808,7 +808,7 @@ test("provider-nodes create route rejects CC mode when feature flag is disabled"
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: "Hidden CC",
-        prefix: "cc",
+        prefix: "ccproxy",
         baseUrl: "https://proxy.example.com/v1",
         type: "anthropic-compatible",
         compatMode: "cc",
@@ -828,7 +828,7 @@ test("provider-nodes create route creates CC node with dedicated prefix when ena
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: "Hidden CC",
-        prefix: "cc",
+        prefix: "ccproxy",
         baseUrl: "https://proxy.example.com/v1/messages?beta=true",
         type: "anthropic-compatible",
         compatMode: "cc",

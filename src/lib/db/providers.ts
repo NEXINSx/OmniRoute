@@ -3,6 +3,8 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
+
+import { isCommonChatGptWebRetiredProviderId } from "@/shared/constants/chatgptWebRetirement";
 import { getDbInstance, rowToCamel, cleanNulls } from "./core";
 import { backupDbFile } from "./backup";
 import {
@@ -19,6 +21,8 @@ import {
 } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import { invalidateReasoningRoutingRuleCache } from "./reasoningRoutingRules";
 import { normalizeProviderSpecificData } from "@/lib/providers/requestDefaults";
+import { withDerivedCookieExpiry } from "@/shared/utils/webCookieExpiry";
+import { WEB_COOKIE_PROVIDERS } from "@/shared/constants/providers";
 import { ensureCodexFingerprintSeed } from "@omniroute/open-sse/config/codexIdentity.ts";
 import { bumpProxyConfigGeneration, getSettings } from "./settings";
 import {
@@ -32,7 +36,9 @@ import {
   isMatchingOauthIdentity,
 } from "./webSessionDedup";
 import { pickCodexConnectionForUser } from "@/lib/oauth/utils/codexConnectionSelection";
+import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
 import { reconcileCodexUsageHistory } from "./providers/usageIdentityReconciliation";
+import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
 
 /**
  * normalizeProviderSpecificData + the Codex fingerprint-seed invariant: Codex
@@ -52,12 +58,34 @@ function normalizeConnectionProviderSpecificData(
   existingProviderSpecificData?: unknown
 ) {
   const normalized = normalizeProviderSpecificData(provider, providerSpecificData);
-  if (provider !== "codex") return normalized;
+  const withExpiry = withDerivedCookieExpiryForProvider(provider, normalized, credentials);
+  if (provider !== "codex") return withExpiry;
   return ensureCodexFingerprintSeed(
-    normalized,
+    withExpiry,
     credentials,
     (existingProviderSpecificData as Record<string, unknown> | null) ?? null
   );
+}
+
+function withDerivedCookieExpiryForProvider(
+  provider: string | null,
+  providerSpecificData: unknown,
+  credentials: { accessToken?: unknown; refreshToken?: unknown } | unknown
+): Record<string, unknown> {
+  const key = String(provider || "").toLowerCase();
+  if (!(WEB_COOKIE_PROVIDERS as Record<string, unknown>)[key]) {
+    // Both branches must satisfy the Codex seed signature below; the
+    // passthrough keeps whatever shape normalization already returned.
+    return (providerSpecificData ?? {}) as Record<string, unknown>;
+  }
+  const source = credentials as Record<string, unknown> | null;
+  const credential =
+    source && typeof source === "object"
+      ? (typeof source.apiKey === "string" && source.apiKey) ||
+        (typeof source.cookie === "string" && source.cookie) ||
+        null
+      : null;
+  return withDerivedCookieExpiry(providerSpecificData, credential);
 }
 import {
   withNullableMaxConcurrent,
@@ -571,13 +599,24 @@ export async function createProviderConnection(data: JsonRecord) {
       _updateConnectionRow(db, existingId, encryptConnectionFields(persistence));
     })();
     backupDbFile("pre-write");
-    return withNullableRateLimitOverrides(
+    const returnedConnection = withNullableRateLimitOverrides(
       withNullableQuotaWindowThresholds(
         withNullableMaxConcurrent(cleanNulls(merged), merged),
         merged
       ),
       merged
     );
+
+    if (
+      isMicrosoftDesignerWebRetiredProviderId(merged.provider) ||
+      isRuntimeRetiredProviderId(merged.provider) ||
+      isCommonChatGptWebRetiredProviderId(merged.provider)
+    ) {
+      invalidateDbCache("connections");
+      return (await getProviderConnectionById(existingId)) ?? returnedConnection;
+    }
+
+    return returnedConnection;
   }
 
   // Generate name: prefer explicit name, then email, then a stable short-ID label.
@@ -698,13 +737,23 @@ export async function createProviderConnection(data: JsonRecord) {
   backupDbFile("pre-write");
   invalidateDbCache("connections"); // Bust connections read cache
 
-  return withNullableRateLimitOverrides(
+  const returnedConnection = withNullableRateLimitOverrides(
     withNullableQuotaWindowThresholds(
       withNullableMaxConcurrent(cleanNulls(connection), connection),
       connection
     ),
     connection
   );
+
+  if (
+    isMicrosoftDesignerWebRetiredProviderId(data.provider) ||
+    isRuntimeRetiredProviderId(providerId) ||
+    isCommonChatGptWebRetiredProviderId(providerId)
+  ) {
+    return (await getProviderConnectionById(String(connection.id))) ?? returnedConnection;
+  }
+
+  return returnedConnection;
 }
 
 function _insertConnectionRow(db: DbLike, conn: JsonRecord) {
@@ -943,13 +992,23 @@ export async function updateProviderConnection(id: string, data: JsonRecord) {
     reorderConnections(db, providerId);
   }
 
-  return withNullableRateLimitOverrides(
+  const returnedConnection = withNullableRateLimitOverrides(
     withNullableQuotaWindowThresholds(
       withNullableMaxConcurrent(cleanNulls(merged), merged),
       merged
     ),
     merged
   );
+
+  if (
+    isMicrosoftDesignerWebRetiredProviderId(merged.provider) ||
+    isRuntimeRetiredProviderId(merged.provider) ||
+    isCommonChatGptWebRetiredProviderId(merged.provider)
+  ) {
+    return (await getProviderConnectionById(id)) ?? returnedConnection;
+  }
+
+  return returnedConnection;
 }
 
 export {

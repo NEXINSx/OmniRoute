@@ -102,6 +102,52 @@ describe("quotaShareInflight", () => {
     assert.equal(getInflight("conn-b", NOW + leaseMs + 1), 0);
   });
 
+  test("an orphaned lease expires even while the connection keeps taking traffic", () => {
+    // The lease exists to bound a leak from a request that aborts before its
+    // release callback runs. A single per-connection expiry was refreshed by
+    // every later increment, so under sustained traffic the orphaned count rode
+    // along forever — the leak was unbounded exactly when the connection was
+    // busy, which is when P2C's view of load matters most.
+    const minute = 60_000;
+    incrementInflight("conn-leak", DEFAULT_LEASE_MS, NOW); // request that never releases
+
+    for (let i = 1; i <= 10; i++) {
+      const at = NOW + i * minute;
+      incrementInflight("conn-leak", DEFAULT_LEASE_MS, at);
+      decrementInflight("conn-leak", at + 1);
+    }
+
+    // 10 minutes on, five times the 120s lease: the orphan must be gone.
+    assert.equal(getInflight("conn-leak", NOW + 10 * minute + 2), 0);
+  });
+
+  test("a late release retires only its own lease, not its neighbours'", () => {
+    // Two concurrent requests on one connection. The first settles after the
+    // lease it was stamped with has lapsed. It must not take the second
+    // request's live slot with it — presenting a busy connection as idle sends
+    // P2C straight at the connection that is already loaded.
+    // First at NOW (lease lapses at NOW+120s), second at NOW+100s (lapses at
+    // NOW+220s). Releasing the first at NOW+130s is therefore a release that
+    // arrives after its own lease expired but while its neighbour is still live.
+    incrementInflight("conn-pair", DEFAULT_LEASE_MS, NOW);
+    incrementInflight("conn-pair", DEFAULT_LEASE_MS, NOW + 100_000);
+    assert.equal(getInflight("conn-pair", NOW + 100_000), 2);
+
+    decrementInflight("conn-pair", NOW + 130_000);
+
+    assert.equal(getInflight("conn-pair", NOW + 130_000), 1);
+  });
+
+  test("expired leases are retired without an explicit decrement, per request", () => {
+    const leaseMs = 1_000;
+    incrementInflight("conn-mix", leaseMs, NOW);
+    incrementInflight("conn-mix", leaseMs * 10, NOW);
+    assert.equal(getInflight("conn-mix", NOW), 2);
+    // The short lease lapses; the long one does not.
+    assert.equal(getInflight("conn-mix", NOW + leaseMs + 1), 1);
+    assert.equal(getInflight("conn-mix", NOW + leaseMs * 10 + 1), 0);
+  });
+
   test("empty connectionId returns 0 (fail-open)", () => {
     assert.equal(getInflight("", NOW), 0);
     incrementInflight("", DEFAULT_LEASE_MS, NOW); // must not throw / not store

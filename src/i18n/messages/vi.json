@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Xóa tất cả các lô đã hoàn thành",
     "batchListBatchesTable": "Lô",
     "changelogViewerLoading": "Đang tải nhật ký thay đổi từ GitHub...",
+    "profile": "Hồ sơ",
     "profileLoading": "Đang tải hồ sơ...",
     "profileHowToEarn": "Cách kiếm điểm",
     "bootstrapBannerDismiss": "Bỏ qua",
@@ -1266,7 +1267,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Chặn lưu lượng agent IDE",
     "trafficInspector": "Traffic Inspector",
-    "trafficInspectorSubtitle": "Giám sát lệnh gọi LLM + gỡ lỗi mọi lưu lượng HTTPS",
+    "trafficInspectorSubtitle": "Kiểm tra lưu lượng yêu cầu và phản hồi từ các ứng dụng của bạn",
     "trafficInspectorPurpose": "Xem chính xác những gì ứng dụng của bạn gửi đến và nhận từ các nhà cung cấp AI. Hoạt động với bất kỳ ứng dụng khách nào tương thích với OpenAI.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Các công cụ lập trình trỏ đến OmniRoute",
@@ -6256,11 +6257,11 @@
       "chenzk": "Gateway tương thích OpenAI với danh mục mô hình trực tiếp tại chenzk.top.",
       "magnific": "Tạo hình ảnh bằng API Mystic của Freepik.",
       "freetheai": "Gateway miễn phí tương thích OpenAI, hỗ trợ chuyển tiếp mô hình.",
-      "g4f-gemini": "Proxy ngược g4f.space miễn phí, không cần khóa cho Gemini, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-groq": "Proxy ngược g4f.space miễn phí, không cần khóa cho Groq, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-nvidia": "Proxy ngược g4f.space miễn phí, không cần khóa cho NVIDIA NIM, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-ollama": "Gateway Ollama được lưu trữ miễn phí, không cần khóa của g4f.space, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-pollinations": "Proxy ngược g4f.space miễn phí, không cần khóa cho Pollinations, giới hạn 5 yêu cầu mỗi phút.",
+      "g4f-gemini": "Cổng g4f.space từ xa tới Gemini. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-groq": "Cổng g4f.space từ xa tới Groq. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-nvidia": "Cổng g4f.space từ xa tới NVIDIA NIM. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-ollama": "Cổng g4f.space từ xa tới Ollama. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-pollinations": "Cổng g4f.space từ xa tới Pollinations. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
       "mixedbread": "Tạo embedding bằng API Mixedbread.",
       "segmind": "Tạo hình ảnh và video bằng các mô hình được lưu trữ trên Segmind.",
       "amazon-q": "Dùng cùng AWS Builder ID hoặc luồng refresh-token đã nhập như Kiro, nhưng giữ các kết nối Amazon Q riêng biệt.",
@@ -11316,7 +11317,9 @@
       "noPayload": "Không có dữ liệu payload cho mục nhật ký này.",
       "correlationId": "ID tương quan",
       "correlationIdValue": "ID tương quan: {id}",
-      "detailedPayloadInfo": "Hãy bật ghi nhật ký chi tiết trước nếu bạn muốn xem giao diện payload client/nhà cung cấp gồm 4 giai đoạn cho các yêu cầu mới."
+      "detailedPayloadInfo": "Hãy bật ghi nhật ký chi tiết trước nếu bạn muốn xem giao diện payload client/nhà cung cấp gồm 4 giai đoạn cho các yêu cầu mới.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12487,7 +12490,12 @@
     "typeApikey": "Khóa API",
     "sortTypeFirst": "Dễ thiết lập trước",
     "sortTypeFirstHelp": "Nhóm theo mức độ thiết lập (Không cần đăng ký → Đăng nhập OAuth → Khóa API), đồng thời giữ thứ tự chất lượng trong từng nhóm",
-    "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp"
+    "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp",
+    "colReliability": "Độ tin cậy",
+    "colReliabilityHelp": "Tỷ lệ lệnh gọi mà nhà cung cấp này thực sự trả lời trong 24 giờ qua. Dấu gạch ngang nghĩa là lưu lượng quá ít để đưa ra tỷ lệ.",
+    "reliabilitySample": "{successes} trong {requests} lệnh gọi thành công trong {hours}h qua",
+    "reliabilityTooFew": "Chỉ có {requests} lệnh gọi trong {hours}h qua — quá ít để đưa ra tỷ lệ",
+    "reliabilityNoTraffic": "Không ghi nhận lệnh gọi nào trong 24h qua"
   },
   "discovery": {
     "title": "Khám phá nhà cung cấp",
@@ -13931,5 +13939,17 @@
     "cta": "Lấy khóa API",
     "partnerLinkNote": "Liên kết đối tác",
     "dismissAriaLabel": "Đóng"
+  },
+  "combo": {
+    "sort": {
+      "label": "Sắp xếp theo",
+      "method": {
+        "manual": "Thủ công",
+        "provider": "Nhà cung cấp",
+        "score": "Điểm (mô hình miễn phí)",
+        "name": "Tên"
+      },
+      "scoreHint": "Xếp hạng theo điểm chỉ áp dụng cho nhà cung cấp miễn phí; các nhà cung cấp khác giữ nguyên vị trí."
+    }
   }
 }

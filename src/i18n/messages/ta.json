@@ -1266,7 +1266,7 @@
     "agentBridge": "ஏஜென்ட் பிரிட்ஜ்",
     "agentBridgeSubtitle": "IDE ஏஜென்ட் டிராஃபிக்கை இடைமறிக்கவும்",
     "trafficInspector": "டிராஃபிக் இன்ஸ்பெக்டர்",
-    "trafficInspectorSubtitle": "LLM அழைப்புகளைக் கண்காணிக்கவும் + ஏதேனும் HTTPS டிராஃபிக்கை பிழைத்திருத்தவும்",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI குறியீடு",
     "cliCodeSubtitle": "OmniRoute-ஐ சுட்டிக்காட்டும் குறியீட்டுக் கருவிகள்",
     "cliAgents": "CLI ஏஜென்ட்கள்",
@@ -6256,11 +6256,11 @@
       "chenzk": "chenzk.top இல் நேரடி மாடல் பட்டியலுடன் கூடிய OpenAI-இணக்கமான gateway.",
       "magnific": "Freepik-இன் Mystic API மூலம் படங்களை உருவாக்கவும்.",
       "freetheai": "passthrough மாடல் ஆதரவுடன் கூடிய இலவச OpenAI-இணக்கமான gateway.",
-      "g4f-gemini": "Gemini-க்கான இலவச key இல்லாத g4f.space reverse proxy, நிமிடத்திற்கு 5 கோரிக்கைகள் என வரம்பிடப்பட்டுள்ளது.",
-      "g4f-groq": "Groq-க்கான இலவச key இல்லாத g4f.space reverse proxy, நிமிடத்திற்கு 5 கோரிக்கைகள் என வரம்பிடப்பட்டுள்ளது.",
-      "g4f-nvidia": "NVIDIA NIM-க்கான இலவச key இல்லாத g4f.space reverse proxy, நிமிடத்திற்கு 5 கோரிக்கைகள் என வரம்பிடப்பட்டுள்ளது.",
-      "g4f-ollama": "g4f.space இலிருந்து இலவச key இல்லாத hosted Ollama gateway, நிமிடத்திற்கு 5 கோரிக்கைகள் என வரம்பிடப்பட்டுள்ளது.",
-      "g4f-pollinations": "Pollinations-க்கான இலவச key இல்லாத g4f.space reverse proxy, நிமிடத்திற்கு 5 கோரிக்கைகள் என வரம்பிடப்பட்டுள்ளது.",
+      "g4f-gemini": "Gemini-க்கான தொலைநிலை g4f.space நுழைவாயில். பெயரற்ற அணுகலுக்கு g4f.dev/chat-இன் proof-of-work கிரெடிட்கள் அல்லது g4f.dev/members.html-இன் உறுப்பினர் API சாவி தேவை; வரம்புகள் மாறுபடும்.",
+      "g4f-groq": "Groq-க்கான தொலைநிலை g4f.space நுழைவாயில். பெயரற்ற அணுகலுக்கு g4f.dev/chat-இன் proof-of-work கிரெடிட்கள் அல்லது g4f.dev/members.html-இன் உறுப்பினர் API சாவி தேவை; வரம்புகள் மாறுபடும்.",
+      "g4f-nvidia": "NVIDIA NIM-க்கான தொலைநிலை g4f.space நுழைவாயில். பெயரற்ற அணுகலுக்கு g4f.dev/chat-இன் proof-of-work கிரெடிட்கள் அல்லது g4f.dev/members.html-இன் உறுப்பினர் API சாவி தேவை; வரம்புகள் மாறுபடும்.",
+      "g4f-ollama": "Ollama-க்கான தொலைநிலை g4f.space நுழைவாயில். பெயரற்ற அணுகலுக்கு g4f.dev/chat-இன் proof-of-work கிரெடிட்கள் அல்லது g4f.dev/members.html-இன் உறுப்பினர் API சாவி தேவை; வரம்புகள் மாறுபடும்.",
+      "g4f-pollinations": "Pollinations-க்கான தொலைநிலை g4f.space நுழைவாயில். பெயரற்ற அணுகலுக்கு g4f.dev/chat-இன் proof-of-work கிரெடிட்கள் அல்லது g4f.dev/members.html-இன் உறுப்பினர் API சாவி தேவை; வரம்புகள் மாறுபடும்.",
       "mixedbread": "Mixedbread API மூலம் embeddings-ஐ உருவாக்கவும்.",
       "segmind": "Segmind-இன் hosted மாடல்கள் மூலம் படங்கள் மற்றும் வீடியோக்களை உருவாக்கவும்.",
       "amazon-q": "Kiro போன்ற அதே AWS Builder ID அல்லது இறக்குமதி செய்யப்பட்ட refresh-token flow-ஐப் பயன்படுத்துகிறது, ஆனால் Amazon Q இணைப்புகளைத் தனியாக வைத்திருக்கிறது.",
@@ -11314,7 +11314,9 @@
       "noPayload": "இந்த பதிவு உள்ளீட்டிற்கு எந்த பைலோடு தரவும் கிடையாது.",
       "correlationId": "குறுக்கீட்டு ஐடி",
       "correlationIdValue": "உறுப்பு அடையாளம்: {id}",
-      "detailedPayloadInfo": "முதலில் விரிவான பதிவு செயல்படுத்தவும், புதிய கோரிக்கைகளுக்கான நான்கு கட்டம் கிளையன்ட்/முதலீட்டாளர் payload காட்சி வேண்டும் என்றால்."
+      "detailedPayloadInfo": "முதலில் விரிவான பதிவு செயல்படுத்தவும், புதிய கோரிக்கைகளுக்கான நான்கு கட்டம் கிளையன்ட்/முதலீட்டாளர் payload காட்சி வேண்டும் என்றால்.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "API கீ",
     "sortTypeFirst": "எளிதானது முதலில்",
     "sortTypeFirstHelp": "பதிவு செய்யும் முயற்சியின் அடிப்படையில் குழுவாக்குங்கள் (பதிவு செய்ய தேவையில்லை → OAuth உள்நுழைவு → API கீ), ஒவ்வொரு குழுவிலும் தர வரிசையைத் தக்க வைத்துக் கொள்ளுங்கள்",
-    "typeLegend": "பதிவு செய்ய தேவையில்லை = பூஜ்ஜிய அமைப்பு · OAuth உள்நுழைவு = உங்கள் சொந்த கணக்குடன் உள்நுழையவும் · API கீ = உங்கள் சொந்த கீயைக் கொண்டு வாருங்கள் அல்லது அந்த வழங்குநரின் இலவச அடுக்கு"
+    "typeLegend": "பதிவு செய்ய தேவையில்லை = பூஜ்ஜிய அமைப்பு · OAuth உள்நுழைவு = உங்கள் சொந்த கணக்குடன் உள்நுழையவும் · API கீ = உங்கள் சொந்த கீயைக் கொண்டு வாருங்கள் அல்லது அந்த வழங்குநரின் இலவச அடுக்கு",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "வழங்குநர் கண்டறிதல்",

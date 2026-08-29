@@ -694,7 +694,14 @@ async function handleXSearch(args: {
 
 async function handleWebFetch(args: {
   url: string;
-  provider?: "firecrawl" | "jina-reader" | "tavily-search" | "tinyfish" | "context7";
+  provider?:
+    | "firecrawl"
+    | "jina-reader"
+    | "tavily-search"
+    | "tinyfish"
+    | "context7"
+    | "nimble-search"
+    | "anysearch-search";
   format?: "markdown" | "html" | "links" | "screenshot";
   include_metadata?: boolean;
   depth?: number;

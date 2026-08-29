@@ -1266,7 +1266,7 @@
     "agentBridge": "جسر الوكيل",
     "agentBridgeSubtitle": "اعتراض حركة مرور وكيل IDE",
     "trafficInspector": "مفتش حركة المرور",
-    "trafficInspectorSubtitle": "مراقبة استدعاءات LLM + تصحيح أخطاء أي حركة مرور HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "كود CLI",
     "cliCodeSubtitle": "أدوات الكود التي تشير إلى OmniRoute",
     "cliAgents": "وكلاء CLI",
@@ -6256,11 +6256,11 @@
       "chenzk": "بوابة متوافقة مع OpenAI مع كتالوج نماذج مباشر على chenzk.top.",
       "magnific": "توليد الصور باستخدام واجهة برمجة تطبيقات Mystic من Freepik.",
       "freetheai": "بوابة مجانية متوافقة مع OpenAI مع دعم نماذج التمرير المباشر (passthrough).",
-      "g4f-gemini": "وكيل عكسي مجاني بدون مفتاح من g4f.space إلى Gemini، محدود بـ 5 طلبات في الدقيقة.",
-      "g4f-groq": "وكيل عكسي مجاني بدون مفتاح من g4f.space إلى Groq، محدود بـ 5 طلبات في الدقيقة.",
-      "g4f-nvidia": "وكيل عكسي مجاني بدون مفتاح من g4f.space إلى NVIDIA NIM، محدود بـ 5 طلبات في الدقيقة.",
-      "g4f-ollama": "بوابة Ollama مستضافة مجانية بدون مفتاح من g4f.space، محدودة بـ 5 طلبات في الدقيقة.",
-      "g4f-pollinations": "وكيل عكسي مجاني بدون مفتاح من g4f.space إلى Pollinations، محدود بـ 5 طلبات في الدقيقة.",
+      "g4f-gemini": "بوابة g4f.space بعيدة إلى Gemini. يتطلب الوصول المجهول أرصدة إثبات العمل من g4f.dev/chat أو مفتاح API للعضو من g4f.dev/members.html؛ تختلف الحدود.",
+      "g4f-groq": "بوابة g4f.space بعيدة إلى Groq. يتطلب الوصول المجهول أرصدة إثبات العمل من g4f.dev/chat أو مفتاح API للعضو من g4f.dev/members.html؛ تختلف الحدود.",
+      "g4f-nvidia": "بوابة g4f.space بعيدة إلى NVIDIA NIM. يتطلب الوصول المجهول أرصدة إثبات العمل من g4f.dev/chat أو مفتاح API للعضو من g4f.dev/members.html؛ تختلف الحدود.",
+      "g4f-ollama": "بوابة g4f.space بعيدة إلى Ollama. يتطلب الوصول المجهول أرصدة إثبات العمل من g4f.dev/chat أو مفتاح API للعضو من g4f.dev/members.html؛ تختلف الحدود.",
+      "g4f-pollinations": "بوابة g4f.space بعيدة إلى Pollinations. يتطلب الوصول المجهول أرصدة إثبات العمل من g4f.dev/chat أو مفتاح API للعضو من g4f.dev/members.html؛ تختلف الحدود.",
       "mixedbread": "إنشاء تضمينات (embeddings) باستخدام واجهة برمجة تطبيقات Mixedbread.",
       "segmind": "توليد الصور ومقاطع الفيديو باستخدام نماذج Segmind المستضافة.",
       "amazon-q": "يستخدم نفس معرف AWS Builder ID أو تدفق رمز التحديث (refresh-token) المستورد مثل Kiro، ولكنه يبقي اتصالات Amazon Q منفصلة.",
@@ -11314,7 +11314,9 @@
       "noPayload": "لا توجد بيانات حمولة متاحة لهذه السجل.",
       "correlationId": "معرف الترابط",
       "correlationIdValue": "معرّف الارتباط: {id}",
-      "detailedPayloadInfo": "قم بتمكين تسجيل الدخول التفصيلي أولاً إذا كنت ترغب في عرض الحمولة من أربعة مراحل للعميل/المزود للطلبات الجديدة."
+      "detailedPayloadInfo": "قم بتمكين تسجيل الدخول التفصيلي أولاً إذا كنت ترغب في عرض الحمولة من أربعة مراحل للعميل/المزود للطلبات الجديدة.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "مفتاح واجهة برمجة التطبيقات",
     "sortTypeFirst": "الأسهل أولاً",
     "sortTypeFirstHelp": "التجميع حسب سهولة البدء (من دون تسجيل ← تسجيل دخول OAuth ← مفتاح API)، مع الحفاظ على ترتيب الجودة داخل كل مجموعة",
-    "typeLegend": "من دون تسجيل = لا إعداد مطلوب · تسجيل دخول OAuth = سجّل الدخول بحسابك · مفتاح API = استخدم مفتاحك أو الخطة المجانية للمزود"
+    "typeLegend": "من دون تسجيل = لا إعداد مطلوب · تسجيل دخول OAuth = سجّل الدخول بحسابك · مفتاح API = استخدم مفتاحك أو الخطة المجانية للمزود",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "اكتشاف موفري الخدمة",

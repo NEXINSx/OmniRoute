@@ -169,7 +169,7 @@ test("turn broker holds a tool invocation and rejects wrong or duplicate results
     assert.throws(() => broker.completeTool(token, request.callId, { content: [] }), /not pending/);
   } finally {
     await broker.close();
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -207,7 +207,7 @@ test("revoking a turn rejects a pending connector invocation", async () => {
     await assert.rejects(invocation, /revoked/);
   } finally {
     await broker.close();
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

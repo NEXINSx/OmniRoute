@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Zachytávat provoz agenta IDE",
     "trafficInspector": "Inspektor provozu",
-    "trafficInspectorSubtitle": "Sledovat volání LLM + ladit veškerý provoz HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI kód",
     "cliCodeSubtitle": "Nástroje pro kód odkazující na OmniRoute",
     "cliAgents": "Agenti CLI",
@@ -6256,11 +6256,11 @@
       "chenzk": "Brána kompatibilní s OpenAI s živým katalogem modelů na chenzk.top.",
       "magnific": "Generujte obrázky pomocí Mystic API od Freepik.",
       "freetheai": "Bezplatná brána kompatibilní s OpenAI s podporou passthrough modelů.",
-      "g4f-gemini": "Bezplatná reverzní proxy g4f.space bez klíče pro Gemini, omezená na 5 požadavků za minutu.",
-      "g4f-groq": "Bezplatná reverzní proxy g4f.space bez klíče pro Groq, omezená na 5 požadavků za minutu.",
-      "g4f-nvidia": "Bezplatná reverzní proxy g4f.space bez klíče pro NVIDIA NIM, omezená na 5 požadavků za minutu.",
-      "g4f-ollama": "Bezplatná hostovaná brána Ollama bez klíče od g4f.space, omezená na 5 požadavků za minutu.",
-      "g4f-pollinations": "Bezplatná reverzní proxy g4f.space bez klíče pro Pollinations, omezená na 5 požadavků za minutu.",
+      "g4f-gemini": "Vzdálená brána g4f.space k Gemini. Anonymní přístup vyžaduje proof-of-work kredity z g4f.dev/chat nebo členský API klíč z g4f.dev/members.html; limity se mění.",
+      "g4f-groq": "Vzdálená brána g4f.space k Groq. Anonymní přístup vyžaduje proof-of-work kredity z g4f.dev/chat nebo členský API klíč z g4f.dev/members.html; limity se mění.",
+      "g4f-nvidia": "Vzdálená brána g4f.space k NVIDIA NIM. Anonymní přístup vyžaduje proof-of-work kredity z g4f.dev/chat nebo členský API klíč z g4f.dev/members.html; limity se mění.",
+      "g4f-ollama": "Vzdálená brána g4f.space k Ollama. Anonymní přístup vyžaduje proof-of-work kredity z g4f.dev/chat nebo členský API klíč z g4f.dev/members.html; limity se mění.",
+      "g4f-pollinations": "Vzdálená brána g4f.space k Pollinations. Anonymní přístup vyžaduje proof-of-work kredity z g4f.dev/chat nebo členský API klíč z g4f.dev/members.html; limity se mění.",
       "mixedbread": "Vytvářejte embeddingy pomocí Mixedbread API.",
       "segmind": "Generujte obrázky a videa pomocí hostovaných modelů Segmind.",
       "amazon-q": "Používá stejné AWS Builder ID nebo importovaný tok refresh-token jako Kiro, ale udržuje připojení Amazon Q oddělená.",
@@ -11314,7 +11314,9 @@
       "noPayload": "Žádná data o payloadu nejsou k dispozici pro tento záznam.",
       "correlationId": "ID korelace",
       "correlationIdValue": "ID korelace: {id}",
-      "detailedPayloadInfo": "Nejprve povolte podrobné protokolování, pokud chcete čtyřstupňový pohled na payload klienta/poskytovatele pro nové požadavky."
+      "detailedPayloadInfo": "Nejprve povolte podrobné protokolování, pokud chcete čtyřstupňový pohled na payload klienta/poskytovatele pro nové požadavky.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "Klíč API",
     "sortTypeFirst": "Nejjednodušší jako první",
     "sortTypeFirstHelp": "Seskupit podle náročnosti registrace (Bez registrace → Přihlášení přes OAuth → Klíč API) při zachování pořadí kvality v rámci každé skupiny",
-    "typeLegend": "Bez registrace = nulové nastavení · Přihlášení přes OAuth = přihlášení vlastním účtem · Klíč API = vlastní klíč nebo bezplatný tarif poskytovatele"
+    "typeLegend": "Bez registrace = nulové nastavení · Přihlášení přes OAuth = přihlášení vlastním účtem · Klíč API = vlastní klíč nebo bezplatný tarif poskytovatele",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Zjišťování poskytovatelů",

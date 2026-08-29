@@ -141,13 +141,14 @@ function generateFakeCookie(): string {
 
 // ── PoW Solver (DeepSeekHashV1) ─────────────────────────────────────────
 
-async function solvePow(challenge: PowChallenge): Promise<string> {
+async function solvePow(challenge: PowChallenge, signal?: AbortSignal | null): Promise<string> {
   const answer = await solveDeepSeekPowAsync(
     challenge.algorithm,
     challenge.challenge,
     challenge.salt,
     challenge.difficulty,
-    challenge.expire_at
+    challenge.expire_at,
+    { signal }
   );
   if (answer < 0) throw new Error("PoW solver failed");
   return Buffer.from(
@@ -566,11 +567,7 @@ export function messagesToPrompt(
   }
 
   const effectiveWindow =
-    historyWindow > 0
-      ? historyWindow
-      : conversation.length > 1
-        ? DEFAULT_AUTO_HISTORY_WINDOW
-        : 0;
+    historyWindow > 0 ? historyWindow : conversation.length > 1 ? DEFAULT_AUTO_HISTORY_WINDOW : 0;
 
   if (effectiveWindow > 0 && conversation.length > 1) {
     // Rolling-window transcript of the most recent turns (#2942, auto-applied per
@@ -932,7 +929,7 @@ export class DeepSeekWebExecutor extends BaseExecutor {
       // One completion attempt against a given session id (fresh PoW per attempt).
       const performCompletion = async (sid: string) => {
         const powChallenge = await getPowChallenge(accessToken, signal);
-        const powAnswer = await solvePow(powChallenge);
+        const powAnswer = await solvePow(powChallenge, signal);
         const reqHeaders: Record<string, string> = {
           ...FAKE_HEADERS,
           "Content-Type": "application/json",
@@ -1145,7 +1142,7 @@ export class DeepSeekWebExecutor extends BaseExecutor {
       const msg = err instanceof Error ? err.message : String(err);
       log?.error?.("DEEPSEEK-WEB", `Execute failed: ${msg}`);
 
-      if (err instanceof DOMException && err.name === "AbortError") {
+      if (err instanceof Error && err.name === "AbortError") {
         return {
           response: errorResponse(499, "Request cancelled"),
           url: COMPLETION_URL,

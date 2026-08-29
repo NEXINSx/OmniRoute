@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Intercetta il traffico dell'agente IDE",
     "trafficInspector": "Ispettore del traffico",
-    "trafficInspectorSubtitle": "Monitora le chiamate LLM + esegui il debug di qualsiasi traffico HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Strumenti di codice che puntano a OmniRoute",
     "cliAgents": "Agenti CLI",
@@ -6256,11 +6256,11 @@
       "chenzk": "Gateway compatibile con OpenAI con un catalogo di modelli live su chenzk.top.",
       "magnific": "Genera immagini con la Mystic API di Freepik.",
       "freetheai": "Gateway gratuito compatibile con OpenAI con supporto per modelli passthrough.",
-      "g4f-gemini": "Reverse proxy gratuito senza chiave di g4f.space verso Gemini, limitato a 5 richieste al minuto.",
-      "g4f-groq": "Reverse proxy gratuito senza chiave di g4f.space verso Groq, limitato a 5 richieste al minuto.",
-      "g4f-nvidia": "Reverse proxy gratuito senza chiave di g4f.space verso NVIDIA NIM, limitato a 5 richieste al minuto.",
-      "g4f-ollama": "Gateway Ollama ospitato gratuito senza chiave da g4f.space, limitato a 5 richieste al minuto.",
-      "g4f-pollinations": "Reverse proxy gratuito senza chiave di g4f.space verso Pollinations, limitato a 5 richieste al minuto.",
+      "g4f-gemini": "Gateway remoto g4f.space verso Gemini. L’accesso anonimo richiede crediti proof-of-work da g4f.dev/chat oppure una chiave API membro da g4f.dev/members.html; i limiti variano.",
+      "g4f-groq": "Gateway remoto g4f.space verso Groq. L’accesso anonimo richiede crediti proof-of-work da g4f.dev/chat oppure una chiave API membro da g4f.dev/members.html; i limiti variano.",
+      "g4f-nvidia": "Gateway remoto g4f.space verso NVIDIA NIM. L’accesso anonimo richiede crediti proof-of-work da g4f.dev/chat oppure una chiave API membro da g4f.dev/members.html; i limiti variano.",
+      "g4f-ollama": "Gateway remoto g4f.space verso Ollama. L’accesso anonimo richiede crediti proof-of-work da g4f.dev/chat oppure una chiave API membro da g4f.dev/members.html; i limiti variano.",
+      "g4f-pollinations": "Gateway remoto g4f.space verso Pollinations. L’accesso anonimo richiede crediti proof-of-work da g4f.dev/chat oppure una chiave API membro da g4f.dev/members.html; i limiti variano.",
       "mixedbread": "Crea embedding con la Mixedbread API.",
       "segmind": "Genera immagini e video con i modelli ospitati di Segmind.",
       "amazon-q": "Utilizza lo stesso AWS Builder ID o flusso di refresh-token importato di Kiro, ma mantiene separate le connessioni ad Amazon Q.",
@@ -11314,7 +11314,9 @@
       "noPayload": "Nessun dato payload disponibile per questa voce di log.",
       "correlationId": "ID di correlazione",
       "correlationIdValue": "ID di correlazione: {id}",
-      "detailedPayloadInfo": "Abilita prima il logging dettagliato se desideri la visualizzazione del payload client/provider in quattro fasi per le nuove richieste."
+      "detailedPayloadInfo": "Abilita prima il logging dettagliato se desideri la visualizzazione del payload client/provider in quattro fasi per le nuove richieste.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "Chiave API",
     "sortTypeFirst": "Più semplice prima",
     "sortTypeFirstHelp": "Raggruppa per sforzo di registrazione (Nessuna registrazione → Accesso OAuth → Chiave API), mantenendo l'ordine di qualità all'interno di ciascun gruppo",
-    "typeLegend": "Nessuna registrazione = zero configurazione · Accesso OAuth = accedi con il tuo account · Chiave API = usa la tua chiave o il piano gratuito di quel provider"
+    "typeLegend": "Nessuna registrazione = zero configurazione · Accesso OAuth = accedi con il tuo account · Chiave API = usa la tua chiave o il piano gratuito di quel provider",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provider Discovery",

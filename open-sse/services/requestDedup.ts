@@ -129,8 +129,34 @@ function extractSystemContent(body: Record<string, unknown>): unknown {
  * `translatedBody`), so the body shape here is whatever the target provider
  * format produced — see `extractPromptContent`/`extractSystemContent` for the
  * full list of shapes this must cover (#10249, #10438).
+ *
+ * `tenantId` (the calling API key's id) namespaces the hash. Dedup shares ONE
+ * upstream call, and therefore one response, between everyone landing on the
+ * same hash — so the hash has to answer "who is asking", not just "what is
+ * being asked". Without it, two distinct API keys issuing the same request
+ * joined the same in-flight promise: the response was produced with the
+ * initiator's provider connection, under the initiator's per-key policy
+ * (allowedConnections / allowedModels), billed to the initiator, and handed to
+ * a different authenticated principal (GHSA-6c7w-56xp-wpc6).
+ *
+ * It is a PLAINTEXT prefix rather than digest input, matching
+ * `semanticCache.generateSignature` (#3740): the id is an internal namespace
+ * key, not a credential, and a namespace you can read off the key is worth more
+ * than one you cannot when debugging a dedup collision.
+ *
+ * It does NOT dodge the CodeQL js/insufficient-password-hash false positive,
+ * which the #3740 comment claims for its own version and which this comment
+ * claimed too until alert #874 was raised on the `createHash` below anyway.
+ * Once an API-key-derived value reaches this file at all, the query flags the
+ * sibling digest regardless of what actually goes into it. Dismissed per HR#14;
+ * expect it to come back on any edit here, and do not "fix" it with a KDF —
+ * that would break the determinism dedup depends on.
+ *
+ * Omitting `tenantId` keeps the un-namespaced hash. Keyless local-first
+ * deployments have no tenant boundary to preserve, and every such install would
+ * otherwise silently lose dedup.
  */
-export function computeRequestHash(requestBody: unknown): string {
+export function computeRequestHash(requestBody: unknown, tenantId?: string | null): string {
   const body = requestBody as Record<string, unknown>;
   const canonical = {
     model: body.model ?? null,
@@ -145,7 +171,8 @@ export function computeRequestHash(requestBody: unknown): string {
     frequency_penalty: body.frequency_penalty ?? null,
     presence_penalty: body.presence_penalty ?? null,
   };
-  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex").slice(0, 16);
+  const digest = createHash("sha256").update(JSON.stringify(canonical)).digest("hex").slice(0, 16);
+  return tenantId ? `${tenantId}.${digest}` : digest;
 }
 
 /** Determine whether a request should be deduplicated */

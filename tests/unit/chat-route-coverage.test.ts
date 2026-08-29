@@ -279,7 +279,7 @@ test("handleChat keeps protected combo fallback separate from Global Fallback Mo
     ],
   });
   await settingsDb.updateSettings({
-    globalFallbackModel: "claude/claude-3-5-sonnet-20241022",
+    globalFallbackModel: "claude/claude-sonnet-4.6",
   });
 
   const attemptedKeys: string[] = [];
@@ -407,7 +407,7 @@ test("handleChat keeps the combo error when the global fallback throws", async (
     models: ["openai/gpt-4.1"],
   });
   await settingsDb.updateSettings({
-    globalFallbackModel: "claude/claude-3-5-sonnet-20241022",
+    globalFallbackModel: "claude/claude-sonnet-4.6",
   });
 
   let attempts = 0;
@@ -617,7 +617,7 @@ test("handleChat returns the primary budget error when emergency fallback also f
 test("handleChat rejects models that are not allowed by the caller API key policy", async () => {
   await seedConnection("openai", { apiKey: "sk-openai-policy" });
   const apiKey = await seedApiKey({
-    allowedModels: ["claude/claude-3-5-sonnet-20241022"],
+    allowedModels: ["claude/claude-sonnet-4.6"],
   });
 
   const response = await handleChat(

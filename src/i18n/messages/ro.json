@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Interceptează traficul agentului IDE",
     "trafficInspector": "Inspector de trafic",
-    "trafficInspectorSubtitle": "Monitorizează apelurile LLM + depanează orice trafic HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "Cod CLI",
     "cliCodeSubtitle": "Instrumente de cod care indică spre OmniRoute",
     "cliAgents": "Agenți CLI",
@@ -6256,11 +6256,11 @@
       "chenzk": "Gateway compatibil cu OpenAI cu un catalog live de modele la chenzk.top.",
       "magnific": "Generați imagini cu API-ul Mystic de la Freepik.",
       "freetheai": "Gateway gratuit compatibil cu OpenAI cu suport pentru modele passthrough.",
-      "g4f-gemini": "Reverse proxy gratuit fără cheie g4f.space către Gemini, limitat la 5 cereri pe minut.",
-      "g4f-groq": "Reverse proxy gratuit fără cheie g4f.space către Groq, limitat la 5 cereri pe minut.",
-      "g4f-nvidia": "Reverse proxy gratuit fără cheie g4f.space către NVIDIA NIM, limitat la 5 cereri pe minut.",
-      "g4f-ollama": "Gateway Ollama găzduit gratuit fără cheie de la g4f.space, limitat la 5 cereri pe minut.",
-      "g4f-pollinations": "Reverse proxy gratuit fără cheie g4f.space către Pollinations, limitat la 5 cereri pe minut.",
+      "g4f-gemini": "Gateway g4f.space la distanță către Gemini. Accesul anonim necesită credite proof-of-work de la g4f.dev/chat sau o cheie API de membru de la g4f.dev/members.html; limitele variază.",
+      "g4f-groq": "Gateway g4f.space la distanță către Groq. Accesul anonim necesită credite proof-of-work de la g4f.dev/chat sau o cheie API de membru de la g4f.dev/members.html; limitele variază.",
+      "g4f-nvidia": "Gateway g4f.space la distanță către NVIDIA NIM. Accesul anonim necesită credite proof-of-work de la g4f.dev/chat sau o cheie API de membru de la g4f.dev/members.html; limitele variază.",
+      "g4f-ollama": "Gateway g4f.space la distanță către Ollama. Accesul anonim necesită credite proof-of-work de la g4f.dev/chat sau o cheie API de membru de la g4f.dev/members.html; limitele variază.",
+      "g4f-pollinations": "Gateway g4f.space la distanță către Pollinations. Accesul anonim necesită credite proof-of-work de la g4f.dev/chat sau o cheie API de membru de la g4f.dev/members.html; limitele variază.",
       "mixedbread": "Creați embeddings cu API-ul Mixedbread.",
       "segmind": "Generați imagini și videoclipuri cu modelele găzduite de Segmind.",
       "amazon-q": "Folosește același flux AWS Builder ID sau refresh-token importat ca Kiro, dar păstrează conexiunile Amazon Q separate.",
@@ -11314,7 +11314,9 @@
       "noPayload": "Nu sunt disponibile date de payload pentru această intrare de jurnal.",
       "correlationId": "ID de corelare",
       "correlationIdValue": "ID de corelare: {id}",
-      "detailedPayloadInfo": "Activați mai întâi jurnalizarea detaliată dacă doriți vizualizarea payload-ului client/provider în patru etape pentru cererile noi."
+      "detailedPayloadInfo": "Activați mai întâi jurnalizarea detaliată dacă doriți vizualizarea payload-ului client/provider în patru etape pentru cererile noi.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "Cheie API",
     "sortTypeFirst": "Cele mai simple mai întâi",
     "sortTypeFirstHelp": "Grupează după efortul de înregistrare (Fără înregistrare → Autentificare OAuth → Cheie API), păstrând ordinea calității în fiecare grup",
-    "typeLegend": "Fără înregistrare = configurare zero · Autentificare OAuth = conectare cu propriul cont · Cheie API = aduceți propria cheie sau nivelul gratuit al acelui furnizor"
+    "typeLegend": "Fără înregistrare = configurare zero · Autentificare OAuth = conectare cu propriul cont · Cheie API = aduceți propria cheie sau nivelul gratuit al acelui furnizor",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Descoperire furnizori",

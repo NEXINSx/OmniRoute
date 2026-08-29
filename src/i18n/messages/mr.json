@@ -1266,7 +1266,7 @@
     "agentBridge": "एजंट ब्रिज",
     "agentBridgeSubtitle": "IDE एजंट ट्रॅफिक इंटरसेप्ट करा",
     "trafficInspector": "ट्रॅफिक इन्स्पेक्टर",
-    "trafficInspectorSubtitle": "LLM कॉल्स मॉनिटर करा + कोणताही HTTPS ट्रॅफिक डीबग करा",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI कोड",
     "cliCodeSubtitle": "OmniRoute कडे पॉइंट करणारी कोड टूल्स",
     "cliAgents": "CLI एजंट्स",
@@ -6256,11 +6256,11 @@
       "chenzk": "chenzk.top वर थेट मॉडेल कॅटलॉगसह OpenAI-सुसंगत गेटवे.",
       "magnific": "Freepik च्या Mystic API सह प्रतिमा तयार करा.",
       "freetheai": "passthrough मॉडेल समर्थनासह मोफत OpenAI-सुसंगत गेटवे.",
-      "g4f-gemini": "Gemini साठी मोफत विना-की g4f.space रिव्हर्स प्रॉक्सी, प्रति मिनिट 5 विनंत्यांपर्यंत मर्यादित.",
-      "g4f-groq": "Groq साठी मोफत विना-की g4f.space रिव्हर्स प्रॉक्सी, प्रति मिनिट 5 विनंत्यांपर्यंत मर्यादित.",
-      "g4f-nvidia": "NVIDIA NIM साठी मोफत विना-की g4f.space रिव्हर्स प्रॉक्सी, प्रति मिनिट 5 विनंत्यांपर्यंत मर्यादित.",
-      "g4f-ollama": "g4f.space कडून मोफत विना-की होस्ट केलेले Ollama गेटवे, प्रति मिनिट 5 विनंत्यांपर्यंत मर्यादित.",
-      "g4f-pollinations": "Pollinations साठी मोफत विना-की g4f.space रिव्हर्स प्रॉक्सी, प्रति मिनिट 5 विनंत्यांपर्यंत मर्यादित.",
+      "g4f-gemini": "Gemini साठी दूरस्थ g4f.space गेटवे. अनामिक प्रवेशासाठी g4f.dev/chat वरील प्रूफ-ऑफ-वर्क क्रेडिट किंवा g4f.dev/members.html वरील सदस्य API की आवश्यक आहे; मर्यादा बदलतात.",
+      "g4f-groq": "Groq साठी दूरस्थ g4f.space गेटवे. अनामिक प्रवेशासाठी g4f.dev/chat वरील प्रूफ-ऑफ-वर्क क्रेडिट किंवा g4f.dev/members.html वरील सदस्य API की आवश्यक आहे; मर्यादा बदलतात.",
+      "g4f-nvidia": "NVIDIA NIM साठी दूरस्थ g4f.space गेटवे. अनामिक प्रवेशासाठी g4f.dev/chat वरील प्रूफ-ऑफ-वर्क क्रेडिट किंवा g4f.dev/members.html वरील सदस्य API की आवश्यक आहे; मर्यादा बदलतात.",
+      "g4f-ollama": "Ollama साठी दूरस्थ g4f.space गेटवे. अनामिक प्रवेशासाठी g4f.dev/chat वरील प्रूफ-ऑफ-वर्क क्रेडिट किंवा g4f.dev/members.html वरील सदस्य API की आवश्यक आहे; मर्यादा बदलतात.",
+      "g4f-pollinations": "Pollinations साठी दूरस्थ g4f.space गेटवे. अनामिक प्रवेशासाठी g4f.dev/chat वरील प्रूफ-ऑफ-वर्क क्रेडिट किंवा g4f.dev/members.html वरील सदस्य API की आवश्यक आहे; मर्यादा बदलतात.",
       "mixedbread": "Mixedbread API सह embeddings तयार करा.",
       "segmind": "Segmind च्या होस्ट केलेल्या मॉडेल्ससह प्रतिमा आणि व्हिडिओ तयार करा.",
       "amazon-q": "Kiro प्रमाणेच AWS Builder ID किंवा आयात केलेला refresh-token फ्लो वापरते, परंतु Amazon Q कनेक्शन्स स्वतंत्र ठेवते.",
@@ -11314,7 +11314,9 @@
       "noPayload": "या लॉग नोंदीसाठी कोणतीही पेलोड डेटा उपलब्ध नाही.",
       "correlationId": "संबंधित आयडी",
       "correlationIdValue": "संबंधित आयडी: {id}",
-      "detailedPayloadInfo": "नवीन विनंत्यांसाठी चार-चरणीय क्लायंट/प्रदाता पेलोड दृश्य पाहण्यासाठी प्रथम तपशीलवार लॉगिंग सक्षम करा."
+      "detailedPayloadInfo": "नवीन विनंत्यांसाठी चार-चरणीय क्लायंट/प्रदाता पेलोड दृश्य पाहण्यासाठी प्रथम तपशीलवार लॉगिंग सक्षम करा.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "API की",
     "sortTypeFirst": "सर्वात सोपे आधी",
     "sortTypeFirstHelp": "साइन-अपच्या त्रासानुसार गटबद्ध करा (साइन-अप नाही → OAuth लॉगिन → API की), प्रत्येक गटामध्ये गुणवत्तेचा क्रम राखून",
-    "typeLegend": "साइन-अप नाही = शून्य सेटअप · OAuth लॉगिन = तुमच्या स्वतःच्या खात्याने साइन इन करा · API की = तुमची स्वतःची की आणा किंवा त्या प्रदात्याची विनामूल्य श्रेणी वापरा"
+    "typeLegend": "साइन-अप नाही = शून्य सेटअप · OAuth लॉगिन = तुमच्या स्वतःच्या खात्याने साइन इन करा · API की = तुमची स्वतःची की आणा किंवा त्या प्रदात्याची विनामूल्य श्रेणी वापरा",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "प्रदाता शोध",

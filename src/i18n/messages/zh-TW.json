@@ -1266,7 +1266,7 @@
     "agentBridge": "代理橋接",
     "agentBridgeSubtitle": "攔截 IDE 代理流量",
     "trafficInspector": "流量檢查器",
-    "trafficInspectorSubtitle": "監控 LLM 呼叫 + 除錯任何 HTTPS 流量",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI 程式碼的",
     "cliCodeSubtitle": "指向 OmniRoute 的程式碼工具",
     "cliAgents": "CLI 代理",
@@ -6256,11 +6256,11 @@
       "chenzk": "OpenAI 相容閘道，在 chenzk.top 提供即時模型目錄。",
       "magnific": "使用 Freepik 的 Mystic API 生成圖片。",
       "freetheai": "免費的 OpenAI 相容閘道，支援透傳模型。",
-      "g4f-gemini": "免費無需金鑰的 g4f.space Gemini 反向代理，每分鐘限制 5 次請求。",
-      "g4f-groq": "免費無需金鑰的 g4f.space Groq 反向代理，每分鐘限制 5 次請求。",
-      "g4f-nvidia": "免費無需金鑰的 g4f.space NVIDIA NIM 反向代理，每分鐘限制 5 次請求。",
-      "g4f-ollama": "來自 g4f.space 的免費無需金鑰託管 Ollama 閘道，每分鐘限制 5 次請求。",
-      "g4f-pollinations": "免費無需金鑰的 g4f.space Pollinations 反向代理，每分鐘限制 5 次請求。",
+      "g4f-gemini": "連往 Gemini 的遠端 g4f.space 閘道。匿名存取需要來自 g4f.dev/chat 的工作量證明額度，或來自 g4f.dev/members.html 的會員 API 金鑰；限制可能變動。",
+      "g4f-groq": "連往 Groq 的遠端 g4f.space 閘道。匿名存取需要來自 g4f.dev/chat 的工作量證明額度，或來自 g4f.dev/members.html 的會員 API 金鑰；限制可能變動。",
+      "g4f-nvidia": "連往 NVIDIA NIM 的遠端 g4f.space 閘道。匿名存取需要來自 g4f.dev/chat 的工作量證明額度，或來自 g4f.dev/members.html 的會員 API 金鑰；限制可能變動。",
+      "g4f-ollama": "連往 Ollama 的遠端 g4f.space 閘道。匿名存取需要來自 g4f.dev/chat 的工作量證明額度，或來自 g4f.dev/members.html 的會員 API 金鑰；限制可能變動。",
+      "g4f-pollinations": "連往 Pollinations 的遠端 g4f.space 閘道。匿名存取需要來自 g4f.dev/chat 的工作量證明額度，或來自 g4f.dev/members.html 的會員 API 金鑰；限制可能變動。",
       "mixedbread": "使用 Mixedbread API 建立嵌入向量。",
       "segmind": "使用 Segmind 的託管模型生成圖片和影片。",
       "amazon-q": "使用與 Kiro 相同的 AWS Builder ID 或匯入的 refresh-token 流程，但將 Amazon Q 連線分開管理。",
@@ -11314,7 +11314,9 @@
       "noPayload": "此日誌條目沒有可用的有效負載數據。",
       "correlationId": "關聯 ID",
       "correlationIdValue": "關聯 ID: {id}",
-      "detailedPayloadInfo": "如果您想要新請求的四階段客戶端/提供者有效載荷視圖，請先啟用詳細日誌記錄。"
+      "detailedPayloadInfo": "如果您想要新請求的四階段客戶端/提供者有效載荷視圖，請先啟用詳細日誌記錄。",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "API 金鑰",
     "sortTypeFirst": "最簡單優先",
     "sortTypeFirstHelp": "按註冊難度分組（無需註冊 → OAuth 登入 → API 金鑰），在各組內保持品質順序",
-    "typeLegend": "無需註冊 = 零設定 · OAuth 登入 = 使用自己的帳戶登入 · API 金鑰 = 自帶金鑰或使用該提供者的免費方案"
+    "typeLegend": "無需註冊 = 零設定 · OAuth 登入 = 使用自己的帳戶登入 · API 金鑰 = 自帶金鑰或使用該提供者的免費方案",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "提供者探索",

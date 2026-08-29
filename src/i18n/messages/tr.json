@@ -1266,7 +1266,7 @@
     "agentBridge": "Ajan Köprüsü",
     "agentBridgeSubtitle": "IDE ajan trafiğini yakalayın",
     "trafficInspector": "Trafik Denetleyicisi",
-    "trafficInspectorSubtitle": "LLM çağrılarını izleyin + tüm HTTPS trafiğinde hata ayıklayın",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI Kodu",
     "cliCodeSubtitle": "OmniRoute'a yönlendiren kod araçları",
     "cliAgents": "CLI Ajanları",
@@ -6256,11 +6256,11 @@
       "chenzk": "chenzk.top adresinde canlı model kataloğuna sahip OpenAI uyumlu ağ geçidi.",
       "magnific": "Freepik'in Mystic API'si ile görseller oluşturun.",
       "freetheai": "Doğrudan geçişli (passthrough) model destekli, ücretsiz OpenAI uyumlu ağ geçidi.",
-      "g4f-gemini": "Gemini için anahtarsız, ücretsiz g4f.space ters proxy'si, dakikada 5 istek ile sınırlıdır.",
-      "g4f-groq": "Groq için anahtarsız, ücretsiz g4f.space ters proxy'si, dakikada 5 istek ile sınırlıdır.",
-      "g4f-nvidia": "NVIDIA NIM için anahtarsız, ücretsiz g4f.space ters proxy'si, dakikada 5 istek ile sınırlıdır.",
-      "g4f-ollama": "g4f.space üzerinden barındırılan anahtarsız, ücretsiz Ollama ağ geçidi, dakikada 5 istek ile sınırlıdır.",
-      "g4f-pollinations": "Pollinations için anahtarsız, ücretsiz g4f.space ters proxy'si, dakikada 5 istek ile sınırlıdır.",
+      "g4f-gemini": "Gemini için uzak g4f.space ağ geçidi. Anonim erişim g4f.dev/chat üzerinden proof-of-work kredileri veya g4f.dev/members.html üzerinden üye API anahtarı gerektirir; sınırlar değişkendir.",
+      "g4f-groq": "Groq için uzak g4f.space ağ geçidi. Anonim erişim g4f.dev/chat üzerinden proof-of-work kredileri veya g4f.dev/members.html üzerinden üye API anahtarı gerektirir; sınırlar değişkendir.",
+      "g4f-nvidia": "NVIDIA NIM için uzak g4f.space ağ geçidi. Anonim erişim g4f.dev/chat üzerinden proof-of-work kredileri veya g4f.dev/members.html üzerinden üye API anahtarı gerektirir; sınırlar değişkendir.",
+      "g4f-ollama": "Ollama için uzak g4f.space ağ geçidi. Anonim erişim g4f.dev/chat üzerinden proof-of-work kredileri veya g4f.dev/members.html üzerinden üye API anahtarı gerektirir; sınırlar değişkendir.",
+      "g4f-pollinations": "Pollinations için uzak g4f.space ağ geçidi. Anonim erişim g4f.dev/chat üzerinden proof-of-work kredileri veya g4f.dev/members.html üzerinden üye API anahtarı gerektirir; sınırlar değişkendir.",
       "mixedbread": "Mixedbread API'si ile yerleştirmeler (embeddings) oluşturun.",
       "segmind": "Segmind'in barındırılan modelleriyle görseller ve videolar oluşturun.",
       "amazon-q": "Kiro ile aynı AWS Builder ID veya içe aktarılan refresh-token akışını kullanır, ancak Amazon Q bağlantılarını ayrı tutar.",
@@ -11314,7 +11314,9 @@
       "noPayload": "Bu günlük girişi için kullanılabilir yük verisi yok.",
       "correlationId": "Korelasyon Kimliği",
       "correlationIdValue": "Korelasyon Kimliği: {id}",
-      "detailedPayloadInfo": "Yeni istekler için dört aşamalı istemci/sağlayıcı yük görünümünü istiyorsanız önce ayrıntılı günlüğü etkinleştirin."
+      "detailedPayloadInfo": "Yeni istekler için dört aşamalı istemci/sağlayıcı yük görünümünü istiyorsanız önce ayrıntılı günlüğü etkinleştirin.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "API Anahtarı",
     "sortTypeFirst": "Önce en kolay",
     "sortTypeFirstHelp": "Kayıt zahmetine göre gruplandır (Kayıt Gerekmez → OAuth ile Giriş → API Anahtarı), her grup içinde kalite sıralamasını koru",
-    "typeLegend": "Kayıt Gerekmez = sıfır kurulum · OAuth ile Giriş = kendi hesabınızla giriş yapın · API Anahtarı = kendi anahtarınızı veya sağlayıcının ücretsiz katmanını kullanın"
+    "typeLegend": "Kayıt Gerekmez = sıfır kurulum · OAuth ile Giriş = kendi hesabınızla giriş yapın · API Anahtarı = kendi anahtarınızı veya sağlayıcının ücretsiz katmanını kullanın",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Sağlayıcı Keşfi",

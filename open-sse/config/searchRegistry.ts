@@ -116,6 +116,27 @@ export const SEARCH_PROVIDERS: Record<string, SearchProviderConfig> = {
     cacheTTLMs: 5 * 60 * 1000,
   },
 
+  // Nimble also serves POST /v1/web/fetch through the same credential — see
+  // open-sse/executors/nimble-fetch.ts.
+  "nimble-search": {
+    id: "nimble-search",
+    name: "Nimble Search",
+    baseUrl: "https://sdk.nimbleway.com/v1/search",
+    method: "POST",
+    authType: "apikey",
+    authHeader: "bearer",
+    costPerQuery: 0.005,
+    freeMonthlyQuota: 0,
+    searchTypes: ["web", "news"],
+    defaultMaxResults: 5,
+    maxMaxResults: 100,
+    // Kept below GLOBAL_TIMEOUT_MS (handlers/search.ts) so a stalled Nimble call
+    // still leaves budget for the failover provider instead of burning the whole
+    // request window.
+    timeoutMs: 10_000,
+    cacheTTLMs: 5 * 60 * 1000,
+  },
+
   firecrawl: {
     id: "firecrawl",
     name: "Firecrawl",
@@ -349,6 +370,26 @@ export const SEARCH_PROVIDERS: Record<string, SearchProviderConfig> = {
     cacheTTLMs: 5 * 60 * 1000,
     fallbackOnly: true,
   },
+
+  // Free public web search for AI agents (https://anysearch.com). fallback-only:
+  // a cost-0 provider never overrides configured paid providers in automatic
+  // selection. max_results is capped at 10 upstream.
+  "anysearch-search": {
+    id: "anysearch-search",
+    name: "AnySearch",
+    baseUrl: "https://api.anysearch.com/v1/search",
+    method: "POST",
+    authType: "apikey",
+    authHeader: "bearer",
+    costPerQuery: 0,
+    freeMonthlyQuota: 0, // free tier is 1000 req/day (daily reset, not monthly) — 0 matches the xquik convention; the daily figure lives in the UI catalog authHint
+    searchTypes: ["web"],
+    defaultMaxResults: 5,
+    maxMaxResults: 10,
+    timeoutMs: 10_000,
+    cacheTTLMs: 5 * 60 * 1000,
+    fallbackOnly: true,
+  },
 };
 
 /**
@@ -398,6 +439,8 @@ export const SEARCH_PROVIDER_ALIASES: Record<string, string> = {
   x: "x-search",
   xquik: "xquik-search",
   xquik_search: "xquik-search",
+  anysearch: "anysearch-search",
+  anysearch_search: "anysearch-search",
 };
 
 export function resolveSearchProviderId(providerId: string): string {

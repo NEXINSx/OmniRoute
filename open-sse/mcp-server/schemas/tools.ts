@@ -509,7 +509,7 @@ export const webSearchOutput = z.object({
 export const webSearchTool: McpToolDefinition<typeof webSearchInput, typeof webSearchOutput> = {
   name: "omniroute_web_search",
   description:
-    "Performs a web search using OmniRoute's search gateway. Supports multiple providers (Serper, Brave, Perplexity, Exa, Tavily, Google PSE, Linkup, SearchAPI, SearXNG) with automatic failover. Returns search results with titles, URLs, snippets, and position data. Not X/Twitter — use omniroute_x_search for that.",
+    "Performs a web search using OmniRoute's search gateway. Supports multiple providers (Serper, Brave, Perplexity, Exa, Tavily, AnySearch, Google PSE, Linkup, SearchAPI, SearXNG) with automatic failover. Returns search results with titles, URLs, snippets, and position data. Not X/Twitter — use omniroute_x_search for that.",
   inputSchema: webSearchInput,
   outputSchema: webSearchOutput,
   scopes: ["execute:search"],
@@ -557,7 +557,15 @@ export const webFetchInput = z.object({
     .min(1, "URL is required")
     .describe("The URL to fetch content from"),
   provider: z
-    .enum(["firecrawl", "jina-reader", "tavily-search", "tinyfish", "context7"])
+    .enum([
+      "firecrawl",
+      "jina-reader",
+      "tavily-search",
+      "tinyfish",
+      "context7",
+      "nimble-search",
+      "anysearch-search",
+    ])
     .optional()
     .describe(
       "Specific fetch provider to use (default: first available). " +

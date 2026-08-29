@@ -24,7 +24,6 @@ import { glmProvider } from "./registry/glm/index.ts";
 import { glmtProvider } from "./registry/glm/t/index.ts";
 import { glm_cnProvider } from "./registry/glm/cn/index.ts";
 import { traeProvider } from "./registry/trae/index.ts";
-import { raycastProvider } from "./registry/raycast/index.ts";
 import { muse_spark_webProvider } from "./registry/muse-spark-web/index.ts";
 import { lmarenaProvider } from "./registry/lmarena/index.ts";
 import { kilocodeProvider } from "./registry/kilocode/index.ts";
@@ -63,6 +62,7 @@ import { nubeProvider } from "./registry/nube/index.ts";
 import { clinepassProvider } from "./registry/clinepass/index.ts";
 import { sparkdeskProvider } from "./registry/sparkdesk/index.ts";
 import { nlpcloudProvider } from "./registry/nlpcloud/index.ts";
+import { oneminaiProvider } from "./registry/oneminai/index.ts";
 import { nvidiaProvider } from "./registry/nvidia/index.ts";
 import { api_airforceProvider } from "./registry/api-airforce/index.ts";
 import { mistralProvider } from "./registry/mistral/index.ts";
@@ -90,7 +90,6 @@ import { snowflakeProvider } from "./registry/snowflake/index.ts";
 import { huggingfaceProvider } from "./registry/huggingface/index.ts";
 import { chipotleProvider } from "./registry/chipotle/index.ts";
 import { freeaiapikeyProvider } from "./registry/freeaiapikey/index.ts";
-import { qwen_webProvider } from "./registry/qwen/web/index.ts";
 import { qwen_cloudProvider } from "./registry/qwen-cloud/index.ts";
 import { qwen_cloud_token_planProvider } from "./registry/qwen-cloud-token-plan/index.ts";
 import { zai_webProvider } from "./registry/zai-web/index.ts";
@@ -115,14 +114,12 @@ import { perplexityProvider } from "./registry/perplexity/index.ts";
 import { perplexity_webProvider } from "./registry/perplexity/web/index.ts";
 import { minimaxProvider } from "./registry/minimax/index.ts";
 import { minimax_cnProvider } from "./registry/minimax/cn/index.ts";
-import { hailuo_webProvider } from "./registry/minimax/web/index.ts";
 import { haiperProvider } from "./registry/haiper/index.ts";
 import { bytezProvider } from "./registry/bytez/index.ts";
 import { blackboxProvider } from "./registry/blackbox/index.ts";
 import { blackbox_webProvider } from "./registry/blackbox/web/index.ts";
 import { uncloseaiProvider } from "./registry/uncloseai/index.ts";
 import { nscaleProvider } from "./registry/nscale/index.ts";
-import { chatgpt_webProvider } from "./registry/chatgpt-web/index.ts";
 import { chatgpt_web_codexProvider } from "./registry/chatgpt-web-codex/index.ts";
 import { openrouterProvider } from "./registry/openrouter/index.ts";
 import { cheaperinferenceProvider } from "./registry/cheaperinference/index.ts";
@@ -148,7 +145,6 @@ import { longcatProvider } from "./registry/longcat/index.ts";
 import { vertex_partnerProvider } from "./registry/vertex/partner/index.ts";
 import { vertexProvider } from "./registry/vertex/index.ts";
 import { duckduckgo_webProvider } from "./registry/duckduckgo-web/index.ts";
-import { felo_webProvider } from "./registry/felo-web/index.ts";
 import { xaiProvider, xai_oauthProvider } from "./registry/xai/index.ts";
 import { morphProvider } from "./registry/morph/index.ts";
 import { siliconflowProvider } from "./registry/siliconflow/index.ts";
@@ -229,6 +225,7 @@ import { x5labProvider } from "./registry/x5lab/index.ts";
 import { kenariProvider } from "./registry/kenari/index.ts";
 import { navyProvider } from "./registry/navy/index.ts";
 import { naraProvider } from "./registry/nara/index.ts";
+import { opperProvider } from "./registry/opper/index.ts";
 import { requestyProvider } from "./registry/requesty/index.ts";
 import { sealionProvider } from "./registry/sealion/index.ts";
 import { routewayProvider } from "./registry/routeway/index.ts";
@@ -292,7 +289,6 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   glmt: glmtProvider,
   "glm-cn": glm_cnProvider,
   trae: traeProvider,
-  raycast: raycastProvider,
   "muse-spark-web": muse_spark_webProvider,
   lmarena: lmarenaProvider,
   kilocode: kilocodeProvider,
@@ -331,6 +327,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   clinepass: clinepassProvider,
   sparkdesk: sparkdeskProvider,
   nlpcloud: nlpcloudProvider,
+  oneminai: oneminaiProvider,
   nvidia: nvidiaProvider,
   "api-airforce": api_airforceProvider,
   mistral: mistralProvider,
@@ -358,7 +355,6 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   huggingface: huggingfaceProvider,
   chipotle: chipotleProvider,
   freeaiapikey: freeaiapikeyProvider,
-  "qwen-web": qwen_webProvider,
   "qwen-cloud": qwen_cloudProvider,
   "qwen-cloud-token-plan": qwen_cloud_token_planProvider,
   "zai-web": zai_webProvider,
@@ -383,14 +379,12 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   "perplexity-web": perplexity_webProvider,
   minimax: minimaxProvider,
   "minimax-cn": minimax_cnProvider,
-  "hailuo-web": hailuo_webProvider,
   haiper: haiperProvider,
   bytez: bytezProvider,
   blackbox: blackboxProvider,
   "blackbox-web": blackbox_webProvider,
   uncloseai: uncloseaiProvider,
   nscale: nscaleProvider,
-  "chatgpt-web": chatgpt_webProvider,
   "chatgpt-web-codex": chatgpt_web_codexProvider,
   openrouter: openrouterProvider,
   cheaperinference: cheaperinferenceProvider,
@@ -416,7 +410,6 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   "vertex-partner": vertex_partnerProvider,
   vertex: vertexProvider,
   "duckduckgo-web": duckduckgo_webProvider,
-  "felo-web": felo_webProvider,
   xai: xaiProvider,
   "xai-oauth": xai_oauthProvider,
   morph: morphProvider,
@@ -500,6 +493,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   kenari: kenariProvider,
   navy: navyProvider,
   nara: naraProvider,
+  opper: opperProvider,
   requesty: requestyProvider,
   sealion: sealionProvider,
   routeway: routewayProvider,

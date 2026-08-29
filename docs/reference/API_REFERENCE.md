@@ -529,7 +529,7 @@ Web/search provider abstraction (Tavily, Brave, Exa, Serper, etc.).
 ## Web Fetch API
 
 Extract content from a URL via a configured web-fetch provider (Firecrawl, Jina
-Reader, Tavily Extract, TinyFish Fetch).
+Reader, Tavily Extract, TinyFish Fetch, Nimble Extract).
 
 | Method | Path            | Description                                               |
 | ------ | --------------- | --------------------------------------------------------- |
@@ -538,7 +538,8 @@ Reader, Tavily Extract, TinyFish Fetch).
 **Auth:** Bearer API key (`extractApiKey` + `isValidApiKey`). Policy enforced via `enforceApiKeyPolicy`.
 
 **Quota-aware fallback (#8297):** when no explicit `provider` is given, the pool
-(`firecrawl` → `jina-reader` → `tavily-search` → `tinyfish`) is walked in fixed
+(`firecrawl` → `jina-reader` → `tavily-search` → `tinyfish` → `nimble-search`) is
+walked in fixed
 priority order (fill-first) — a rate-limited-but-configured provider is skipped
 instead of short-circuiting the request, and a retryable/quota upstream failure
 (HTTP 429 always; 402/403 for Firecrawl/Tavily/TinyFish quota-style free tiers —
@@ -661,11 +662,21 @@ refusal. On success:
 {
   "allowed": true,
   // present only when the key opted into per-key usage limits (daily/weekly USD):
-  "personal": { "dailySpentUsd": 1.25, "dailyLimitUsd": 5, "dailyResetAtIso": "…", "weeklySpentUsd": 8, "weeklyLimitUsd": 20, "weeklyResetAtIso": "…" /* … */ },
+  "personal": {
+    "dailySpentUsd": 1.25,
+    "dailyLimitUsd": 5,
+    "dailyResetAtIso": "…",
+    "weeklySpentUsd": 8,
+    "weeklyLimitUsd": 20,
+    "weeklyResetAtIso": "…" /* … */,
+  },
   // the selected provider quota snapshot, or null when nothing is cached yet:
-  "provider": { "connectionId": "…", "provider": "claude", "plan": "…", "quotas": { /* … */ } },
+  "provider": { "connectionId": "…", "provider": "claude", "plan": "…", "quotas": {/* … */} },
   // every connection's snapshot, so a UI can render several providers side by side:
-  "providers": [ { "connectionId": "…", "provider": "claude", /* … */ }, { "provider": "codex", /* … */ } ]
+  "providers": [
+    { "connectionId": "…", "provider": "claude" /* … */ },
+    { "provider": "codex" /* … */ },
+  ],
 }
 ```
 
@@ -674,7 +685,7 @@ On refusal (`401` bad key / `403` not allowed) the same route returns
 (key allowed, nothing learned yet) is a different state from a refusal, and only the JSON form
 distinguishes them.
 
-**Auth:** the caller's own Bearer API key, validated with `isValidApiKey` — this is *not* the
+**Auth:** the caller's own Bearer API key, validated with `isValidApiKey` — this is _not_ the
 management surface (`/api/keys/…`), which stays behind `requireManagementAuth`.
 
 ---

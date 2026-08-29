@@ -59,6 +59,12 @@ import AgentrouterConsoleFields from "./AgentrouterConsoleFields";
 import QuotaScrapingFields, { EMPTY_QUOTA_SCRAPING_FIELDS } from "./QuotaScrapingFields";
 import GlmTeamQuotaFields, { EMPTY_GLM_TEAM_QUOTA_FIELDS } from "./GlmTeamQuotaFields";
 import ProviderRegionField, { getProviderRegionConfig } from "./AlibabaProviderRegionField";
+import PeakHourProtectionEditor, {
+  EMPTY_PEAK_HOUR_PROTECTION,
+  formatPeakHourSummary,
+  normalizePeakHourProtectionForSave,
+} from "../PeakHourProtectionEditor";
+import type { PeakHourProtectionConfig } from "@/lib/providers/peakHourProtection";
 export interface EditConnectionModalConnection {
   id?: string;
   name?: string;
@@ -154,6 +160,7 @@ export default function EditConnectionModal({
     runtimeKey: "",
     connectorName: stringField(connectionProviderSpecificData?.connectorName) || "OmniRoute Codex",
     m365Tier: normalizeM365TierValue(connectionProviderSpecificData?.tier) as M365TierValue,
+    peakHourProtection: { ...EMPTY_PEAK_HOUR_PROTECTION, windows: [] } as PeakHourProtectionConfig,
   });
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
@@ -391,6 +398,22 @@ export default function EditConnectionModal({
         connectorName:
           stringField(connection.providerSpecificData?.connectorName) || "OmniRoute Codex",
         m365Tier: normalizeM365TierValue(connection.providerSpecificData?.tier) as M365TierValue,
+        peakHourProtection: {
+          ...EMPTY_PEAK_HOUR_PROTECTION,
+          ...((connection.providerSpecificData?.peakHourProtection as PeakHourProtectionConfig) ||
+            {}),
+          windows: Array.isArray(
+            (
+              connection.providerSpecificData?.peakHourProtection as
+                PeakHourProtectionConfig | undefined
+            )?.windows
+          )
+            ? [
+                ...(connection.providerSpecificData?.peakHourProtection as PeakHourProtectionConfig)
+                  .windows,
+              ]
+            : [],
+        },
       });
       const existing = connection.providerSpecificData?.extraApiKeys;
       setExtraApiKeys(Array.isArray(existing) ? existing : []);
@@ -699,6 +722,9 @@ export default function EditConnectionModal({
       }
       if (updates.providerSpecificData) {
         updates.providerSpecificData.disableCooling = formData.disableCooling ? true : undefined;
+        updates.providerSpecificData.peakHourProtection = normalizePeakHourProtectionForSave(
+          formData.peakHourProtection
+        );
         // Explicit `null`, not `undefined`: the PUT route merges
         // { ...existing, ...incoming }, so omitting the key would keep the previous
         // choice and switching back to the default would never take effect.
@@ -844,6 +870,16 @@ export default function EditConnectionModal({
             label={t("disableCoolingLabel")}
             description={t("disableCoolingDescription")}
           />
+          <PeakHourProtectionEditor
+            value={formData.peakHourProtection}
+            onChange={(peakHourProtection) => setFormData({ ...formData, peakHourProtection })}
+            t={t}
+          />
+          {formatPeakHourSummary(formData.peakHourProtection) && (
+            <p className="text-xs text-text-muted">
+              {formatPeakHourSummary(formData.peakHourProtection)}
+            </p>
+          )}
         </div>
         <QuotaScrapingFields
           provider={provider}

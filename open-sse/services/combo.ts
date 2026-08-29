@@ -20,6 +20,7 @@ import {
   recordModelLockoutFailure,
   recordProviderFailure,
   recordProviderSuccess,
+  retryHintBypassesMaxCooldownMs,
   selectLockoutCooldownMs,
 } from "./accountFallback.ts";
 import {
@@ -70,6 +71,7 @@ import { resolveProviderId } from "../../src/shared/constants/providers.ts";
 import * as semaphore from "./rateLimitSemaphore.ts";
 import { getCircuitBreaker } from "../../src/shared/utils/circuitBreaker";
 import { parseModel } from "./model.ts";
+import { rejectRetiredAutoComboCandidates } from "./modelLifecycle.ts";
 import { createComboContext } from "./combo/context.ts";
 import { phaseComboSetup } from "./combo/comboSetup.ts";
 import { checkCredentialGate, logCredentialSkip } from "./credentialGate.ts";
@@ -166,6 +168,7 @@ import {
   recordStickyWeightedSuccess,
   resolveComboStickyRoundRobinLimit,
 } from "./combo/rrState.ts";
+import { expandTargetsForAllStrategies } from "./combo/connectionAwareExpansion.ts";
 import {
   validateResponseQuality,
   releaseQualityClone,
@@ -627,11 +630,14 @@ export async function buildAutoCandidates(
     })
   );
 
-  // Filter out candidates whose model is hidden by the user in the dashboard
-  return candidates.filter((c) => {
-    const hiddenModels = hiddenModelsMap.get(c.provider);
-    return !hiddenModels?.has(c.model);
-  });
+  // Filter out candidates whose model is hidden by the user in the dashboard,
+  // then drop vendor-retired ids so auto-combo cannot pick them (#11625).
+  return rejectRetiredAutoComboCandidates(
+    candidates.filter((c) => {
+      const hiddenModels = hiddenModelsMap.get(c.provider);
+      return !hiddenModels?.has(c.model);
+    })
+  );
 }
 
 // Context-cache pin health gate — moved to combo/dispatchPrelude.ts alongside the
@@ -834,6 +840,8 @@ async function handleComboChatInner({
     combo,
     config,
     strategy,
+    settings,
+    apiKeyAllowedConnections,
     allCombos,
     handleSingleModelWithTimeout,
     log,
@@ -884,6 +892,7 @@ async function handleComboChatInner({
       settings,
       allCombos,
       signal,
+      apiKeyAllowedConnections,
       hiddenModelsByProvider,
       clientManagedResponsesContext,
       deferContextOverflowWhenCompressible,
@@ -2138,12 +2147,12 @@ async function handleComboChatInner({
             fallbackResult.usedUpstreamRetryHint === true
               ? cooldownMs
               : (fallbackResult.quotaResetHintMs ?? 0);
-          // #6863 vs #7940: lockoutHintMs is only ever nonzero when it traces back to
-          // a genuine upstream signal (usedUpstreamRetryHint or a parsed quotaResetHintMs)
-          // — never a synthetic estimate. Tell recordModelLockoutFailure to honor it
-          // exactly instead of clamping it to maxCooldownMs (#7940's cap still applies
-          // to the exponential-backoff / synthetic-default paths).
-          const lockoutHintVerified = lockoutHintMs > 0;
+          // Only a transport header or google.rpc.RetryInfo is authoritative enough
+          // to bypass maxCooldownMs. Prose and generic JSON remain useful exact hints,
+          // but the operator cap still bounds them.
+          const lockoutHintVerified = retryHintBypassesMaxCooldownMs(
+            fallbackResult.retryHintSource
+          );
           const selectedConnectionId =
             result.headers?.get("X-OmniRoute-Selected-Connection-Id") ||
             result.headers?.get("x-omniroute-selected-connection-id") ||
@@ -2338,10 +2347,8 @@ async function handleComboChatInner({
                     // upstream reset (lockoutHintVerified) bypasses it.
                     exactCooldownMs: selectLockoutCooldownMs(lockoutHintMs, mlSettings),
                     maxCooldownMs: mlSettings.maxCooldownMs,
-                    // #6863: a parsed upstream quota reset is authoritative — the upstream
-                    // told us exactly when it resets, so honor it in full instead of
-                    // clamping to maxCooldownMs (which only bounds computed backoff).
-                    exactCooldownIsUpstreamReset: lockoutHintMs > mlSettings.baseCooldownMs,
+                    // Preserve authoritative structured/header resets; clamp body prose.
+                    exactCooldownIsUpstreamReset: lockoutHintVerified,
                   }
                 );
                 lockoutRecorded = true;
@@ -2430,9 +2437,8 @@ async function handleComboChatInner({
                   // upstream reset (lockoutHintVerified) bypasses it.
                   exactCooldownMs: selectLockoutCooldownMs(lockoutHintMs, mlSettings),
                   maxCooldownMs: mlSettings.maxCooldownMs,
-                  // #6863: an authoritative parsed upstream reset must be honored in full,
-                  // never clamped to maxCooldownMs (which only bounds computed backoff).
-                  exactCooldownIsUpstreamReset: lockoutHintMs > mlSettings.baseCooldownMs,
+                  // Preserve authoritative structured/header resets; clamp body prose.
+                  exactCooldownIsUpstreamReset: lockoutHintVerified,
                 }
               );
             }
@@ -2874,6 +2880,7 @@ async function handleRoundRobinCombo({
   settings,
   allCombos,
   signal,
+  apiKeyAllowedConnections = null,
   nesting = null,
   hiddenModelsByProvider = getHiddenModelsByProvider(),
   clientManagedResponsesContext,
@@ -2930,12 +2937,25 @@ async function handleRoundRobinCombo({
         }
     : allCombos;
 
-  const orderedTargets = resolveComboTargets(
+  let orderedTargets = resolveComboTargets(
     rrExpandedCombo,
     rrExpandedAllCombos,
     clampComboDepth(config.maxComboDepth),
     hiddenModelsByProvider
   );
+  // Connection-aware expansion is opt-in. RR runs outside
+  // resolveComboTargetPipeline, so it wires the same stage here. Rotation
+  // granularity becomes model x connection: rrStartIndex takes mod over the
+  // expanded list, so each account occupies its own rotation slot.
+  orderedTargets = await expandTargetsForAllStrategies({
+    strategy: "round-robin",
+    targets: orderedTargets,
+    comboName: combo.name,
+    config: combo.config,
+    settings: settings as Record<string, unknown> | null | undefined,
+    log,
+    apiKeyAllowedConnectionIds: apiKeyAllowedConnections,
+  });
   const tagFilteredTargets = await applyRequestTagRouting(orderedTargets, body, log);
   const evalRankedTargets = orderTargetsByEvalScores(tagFilteredTargets, config.evalRouting, log);
   // Align with the main/auto paths: combo config OR top-level settings (#8488 / #8494).
@@ -3282,7 +3302,24 @@ async function handleRoundRobinCombo({
               "COMBO-RR",
               `Maximum combo attempts (${maxGlobalAttempts}) exceeded. Terminating loop to prevent runaway requests.`
             );
-            return errorResponse(503, "Maximum combo retry limit reached");
+            return errorResponseWithComboDiagnostics(
+              503,
+              "Maximum combo retry limit reached",
+              {
+                poolSize: modelCount,
+                attempted: globalAttempts,
+                excluded: [
+                  ...[...exhaustedProviders].map((p) => ({ provider: p, reason: "exhausted" })),
+                  ...[...exhaustedConnections].map((c) => formatExhaustedConnectionKey(String(c))),
+                ],
+                attemptOrder: rrOutcomes.map((o) => ({
+                  provider: o.model.split("/")[0] || "unknown",
+                  model: o.model,
+                })),
+                terminalReason: "max_attempts_exceeded",
+                recovery: buildRecoveryHint("max_attempts_exceeded"),
+              }
+            );
           }
           if (retry > 0) {
             log.info(

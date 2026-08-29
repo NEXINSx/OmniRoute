@@ -18,7 +18,7 @@ const store = await import("../../src/lib/db/responsesContinuationStore.ts");
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 function insertCallLog(row: {
@@ -221,6 +221,44 @@ test("resolvePreviousResponseState resolves input from clientRawRequest when pro
     input: [{ type: "message", role: "user", content: "hi" }],
     output: [{ type: "message", role: "assistant", content: "hello" }],
   });
+});
+
+test("resolvePreviousResponseState fails closed when the stored input array was log-truncated", () => {
+  // Real production shape: cloneBoundedChatLogPayload (chatCore/logTruncation.ts)
+  // and cloneBoundedForLog (utils/requestLogger.ts) both prepend an
+  // `_omniroute_truncated_array` sentinel in place of the items they dropped
+  // once a logged array exceeds their tail-item cap (~24 items) -- routine
+  // for any conversation that's been going a while, not an edge case. Reading
+  // that sentinel back as a real Responses-API item and forwarding it upstream
+  // produced a live 400: "input item type 'missing' cannot be represented in
+  // Chat Completions" -- worse than the plain cache-miss this function is
+  // otherwise designed to fail into.
+  insertCallLog({
+    id: "log-7",
+    responseId: "resp_gen-truncated-history",
+    apiKeyId: "key-1",
+    detailState: "ready",
+    artifactRelPath: "2026-01-01/log-7.json",
+  });
+  writeArtifact("2026-01-01/log-7.json", {
+    clientRawRequest: {
+      body: {
+        input: [
+          { _omniroute_truncated_array: true, originalLength: 26, retainedTailItems: 24 },
+          { type: "function_call_output", call_id: "call_1", output: "ok" },
+        ],
+      },
+    },
+    providerRequest: { body: { input: [] } },
+    clientResponse: {
+      summary: {
+        id: "resp_gen-truncated-history",
+        output: [{ type: "message", role: "assistant", content: "hello" }],
+      },
+    },
+  });
+
+  assert.equal(store.resolvePreviousResponseState("resp_gen-truncated-history", "key-1"), null);
 });
 
 test("resolvePreviousResponseState returns null when detail logging was never captured for this row", () => {

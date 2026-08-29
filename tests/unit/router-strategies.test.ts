@@ -262,6 +262,34 @@ test("lkgp — lkgpEnabled:false delegates to rules", () => {
   assert.equal(d.strategy, "rules");
 });
 
+test("lkgp — falls back to rules when the pool lacks the last known good provider", () => {
+  const pool = [cand({ provider: "x" })];
+  const context: RoutingContext = {
+    taskType: "default",
+    lastKnownGoodProvider: "y",
+  };
+  const d = getStrategy("lkgp").select(pool, context);
+  const expected = getStrategy("rules").select(pool, context);
+  assert.equal(d.strategy, expected.strategy);
+  assert.equal(d.provider, expected.provider);
+  assert.equal(d.model, expected.model);
+});
+
+test("lkgp — keeps the first candidate among several targets of the pinned provider", () => {
+  const pool = [
+    cand({ provider: "shared", model: "shared/m1", connectionId: "conn-1" }),
+    cand({ provider: "shared", model: "shared/m2", connectionId: "conn-2" }),
+  ];
+  const d = getStrategy("lkgp").select(pool, {
+    taskType: "default",
+    lastKnownGoodProvider: "shared",
+  });
+  assert.equal(d.provider, "shared");
+  assert.equal(d.model, "shared/m1");
+  assert.equal(d.connectionId, "conn-1");
+  assert.equal(d.candidatesConsidered, 1);
+});
+
 // ── selectWithStrategy + registry ─────────────────────────────────────────────
 test("selectWithStrategy — dispatches by name", () => {
   const pool = [

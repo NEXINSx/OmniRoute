@@ -106,25 +106,25 @@ test("web session credential metadata identifies cookie, token, and no-auth prov
 
 test("web session credential validator requires provider-specific non-empty values", () => {
   assert.equal(
-    webSessionCredentials.hasUsableWebSessionCredential("qwen-web", { token: "qwen-token" }),
+    webSessionCredentials.hasUsableWebSessionCredential("kimi-web", { token: "kimi-token" }),
     true
   );
   assert.equal(
-    webSessionCredentials.hasUsableWebSessionCredential("qwen-web", { token: "   " }),
+    webSessionCredentials.hasUsableWebSessionCredential("kimi-web", { token: "   " }),
     false
   );
   assert.equal(
-    webSessionCredentials.hasUsableWebSessionCredential("qwen-web", { unrelated: "value" }),
+    webSessionCredentials.hasUsableWebSessionCredential("kimi-web", { unrelated: "value" }),
     false
   );
   assert.equal(
-    webSessionCredentials.hasUsableWebSessionCredential("chatgpt-web", {
+    webSessionCredentials.hasUsableWebSessionCredential("perplexity-web", {
       cookie: "__Secure-next-auth.session-token=session",
     }),
     true
   );
   assert.equal(
-    webSessionCredentials.hasUsableWebSessionCredential("chatgpt-web", { unrelated: "value" }),
+    webSessionCredentials.hasUsableWebSessionCredential("perplexity-web", { unrelated: "value" }),
     false
   );
 });
@@ -132,5 +132,5 @@ test("web session credential validator requires provider-specific non-empty valu
 test("no-auth web providers can be saved without an API key", () => {
   assert.equal(providers.providerAllowsOptionalApiKey("veoaifree-web"), true);
   assert.equal(webSessionCredentials.requiresWebSessionCredential("veoaifree-web"), false);
-  assert.equal(webSessionCredentials.requiresWebSessionCredential("chatgpt-web"), true);
+  assert.equal(webSessionCredentials.requiresWebSessionCredential("perplexity-web"), true);
 });

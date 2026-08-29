@@ -591,8 +591,7 @@ PORT=20128 DASHBOARD_PORT=20129 omniroute
 | --- | ------------------------------------------------ | ----------------------------------- |
 | 1   | Подключить **Kiro** (AWS Builder ID OAuth)       | Claude Sonnet / Haiku               |
 | 2   | Подключить **Qoder** (Google OAuth)              | kimi-k2-thinking, qwen3-coder-plus… |
-| 3   | Подключить **Qwen** (Device Code)                | qwen3-coder-plus/flash…             |
-| 4   | `/dashboard/combos` → шаблон **Free Stack ($0)** | Round-robin free-провайдеров        |
+| 3   | `/dashboard/combos` → шаблон **Free Stack ($0)** | Round-robin free-провайдеров        |
 
 IDE/CLI: `http://localhost:20128/v1` · API Key: любая строка (если `REQUIRE_API_KEY=false`).
 
@@ -645,7 +644,7 @@ IDE/CLI: `http://localhost:20128/v1` · API Key: любая строка (есл
 | 💳 **Subscription**           | Claude Code Pro / Codex / Copilot        | $10–200/мес         |
 | 🔑 **API Key (free tiers)**   | NVIDIA NIM, Cerebras, Groq               | **Free**            |
 | 💰 **Cheap**                  | GLM ~$0.5/1M · MiniMax ~$0.2–0.3/1M      | Копейки             |
-| 🆓 **Documented free access** | Kiro, Qoder, Qwen, Pollinations, LongCat | **$0 where listed** |
+| 🆓 **Documented free access** | Kiro, Qoder, Pollinations, LongCat | **$0 where listed** |
 
 **Playbook A — выжать подписку + cheap backup:**
 
@@ -661,7 +660,7 @@ Combo: "maximize-claude"
 ```txt
 Combo: "free-tier-fallback"
   1. if/kimi-k2-thinking
-  2. qw/qwen3-coder-plus
+  2. kr/qwen3-coder-next
 ```
 
 > 💡 «Cost» в дашборде — **tracker экономии**, не счёт OmniRoute. OmniRoute вам **не** выставляет счета.

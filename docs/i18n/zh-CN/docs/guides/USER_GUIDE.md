@@ -52,7 +52,6 @@ lastUpdated: 2026-06-28
 |                | MiniMax M2.1      | $0.2/1M    | 5 小时滑动窗口 | 最便宜选项         |
 |                | Kimi K2           | $9/月 固定 | 10M Token/月   | 费用可预测         |
 | **🆓 免费**    | Qoder             | $0         | 未公布 Token 上限；仍有服务商限制 | 8 个模型免费 |
-|                | Qwen              | $0         | 未公布 Token 上限；仍有服务商限制 | 3 个模型免费 |
 |                | Kiro              | $0         | ~50 积分/月    | Claude 免费        |
 
 ---
@@ -80,7 +79,7 @@ Combo: "maximize-claude"
 ```
 Combo: "free-tier-fallback"
   1. if/kimi-k2       (未公布 Token 上限；限制仍适用)
-  2. qw/qwen3-coder-plus       (未公布 Token 上限；限制仍适用)
+  2. kr/qwen3-coder-next
 
 每月费用：$0
 质量：生产级模型
@@ -245,7 +244,6 @@ Use in CLI: premium-coding
 Name: free-combo
 Models:
   1. if/kimi-k2 (no published token cap; provider limits may apply)
-  2. qw/coder-model (no published token cap; provider limits may apply)
 
 Cost: currently listed as $0; terms and availability may change
 ```
@@ -569,7 +567,6 @@ post_install() {
 
 **Qoder (`if/`)** — FREE OAuth: `if/kimi-k2-0905`, `if/kimi-k2`, `if/qwen3-coder-plus`, `if/qwen3-max`, `if/qwen3-max-preview`, `if/qwen3-vl-plus`, `if/qwen3-32b`, `if/qwen3-235b-a22b-thinking-2507`, `if/qwen3-235b-a22b-instruct`, `if/qwen3-235b`, `if/deepseek-v3.2`, `if/deepseek-v3`, `if/deepseek-r1`, `if/qoder-rome-30ba3b`
 
-**Qwen (`qw/`)** — FREE OAuth (chat.qwen.ai): `qw/coder-model`, `qw/vision-model`
 
 **GLM (`glm/`、`glm-cn/`、`zai/`、`glmt/`)** — $0.2–0.6/1M: `glm/glm-5.1`, `glm/glm-5`, `glm/glm-5-turbo`, `glm/glm-4.7`, `glm/glm-4.7-flash`, `glm/glm-4.6`, `glm/glm-4.6v`, `glm/glm-4.5`, `glm/glm-4.5v`, `glm/glm-4.5-air`
 

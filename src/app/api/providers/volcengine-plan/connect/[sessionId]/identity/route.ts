@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
+import { formatValidationMessage, validateBody } from "@/shared/validation/helpers";
+import { volcenginePlanIdentitySchema } from "@/shared/validation/schemas/volcenginePlan";
 
 /**
  * POST /api/providers/volcengine-plan/connect/[sessionId]/identity
@@ -16,11 +18,21 @@ export async function POST(
   if (auth) return auth;
 
   const { sessionId } = await params;
-  const body = await request.json().catch(() => ({}));
+  const raw = await request.json().catch(() => ({}));
+  // Validate BEFORE the session lookup — see the sibling code/route.ts note.
+  const validation = validateBody(volcenginePlanIdentitySchema, raw);
+  if (!validation.success) {
+    return NextResponse.json(
+      { success: false, error: formatValidationMessage(validation.error) },
+      { status: 400 }
+    );
+  }
+  const { index, timeout } = validation.data;
 
   try {
-    const { volcengineConsoleAutoLoginService } =
-      await import("@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts");
+    const { volcengineConsoleAutoLoginService } = await import(
+      "@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts"
+    );
 
     if (!volcengineConsoleAutoLoginService.getStatus(sessionId)) {
       return NextResponse.json(
@@ -29,15 +41,6 @@ export async function POST(
       );
     }
 
-    const index = Number(body.index);
-    if (!Number.isInteger(index) || index < 0) {
-      return NextResponse.json(
-        { success: false, error: "Invalid identity index" },
-        { status: 400 }
-      );
-    }
-
-    const timeout = typeof body.timeout === "number" ? body.timeout : undefined;
     const session = await volcengineConsoleAutoLoginService.selectIdentity(sessionId, index, {
       timeout,
     });

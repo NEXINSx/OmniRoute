@@ -438,6 +438,36 @@ export function hasUsableQuota(usage: JsonRecord): boolean {
   return false;
 }
 
+// A SYNTHETIC cooldown (persisted by a poller without a parseable upstream
+// reset — e.g. the Claude-subscription SUBSCRIPTION_QUOTA_COOLDOWN_MS lock) may
+// be overruled only by POSITIVE live-window evidence: EVERY reported quota
+// window is replenished (remaining > 0) AND carries a documented reset
+// timestamp that has already elapsed. Unknown-reset windows never authorize an
+// override (matching the kimi-coding partial-refresh semantics);
+// `unlimited` windows carry no reset evidence and are rejected.
+export function syntheticCooldownOutlivedByRealWindows(
+  usage: JsonRecord,
+  nowMs: number = Date.now()
+): boolean {
+  if (!isRecord(usage) || !isRecord(usage.quotas)) return false;
+  const windows = Object.values(usage.quotas);
+  if (windows.length === 0) return false;
+  for (const value of windows) {
+    if (!isRecord(value) || value.unlimited === true) return false;
+    const remaining =
+      typeof value.remaining === "number"
+        ? value.remaining
+        : typeof value.remainingPercentage === "number"
+          ? value.remainingPercentage
+          : null;
+    if (remaining === null || remaining <= 0) return false;
+    if (value.resetAt == null) return false;
+    const resetMs = Date.parse(String(value.resetAt));
+    if (Number.isNaN(resetMs) || resetMs > nowMs) return false;
+  }
+  return true;
+}
+
 /**
  * Is an explicit cooldown still in the future?
  *
@@ -482,13 +512,60 @@ export function shouldClearErrorStateOnValidProbe(
   return probeValid && !hasActiveCooldown(connection, now);
 }
 
+/**
+ * May an active cooldown be released because the REAL quota windows recovered?
+ *
+ * Only the synthetic-cooldown case (#10534) qualifies: lastErrorType
+ * "quota_exhausted" plus every governing window past its real reset with quota
+ * left. A window that is still exhausted — or whose reset is unknown/unparseable
+ * — keeps the connection locked, matching the kimi-coding partial-refresh
+ * semantics.
+ */
+
+
+/**
+ * Is an explicit cooldown still in the future?
+ *
+ * A rateLimitedUntil set by the upstream 429 handler is a hard statement and
+ * must never be overruled by a quota poll.
+ *
+ * Gate on the timestamp alone; lastErrorType stays irrelevant here.
+ */
+
+/**
+ * Whether a connection test may wipe the persisted error/cooldown state.
+ *
+ * A successful probe proves the CREDENTIAL is valid; it does not prove an
+ * exhausted quota window reopened — the probe is a cheap auth/models call that
+ * never touches the chat quota a weekly cap applies to. The credential-health
+ * scheduler runs that probe against every connection every 300s, so without this
+ * gate a weekly-capped connection was reset to `active` / `rateLimitedUntil=null`
+ * within 30s of every restart and dispatched straight back into the same 429.
+ *
+ * Same rule as `maybeClearRecoveredQuotaState`: a future `rateLimitedUntil` is
+ * the 429 handler's hard statement and no poller may overrule it. Once the
+ * window elapses, the next probe clears the state normally.
+ */
+
 export async function maybeClearRecoveredQuotaState(
   connection: ProviderConnectionLike,
   usage: JsonRecord
 ): Promise<ProviderConnectionLike> {
   if (!hasUsableQuota(usage)) return connection;
   if (isTerminalStatusForQuotaRecovery(connection.testStatus)) return connection;
-  if (hasActiveCooldown(connection)) return connection;
+  if (hasActiveCooldown(connection)) {
+    // A future rateLimitedUntil written from a real upstream signal is a hard
+    // statement no poller may overrule (#11277) — executor-sourced rate limits
+    // and extra-usage policy blocks included. Only a SYNTHETIC cooldown (a
+    // quota_exhausted lock persisted without an upstream reset, e.g. the
+    // Claude-subscription poller's 1h lockout) yields to positive live-window
+    // evidence that the real quota has already replenished past its reset.
+    const syntheticRecoveryOverride =
+      connection.lastErrorType === "quota_exhausted" &&
+      connection.lastErrorSource !== "extra_usage" &&
+      syntheticCooldownOutlivedByRealWindows(usage);
+    if (!syntheticRecoveryOverride) return connection;
+  }
 
   const hasTransientState =
     connection.testStatus === "unavailable" ||

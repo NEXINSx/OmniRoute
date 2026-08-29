@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Kaappaa IDE-agentin liikenne",
     "trafficInspector": "Liikennetarkastin",
-    "trafficInspectorSubtitle": "Valvo LLM-kutsuja + vianmääritä mitä tahansa HTTPS-liikennettä",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI-koodi",
     "cliCodeSubtitle": "OmniRouteen osoittavat koodityökalut",
     "cliAgents": "CLI-agentit",
@@ -6256,11 +6256,11 @@
       "chenzk": "OpenAI-yhteensopiva yhdyskäytävä reaaliaikaisella malliluettelolla osoitteessa chenzk.top.",
       "magnific": "Luo kuvia Freepikin Mystic API:lla.",
       "freetheai": "Ilmainen OpenAI-yhteensopiva yhdyskäytävä läpivientimallien tuella.",
-      "g4f-gemini": "Ilmainen avaimeton g4f.space-käänteisvälityspalvelin Geminiin, rajoitettu 5 pyyntöön minuutissa.",
-      "g4f-groq": "Ilmainen avaimeton g4f.space-käänteisvälityspalvelin Groqiin, rajoitettu 5 pyyntöön minuutissa.",
-      "g4f-nvidia": "Ilmainen avaimeton g4f.space-käänteisvälityspalvelin NVIDIA NIMiin, rajoitettu 5 pyyntöön minuutissa.",
-      "g4f-ollama": "Ilmainen avaimeton isännöity Ollama-yhdyskäytävä palvelusta g4f.space, rajoitettu 5 pyyntöön minuutissa.",
-      "g4f-pollinations": "Ilmainen avaimeton g4f.space-käänteisvälityspalvelin Pollinationsiin, rajoitettu 5 pyyntöön minuutissa.",
+      "g4f-gemini": "Etäkäyttöinen g4f.space-yhdyskäytävä palveluun Gemini. Anonyymi käyttö vaatii proof-of-work-krediittejä osoitteesta g4f.dev/chat tai jäsenen API-avaimen osoitteesta g4f.dev/members.html; rajat vaihtelevat.",
+      "g4f-groq": "Etäkäyttöinen g4f.space-yhdyskäytävä palveluun Groq. Anonyymi käyttö vaatii proof-of-work-krediittejä osoitteesta g4f.dev/chat tai jäsenen API-avaimen osoitteesta g4f.dev/members.html; rajat vaihtelevat.",
+      "g4f-nvidia": "Etäkäyttöinen g4f.space-yhdyskäytävä palveluun NVIDIA NIM. Anonyymi käyttö vaatii proof-of-work-krediittejä osoitteesta g4f.dev/chat tai jäsenen API-avaimen osoitteesta g4f.dev/members.html; rajat vaihtelevat.",
+      "g4f-ollama": "Etäkäyttöinen g4f.space-yhdyskäytävä palveluun Ollama. Anonyymi käyttö vaatii proof-of-work-krediittejä osoitteesta g4f.dev/chat tai jäsenen API-avaimen osoitteesta g4f.dev/members.html; rajat vaihtelevat.",
+      "g4f-pollinations": "Etäkäyttöinen g4f.space-yhdyskäytävä palveluun Pollinations. Anonyymi käyttö vaatii proof-of-work-krediittejä osoitteesta g4f.dev/chat tai jäsenen API-avaimen osoitteesta g4f.dev/members.html; rajat vaihtelevat.",
       "mixedbread": "Luo upotuksia Mixedbread API:lla.",
       "segmind": "Luo kuvia ja videoita Segmindin isännöidyillä malleilla.",
       "amazon-q": "Käyttää samaa AWS Builder ID- tai tuotua refresh-token-työnkulkua kuin Kiro, mutta pitää Amazon Q -yhteydet erillään.",
@@ -11314,7 +11314,9 @@
       "noPayload": "Ei kuormitustietoja saatavilla tälle lokimerkinnälle.",
       "correlationId": "Korrelaatio-ID",
       "correlationIdValue": "Korrelaatio-ID: {id}",
-      "detailedPayloadInfo": "Ota ensin käyttöön yksityiskohtainen lokitus, jos haluat nelivaiheisen asiakas/toimittaja kuormitusnäkymän uusille pyyntöille."
+      "detailedPayloadInfo": "Ota ensin käyttöön yksityiskohtainen lokitus, jos haluat nelivaiheisen asiakas/toimittaja kuormitusnäkymän uusille pyyntöille.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12487,12 @@
     "typeApikey": "API-avain",
     "sortTypeFirst": "Helpoin ensin",
     "sortTypeFirstHelp": "Ryhmittele rekisteröitymisvaivan mukaan (Ei rekisteröitymistä → OAuth-kirjautuminen → API-avain), säilyttäen laatuun perustuva järjestys kussakin ryhmässä",
-    "typeLegend": "Ei rekisteröitymistä = ei käyttöönottoa · OAuth-kirjautuminen = kirjaudu omalla tililläsi · API-avain = käytä omaa avaintasi tai palveluntarjoajan ilmaistasoa"
+    "typeLegend": "Ei rekisteröitymistä = ei käyttöönottoa · OAuth-kirjautuminen = kirjaudu omalla tililläsi · API-avain = käytä omaa avaintasi tai palveluntarjoajan ilmaistasoa",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Palveluntarjoajien kartoitus",
