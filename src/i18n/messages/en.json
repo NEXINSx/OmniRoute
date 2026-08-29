@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Delete all completed batches",
     "batchListBatchesTable": "Batches",
     "changelogViewerLoading": "Loading changelog from GitHub...",
+    "profile": "Profile",
     "profileLoading": "Loading profile...",
     "profileHowToEarn": "How to earn",
     "bootstrapBannerDismiss": "Dismiss",
@@ -12915,6 +12916,18 @@
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Enable network access in the skills sandbox."
       }
+    }
+  },
+  "combo": {
+    "sort": {
+      "label": "Sort by",
+      "method": {
+        "manual": "Manual",
+        "provider": "Provider",
+        "score": "Score (free models)",
+        "name": "Name"
+      },
+      "scoreHint": "Score ranking applies to free providers only; others stay in place."
     }
   },
   "comboControl": {

@@ -27,12 +27,10 @@ process.env.DATA_DIR = testDataDir;
 const coreDb = await import("../../src/lib/db/core.ts");
 const settingsDb = await import("../../src/lib/db/settings.ts");
 const upstreamProxyDb = await import("../../src/lib/db/upstreamProxy.ts");
-const { resolveExecutorWithProxy } = await import(
-  "../../open-sse/handlers/chatCore/executorProxy.ts"
-);
-const { clearUpstreamProxyConfigCache } = await import(
-  "../../open-sse/handlers/chatCore/comboContextCache.ts"
-);
+const { resolveExecutorWithProxy } =
+  await import("../../open-sse/handlers/chatCore/executorProxy.ts");
+const { clearUpstreamProxyConfigCache } =
+  await import("../../open-sse/handlers/chatCore/comboContextCache.ts");
 const { updateSettingsSchema } = await import("../../src/shared/validation/settingsSchemas.ts");
 
 const NATIVE_KEY = "sk-native-provider-key-cliproxyapi-must-not-see";
@@ -50,7 +48,8 @@ afterEach(async () => {
 
 after(() => {
   coreDb.resetDbInstance();
-  if (fs.existsSync(testDataDir)) fs.rmSync(testDataDir, { recursive: true, force: true });
+  if (fs.existsSync(testDataDir))
+    fs.rmSync(testDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 type ExecuteInput = {
@@ -68,9 +67,7 @@ type ExecutorLike = { execute: (input: ExecuteInput) => Promise<unknown> };
  * simulated native-provider network failure — driving the "fallback" retry
  * leg for real.
  */
-async function withCapturedCliproxyapiRequest(
-  fn: () => Promise<unknown>
-): Promise<{
+async function withCapturedCliproxyapiRequest(fn: () => Promise<unknown>): Promise<{
   headers: Record<string, string>;
   body: Record<string, unknown>;
   called: boolean;
@@ -185,11 +182,9 @@ describe("#7645 — CLIProxyAPI fallback leg authenticates with the dedicated ke
       cliproxyapiModelMapping: { [sourceModel]: mappedModel },
     });
 
-    const executor = await resolveExecutorWithProxy(
-      "anthropic-7645-per-connection",
-      undefined,
-      { cliproxyapiMode: "claude-native" }
-    );
+    const executor = await resolveExecutorWithProxy("anthropic-7645-per-connection", undefined, {
+      cliproxyapiMode: "claude-native",
+    });
 
     const { headers, body, called } = await withCapturedCliproxyapiRequest(() =>
       (executor as ExecutorLike).execute({

@@ -211,7 +211,7 @@ test(
       );
     } finally {
       db.close();
-      fs.rmSync(dataDir, { recursive: true, force: true });
+      fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   }
 );
@@ -263,6 +263,6 @@ test("#10421 the newest pre-migration backup survives pruning", serial, async ()
     assert.equal(fresh.length, 1, `expected the run's own backup to survive, got ${fresh.length}`);
   } finally {
     db.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

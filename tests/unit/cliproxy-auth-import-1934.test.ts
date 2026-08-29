@@ -117,7 +117,7 @@ test("scanCliProxyAuthDir reads importable files and counts skips", async () => 
     assert.equal(candidates[0].provider, "antigravity");
     assert.equal(skipped, 2); // unknown type + broken json
   } finally {
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

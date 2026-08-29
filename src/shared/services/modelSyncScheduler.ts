@@ -182,8 +182,12 @@ async function getAutoSyncConnections(): Promise<
 
 /**
  * Sync models for a single connection via the internal sync-models endpoint.
+ *
+ * Shared by the scheduled auto-sync cycle and the reactive trigger
+ * (src/lib/providerModels/reactiveModelSync.ts) that runs a discovery sync
+ * after an upstream model-not-found 404.
  */
-async function syncConnectionModels(
+export async function syncConnectionModels(
   connectionId: string,
   provider: string,
   baseUrl: string

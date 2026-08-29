@@ -147,6 +147,14 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/lib/oauth/utils/codexAuthImport.ts": 1,
     "src/lib/providerModels/managedModelImport.ts": 1,
     "src/lib/providers/codexConnectionDefaults.ts": 1,
+    // Volcano Ark plan connect flow (commit d732cf615): both are connection *persistence*
+    // sites, not dispatch. volcenginePlanBinding looks the plan connection up by name to
+    // decide update-vs-create during connect (same shape as oauth/connectionPersistence);
+    // volcPlanAutoSyncBackfill is a one-shot boot backfill that patches a providerSpecificData
+    // flag and issues no upstream call. Neither selects a connection to serve a request, so
+    // both stay class C (see CLASSIFICATION below).
+    "src/lib/providers/volcPlanAutoSyncBackfill.ts": 1,
+    "src/lib/providers/volcenginePlanBinding.ts": 1,
     "src/lib/proxyEgress.ts": 1,
     "src/lib/quota/connectionRecovery.ts": 2,
     "src/lib/sync/bundle.ts": 1,
@@ -194,6 +202,7 @@ const CLASSIFICATION: Record<InventoryKind, Record<string, BypassClass>> = {
       [
         "open-sse/handlers/autoComboCandidates.ts",
         "open-sse/handlers/chatCore.ts",
+        "open-sse/services/combo.ts",
         "open-sse/services/alibabaFreeTier.ts",
         "open-sse/services/alibabaFreeTierQuotaFetcher.ts",
         "open-sse/services/combo.ts",

@@ -8,7 +8,9 @@ const fixture = join(process.cwd(), "tests/fixtures/fake-zcode-app-server.mjs");
 const TEST_DATA_DIR = mkdtempSync(join(tmpdir(), "omniroute-zcode-"));
 process.env.DATA_DIR = TEST_DATA_DIR;
 
-test.after(() => rmSync(TEST_DATA_DIR, { recursive: true, force: true }));
+test.after(() =>
+  rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+);
 
 async function loadZcodeExecutor() {
   return import("../../open-sse/executors/zcode.ts");

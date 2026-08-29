@@ -8,7 +8,7 @@ const routeSource = fs.readFileSync("src/app/api/v1/responses/route.ts", "utf8")
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-responses-route-test-"));
 process.env.DATA_DIR = dataDir;
 process.env.REQUIRE_API_KEY = "false";
-after(() => fs.rmSync(dataDir, { recursive: true, force: true }));
+after(() => fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
 
 test("Responses route wires dual-cadence neutral keepalives", () => {
   assert.match(

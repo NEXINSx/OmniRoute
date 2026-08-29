@@ -67,6 +67,7 @@
       "lib/resolveServerEntry.js",
       "lib/resolveNodeHelper.js",
       "lib/windowLifecycle.js",
+      "lib/loginHeaderCapture.js",
       "lib/resolveRemoteServerUrl.js",
       "lib/remoteServerPreferences.js",
       "lib/serverReadiness.js",
@@ -79,6 +80,14 @@
       {
         "from": "../.build/electron-standalone",
         "to": "app",
+        "filter": [
+          "**/*",
+          "node_modules/**/*"
+        ]
+      },
+      {
+        "from": "../.build/electron-standalone/node_modules",
+        "to": "app/node_modules",
         "filter": [
           "**/*"
         ]

@@ -30,7 +30,7 @@ import {
   addParamToBlocklist,
   isAutoLearnGloballyEnabled,
 } from "@/lib/db/paramFilters";
-import { applyFingerprint, isCliCompatEnabled } from "../config/cliFingerprints.ts";
+import { applyFingerprint, isCliCompatEnabled, stripInternalBodyFields } from "../config/cliFingerprints.ts";
 import { supportsClaudeMaxEffort, supportsXHighEffort } from "../config/providerModels.ts";
 import { getThinkingBudgetConfig, ThinkingMode } from "../services/thinkingBudget.ts";
 import {
@@ -581,6 +581,8 @@ export class BaseExecutor {
       for (const key of optionalKeys) {
         if (cloned[key] === "") delete cloned[key];
       }
+
+      stripInternalBodyFields(cloned);
 
       return cloned;
     }
@@ -1393,6 +1395,7 @@ export class BaseExecutor {
           );
         }
 
+        stripInternalBodyFields(transformedBody);
         let bodyString = JSON.stringify(transformedBody);
 
         const shouldFingerprint =

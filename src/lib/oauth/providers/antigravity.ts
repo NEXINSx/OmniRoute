@@ -247,6 +247,12 @@ function mapAntigravityTokens(
       clientProfile,
       projectId: extra?.projectId,
       tier: extra?.tierId,
+      // The Antigravity backend ships new models frequently (e.g. Gemini 3.7
+      // Flash tiers appeared upstream weeks before the pinned catalog knew
+      // them). Default new connections into the 24h model auto-sync (#488) so
+      // live discovery lands in the synced catalog and /v1/models stays
+      // current without code changes. Operator-controlled per connection.
+      autoSync: true,
     },
   };
 }

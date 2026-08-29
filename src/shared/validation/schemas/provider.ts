@@ -271,6 +271,7 @@ export const providerModelMutationSchema = z.object({
   // the same flag flows through `getCustomVisionCapabilityFields()` in the /v1/models
   // catalog. `null` clears a manual override back to the id-based heuristic.
   supportsVision: z.boolean().nullable().optional(),
+  isFree: z.boolean().nullable().optional(),
   normalizeToolCallId: z.boolean().optional(),
   preserveOpenAIDeveloperRole: z.boolean().nullable().optional(),
   upstreamHeaders: upstreamHeadersRecordSchema.nullable().optional(),
@@ -374,6 +375,17 @@ export const createProviderNodeSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Prefix is required",
+        path: ["prefix"],
+      });
+    } else if (isReservedProviderPrefix(value.prefix.trim())) {
+      // Reserved-prefix guard (tokenrouter bug): the runtime model resolver skips
+      // compatible-node lookup for built-in registry ids/aliases, so a node
+      // created with such a prefix could never be reached by it and silently
+      // routed requests to the built-in provider instead. Reject at the write
+      // path. Case-sensitive to match the runtime guard exactly.
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: reservedProviderPrefixMessage(value.prefix.trim()),
         path: ["prefix"],
       });
     }

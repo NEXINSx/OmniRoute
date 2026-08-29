@@ -426,7 +426,7 @@ export default function ProviderModelsSection({
   const modelsWithVisibility = models.map((model) => ({
     ...model,
     isHidden: effectiveModelHidden(model.id),
-    isFree: isFreeModel(providerId, { id: model.id }),
+    isFree: isFreeModel(providerId, { id: model.id, isFree: (model as any).isFree }),
   }));
   const filteredModels = modelsWithVisibility.filter((model) => {
     const matchesQuery = matchesModelCatalogQuery(modelFilter, {

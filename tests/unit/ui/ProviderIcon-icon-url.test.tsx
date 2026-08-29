@@ -243,3 +243,24 @@ describe("ProviderIcon — unresolved local asset provenance", () => {
     }
   );
 });
+
+// #11853 follow-up: getLobeProviderIcon() itself is already guarded by #11880's
+// Object.hasOwn() checks (see lobe-provider-icons-prototype-collision-11853.test.ts).
+// This covers the three *other* plain-object lookups ProviderIcon.tsx does on its own
+// (PROVIDER_ICON_ALIASES, LOCAL_SVG_ALIASES, THEMED_SVGS) — none of which #11880 touched —
+// which resolved the same inherited-property ids through the prototype chain before
+// falling through to the thesvg.org unknown-provider CDN path.
+describe("ProviderIcon — inherited object property ids", () => {
+  it.each(["constructor", "valueOf", "hasOwnProperty", "__proto__"])(
+    "renders provider id %s through the unknown-provider fallback",
+    (providerId) => {
+      const container = renderIcon({ providerId });
+      const img = container.querySelector("img");
+
+      expect(img).not.toBeNull();
+      expect(img?.getAttribute("src")).toBe(
+        `https://thesvg.org/icons/${providerId.toLowerCase()}/default.svg`
+      );
+    }
+  );
+});

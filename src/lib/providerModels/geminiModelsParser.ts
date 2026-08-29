@@ -27,6 +27,7 @@ const METHOD_TO_ENDPOINT: Record<string, string> = {
   embedContent: "embeddings",
   predict: "images",
   predictLongRunning: "videos",
+  bidiGenerateContent: "audio",
   generateAnswer: "chat",
 };
 

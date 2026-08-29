@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from "crypto";
+import { randomUUID } from "crypto";
 import { nodeTypeFromId } from "@/lib/db/providerNodeSelect";
 import { extractGoogApiKeyHeader } from "./googApiKeyAuth.ts";
 import { describeUpstreamFailure } from "@/shared/utils/upstreamError";
@@ -63,6 +63,7 @@ import {
   hasPerModelQuota,
   getRuntimeProviderProfile,
   recordModelLockoutFailure,
+  retryHintBypassesMaxCooldownMs,
   isProviderModelUnsupported400,
 } from "@omniroute/open-sse/services/accountFallback.ts";
 import { isLocalProvider } from "@omniroute/open-sse/config/providerRegistry.ts";
@@ -217,81 +218,6 @@ function toStringOrNull(value: unknown): string | null {
 }
 function toBooleanOrDefault(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
-}
-function normalizeSessionKey(value: unknown, prefix: string): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) return null;
-  const trimmed = value.trim();
-  if (trimmed.length <= 180 && /^[A-Za-z0-9._:-]+$/.test(trimmed)) {
-    return `${prefix}:${trimmed}`;
-  }
-  return `${prefix}:sha256:${createHash("sha256").update(trimmed).digest("hex")}`;
-}
-function extractTextForSessionHash(value: unknown): string | null {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) {
-    const parts = value
-      .map((item) => {
-        if (typeof item === "string") return item;
-        const record = asRecord(item);
-        if (typeof record.text === "string") return record.text;
-        if (typeof record.content === "string") return record.content;
-        return null;
-      })
-      .filter(Boolean) as string[];
-    return parts.length > 0 ? parts.join("\n") : JSON.stringify(value);
-  }
-  if (value && typeof value === "object") return JSON.stringify(value);
-  return null;
-}
-function getFirstInputText(body: unknown): string | null {
-  const record = asRecord(body);
-  if (record.input !== undefined) {
-    if (typeof record.input === "string") return record.input;
-    if (Array.isArray(record.input)) {
-      for (const item of record.input) {
-        const itemRecord = asRecord(item);
-        const text = extractTextForSessionHash(itemRecord.content ?? item);
-        if (text && text.trim().length > 0) return text;
-      }
-    }
-    const text = extractTextForSessionHash(record.input);
-    if (text && text.trim().length > 0) return text;
-  }
-
-  if (Array.isArray(record.messages)) {
-    const userMessage = record.messages.find((message) => asRecord(message).role === "user");
-    const firstMessage = userMessage ?? record.messages[0];
-    const text = extractTextForSessionHash(asRecord(firstMessage).content ?? firstMessage);
-    if (text && text.trim().length > 0) return text;
-  }
-
-  return null;
-}
-export function extractSessionAffinityKey(
-  body: unknown,
-  headers?: Headers | { get?: (name: string) => string | null } | null
-): string | null {
-  const headerKey = normalizeSessionKey(
-    readHeaderValue(headers, "x-codex-session-id") ??
-      readHeaderValue(headers, "x-session-id") ??
-      readHeaderValue(headers, "x-omniroute-session"),
-    "header"
-  );
-  if (headerKey) return headerKey;
-
-  const record = asRecord(body);
-  const metadata = asRecord(record.metadata);
-  const explicitKey =
-    normalizeSessionKey(metadata.session_id, "metadata") ??
-    normalizeSessionKey(metadata.sessionId, "metadata") ??
-    normalizeSessionKey(record.conversation_id, "conversation") ??
-    normalizeSessionKey(record.session_id, "session") ??
-    normalizeSessionKey(record.prompt_cache_key, "prompt-cache");
-  if (explicitKey) return explicitKey;
-
-  const inputText = getFirstInputText(body);
-  if (!inputText || inputText.trim().length === 0) return null;
-  return `input:sha256:${createHash("sha256").update(inputText.slice(0, 4096)).digest("hex")}`;
 }
 function getCodexLimitPolicy(providerSpecificData: JsonRecord): {
   use5h: boolean;
@@ -1023,6 +949,7 @@ export { fisherYatesShuffle, getNextFromDeckSync as getNextFromDeck };
 // Re-export readHeaderValue and AuthRequestHeaders from headerReader.ts for
 // backwards compat with existing imports (e.g. googApiKeyAuth.ts).
 export { readHeaderValue, type AuthRequestHeaders } from "./headerReader.ts";
+export { extractSessionAffinityKey } from "./sessionAffinityPin";
 const PROVIDER_SEARCH_PAIRS: string[][] = [
   ["nvidia", "nvidia_nim"],
   ["kimi-coding", "kimi-coding-apikey"],
@@ -2622,6 +2549,7 @@ export async function markAccountUnavailable(
     persistUnavailableState?: boolean;
     /** Caller is the combo engine — it records its own model-level lockouts. */
     isCombo?: boolean;
+    headers?: Headers | Record<string, string> | null;
   } = {}
 ) {
   const currentMutex = markMutexes.get(connectionId) || Promise.resolve();
@@ -2737,7 +2665,7 @@ export async function markAccountUnavailable(
       backoffLevel,
       model,
       provider,
-      null,
+      options.headers ?? null,
       effectiveProviderProfile
     );
 
@@ -2975,13 +2903,11 @@ export async function markAccountUnavailable(
               : (fallbackResult.quotaResetHintMs ?? null),
           maxCooldownMs: mlSettings.maxCooldownMs,
           scope: usesExactAntigravityLock ? "exact" : undefined,
-          // #6863 vs #7940: exactCooldownMs above is only ever set from a genuine
-          // upstream signal (Retry-After/reset header or a parsed quotaResetHintMs) —
-          // never a synthetic estimate — so it must bypass maxCooldownMs instead of
-          // being clamped down to a window the upstream already told us is wrong.
-          exactCooldownIsUpstreamReset:
-            fallbackResult.usedUpstreamRetryHint === true ||
-            typeof fallbackResult.quotaResetHintMs === "number",
+          // Only a transport header or google.rpc.RetryInfo can bypass maxCooldownMs.
+          // Prose and generic JSON hints remain exact but operator-capped.
+          exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(
+            fallbackResult.retryHintSource
+          ),
         }
       );
       // Update last error for observability (without changing terminal status)
