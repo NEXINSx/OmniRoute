@@ -1,4 +1,16 @@
-@import "tailwindcss";
+/* PERFORMANCE: `source(none)` disables Tailwind v4 automatic content
+   detection, which walks the whole repository root (tests/ ~5k files, docs/,
+   CHANGELOG.md ~2.4 MB, scripts/...) and costs ~13.5 s PER fresh worker
+   process. The Turbopack build delegates this postcss transform to a pool of
+   short-lived node workers, so every worker respawn re-paid the full cold
+   scan and the build never converged (local macOS arm64 stall, 2026-08-29 —
+   see _tasks/research/2026-08-29-turbopack-local-build-stall-rootcause.md).
+   The explicit @source globs below cover every production class-bearing tree
+   (className usage lives only under src/ in .tsx files; verified by
+   repo-wide grep). Rule: when adding UI code with Tailwind classes OUTSIDE
+   src/, add an explicit @source line here. NB: keep glob `*` and `/` apart
+   inside comments — the sequence closes the comment. */
+@import "tailwindcss" source(none);
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
 /* Self-hosted Material Symbols icon font (#3695): the Google Fonts CDN
@@ -8,6 +20,7 @@
    The bundled @font-face uses family "Material Symbols Outlined", matching the
    .material-symbols-outlined rule defined later in this file. */
 @import "material-symbols/outlined.css";
+@source "../";
 @source "../../node_modules/fumadocs-ui/css/generated/*.css";
 
 /* Tailwind v4 auto-detection cannot scan directories with parentheses
