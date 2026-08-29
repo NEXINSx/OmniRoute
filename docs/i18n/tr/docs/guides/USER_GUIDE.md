@@ -56,7 +56,6 @@ Sağlayıcıları yapılandırma, kombolar oluşturma, CLI araçlarını entegre
 |                     | MiniMax M2.1      | $0.2/1M     | 5 saatlik döngü | En ucuz seçenek      |
 |                     | Kimi K2           | $9/ay sabit | 10M token/ay    | Öngörülebilir maliyet|
 | **🆓 ÜCRETSİZ**     | Qoder             | $0          | Sağlayıcı limiti| Katalogdan kontrol   |
-|                     | Qwen              | $0          | Sağlayıcı limiti| Katalogdan kontrol   |
 |                     | Kiro              | $0          | ~50 kredi/ay    | Claude ücretsiz      |
 
 ---

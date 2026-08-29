@@ -35,7 +35,7 @@ test("writeEsmWorkerScopes writes a scoped type:module beside each worker", () =
       assert.equal(pkg.type, "module", `${dir} declares type:module`);
     }
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -57,7 +57,7 @@ test("writeEsmWorkerScopes never touches the standalone root package.json", () =
       "root package.json stays type-less so server.js is parsed as CommonJS"
     );
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -75,7 +75,7 @@ test("writeEsmWorkerScopes is no-clobber: it leaves an existing package.json int
     const pkg = JSON.parse(readFileSync(join(workerDir, "package.json"), "utf8"));
     assert.equal(pkg.version, "9.9.9", "the traced manifest is preserved verbatim");
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -124,7 +124,7 @@ test("scoped layout runs a CJS server.js and an ESM worker.js side by side", () 
     );
     assert.ok(existsSync(join(workerDir, "package.json")), "worker scope package.json exists");
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -141,6 +141,6 @@ test("colocate-standalone bundles the required compression worker", () => {
     assert.equal(existsSync(join(workerDir, "compressionWorker.js")), true);
     assert.equal(JSON.parse(readFileSync(join(workerDir, "package.json"), "utf8")).type, "module");
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

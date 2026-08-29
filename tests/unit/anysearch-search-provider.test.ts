@@ -13,7 +13,8 @@ const {
   extractAnysearchSearchItems,
 } = await import("../../open-sse/handlers/search/anysearchSearch.ts");
 const { handleSearch } = await import("../../open-sse/handlers/search.ts");
-const { v1SearchSchema } = await import("../../src/shared/validation/schemas.ts");
+const { v1SearchSchema, v1WebFetchSchema } = await import("../../src/shared/validation/schemas.ts");
+const { webFetchInput } = await import("../../open-sse/mcp-server/schemas/tools.ts");
 
 test("anysearch-search is a fallback-only web provider with the upstream 10-result cap", () => {
   const config = getSearchProvider(ANYSEARCH_SEARCH_PROVIDER_ID);
@@ -91,6 +92,12 @@ test("v1SearchSchema canonicalizes anysearch aliases without forcing a search_ty
     assert.equal(parsed.provider, "anysearch-search");
     assert.equal(parsed.search_type, "web");
   }
+});
+
+test("REST and MCP web-fetch schemas both accept explicit anysearch-search selection", () => {
+  const request = { url: "https://example.com", provider: "anysearch-search" } as const;
+  assert.equal(v1WebFetchSchema.parse(request).provider, "anysearch-search");
+  assert.equal(webFetchInput.parse(request).provider, "anysearch-search");
 });
 
 test("handleSearch maps AnySearch results into the unified search response", async () => {

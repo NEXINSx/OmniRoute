@@ -1,12 +1,12 @@
 ---
 title: "Release Checklist"
-version: 3.8.40
-lastUpdated: 2026-06-28
+version: 3.8.51
+lastUpdated: 2026-08-28
 ---
 
 # Release Checklist
 
-> **Last updated:** 2026-06-28 — v3.8.40
+> **Last updated:** 2026-08-28 — v3.8.51
 > Streamlined release flow that leverages Claude Code skills for automation.
 >
 > **Keep the queue/branch green between releases:** see [RELEASE_GREEN.md](./RELEASE_GREEN.md)
@@ -37,7 +37,21 @@ npm run test:e2e           # optional but recommended
 /capture-release-evidences-cc
 ```
 
-## npm Staged Publishing (default since v3.8.49 — WS1.3/D2)
+## npm Trusted Publishing (default since v3.8.51) — staged on request, direct as fallback
+
+`npm-publish.yml` publishes through **npm Trusted Publishing (OIDC)** by default: the
+`stage-npm` job (github-hosted) exchanges GitHub's id-token for a short-lived npm
+credential for that run — no long-lived npm token in the repository secrets, no 2FA prompt, provenance attached.
+That is the bypass npm sanctions now that tokens which skip 2FA are being retired;
+it restores the fully automatic flow the project had up to v3.8.48 while keeping the
+WS1.3 guarantee (a leaked token cannot publish alone — there is no token).
+
+**One-time setup (owner):** npmjs.com → package `omniroute` → Settings → *Trusted
+Publisher* → GitHub: owner `diegosouzapw`, repo `OmniRoute`, workflow `npm-publish.yml`
+(environment: none). Until that exists, the automatic step fails with `ENEEDAUTH`:
+re-dispatch with `publish_mode=staged` (below) or `direct`.
+
+### Staged publishing (on request — `publish_mode=staged`)
 
 The npm-publish workflow no longer publishes directly: it boots the packed tarball
 (`check:pack-boot`) and then runs `npm stage publish` — the exact bytes are parked on

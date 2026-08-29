@@ -59,9 +59,19 @@ import {
 import { setConnectionRateLimitUntil } from "@/lib/db/providers";
 import {
   parseRetryHintFromJsonBody,
+  parseDetailedRetryHintFromJsonBody,
   parseDelayString,
   MAX_SHORT_RETRY_HINT_MS,
 } from "./retryAfterJson.ts";
+
+export type RetryHintProvenance = "header" | "google_rpc_retry_info" | "body";
+
+export function retryHintBypassesMaxCooldownMs(
+  provenance: RetryHintProvenance | undefined
+): boolean {
+  return provenance === "header" || provenance === "google_rpc_retry_info";
+}
+
 import {
   isSubscriptionQuotaText,
   buildSubscriptionQuotaFallback,
@@ -503,6 +513,66 @@ function getCanonicalLockProvider(provider: string): string {
   return canonical;
 }
 
+export function shouldDeferAntigravityQuotaStateToCaller(
+  provider: string,
+  hasCallerOwner: boolean
+): boolean {
+  const canonicalProvider = getCanonicalLockProvider(provider);
+  return (
+    hasCallerOwner && (canonicalProvider === "antigravity" || canonicalProvider === "agy")
+  );
+}
+
+export async function recordCoreOwnedAntigravityQuotaState({
+  provider,
+  connectionId,
+  model,
+  status,
+  errorText,
+  headers,
+  profileOverride = null,
+}: {
+  provider: string;
+  connectionId: string;
+  model: string;
+  status: number;
+  errorText: string;
+  headers: Headers | Record<string, string> | null;
+  profileOverride?: ProviderProfile | null;
+}) {
+  const profile = profileOverride ?? (await getRuntimeProviderProfile(provider));
+  const fallback = checkFallbackError(
+    status,
+    errorText,
+    0,
+    model,
+    provider,
+    headers,
+    profile
+  );
+  const lockout = recordModelLockoutFailure(
+    provider,
+    connectionId,
+    model,
+    "quota_exhausted",
+    status,
+    fallback.baseCooldownMs ?? profile.baseCooldownMs ?? COOLDOWN_MS.rateLimit,
+    profile,
+    {
+      exactCooldownMs:
+        fallback.usedUpstreamRetryHint === true
+          ? fallback.cooldownMs
+          : (fallback.quotaResetHintMs ?? null),
+      maxCooldownMs: profile.maxCooldownMs,
+      scope: "exact",
+      exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(
+        fallback.retryHintSource
+      ),
+    }
+  );
+  return { cooldownMs: lockout.cooldownMs, failureCount: lockout.failureCount };
+}
+
 function getModelLockKey(
   provider: string,
   connectionId: string,
@@ -654,13 +724,9 @@ export const lockExactModel = exactModelLock.createLockExactModel(
 /**
  * Pick the `exactCooldownMs` to apply to a model lockout (#1308).
  *
- * When the upstream response carried an explicit reset longer than the base
- * cooldown — e.g. Antigravity "Resets in 160h", a `Retry-After` header, or a
- * parseable reset text already extracted by `checkFallbackError`/`parseRetryFromErrorText`
- * into `parsedCooldownMs` — honor it exactly so an exhausted model is not retried
- * again within minutes. Otherwise preserve the previous behavior: return `0` to let
- * `recordModelLockoutFailure` apply its exponential backoff, or the base cooldown when
- * backoff is disabled.
+ * Prefer a parsed reset longer than the base cooldown so a precise body hint
+ * still beats exponential backoff. Whether it may bypass maxCooldownMs is a
+ * separate provenance decision made by retryHintBypassesMaxCooldownMs.
  */
 export function selectLockoutCooldownMs(
   parsedCooldownMs: number,
@@ -686,14 +752,11 @@ export function recordModelLockoutFailure(
     scope?: "exact" | "quota_family";
     /**
      * #6863 vs #7940: set true only when `exactCooldownMs` came from an actual
-     * upstream signal (Retry-After header, X-RateLimit-Reset, or a reset parsed
-     * from the error body — i.e. `usedUpstreamRetryHint`/`quotaResetHintMs` from
-     * `checkFallbackError`). Such a reset is honored exactly, even past
-     * `maxCooldownMs` — a real "Resets in 92h" must not be clamped down to
-     * minutes, or the router hammers 429 against quota that is known not to be
-     * back yet. Leave false/omitted for SYNTHETIC estimates (the quota_exhausted
-     * until-midnight default below, plain exponential backoff) — those stay
-     * capped, per #7940.
+     * authoritative upstream signal: Retry-After/X-RateLimit-Reset headers or
+     * google.rpc.RetryInfo. Generic JSON and prose-derived reset text are useful
+     * exact hints but remain bounded by maxCooldownMs. Leave false/omitted for
+     * those body hints and for synthetic estimates (the quota_exhausted
+     * until-midnight default below, plain exponential backoff).
      */
     exactCooldownIsUpstreamReset?: boolean;
   } = {}
@@ -1289,7 +1352,7 @@ export function parseRetryFromErrorText(errorText: unknown): number | null {
     }
   }
 
-  const match = /reset after (\d+h)?(\d+m)?(\d+s)?/i.exec(msg);
+  const match = /resets? after (\d+h)?(\d+m)?(\d+s)?/i.exec(msg);
   if (match?.[1] || match?.[2] || match?.[3]) return computeDurationMs(match);
 
   // Variant without "reset after": "will reset after XhYmZs"
@@ -1514,6 +1577,7 @@ export function checkFallbackError(
   baseCooldownMs?: number;
   newBackoffLevel?: number;
   usedUpstreamRetryHint?: boolean;
+  retryHintSource?: RetryHintProvenance;
   reason?: string;
   permanent?: boolean;
   creditsExhausted?: boolean;
@@ -1597,20 +1661,37 @@ export function checkFallbackError(
     return null;
   }
 
-  function getUpstreamRetryHintMs() {
-    if (!profile?.useUpstreamRetryHints) return null;
+  function detectRetryHint(): {
+    retryAfterMs: number;
+    provenance: RetryHintProvenance;
+  } | null {
     const resetTime = parseResetFromHeaders(headers);
     if (resetTime) {
       const waitMs = Math.max(resetTime - Date.now(), 0);
-      if (waitMs > 0) return waitMs;
+      if (waitMs > 0) return { retryAfterMs: waitMs, provenance: "header" };
+    }
+
+    const detailedJsonHint = parseDetailedRetryHintFromJsonBody(
+      errorStr,
+      MAX_PROVIDER_COOLDOWN_MS
+    );
+    if (detailedJsonHint) {
+      return {
+        retryAfterMs: detailedJsonHint.retryAfterMs,
+        provenance: detailedJsonHint.provenance,
+      };
     }
 
     const retryFromErrorText = parseRetryFromErrorText(errorStr);
     if (retryFromErrorText && retryFromErrorText > 0) {
-      return retryFromErrorText;
+      return { retryAfterMs: retryFromErrorText, provenance: "body" };
     }
 
     return null;
+  }
+
+  function getUpstreamRetryHint() {
+    return profile?.useUpstreamRetryHints ? detectRetryHint() : null;
   }
 
   function getScaledBaseCooldown(reason: RateLimitReasonValue, level = backoffLevel) {
@@ -1632,14 +1713,15 @@ export function checkFallbackError(
   }
 
   function buildRetryableFallback(reason: RateLimitReasonValue) {
-    const upstreamRetryHintMs = getUpstreamRetryHintMs();
-    if (typeof upstreamRetryHintMs === "number" && upstreamRetryHintMs > 0) {
+    const upstreamRetryHint = getUpstreamRetryHint();
+    if (upstreamRetryHint && upstreamRetryHint.retryAfterMs > 0) {
       return {
         shouldFallback: true,
-        cooldownMs: upstreamRetryHintMs,
-        baseCooldownMs: upstreamRetryHintMs,
+        cooldownMs: upstreamRetryHint.retryAfterMs,
+        baseCooldownMs: upstreamRetryHint.retryAfterMs,
         newBackoffLevel: 0,
         usedUpstreamRetryHint: true,
+        retryHintSource: upstreamRetryHint.provenance,
         reason,
       };
     }
@@ -1745,7 +1827,7 @@ export function checkFallbackError(
     if (shouldUseQuotaSignal && !isCreditsExhausted(errorStr) && !isDailyQuotaExhausted(errorStr)) {
       const subResult = buildSubscriptionQuotaFallback(
         errorStr,
-        getUpstreamRetryHintMs,
+        () => getUpstreamRetryHint()?.retryAfterMs ?? null,
         parseRetryFromErrorText,
         provider
       );
@@ -1760,7 +1842,13 @@ export function checkFallbackError(
     const sessionResult = buildSessionQuotaFallback(errorStr);
     if (sessionResult) return sessionResult;
 
-    const quotaResetHintMs = parseRetryFromErrorText(errorStr);
+    const detectedRetryHint = detectRetryHint();
+    const quotaResetHintMs = detectedRetryHint?.retryAfterMs ?? parseRetryFromErrorText(errorStr);
+    const quotaResetHintSource: RetryHintProvenance | undefined = detectedRetryHint
+      ? detectedRetryHint.provenance
+      : quotaResetHintMs
+        ? "body"
+        : undefined;
     if (
       shouldUseQuotaSignal &&
       quotaResetHintMs &&
@@ -1770,6 +1858,7 @@ export function checkFallbackError(
       return {
         ...fallbackResult,
         quotaResetHintMs,
+        retryHintSource: fallbackResult.retryHintSource ?? quotaResetHintSource,
       };
     }
 

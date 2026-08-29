@@ -21,7 +21,6 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 const core = await import("../../../../src/lib/db/core.ts");
 const route = await import("../../../../src/app/api/settings/compression/route.ts");
 
-
 describe("Compression Settings API Schema Validation", () => {
   const compressionModeValues = [
     "off",
@@ -140,13 +139,13 @@ function makeRequest(method: string, body?: unknown): Request {
 describe("settings/compression route — engines + activeComboId", () => {
   beforeEach(() => {
     core.resetDbInstance();
-    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   });
 
   after(() => {
     core.resetDbInstance();
-    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     if (ORIGINAL_DATA_DIR === undefined) delete process.env.DATA_DIR;
     else process.env.DATA_DIR = ORIGINAL_DATA_DIR;
   });

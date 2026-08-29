@@ -1,36 +1,31 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
-import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
-
-const volcengineConnectSchema = z.object({
-  phone: z.string().trim().min(1).optional(),
-  timeout: z.number().int().positive().max(600_000).optional(),
-});
+import { formatValidationMessage, validateBody } from "@/shared/validation/helpers";
+import { volcenginePlanConnectSchema } from "@/shared/validation/schemas/volcenginePlan";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const auth = await requireManagementAuth(request);
   if (auth) return auth;
 
-  const rawBody = await request.json().catch(() => ({}));
-  const validation = validateBody(volcengineConnectSchema, rawBody);
-  if (isValidationFailure(validation)) {
+  const raw = await request.json().catch(() => ({}));
+  const validation = validateBody(volcenginePlanConnectSchema, raw);
+  if (!validation.success) {
     return NextResponse.json(
-      { success: false, error: validation.error.message, details: validation.error.details },
+      { success: false, error: formatValidationMessage(validation.error) },
       { status: 400 }
     );
   }
-  const body = validation.data;
-  const timeout = body.timeout;
+  const { phone, timeout } = validation.data;
 
   // Auto flow: phone present → start a session-based headless phone/SMS login.
-  if (body.phone) {
+  if (phone) {
     try {
-      const { volcengineConsoleAutoLoginService } =
-        await import("@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts");
-      const started = await volcengineConsoleAutoLoginService.startLogin(body.phone, { timeout });
+      const { volcengineConsoleAutoLoginService } = await import(
+        "@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts"
+      );
+      const started = await volcengineConsoleAutoLoginService.startLogin(phone, { timeout });
       if (!started.ok) {
         return NextResponse.json({ success: false, error: started.error }, { status: 400 });
       }

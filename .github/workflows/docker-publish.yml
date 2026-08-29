@@ -195,6 +195,13 @@ jobs:
 
       - name: Build and push BUN base platform image by digest
         id: build-bun-base
+        # Bun is a best-effort compatibility target, not a supported runtime
+        # (AGENTS.md -> Environment). Its `bun run build` has been OOM-killing on
+        # both arches; letting that sink the whole publish means the SUPPORTED
+        # runner-base / runner-web images never reach the registry either. The
+        # image is still built and pushed whenever it succeeds — only its power to
+        # block the release is removed.
+        continue-on-error: true
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
@@ -213,6 +220,13 @@ jobs:
 
       - name: Build and push BUN web platform image by digest
         id: build-bun-web
+        # Bun is a best-effort compatibility target, not a supported runtime
+        # (AGENTS.md -> Environment). Its `bun run build` has been OOM-killing on
+        # both arches; letting that sink the whole publish means the SUPPORTED
+        # runner-base / runner-web images never reach the registry either. The
+        # image is still built and pushed whenever it succeeds — only its power to
+        # block the release is removed.
+        continue-on-error: true
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
@@ -240,8 +254,15 @@ jobs:
           mkdir -p /tmp/digests/base /tmp/digests/web /tmp/digests/bun-base /tmp/digests/bun-web
           touch "/tmp/digests/base/${DIGEST_BASE#sha256:}"
           touch "/tmp/digests/web/${DIGEST_WEB#sha256:}"
-          touch "/tmp/digests/bun-base/${DIGEST_BUN_BASE#sha256:}"
-          touch "/tmp/digests/bun-web/${DIGEST_BUN_WEB#sha256:}"
+          # Empty when the (non-blocking) bun build produced no image. `if` blocks,
+          # not `[ -n ] && touch`: under `set -e` a failing AND-list aborts the step,
+          # which is precisely the case being handled here.
+          if [ -n "$DIGEST_BUN_BASE" ]; then
+            touch "/tmp/digests/bun-base/${DIGEST_BUN_BASE#sha256:}"
+          fi
+          if [ -n "$DIGEST_BUN_WEB" ]; then
+            touch "/tmp/digests/bun-web/${DIGEST_BUN_WEB#sha256:}"
+          fi
 
       - name: Upload base digests
         uses: actions/upload-artifact@v7
@@ -264,7 +285,11 @@ jobs:
         with:
           name: digests-bun-base-${{ matrix.arch }}
           path: /tmp/digests/bun-base/*
-          if-no-files-found: error
+          # `ignore`, not `error`: the bun build is non-blocking, so an absent
+          # digest is the expected outcome of a failed/skipped bun image — the
+          # manifest step already treats these tags as optional. Leaving `error`
+          # here just relocates the blocker from the manifest to the upload.
+          if-no-files-found: ignore
           retention-days: 1
 
       - name: Upload bun-web digests
@@ -272,7 +297,11 @@ jobs:
         with:
           name: digests-bun-web-${{ matrix.arch }}
           path: /tmp/digests/bun-web/*
-          if-no-files-found: error
+          # `ignore`, not `error`: the bun build is non-blocking, so an absent
+          # digest is the expected outcome of a failed/skipped bun image — the
+          # manifest step already treats these tags as optional. Leaving `error`
+          # here just relocates the blocker from the manifest to the upload.
+          if-no-files-found: ignore
           retention-days: 1
 
   merge:
@@ -330,6 +359,9 @@ jobs:
           merge-multiple: true
 
       - name: Download bun-base digests
+        # Non-blocking: the bun image is best-effort, so its artifact may not
+        # exist at all. The manifest step treats these tags as optional.
+        continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: digests-bun-base-*
@@ -337,6 +369,9 @@ jobs:
           merge-multiple: true
 
       - name: Download bun-web digests
+        # Non-blocking: the bun image is best-effort, so its artifact may not
+        # exist at all. The manifest step treats these tags as optional.
+        continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: digests-bun-web-*
@@ -348,7 +383,7 @@ jobs:
           set -euo pipefail
 
           create_manifest() {
-            local image="$1" suffix="$2" dir="$3"
+            local image="$1" suffix="$2" dir="$3" optional="${4:-}"
             local tags=(-t "${image}:${VERSION}${suffix}")
             if [ "$PROMOTE_LATEST" = "true" ]; then
               tags+=(-t "${image}:latest${suffix}")
@@ -358,6 +393,10 @@ jobs:
               refs+=("${image}@sha256:$(basename "$digest_file")")
             done < <(find "$dir" -type f | sort)
             if [ "${#refs[@]}" -eq 0 ]; then
+              if [ -n "$optional" ]; then
+                echo "::warning::No image digests in $dir — skipping optional tag ${image}:${VERSION}${suffix}" >&2
+                return 0
+              fi
               echo "No image digests in $dir" >&2
               exit 1
             fi
@@ -366,15 +405,15 @@ jobs:
 
           create_manifest "${IMAGE_NAME}" "" /tmp/digests/base
           create_manifest "${IMAGE_NAME}" "-web" /tmp/digests/web
-          create_manifest "${IMAGE_NAME}" "-bun" /tmp/digests/bun-base
-          create_manifest "${IMAGE_NAME}" "-web-bun" /tmp/digests/bun-web
+          create_manifest "${IMAGE_NAME}" "-bun" /tmp/digests/bun-base optional
+          create_manifest "${IMAGE_NAME}" "-web-bun" /tmp/digests/bun-web optional
 
       - name: Create GHCR manifest
         run: |
           set -euo pipefail
 
           create_manifest() {
-            local image="$1" suffix="$2" dir="$3"
+            local image="$1" suffix="$2" dir="$3" optional="${4:-}"
             local tags=(-t "${image}:${VERSION}${suffix}")
             if [ "$PROMOTE_LATEST" = "true" ]; then
               tags+=(-t "${image}:latest${suffix}")
@@ -384,6 +423,10 @@ jobs:
               refs+=("${image}@sha256:$(basename "$digest_file")")
             done < <(find "$dir" -type f | sort)
             if [ "${#refs[@]}" -eq 0 ]; then
+              if [ -n "$optional" ]; then
+                echo "::warning::No image digests in $dir — skipping optional tag ${image}:${VERSION}${suffix}" >&2
+                return 0
+              fi
               echo "No image digests in $dir" >&2
               exit 1
             fi
@@ -392,8 +435,8 @@ jobs:
 
           create_manifest "${GHCR_IMAGE_NAME}" "" /tmp/digests/base
           create_manifest "${GHCR_IMAGE_NAME}" "-web" /tmp/digests/web
-          create_manifest "${GHCR_IMAGE_NAME}" "-bun" /tmp/digests/bun-base
-          create_manifest "${GHCR_IMAGE_NAME}" "-web-bun" /tmp/digests/bun-web
+          create_manifest "${GHCR_IMAGE_NAME}" "-bun" /tmp/digests/bun-base optional
+          create_manifest "${GHCR_IMAGE_NAME}" "-web-bun" /tmp/digests/bun-web optional
 
       - name: Inspect image
         if: needs.prepare.outputs.version != 'main'

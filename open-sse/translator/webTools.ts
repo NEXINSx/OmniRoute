@@ -1,4 +1,4 @@
-// Tool-call translation for web-cookie providers (deepseek-web, chatgpt-web, ...).
+// Tool-call translation for web-cookie providers (DeepSeek Web, Perplexity Web, etc.).
 //
 // The web UIs accept only a single plain prompt string and have no native function
 // calling — they reply with tool invocations as raw text. To let agentic clients use
@@ -532,12 +532,12 @@ function buildToolReminder(toolPrompt: string): string {
  * Placement matters: the contract used to be PREPENDED as the first system
  * message. Executors fold all system messages into one block, so with agentic
  * clients whose system prompts exceed ~28K chars the contract sat at the head
- * of a huge block and web models (chatgpt-web observed) ignored it, answering
+ * of a huge block and observed web models ignored it, answering
  * "tool X is not in my tool set" instead of emitting <tool> blocks. Dual
  * placement fixes it: the full contract goes AFTER the client messages (folds
  * to the tail of the system block) and a one-line reminder rides at the end of
- * the latest user message. Measured on cgpt-web/gpt-5.5-thinking with a
- * 30K-char system prompt: prepend 0/3 tool calls, dual placement 16/17 across
+ * the latest user message. Captured long-context trials showed prepend 0/3 tool
+ * calls and dual placement 16/17 across
  * 30K-250K prompts, 30-tool sets, multi-turn tool history, and streaming.
  */
 export function prepareToolMessages(
