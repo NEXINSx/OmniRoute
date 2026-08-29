@@ -13,6 +13,7 @@
     "admission-lanes",
     "cluster-decisions",
     "persistence-backend-boundary",
-    "ADAPTIVE_ROUTING"
+    "ADAPTIVE_ROUTING",
+    "streaming-usage-trailing-chunk-decision"
   ]
 }
