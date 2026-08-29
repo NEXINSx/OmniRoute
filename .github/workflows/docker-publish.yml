@@ -26,6 +26,14 @@ on:
         type: boolean
         default: false
 
+# One publish per ref. A merge storm used to fan out 8 concurrent hosted builds,
+# every one OOM-killing `npm run build` inside BuildKit (#11976). The :next
+# channel only needs the newest SHA; cancel-in-progress is the same pattern as
+# quality.yml / nightly-release-green.
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
 # Least-privilege default: read-only at the top level; the build and merge jobs that
 # push to GHCR grant packages: write themselves (Scorecard TokenPermissions).
 permissions:
@@ -126,6 +134,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Hosted ubuntu-24.04 is ~7 GB here (#11946/#11976), not the 16 GB the
+          # Dockerfile budget test models. Turbopack's native RSS is ~4.5 GB per
+          # process and is not bounded by NODE_OPTIONS, so `npm run build` dies
+          # with ResourceExhausted during page-data collection. Webpack stays
+          # inside the V8 heap we cap. amd64 stays hosted (the omni-build pool
+          # holds one next-build and must not also swallow a Docker daemon).
           - platform: linux/amd64
             runner: ubuntu-24.04
             arch: amd64
@@ -166,6 +180,8 @@ jobs:
           context: .
           target: runner-base
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -183,6 +199,8 @@ jobs:
           context: .
           target: runner-web
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -208,6 +226,8 @@ jobs:
           file: Dockerfile.bun
           target: runner-base
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -233,6 +253,8 @@ jobs:
           file: Dockerfile.bun
           target: runner-web
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}

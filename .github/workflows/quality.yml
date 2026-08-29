@@ -70,7 +70,15 @@ jobs:
     # 2026-08-14: 72 of the last 100 PRs into release/** came from forks, so the fork case is
     # the majority of the traffic, not the exception — this job earns its place, it just should
     # not duplicate build.yml for the own-origin 28%.
-    if: ${{ github.event_name != 'pull_request' || ((github.event.pull_request.draft == false || startsWith(github.head_ref, 'mergify/merge-queue/')) && needs.changes.outputs.code == 'true' && github.event.pull_request.head.repo.full_name != github.repository) }}
+    # Disabled 2026-08-29 (#11976 follow-up). `continue-on-error: true` still
+    # reports a GitHub check FAILURE, so every fork PR into release/** was born
+    # with a red "Build (advisory)" even when every required gate was green
+    # (sweep-reds, 41 PRs). Hosted ubuntu-latest cannot finish `npm run build`
+    # on this tree — VM shutdown ~6 min in, same class as build.yml going
+    # workflow_dispatch-only in #11962. Pre-merge build signal for release/**
+    # is nightly-release-green (omni-build); for main it is ci.yml `Build`.
+    # Restore this job when a runner that actually fits the tree is wired here.
+    if: ${{ false }}
     # PINNED to hosted — this was the last job in THIS workflow still on the USE_VPS_RUNNER
     # switch (ci.yml's Build, nightly-release-green and npm-publish keep it, so the variable
     # stays meaningful), and with USE_VPS_RUNNER=true it produced NO signal at all here.
