@@ -126,7 +126,19 @@ jobs:
     name: Build Docker (${{ matrix.platform }})
     needs: prepare
     if: needs.prepare.outputs.skip != 'true'
-    runs-on: ${{ matrix.runner }}
+    # amd64: the .113 omni-build pool (31 GB / 32 cores, two listeners). A
+    # next-build peaks at 14–16 GB; hosted ubuntu-24.04 is ~7 GB and dies
+    # ResourceExhausted (#11976). Falls back to hosted + webpack when
+    # USE_VPS_RUNNER is off. arm64: no ARM box — stay on GitHub's ubuntu-24.04-arm
+    # with webpack (Turbopack native RSS does not fit 7 GB).
+    runs-on: ${{ matrix.arch == 'amd64' && (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-build"]') || 'ubuntu-24.04') || 'ubuntu-24.04-arm' }}
+    # Share the 2-slot omni-build ceiling with ci.yml `Build` / npm-publish.
+    # Same group as main's Build so a :next publish waits beside the artefact
+    # instead of becoming the third heavy and getting kernel-OOM'd (2026-08-28).
+    # arm64 is hosted — its own group, cancelled by the workflow-level concurrency.
+    concurrency:
+      group: ${{ matrix.arch == 'amd64' && 'heavy-build-main' || format('docker-publish-arm-{0}', github.ref) }}
+      cancel-in-progress: ${{ matrix.arch != 'amd64' }}
     permissions:
       contents: read
       packages: write
@@ -134,21 +146,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Hosted ubuntu-24.04 is ~7 GB here (#11946/#11976), not the 16 GB the
-          # Dockerfile budget test models. Turbopack's native RSS is ~4.5 GB per
-          # process and is not bounded by NODE_OPTIONS, so `npm run build` dies
-          # with ResourceExhausted during page-data collection. Webpack stays
-          # inside the V8 heap we cap. amd64 stays hosted (the omni-build pool
-          # holds one next-build and must not also swallow a Docker daemon).
           - platform: linux/amd64
-            runner: ubuntu-24.04
             arch: amd64
           - platform: linux/arm64
-            runner: ubuntu-24.04-arm
             arch: arm64
     env:
       IMAGE_NAME: diegosouzapw/omniroute
       GHCR_IMAGE_NAME: ghcr.io/diegosouzapw/omniroute
+      # Turbopack on the 31 GB box; webpack on any hosted 7 GB fallback / ARM.
+      USE_TURBOPACK: ${{ (matrix.arch == 'amd64' && vars.USE_VPS_RUNNER == 'true') && '1' || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -156,6 +162,9 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/v{0}', inputs.version) || '' }}
           fetch-depth: 0
+
+      - name: Assert Docker Engine
+        run: docker info
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -181,7 +190,7 @@ jobs:
           target: runner-base
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=0
+            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -200,7 +209,7 @@ jobs:
           target: runner-web
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=0
+            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -227,7 +236,7 @@ jobs:
           target: runner-base
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=0
+            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -254,7 +263,7 @@ jobs:
           target: runner-web
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=0
+            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}

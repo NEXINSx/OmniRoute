@@ -50,13 +50,25 @@ a time, only when idle**, with the idle check and the restart in the same comman
 ## Operating rules
 
 - **Heavy-build ceiling: 2 at a time — enforced by label.** Every job that runs a
-  `next build` (`ci.yml` `build`, `npm-publish.yml` `publish`, both `nightly-release-green`
-  validations) targets `[self-hosted, omni-build]`, and only **two** runners carry that
-  label (`omniroute-113-5`, `omniroute-113-6`, added through the runners API — no
-  re-registration). The other six keep `omni-release` and take nothing heavy; GitHub
-  queues a third build instead of the kernel killing one. Pair with the `heavy-build-*`
-  concurrency lanes in `ci.yml`. To add capacity, label another runner — never raise
-  the count past what 31 GB holds (one next-build ≈ 14–16 GB).
+  full `next build` targets `[self-hosted, omni-build]`, and only **two** runners carry
+  that label (`omniroute-113-5`, `omniroute-113-6`, added through the runners API — no
+  re-registration):
+  - `ci.yml` `Build` and `npm-publish.yml` `publish`
+  - both `nightly-release-green` validations
+  - `docker-publish.yml` **amd64** (the hosted 7 GB runner ResourceExhausted this
+    tree — #11976). The arm64 leg stays on `ubuntu-24.04-arm` (no ARM box) with
+    webpack.
+  The other listeners keep `omni-release` / `omni-light` and take nothing heavy;
+  GitHub queues a third build instead of the kernel killing one. Pair with the
+  `heavy-build-*` concurrency lanes: `ci.yml` `Build` on `main` and docker-publish
+  amd64 share `heavy-build-main` (`cancel-in-progress: false`) so a `:next` publish
+  waits beside the artefact instead of sitting next to it. PR builds use
+  `heavy-build-pr`. To add capacity, label another runner — never raise the count
+  past what 31 GB holds (one next-build ≈ 14–16 GB; a Docker amd64 build is the
+  same class plus the daemon — still one slot).
+  Docker Engine must be on those two units (`docker info` is the first step of
+  the publish job). If it is missing, the job fails closed instead of hanging on
+  `setup-buildx`.
 - **Light pool: `omni-light` (2026-08-29, #11965).** `omniroute-113` and `omniroute-113-2` carry
   `omni-light` for jobs that need a backend-only `next build` (~5–6 GB) but not a full one: the
   nightly Schemathesis, promptfoo, garak and axe-a11y jobs. They ran on the hosted 7 GB runner and
