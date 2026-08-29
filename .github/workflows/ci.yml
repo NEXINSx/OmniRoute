@@ -979,7 +979,11 @@ jobs:
     # 10min was sized before #7114 added the lcov reporter (Codecov/Sonar need it);
     # merging 8 shard JSONs + text+json+lcov now takes ~10-12min — three consecutive
     # release-tip runs died at exactly 10m as job-timeout "cancelled" (2026-07-15/16).
-    timeout-minutes: 20
+    # 30, not 20 (2026-08-29): the informational Codecov upload below hung for the rest of
+    # the budget on two consecutive main runs (33207760653, 33215115341); the job ended
+    # `cancelled` and dragged the whole run's conclusion to `cancelled` although every
+    # blocking job was green. The upload step now has its own ceiling; this is headroom.
+    timeout-minutes: 30
     needs: test-unit
     if: ${{ !cancelled() && needs.test-unit.result == 'success' && !contains(github.event.pull_request.labels.*.name, 'hotfix') }}
     env:
@@ -1058,6 +1062,10 @@ jobs:
       # (if-no-files-found: warn) — Sonar consumes the same file.
       - name: Upload coverage to Codecov (informational)
         if: always()
+        # Informational means informational: its own ceiling and continue-on-error, so a
+        # stalled upload can neither eat the job's budget nor turn a green job cancelled.
+        timeout-minutes: 5
+        continue-on-error: true
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: coverage/lcov.info

@@ -11,6 +11,8 @@ import { rmSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+type CustomRow = { id: string; isFree?: boolean };
+
 describe("custom isFree tri-state (DB)", () => {
   let dir: string;
   let prevDataDir: string | undefined;
@@ -44,8 +46,8 @@ describe("custom isFree tri-state (DB)", () => {
       undefined,
       true
     );
-    const rows: any = await getCustomModels("p");
-    const r = rows.find((x: any) => x.id === "m1");
+    const rows = (await getCustomModels("p")) as CustomRow[];
+    const r = rows.find((x) => x.id === "m1");
     assert.equal(r.isFree, true);
     await addCustomModel(
       "p",
@@ -60,8 +62,8 @@ describe("custom isFree tri-state (DB)", () => {
       undefined,
       undefined
     );
-    const rows2: any = await getCustomModels("p");
-    const r2 = rows2.find((x: any) => x.id === "m2");
+    const rows2 = (await getCustomModels("p")) as CustomRow[];
+    const r2 = rows2.find((x) => x.id === "m2");
     assert.equal(r2.isFree, undefined);
   });
 
@@ -79,9 +81,9 @@ describe("custom isFree tri-state (DB)", () => {
       undefined,
       true
     );
-    await updateCustomModel("p", "m", { isFree: null } as any);
-    const rows: any = await getCustomModels("p");
-    const r = rows.find((x: any) => x.id === "m");
+    await updateCustomModel("p", "m", { isFree: null });
+    const rows = (await getCustomModels("p")) as CustomRow[];
+    const r = rows.find((x) => x.id === "m");
     assert.equal(r.isFree, undefined);
   });
 
@@ -99,13 +101,13 @@ describe("custom isFree tri-state (DB)", () => {
       undefined,
       undefined
     );
-    await updateCustomModel("p", "m", { isFree: true } as any);
-    let rows: any = await getCustomModels("p");
-    assert.equal(rows.find((x: any) => x.id === "m").isFree, true);
+    await updateCustomModel("p", "m", { isFree: true });
+    let rows = (await getCustomModels("p")) as CustomRow[];
+    assert.equal(rows.find((x) => x.id === "m").isFree, true);
     // tri-state helper treats false as Boolean(false) → stored as false (falsy free), but only true is free per isFree guard
-    await updateCustomModel("p", "m", { isFree: false } as any);
+    await updateCustomModel("p", "m", { isFree: false });
     rows = await getCustomModels("p");
-    assert.equal(rows.find((x: any) => x.id === "m").isFree, false);
+    assert.equal(rows.find((x) => x.id === "m").isFree, false);
   });
 
   it("replaceCustomModels preserves isFree (new wins else prev)", async () => {
@@ -138,15 +140,15 @@ describe("custom isFree tri-state (DB)", () => {
     // replace with new truth for override, omit for keep (prev should win)
     await replaceCustomModels("p", [
       { id: "keep", name: "keep" },
-      { id: "override", name: "override", isFree: true } as any,
+      { id: "override", name: "override", isFree: true },
     ]);
-    const rows: any = await getCustomModels("p");
+    const rows = (await getCustomModels("p")) as CustomRow[];
     assert.equal(
-      rows.find((x: any) => x.id === "keep").isFree,
+      rows.find((x) => x.id === "keep").isFree,
       true,
       "prev isFree preserved when new omits"
     );
-    assert.equal(rows.find((x: any) => x.id === "override").isFree, true, "new isFree wins");
+    assert.equal(rows.find((x) => x.id === "override").isFree, true, "new isFree wins");
   });
 
   it("allowEmpty:false intact (no destructive clear)", async () => {
@@ -163,8 +165,8 @@ describe("custom isFree tri-state (DB)", () => {
       undefined,
       true
     );
-    const before: any = await getCustomModels("p");
-    const after: any = await replaceCustomModels("p", [], { allowEmpty: false });
+    const before = (await getCustomModels("p")) as CustomRow[];
+    const after = await replaceCustomModels("p", [], { allowEmpty: false });
     assert.equal(after.length, before.length);
   });
 });
