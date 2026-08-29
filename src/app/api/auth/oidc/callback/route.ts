@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCachedSettings, updateSettings } from "@/lib/localDb";
+import { getCachedSettings } from "@/lib/db/readCache";
+import { updateSettings } from "@/lib/db/settings";
 import { SignJWT, jwtVerify, createRemoteJWKSet } from "jose";
 import { cookies } from "next/headers";
 import { timingSafeCompare } from "@/shared/utils/timingSafeCompare";

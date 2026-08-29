@@ -18,7 +18,7 @@ import {
 import path from "path";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import { createErrorResponse } from "@/lib/api/errorResponse";
-import { pickApiKeyForInternalUse } from "@/lib/localDb";
+import { pickApiKeyForInternalUse } from "@/lib/db/apiKeys";
 
 /**
  * Resolve the OmniRoute API key the spawned MITM child (`server.cjs`) uses to
@@ -69,7 +69,9 @@ export async function POST(request: Request): Promise<Response> {
   try {
     if (action === "start") {
       const suppliedPassword =
-        typeof raw.sudoPassword === "string" ? normalizeMitmSudoPasswordInput(raw.sudoPassword) : "";
+        typeof raw.sudoPassword === "string"
+          ? normalizeMitmSudoPasswordInput(raw.sudoPassword)
+          : "";
       if (suppliedPassword) setCachedPassword(suppliedPassword);
       const apiKey = await resolveRouterApiKey(rawApiKey);
       const { startMitm } = await import("@/mitm/manager.runtime");
@@ -106,7 +108,9 @@ export async function POST(request: Request): Promise<Response> {
       const result = await installCertResult(sudoPassword, certPath);
       if (result.installed) {
         const suppliedPassword =
-          typeof raw.sudoPassword === "string" ? normalizeMitmSudoPasswordInput(raw.sudoPassword) : "";
+          typeof raw.sudoPassword === "string"
+            ? normalizeMitmSudoPasswordInput(raw.sudoPassword)
+            : "";
         if (process.platform !== "win32" && suppliedPassword) {
           setCachedPassword(suppliedPassword);
         }

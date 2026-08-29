@@ -3,9 +3,9 @@ import {
   deleteApiKey,
   getApiKeyById,
   updateApiKeyPermissions,
-  isCloudEnabled,
   ApiKeyPolicyInvariantError,
-} from "@/lib/localDb";
+} from "@/lib/db/apiKeys";
+import { isCloudEnabled } from "@/lib/db/settings";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
 import { updateKeyPermissionsSchema } from "@/shared/validation/schemas";
@@ -162,10 +162,13 @@ export async function PATCH(request, { params }) {
     });
   } catch (error) {
     if (error instanceof ApiKeyPolicyInvariantError) {
-      return NextResponse.json(buildErrorBody(400, error.message, null, {
-        type: "lease_error",
-        code: error.code,
-      }), { status: 400 });
+      return NextResponse.json(
+        buildErrorBody(400, error.message, null, {
+          type: "lease_error",
+          code: error.code,
+        }),
+        { status: 400 }
+      );
     }
     log.error("keys", "Error updating key permissions", error);
     return NextResponse.json({ error: "Failed to update permissions" }, { status: 500 });
