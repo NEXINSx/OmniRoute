@@ -5,7 +5,8 @@ import {
   summarizeProviderConnectionForAudit,
 } from "@/lib/compliance/providerAudit";
 import { getCachedProviderConnectionById } from "@/lib/db/readCache";
-import { updateProviderConnection, deleteProviderConnection } from "@/lib/db/providers";
+import { updateProviderConnection } from "@/lib/db/providers";
+import { deleteProviderConnection } from "@/lib/db/providers/deletion";
 import { isCloudEnabled } from "@/lib/db/settings";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
@@ -210,7 +211,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (errorCode !== undefined) updateData.errorCode = errorCode;
     if (rateLimitedUntil !== undefined) updateData.rateLimitedUntil = rateLimitedUntil;
     if (lastTested !== undefined) updateData.lastTested = lastTested;
-    if (healthCheckInterval !== undefined) updateData.healthCheckInterval = healthCheckInterval;
+    // healthCheckInterval PATCH semantics: undefined = leave as-is; null = clear
+    // the override (connection follows the global default); 0-1440 = explicit
+    // per-connection minutes (0 opts this connection out of the sweep).
+    if (healthCheckInterval === null) updateData.healthCheckInterval = null;
+    else if (healthCheckInterval !== undefined) updateData.healthCheckInterval = healthCheckInterval;
     if (group !== undefined) updateData.group = group;
     if (maxConcurrent !== undefined) updateData.maxConcurrent = maxConcurrent;
     if (incomingWindowThresholds !== undefined) {

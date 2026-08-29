@@ -32,6 +32,22 @@ export interface RequestQueueSettings {
   maxQueueDepth: number;
 }
 
+/**
+ * Global default cadence (minutes) for the background credential health check
+ * sweep (src/lib/credentialHealth/scheduler.ts). Applies to every active
+ * connection that does NOT carry its own per-connection override. Bounded
+ * 0-1440: 0 disables the sweep entirely, 1440 = 24 hours.
+ *
+ * The per-connection `provider_connections.healthCheckInterval` (minutes)
+ * ALWAYS wins when set — including its 0 = "never test this connection"
+ * opt-out — so an operator can globally slow the sweep and still fast-probe
+ * (or fully exclude) a single connection.
+ */
+export interface CredentialHealthCheckSettings {
+  /** Sweep interval in minutes. 0 = disabled. Max 1440 (24h). */
+  intervalMinutes: number;
+}
+
 export interface ConnectionCooldownProfileSettings {
   baseCooldownMs: number;
   useUpstreamRetryHints: boolean;
@@ -221,6 +237,7 @@ export interface ResilienceSettings {
   quotaPreflight: QuotaPreflightSettings;
   streamRecovery: StreamRecoverySettings;
   providerQuotaOverrides: Record<string, ProviderQuotaOverrideSettings>;
+  credentialHealthCheck: CredentialHealthCheckSettings;
 }
 
 export interface ResilienceSettingsPatch {
@@ -234,4 +251,5 @@ export interface ResilienceSettingsPatch {
   quotaPreflight?: Partial<QuotaPreflightSettings>;
   streamRecovery?: Partial<StreamRecoverySettings>;
   providerQuotaOverrides?: Record<string, Partial<ProviderQuotaOverrideSettings>>;
+  credentialHealthCheck?: Partial<CredentialHealthCheckSettings>;
 }

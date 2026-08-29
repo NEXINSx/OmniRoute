@@ -21,6 +21,7 @@ import type {
   QuotaPreflightSettings,
   StreamRecoverySettings,
   ProviderQuotaOverrideSettings,
+  CredentialHealthCheckSettings,
 } from "./types";
 
 export function asRecord(value: unknown): JsonRecord {
@@ -467,4 +468,17 @@ export function normalizeProviderQuotaOverrides(
     if (normalized) out[provider] = normalized;
   }
   return out;
+}
+
+export function normalizeCredentialHealthCheckSettings(
+  next: unknown,
+  fallback: CredentialHealthCheckSettings
+): CredentialHealthCheckSettings {
+  const record = asRecord(next);
+  return {
+    intervalMinutes: toInteger(record.intervalMinutes, fallback.intervalMinutes, {
+      min: 0,
+      max: 1440,
+    }),
+  };
 }

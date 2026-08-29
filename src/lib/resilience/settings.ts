@@ -20,6 +20,7 @@ import {
   normalizeQuotaPreflightSettings,
   normalizeStreamRecoverySettings,
   normalizeProviderQuotaOverrides,
+  normalizeCredentialHealthCheckSettings,
 } from "./settings/normalize";
 
 // Re-export the settings shape (moved to ./settings/types) so this module's
@@ -36,6 +37,7 @@ export type {
   StreamRecoverySettings,
   StreamThroughputWatchdogSettings,
   ProviderQuotaOverrideSettings,
+  CredentialHealthCheckSettings,
   ResilienceSettings,
   ResilienceSettingsPatch,
 } from "./settings/types";
@@ -170,6 +172,12 @@ export const DEFAULT_RESILIENCE_SETTINGS: ResilienceSettings = {
   // provider registered in providerDefaultRateLimit.ts) uses its static
   // default until an operator adds an override here.
   providerQuotaOverrides: {},
+  // Global default cadence for the background credential health check sweep.
+  // 5 minutes preserves the pre-setting scheduler default (300 000 ms);
+  // 0 disables the sweep entirely. Per-connection overrides always win.
+  credentialHealthCheck: {
+    intervalMinutes: 5,
+  },
 };
 
 function buildLegacyFallback(settings: JsonRecord): ResilienceSettings {
@@ -270,6 +278,7 @@ function buildLegacyFallback(settings: JsonRecord): ResilienceSettings {
     quotaPreflight: DEFAULT_RESILIENCE_SETTINGS.quotaPreflight,
     streamRecovery: streamRecoveryDefaults,
     providerQuotaOverrides: DEFAULT_RESILIENCE_SETTINGS.providerQuotaOverrides,
+    credentialHealthCheck: DEFAULT_RESILIENCE_SETTINGS.credentialHealthCheck,
   };
 }
 
@@ -353,6 +362,10 @@ export function resolveResilienceSettings(
       current.providerQuotaOverrides,
       fallback.providerQuotaOverrides
     ),
+    credentialHealthCheck: normalizeCredentialHealthCheckSettings(
+      current.credentialHealthCheck,
+      fallback.credentialHealthCheck
+    ),
   };
 }
 
@@ -403,6 +416,10 @@ export function mergeResilienceSettings(
     providerQuotaOverrides: normalizeProviderQuotaOverrides(
       updates.providerQuotaOverrides,
       current.providerQuotaOverrides
+    ),
+    credentialHealthCheck: normalizeCredentialHealthCheckSettings(
+      updates.credentialHealthCheck,
+      current.credentialHealthCheck
     ),
   };
 }

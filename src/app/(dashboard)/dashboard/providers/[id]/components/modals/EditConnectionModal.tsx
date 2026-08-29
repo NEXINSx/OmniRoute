@@ -117,7 +117,7 @@ export default function EditConnectionModal({
     maxWaitMs: "",
     rateLimitMaxConcurrent: "",
     apiKey: "",
-    healthCheckInterval: 60,
+    healthCheckInterval: "" as number | "",
     baseUrl: "",
     targetFormat: "",
     cx: "",
@@ -336,7 +336,9 @@ export default function EditConnectionModal({
             ? String(connection.rateLimitOverrides.maxConcurrent)
             : "",
         apiKey: "",
-        healthCheckInterval: connection.healthCheckInterval ?? 60,
+        // Unset per-connection override means "follow the global default" —
+        // surface that as an empty field (0 renders as an explicit opt-out).
+        healthCheckInterval: connection.healthCheckInterval ?? "",
         baseUrl: existingBaseUrl || defaultBaseUrl,
         targetFormat: existingTargetFormat || "",
         cx: existingCx,
@@ -556,7 +558,10 @@ export default function EditConnectionModal({
         name: formData.name,
         priority: formData.priority,
         maxConcurrent: parsedMaxConcurrent,
-        healthCheckInterval: formData.healthCheckInterval,
+        // Empty field = "follow the global default" → send undefined so the
+        // stored per-connection override is cleared; 0 = explicit opt-out.
+        healthCheckInterval:
+          formData.healthCheckInterval === "" ? undefined : formData.healthCheckInterval,
       };
       const overrides: Record<string, number> = {};
       if (formData.rpm.trim()) overrides.rpm = Number(formData.rpm);
@@ -920,20 +925,19 @@ export default function EditConnectionModal({
             </p>
           </div>
         )}
-        {isOAuth && (
-          <Input
-            label={t("healthCheckMinutes")}
-            type="number"
-            value={formData.healthCheckInterval}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                healthCheckInterval: Math.max(0, Number.parseInt(e.target.value) || 0),
-              })
-            }
-            hint={t("healthCheckHint")}
-          />
-        )}
+        <Input
+          label={t("healthCheckMinutes")}
+          type="number"
+          min={0}
+          max={1440}
+          value={formData.healthCheckInterval}
+          onChange={(e) => {
+            const parsed = Number.parseInt(e.target.value, 10);
+            const next = Number.isNaN(parsed) ? 0 : Math.min(1440, Math.max(0, parsed));
+            setFormData({ ...formData, healthCheckInterval: next });
+          }}
+          hint={t("healthCheckHint")}
+        />
         <Input
           label={t("priorityLabel")}
           type="number"
