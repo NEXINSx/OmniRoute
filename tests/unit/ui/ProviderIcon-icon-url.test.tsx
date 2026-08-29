@@ -226,6 +226,23 @@ describe("ProviderIcon — custom remote icon URL (#2166)", () => {
   });
 });
 
+describe("ProviderIcon — local SVG dimensions", () => {
+  it.each([
+    ["cline", "/providers/cline.svg"],
+    ["kimi-coding", "/providers/kimi-logomark-light.svg"],
+  ])("gives %s a definite square layout size", (providerId, expectedSrc) => {
+    const container = renderIcon({ providerId, size: 24 });
+    const img = container.querySelector(`img[src="${expectedSrc}"]`);
+
+    expect(img).not.toBeNull();
+    expect(img?.style.width).toBe("24px");
+    expect(img?.style.height).toBe("24px");
+    expect(img?.style.objectFit).toBe("contain");
+    expect(img?.style.maxWidth).toBe("");
+    expect(img?.style.maxHeight).toBe("");
+  });
+});
+
 describe("ProviderIcon — unresolved local asset provenance", () => {
   it("covers the complete provider and alias inventory", () => {
     expect(PROVIDER_IDS_WITHOUT_LOCAL_ASSET_PROVENANCE).toHaveLength(79);
