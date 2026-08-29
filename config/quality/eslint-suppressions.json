@@ -1588,11 +1588,6 @@
       "count": 2
     }
   },
-  "src/lib/db/compressionCombos.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/lib/db/core.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
@@ -1614,11 +1609,6 @@
     }
   },
   "src/lib/db/healthCheck.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
-    }
-  },
-  "src/lib/db/middleware.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
     }
