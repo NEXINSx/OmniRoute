@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs/promises";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -93,6 +93,8 @@ export function ensureWindowsBuildProfileDirs(env, mkdirImpl = mkdirSync) {
 
 function runNextBuild() {
   return new Promise((resolve) => {
+    // .env bundler flag fill-in before the arg is constructed (see helper doc).
+    honorBundlerFlagFromEnvFile();
     const nextBin = path.join(projectRoot, "node_modules", "next", "dist", "bin", "next");
     const buildEnv = resolveNextBuildEnv(process.env);
     ensureWindowsBuildProfileDirs(buildEnv);
@@ -140,6 +142,30 @@ export function resolveNextBuildBundlerFlag(baseEnv = process.env) {
     return "--webpack";
   }
   return "--turbopack";
+}
+
+// Honor OMNIROUTE_USE_TURBOPACK from the repo `.env` on the BUILD path too.
+// Unlike the dev server (scripts/dev/run-next.mjs → bootstrapEnv()), this script
+// never loads .env, so the documented escape hatch set there — the exact remedy
+// for the #6409/#9695 RAM-constrained / macOS arm64 local-stall cases — was
+// silently ignored by `npm run build`: .env said 0 but the build still ran
+// Turbopack and stalled (2026-08-29 local investigation). Shell env wins;
+// .env only fills the variable in when it is absent (ports the DATA_DIR
+// pre-read pattern from run-next.mjs).
+// @param {NodeJS.ProcessEnv} [env]
+// @param {string} [cwd]
+export function honorBundlerFlagFromEnvFile(env = process.env, cwd = process.cwd()) {
+  if (env.OMNIROUTE_USE_TURBOPACK !== undefined) return env.OMNIROUTE_USE_TURBOPACK ?? null;
+  try {
+    const raw = readFileSync(path.join(cwd, ".env"), "utf8");
+    const match = raw.match(/^OMNIROUTE_USE_TURBOPACK=(\S+)\s*$/m);
+    if (match?.[1]) {
+      env.OMNIROUTE_USE_TURBOPACK = match[1].trim();
+    }
+  } catch {
+    /* .env missing or unreadable — shell env stays authoritative */
+  }
+  return env.OMNIROUTE_USE_TURBOPACK ?? null;
 }
 
 /**
