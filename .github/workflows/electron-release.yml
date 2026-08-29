@@ -35,6 +35,10 @@ jobs:
       contents: read
     outputs:
       version: ${{ steps.validate.outputs.version }}
+      # The ref every build job checks out. Validated here so the raw dispatch input never
+      # reaches a checkout (CodeQL actions/cache-poisoning: an unvalidated ref + npm cache on
+      # the default branch is a cache-poisoning vector); allowlist = main or release/vX.Y.Z.
+      build_ref: ${{ steps.validate.outputs.build_ref }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -51,6 +55,7 @@ jobs:
           # the operator-supplied value and is regex-validated below before use.
           EVENT_NAME: ${{ github.event_name }}
           INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUILD_REF: ${{ inputs.build_ref }}
         run: |
           if [[ "$EVENT_NAME" == "push" ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
@@ -64,6 +69,18 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "✓ Valid version: $VERSION"
+
+          # Ref to build from: the tag itself unless the operator names a repaired line.
+          BUILD_REF="$VERSION"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && -n "$INPUT_BUILD_REF" ]]; then
+            if [[ ! "$INPUT_BUILD_REF" =~ ^(main|release/v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              echo "Error: build_ref must be 'main' or 'release/vX.Y.Z' (got: $INPUT_BUILD_REF)"
+              exit 1
+            fi
+            BUILD_REF="$INPUT_BUILD_REF"
+          fi
+          echo "build_ref=$BUILD_REF" >> "$GITHUB_OUTPUT"
+          echo "✓ Build ref: $BUILD_REF"
 
   web-build:
     name: Build shared Next standalone
@@ -88,7 +105,7 @@ jobs:
           persist-credentials: false
           # workflow_dispatch: build the tag being (re)built, not the dispatching branch. On a
           # tag push this resolves to the same commit.
-          ref: ${{ inputs.build_ref || needs.validate.outputs.version }}
+          ref: ${{ needs.validate.outputs.build_ref }}
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -176,7 +193,7 @@ jobs:
           persist-credentials: false
           # workflow_dispatch: build the tag being (re)built, not the dispatching branch. On a
           # tag push this resolves to the same commit.
-          ref: ${{ inputs.build_ref || needs.validate.outputs.version }}
+          ref: ${{ needs.validate.outputs.build_ref }}
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -364,7 +381,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           # Source archives + SBOM come from the tag being released, not the dispatching branch.
-          ref: ${{ inputs.build_ref || needs.validate.outputs.version }}
+          ref: ${{ needs.validate.outputs.build_ref }}
 
       # `merge-multiple` is deliberately OFF. It resolves same-name collisions by ARRIVAL
       # ORDER, and the two macOS jobs each emit their own `latest-mac.yml` listing only their
