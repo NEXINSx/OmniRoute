@@ -341,7 +341,12 @@ async function buildUnifiedModelsResponseCore(
     // explicitly — a disabled router rejects every auto/* id with a 400, so
     // listing them offers the client a choice that cannot succeed.
     const hideAuto = settings.hideAutoCombos === true || settings.autoRoutingEnabled === false;
-    const shouldHidePaid = (providerKey: string, modelId: string, pricing?: unknown, isFree?: boolean): boolean => {
+    const shouldHidePaid = (
+      providerKey: string,
+      modelId: string,
+      pricing?: unknown,
+      isFree?: boolean
+    ): boolean => {
       if (!hidePaid) return false;
       const provider = aliasToProviderId[providerKey] || providerKey;
       // isFree:true is the first door — custom row kept even when its provider is outside FREE_MODEL_BUDGETS.
@@ -730,6 +735,83 @@ async function buildUnifiedModelsResponseCore(
       };
     };
 
+    const buildBuiltinAutoModalityMetadata = (
+      targets: Array<{
+        model: string;
+        providerId: string;
+        connectionId?: string | null;
+        allowedConnectionIds?: string[] | null;
+      }>
+    ) => {
+      const emptyMetadata = { inputModalities: [], outputModalities: [], vision: false };
+      if (targets.length === 0) return emptyMetadata;
+
+      const targetMetadata = targets.map((target) => {
+        const comboTarget = {
+          modelStr: target.model,
+          providerId: target.providerId,
+          connectionId: target.connectionId,
+          ...(target.allowedConnectionIds
+            ? { allowedConnectionIds: target.allowedConnectionIds }
+            : {}),
+        };
+        const metadata = getComboTargetCatalogMetadata(comboTarget);
+        const targetModel = getComboTargetModelId(comboTarget);
+        if (!metadata || !targetModel) return null;
+
+        const synced = getSyncedCapability(
+          targetModel.providerId,
+          targetModel.modelId,
+          capabilityResolutionSnapshot.synced
+        );
+        if (!synced) return metadata;
+
+        const inputModalities = parseJsonStringArray(synced.modalities_input);
+        const outputModalities = parseJsonStringArray(synced.modalities_output);
+        const syncedVision =
+          typeof synced.attachment === "boolean" ? synced.attachment : metadata.capabilities.vision;
+        return {
+          ...metadata,
+          inputModalities,
+          outputModalities,
+          capabilities: {
+            ...metadata.capabilities,
+            ...(typeof syncedVision === "boolean" ? { vision: syncedVision } : {}),
+          },
+        };
+      });
+      // #11947: built-in autos must fail closed when any effective target is unknown;
+      // persisted combos intentionally aggregate their known subset instead.
+      if (targetMetadata.some((metadata) => metadata === null)) return emptyMetadata;
+
+      const knownMetadata = targetMetadata.filter(
+        (metadata): metadata is ComboTargetCatalogMetadata => metadata !== null
+      );
+      let inputModalities = knownMetadata.every(
+        (metadata) => Array.isArray(metadata.inputModalities) && metadata.inputModalities.length > 0
+      )
+        ? intersectStringArrays(knownMetadata.map((metadata) => metadata.inputModalities || []))
+        : [];
+      const outputModalities = knownMetadata.every(
+        (metadata) =>
+          Array.isArray(metadata.outputModalities) && metadata.outputModalities.length > 0
+      )
+        ? intersectStringArrays(knownMetadata.map((metadata) => metadata.outputModalities || []))
+        : [];
+      const unanimousVision = knownMetadata.every(
+        (metadata) => metadata.capabilities.vision === true
+      );
+      if (inputModalities.includes("image") && !unanimousVision) {
+        inputModalities = [];
+      }
+
+      return {
+        inputModalities,
+        outputModalities,
+        vision: unanimousVision && inputModalities.includes("image"),
+      };
+    };
+
     const buildComboCatalogMetadata = (
       combo: Parameters<typeof resolveNestedComboTargets>[0],
       targets: ComboCatalogTarget[]
@@ -869,6 +951,7 @@ async function buildUnifiedModelsResponseCore(
         const virtualCombo = await createBuiltinAutoCombo(autoId, suffix, preparedAutoInputs);
         const contextLength = virtualCombo.advertisedContextLength || 128000;
         const maxOutputTokens = virtualCombo.advertisedMaxOutputTokens || 8192;
+        const modalityMetadata = buildBuiltinAutoModalityMetadata(virtualCombo.models);
         models.push({
           ...baseAutoEntry,
           context_length: contextLength,
@@ -879,7 +962,14 @@ async function buildUnifiedModelsResponseCore(
             reasoning: true,
             thinking: true,
             temperature: true,
+            ...(modalityMetadata.vision ? { vision: true } : {}),
           },
+          ...(modalityMetadata.inputModalities.length > 0
+            ? { input_modalities: modalityMetadata.inputModalities }
+            : {}),
+          ...(modalityMetadata.outputModalities.length > 0
+            ? { output_modalities: modalityMetadata.outputModalities }
+            : {}),
         });
       } catch (err) {
         console.log(`[catalog] Could not materialize built-in auto model ${autoId}:`, err);
@@ -1580,7 +1670,12 @@ async function buildUnifiedModelsResponseCore(
           // Custom entries do not carry pricing, so shouldHidePaid() decides
           // via FREE_MODEL_IDS_BY_PROVIDER — matches synced/PROVIDER_MODELS.
           if (
-            shouldHidePaid(canonicalProviderId, modelId, (model as { pricing?: unknown }).pricing, (model as any).isFree)
+            shouldHidePaid(
+              canonicalProviderId,
+              modelId,
+              (model as { pricing?: unknown }).pricing,
+              (model as any).isFree
+            )
           )
             continue;
           // noAuth providers have no connection rows; keep auth providers gated. (#2798/#3200)
