@@ -400,7 +400,7 @@ export async function buildAutoCandidates(
   // apply, so auto-routing behavior is unchanged.
   const quotaCutoffEnabled =
     (resilienceSettings ?? resolveResilienceSettings(null))?.quotaPreflight?.enabled === true;
-  const { getPricingForModel } = await import("../../src/lib/localDb");
+  const { getPricingForModel } = await import("@/lib/db/settings");
   const quotaPromises = new Map<string, Promise<unknown>>();
   let historicalLatencyStats: Record<string, HistoricalLatencyStatsEntry> = {};
   try {
@@ -1937,7 +1937,7 @@ async function handleComboChatInner({
               const connId = effectiveConnectionId || undefined;
               void (async () => {
                 try {
-                  const { setLKGP } = await import("../../src/lib/localDb");
+                  const { setLKGP } = await import("@/lib/db/settings");
                   await Promise.all([
                     setLKGP(combo.name, target.executionKey, provider, connId),
                     setLKGP(combo.name, combo.id || combo.name, provider, connId),
@@ -2418,7 +2418,7 @@ async function handleComboChatInner({
           // so nothing else clears this stale pin.
           void (async () => {
             try {
-              const { clearLKGP } = await import("../../src/lib/localDb");
+              const { clearLKGP } = await import("@/lib/db/settings");
               await Promise.all([
                 clearLKGP(combo.name, target.executionKey),
                 clearLKGP(combo.name, combo.id || combo.name),
@@ -3535,7 +3535,7 @@ async function handleRoundRobinCombo({
               const connId = effectiveConnectionId || undefined;
               void (async () => {
                 try {
-                  const { setLKGP } = await import("../../src/lib/localDb");
+                  const { setLKGP } = await import("@/lib/db/settings");
                   await Promise.all([
                     setLKGP(combo.name, target.executionKey, provider, connId),
                     setLKGP(combo.name, combo.id || combo.name, provider, connId),
@@ -3768,7 +3768,7 @@ async function handleRoundRobinCombo({
           // by a request-scoped failure class like a stream-readiness timeout).
           void (async () => {
             try {
-              const { clearLKGP } = await import("../../src/lib/localDb");
+              const { clearLKGP } = await import("@/lib/db/settings");
               await Promise.all([
                 clearLKGP(combo.name, target.executionKey),
                 clearLKGP(combo.name, combo.id || combo.name),
