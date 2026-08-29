@@ -1,3 +1,9 @@
+---
+title: "Log Export"
+version: 3.8.51
+lastUpdated: 2026-08-29
+---
+
 # Log export
 
 Continuous, incremental export of OmniRoute call logs to an external analytics store.
@@ -45,20 +51,20 @@ no-log and PII rules; the export carries the same summary fields the Logs tab re
 
 ## 2. Files
 
-| Piece                | Location                                       |
-| -------------------- | ---------------------------------------------- |
-| Destination contract | `src/lib/logExport/types.ts`                   |
-| Registry             | `src/lib/logExport/registry.ts`                |
-| Secret handling      | `src/lib/logExport/secrets.ts`                 |
-| Runner (cursor loop) | `src/lib/logExport/runner.ts`                  |
-| API projection       | `src/lib/logExport/presenter.ts`               |
-| BigQuery destination | `src/lib/logExport/destinations/bigquery.ts`   |
-| Google SA auth       | `src/lib/logExport/googleServiceAccount.ts`    |
-| Call-log source      | `src/lib/usage/callLogExportSource.ts`         |
-| Persistence          | `src/lib/db/logExportDestinations.ts`          |
-| Cron job             | `src/lib/jobs/logExportJob.ts`                 |
-| REST layer           | `src/app/api/log-export/`                      |
-| Dashboard page       | `src/app/(dashboard)/dashboard/log-export/`    |
+| Piece                | Location                                     |
+| -------------------- | -------------------------------------------- |
+| Destination contract | `src/lib/logExport/types.ts`                 |
+| Registry             | `src/lib/logExport/registry.ts`              |
+| Secret handling      | `src/lib/logExport/secrets.ts`               |
+| Runner (cursor loop) | `src/lib/logExport/runner.ts`                |
+| API projection       | `src/lib/logExport/presenter.ts`             |
+| BigQuery destination | `src/lib/logExport/destinations/bigquery.ts` |
+| Google SA auth       | `src/lib/logExport/googleServiceAccount.ts`  |
+| Call-log source      | `src/lib/usage/callLogExportSource.ts`       |
+| Persistence          | `src/lib/db/logExportDestinations.ts`        |
+| Cron job             | `src/lib/jobs/logExportJob.ts`               |
+| REST layer           | `src/app/api/log-export/`                    |
+| Dashboard page       | `src/app/(dashboard)/dashboard/log-export/`  |
 
 Schema: `src/lib/db/migrations/170_log_export_destinations.sql`.
 
@@ -75,17 +81,17 @@ Creating or updating a destination whose type declares a secret **requires
 refused with a 400 rather than putting a credential into SQLite in plaintext (the same guard the
 Telegram webhook applies).
 
-| Method   | Path                                        | Purpose                                       |
-| -------- | ------------------------------------------- | --------------------------------------------- |
-| `GET`    | `/api/log-export/types`                     | Destination types + their config field list   |
-| `GET`    | `/api/log-export/destinations`              | List destinations (secrets redacted)          |
-| `POST`   | `/api/log-export/destinations`              | Create a destination                          |
-| `GET`    | `/api/log-export/destinations/{id}`         | Read one                                      |
-| `PUT`    | `/api/log-export/destinations/{id}`         | Update name / enabled / config / batching     |
-| `DELETE` | `/api/log-export/destinations/{id}`         | Delete                                        |
-| `POST`   | `/api/log-export/destinations/{id}/test`    | Probe credentials, write nothing              |
-| `POST`   | `/api/log-export/destinations/{id}/run`     | Drain now, same path as the scheduled run     |
-| `GET`    | `/api/log-export/status`                    | Cron state, recent runs, backlog per target   |
+| Method   | Path                                     | Purpose                                     |
+| -------- | ---------------------------------------- | ------------------------------------------- |
+| `GET`    | `/api/log-export/types`                  | Destination types + their config field list |
+| `GET`    | `/api/log-export/destinations`           | List destinations (secrets redacted)        |
+| `POST`   | `/api/log-export/destinations`           | Create a destination                        |
+| `GET`    | `/api/log-export/destinations/{id}`      | Read one                                    |
+| `PUT`    | `/api/log-export/destinations/{id}`      | Update name / enabled / config / batching   |
+| `DELETE` | `/api/log-export/destinations/{id}`      | Delete                                      |
+| `POST`   | `/api/log-export/destinations/{id}/test` | Probe credentials, write nothing            |
+| `POST`   | `/api/log-export/destinations/{id}/run`  | Drain now, same path as the scheduled run   |
+| `GET`    | `/api/log-export/status`                 | Cron state, recent runs, backlog per target |
 
 `GET /api/log-export/types` is what makes the UI generic: the dashboard form is rendered from
 the returned field descriptors, so a new destination needs no UI change.
@@ -160,7 +166,7 @@ Two rules for a new destination:
 - **Dashboard**: Integrations → Log export. Add a destination, run **Test** to check credentials
   without writing rows, then enable it.
 - **Backlog**: each destination card shows pending rows and the cursor; `GET
-  /api/log-export/status` returns the same figures plus the last 20 job runs.
+/api/log-export/status` returns the same figures plus the last 20 job runs.
 - **A failing destination does not fail the others** — the run summary records per-destination
   status in `last_status` / `last_error`, and the job run history keeps the aggregate.
 - **Deleting a destination deletes its cursor.** Re-adding it starts from the oldest retained
