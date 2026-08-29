@@ -47,7 +47,7 @@ test("web-session contract preserves representative token and cookie semantics",
   assert.equal(providers.get("deepseek-web")?.credential.kind, "token");
   assert.equal(providers.get("zai-web")?.credential.kind, "token");
   assert.equal(providers.get("gemini-web")?.credential.kind, "cookie");
-  assert.equal(providers.get("qwen-web")?.credential.kind, "cookie");
+  assert.equal(providers.get("perplexity-web")?.credential.kind, "cookie");
 
   assert.ok(
     providers

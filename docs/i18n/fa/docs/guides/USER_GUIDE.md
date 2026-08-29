@@ -41,7 +41,6 @@
 |                        | MiniMax M2.1      | ۰٫۲ دلار/۱میلیون  | بازه چرخشی ۵ ساعته       | ارزان‌ترین گزینه                |
 |                        | Kimi K2           | ماهانه ۹ دلار ثابت | ماهانه ۱۰ میلیون توکن    | هزینه قابل پیش‌بینی             |
 | **🆓 رایگان**          | Qoder             | ۰ دلار            | تابع محدودیت ارائه‌دهنده | بررسی فهرست فعلی                |
-|                        | Qwen              | ۰ دلار            | تابع محدودیت ارائه‌دهنده | بررسی فهرست فعلی                |
 |                        | Kiro              | ۰ دلار            | تابع محدودیت ارائه‌دهنده | Claude رایگان                   |
 
 ---
@@ -69,7 +68,7 @@
 ```
 ترکیب: "free-tier-fallback"
   1. if/kimi-k2-thinking       (سقف توکن منتشر نشده است؛ محدودیت‌ها اعمال می‌شوند)
-  2. qw/qwen3-coder-plus       (سقف توکن منتشر نشده است؛ محدودیت‌ها اعمال می‌شوند)
+  2. kr/qwen3-coder-next
 
 هزینه ماهانه: ۰ دلار
 کیفیت: مدل، محدودیت‌ها، حریم خصوصی و SLA را متناسب با بار کاری خود بررسی کنید
@@ -185,13 +184,6 @@ Dashboard → Connect Qoder → ورود با OAuth → دسترسی تابع م
 مدل‌ها: if/kimi-k2-thinking, if/qwen3-coder-plus, if/glm-4.7, if/minimax-m2, if/deepseek-r1
 ```
 
-#### Qwen (۳ مدل رایگان)
-
-```bash
-Dashboard → Connect Qwen → احراز هویت با کد دستگاه → دسترسی تابع محدودیت‌های فعلی ارائه‌دهنده است
-
-مدل‌ها: qw/qwen3-coder-plus, qw/qwen3-coder-flash
-```
 
 #### Kiro (دسترسی رایگان به Claude)
 
@@ -227,7 +219,7 @@ Dashboard → Combos → Create New
 نام: free-combo
 مدل‌ها:
   1. if/kimi-k2-thinking (سقف توکن منتشر نشده است؛ ممکن است محدودیت ارائه‌دهنده اعمال شود)
-  2. qw/qwen3-coder-plus (سقف توکن منتشر نشده است؛ ممکن است محدودیت ارائه‌دهنده اعمال شود)
+  2. kr/qwen3-coder-next
 
 هزینه: درحال‌حاضر ۰ دلار اعلام شده است؛ شرایط و دسترس‌پذیری ممکن است تغییر کند
 ```
@@ -547,7 +539,6 @@ post_install() {
 
 **Qoder (`if/`)** — رایگان: `if/kimi-k2-thinking`, `if/qwen3-coder-plus`, `if/deepseek-r1`
 
-**Qwen (`qw/`)** — رایگان: `qw/qwen3-coder-plus`, `qw/qwen3-coder-flash`
 
 **Kiro (`kr/`)** — رایگان: `kr/claude-sonnet-4.5`, `kr/claude-haiku-4.5`
 

@@ -109,11 +109,13 @@ function isDayAllowed(window: PeakHourWindow, date: Date): boolean {
 }
 
 function windowActiveAt(window: PeakHourWindow, date: Date): boolean {
-  if (!isDayAllowed(window, date)) return false;
   const start = parseUtcTimeMinutes(window.startUtc);
   const end = parseUtcTimeMinutes(window.endUtc);
   if (start === null || end === null || start === end) return false;
   const now = date.getUTCHours() * 60 + date.getUTCMinutes();
+  const effectiveDay =
+    start > end && now < end ? new Date(date.getTime() - MINUTES_PER_DAY * 60_000) : date;
+  if (!isDayAllowed(window, effectiveDay)) return false;
   return start < end ? now >= start && now < end : now >= start || now < end;
 }
 

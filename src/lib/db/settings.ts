@@ -147,6 +147,8 @@ export async function getSettings() {
     tailscaleUrl: "",
     stickyRoundRobinLimit: 3,
     disableSessionStickiness: false,
+    // Global connection-aware expansion fallback for group-B combo strategies is opt-in.
+    connectionAwareExpansion: false,
     promptCacheAffinityEnabled: true,
     comboStrategy: "fallback",
     comboStickyRoundRobinLimit: null, // null = inherit stickyRoundRobinLimit (a literal default here shadows the documented batched-rotation default of 3 — #6678 regression caught by the v3.8.47 release CI)

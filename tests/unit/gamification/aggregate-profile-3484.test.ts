@@ -16,7 +16,8 @@ if (!process.env.API_KEY_SECRET) {
 
 const { getDbInstance, resetDbInstance } = await import("../../../src/lib/db/core.ts");
 const gami = await import("../../../src/lib/db/gamification.ts");
-const { seedBuiltinBadges, BUILTIN_BADGES } = await import("../../../src/lib/gamification/badges.ts");
+const { seedBuiltinBadges, BUILTIN_BADGES } =
+  await import("../../../src/lib/gamification/badges.ts");
 
 test.after(() => {
   try {
@@ -29,7 +30,7 @@ test.after(() => {
   } catch {
     /* ignore */
   }
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("#3484 getAggregateXp on an empty ledger → zero XP, level 1, no throw", () => {

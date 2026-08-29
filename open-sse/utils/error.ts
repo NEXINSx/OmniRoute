@@ -343,13 +343,22 @@ export function errorResponseWithComboDiagnostics(
  * @param {string} message - Error message
  * @returns {Response} HTTP Response object
  */
-export function errorResponse(statusCode: number, message: string): Response {
-  return new Response(JSON.stringify(buildErrorBody(statusCode, sanitizeErrorMessage(message))), {
-    status: statusCode,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+export function errorResponse(
+  statusCode: number,
+  message: string,
+  classification?: ErrorBodyClassification
+): Response {
+  return new Response(
+    JSON.stringify(
+      buildErrorBody(statusCode, sanitizeErrorMessage(message), undefined, classification)
+    ),
+    {
+      status: statusCode,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
 }
 
 /**

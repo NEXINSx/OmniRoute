@@ -48,7 +48,7 @@ const providerNodeIconUrlSchema = z
   .optional();
 
 // #6715: the `apiKey` field is reused as the raw `Cookie:` header value for
-// cookie-based web providers (Gemini Business, Copilot M365, ChatGPT Web,
+// cookie-based web providers (Gemini Business, Copilot M365, ChatGPT Web (Codex),
 // Claude Web, …). Real multi-cookie session headers (many `__Secure-*` entries,
 // large session tokens) legitimately exceed the old 10,000-char cap, so saving
 // a cookie that the provider's own `validate` check (validateProviderApiKeySchema,
@@ -271,6 +271,7 @@ export const providerModelMutationSchema = z.object({
   // the same flag flows through `getCustomVisionCapabilityFields()` in the /v1/models
   // catalog. `null` clears a manual override back to the id-based heuristic.
   supportsVision: z.boolean().nullable().optional(),
+  isFree: z.boolean().nullable().optional(),
   normalizeToolCallId: z.boolean().optional(),
   preserveOpenAIDeveloperRole: z.boolean().nullable().optional(),
   upstreamHeaders: upstreamHeadersRecordSchema.nullable().optional(),
@@ -339,6 +340,17 @@ export const createProviderNodeSchema = z
   })
   .superRefine((value, ctx) => {
     const nodeType = value.type || "openai-compatible";
+    const normalizedPrefix = value.prefix?.trim();
+    if (normalizedPrefix && isReservedProviderPrefix(normalizedPrefix)) {
+      // Validate caller-supplied prefixes before preset handling. Presets may
+      // provide a default, but the route preserves an explicit prefix; an early
+      // return here used to let retired identities create unreachable nodes.
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: reservedProviderPrefixMessage(normalizedPrefix),
+        path: ["prefix"],
+      });
+    }
     if (value.preset === "vibeproxy-openai") {
       // Preset supplies name/prefix/apiType — but baseUrl is still mandatory
       // (a local proxy's host/port is operator-specific, unlike the generic

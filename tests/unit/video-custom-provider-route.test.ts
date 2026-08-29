@@ -43,7 +43,7 @@ test.afterEach(() => {
 
 test.after(() => {
   core.closeDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("video route uses OpenAI-compatible handler for custom provider with videos endpoint", async () => {

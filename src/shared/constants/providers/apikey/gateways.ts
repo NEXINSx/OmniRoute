@@ -692,10 +692,14 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://g4f.space",
     hasFree: false,
     freeNote:
-      "No-key reverse proxy to Groq (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
+      "Anonymous access to Groq requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-gemini": {
     id: "g4f-gemini",
@@ -707,10 +711,14 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://g4f.space",
     hasFree: false,
     freeNote:
-      "No-key reverse proxy to Gemini (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
+      "Anonymous access to Gemini requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-pollinations": {
     id: "g4f-pollinations",
@@ -722,10 +730,14 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://g4f.space",
     hasFree: false,
     freeNote:
-      "No-key reverse proxy to Pollinations (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
+      "Anonymous access to Pollinations requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-ollama": {
     id: "g4f-ollama",
@@ -737,10 +749,14 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://g4f.space",
     hasFree: false,
     freeNote:
-      "No-key hosted Ollama gateway (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
+      "Anonymous access to hosted Ollama requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "g4f-nvidia": {
     id: "g4f-nvidia",
@@ -752,10 +768,14 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://g4f.space",
     hasFree: false,
     freeNote:
-      "No-key reverse proxy to NVIDIA NIM (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
+      "Anonymous access to NVIDIA NIM requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
+    notice: {
+      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      apiKeyUrl: "https://g4f.dev/members.html",
+    },
   },
   "vercel-ai-gateway": {
     id: "vercel-ai-gateway",

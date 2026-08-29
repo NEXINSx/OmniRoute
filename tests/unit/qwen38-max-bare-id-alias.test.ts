@@ -7,7 +7,7 @@ import { hasKnownProviderModel } from "../../open-sse/services/model.ts";
 
 /**
  * Bare `qwen3.8-max` was an unroutable id: the model ships everywhere as
- * `qwen3.8-max-preview` (bailian-coding-plan, qoder, qwen-cloud-token-plan, qwen-web),
+ * `qwen3.8-max-preview` (bailian-coding-plan, qoder, qwen-cloud-token-plan),
  * and nothing in the repo declared the short form. A client sending it therefore
  *
  *   1. missed MODEL_SPECS, so `getModelContextLimit()` fell through to the
@@ -52,12 +52,14 @@ test("the alias target carries the real 1M window, not the 128k fallback", () =>
   assert.equal(MODEL_SPECS[BARE], undefined);
 });
 
-// The catalogs have since split. `qwen-cloud-token-plan` and `qwen-web` now list the
-// BARE id and no longer carry `-preview`, so `resolveModelAlias`'s
+// The catalogs have since split. `qwen-cloud-token-plan` now lists the BARE
+// id and no longer carries `-preview`, so `resolveModelAlias`'s
 // `hasKnownProviderModel` short-circuit deliberately leaves the id alone there —
-// rewriting it to `-preview` would dispatch an id those two no longer serve. The
-// rewrite still has to happen on the providers that only know `-preview`.
-const SERVES_BARE = ["qwen-cloud-token-plan", "qwen-web"];
+// rewriting it to `-preview` would dispatch an id that provider no longer
+// serves. The rewrite still has to happen on the providers that only know
+// `-preview`. `qwen-web` served the BARE id too before its retirement
+// (provenance HOLD, #11713); it no longer exists as a provider at all.
+const SERVES_BARE = ["qwen-cloud-token-plan"];
 const SERVES_PREVIEW = ["qoder", "bailian-coding-plan"];
 
 // Pin the premise, not just the outcome: if a catalog flips, this fails first and says

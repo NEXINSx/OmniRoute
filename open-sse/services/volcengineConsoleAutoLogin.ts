@@ -28,6 +28,7 @@
  */
 
 import { randomUUID } from "crypto";
+import { matchesCookieDomain } from "../utils/cookieDomain";
 
 // ─── Public types ───────────────────────────────────────────────────────────
 
@@ -95,13 +96,6 @@ const ARK_CONSOLE_URL =
 
 /** Cookie names required for a valid console session (mirrors tokenExtractionConfig) */
 const REQUIRED_COOKIES = ["digest", "AccountID", "csrfToken", "userInfo"] as const;
-
-/** Exact-domain match for session cookies — substring checks would also accept
- * look-alike hosts (e.g. `volcengine.com.evil.test`). Playwright may report the
- * domain with or without a leading dot. */
-function isVolcengineCookieDomain(domain: string): boolean {
-  return domain === "volcengine.com" || domain.endsWith(".volcengine.com");
-}
 
 const DEFAULT_SESSION_TIMEOUT = 300_000;
 const SUBMIT_COOKIE_TIMEOUT = 90_000;
@@ -236,6 +230,21 @@ export function normalizePhone(raw: string): string | null {
     .replace(/[\s-]/g, "");
   const bare = trimmed.replace(/^\+?86/, "");
   return /^1\d{10}$/.test(bare) ? bare : null;
+}
+
+/**
+ * Whether a cookie's `domain` belongs to the Volcengine console.
+ *
+ * Cookie domains must be matched by exact host or dot-boundary suffix, never by
+ * substring: `domain.includes("volcengine.com")` also accepted
+ * `volcengine.com.attacker.tld` and `notvolcengine.com`, so a cookie named
+ * `digest`/`AccountID`/`csrfToken`/`userInfo` set by a look-alike host was
+ * harvested as an operator credential and persisted as a provider connection
+ * (CodeQL js/incomplete-url-substring-sanitization #860/#861). Mirrors
+ * `isAdobeCookieDomain` in adobeFireflyBrowserLogin.ts.
+ */
+export function isVolcengineCookieDomain(domain: string | undefined): boolean {
+  return matchesCookieDomain(domain, "volcengine.com");
 }
 
 function sleep(ms: number): Promise<void> {

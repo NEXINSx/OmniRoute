@@ -60,10 +60,12 @@ function isZeroPrice(value: unknown): boolean {
 export interface FreeModelCandidate {
   id?: string;
   pricing?: { prompt?: string | number; completion?: string | number };
+  isFree?: boolean;
 }
 
 /** Whether a single fetched model qualifies as free for the given provider (id or alias). */
 export function isFreeModel(provider: string, model: FreeModelCandidate): boolean {
+  if (model.isFree === true) return true;
   if (typeof model.id === "string" && model.id.endsWith(":free")) return true;
   if (isZeroPrice(model.pricing?.prompt) && isZeroPrice(model.pricing?.completion)) return true;
   if (typeof model.id === "string") {

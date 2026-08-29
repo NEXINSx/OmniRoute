@@ -8,7 +8,6 @@ const { V0VercelWebExecutor } = await import("../../open-sse/executors/v0-vercel
 const { KimiWebExecutor } = await import("../../open-sse/executors/kimi-web.ts");
 const { MoonshotExecutor } = await import("../../open-sse/executors/moonshot.ts");
 const { DoubaoWebExecutor } = await import("../../open-sse/executors/doubao-web.ts");
-const { QwenWebExecutor } = await import("../../open-sse/executors/qwen-web.ts");
 const { getExecutor, hasSpecializedExecutor } = await import("../../open-sse/executors/index.ts");
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -158,6 +157,12 @@ test("Doubao Web executor is registered", async () => {
   assert.ok(executor instanceof DoubaoWebExecutor);
 });
 
+test("Qwen Web aliases stay removed while Qwen Cloud remains routable", async () => {
+  assert.equal(hasSpecializedExecutor("qwen-web"), false);
+  assert.equal(hasSpecializedExecutor("qw"), false);
+  assert.equal((await getExecutor("qwen-cloud")).getProvider(), "qwen-cloud");
+});
+
 // ── Constructor Tests ────────────────────────────────────────────────────────
 
 test("HuggingChat sets correct provider", () => {
@@ -188,21 +193,6 @@ test("Kimi Web sets correct provider", () => {
 test("Doubao Web sets correct provider", () => {
   const executor = new DoubaoWebExecutor();
   assert.equal(executor.getProvider(), "doubao-web");
-});
-
-// ── Registration Tests (Qwen Web) ────────────────────────────────────────────
-
-test("Qwen Web executor is registered", async () => {
-  assert.ok(hasSpecializedExecutor("qwen-web"));
-  const executor = await getExecutor("qwen-web");
-  assert.ok(executor instanceof QwenWebExecutor);
-});
-
-// ── Constructor Tests (Qwen Web) ─────────────────────────────────────────────
-
-test("Qwen Web sets correct provider", () => {
-  const executor = new QwenWebExecutor();
-  assert.equal(executor.getProvider(), "qwen-web");
 });
 
 // ── HuggingChat Execution Tests ──────────────────────────────────────────────
