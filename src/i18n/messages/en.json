@@ -11244,6 +11244,8 @@
       "tokens": "Tokens",
       "compressed": "Compression",
       "tps": "TPS",
+      "ttft": "TTFT",
+      "ttftTitle": "Time to first token (client-side estimate)",
       "duration": "Duration",
       "time": "Time",
       "conversation": "Conversation"

@@ -68,6 +68,12 @@ export function rowMatchesFilter(row: any, filter: Record<string, any>): boolean
   }
   if (filter.search) {
     const term = String(filter.search);
+    const tokens = term.split(/\s+/).filter(Boolean);
+    const positiveTokens = tokens.filter((t) => !t.startsWith("-") || t.length === 1);
+    const negativeTokens = tokens
+      .filter((t) => t.startsWith("-") && t.length > 1)
+      .map((t) => t.substring(1));
+
     const haystack = [
       row?.model,
       row?.provider,
@@ -81,7 +87,16 @@ export function rowMatchesFilter(row: any, filter: Record<string, any>): boolean
     ]
       .filter(Boolean)
       .join(" ");
-    if (!matchesSearch(haystack, term)) return false;
+
+    // Must match ALL positive tokens
+    for (const pToken of positiveTokens) {
+      if (!matchesSearch(haystack, pToken)) return false;
+    }
+
+    // Must NOT match ANY negative tokens
+    for (const nToken of negativeTokens) {
+      if (matchesSearch(haystack, nToken)) return false;
+    }
   }
 
   return true;
@@ -125,6 +140,7 @@ export function buildCallLogListRows({
       account: connectionNames.get(detail.connectionId || "") || detail.connectionId || "unknown",
       connectionId: detail.connectionId,
       duration: Math.max(0, now - detail.startedAt),
+      timeToFirstTokenMs: null,
       tokens: { in: 0, out: 0 },
       cacheSource: null,
       sourceFormat: null,
@@ -160,6 +176,7 @@ export function buildCallLogListRows({
       account: connectionNames.get(detail.connectionId || "") || detail.connectionId || "unknown",
       connectionId: detail.connectionId,
       duration,
+      timeToFirstTokenMs: null,
       tokens: { in: 0, out: 0 },
       cacheSource: null,
       sourceFormat: null,

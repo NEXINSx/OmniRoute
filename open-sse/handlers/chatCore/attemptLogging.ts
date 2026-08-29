@@ -14,7 +14,7 @@ import { extractProviderWarnings } from "@/lib/compliance/providerAudit";
 import { logAuditEvent } from "@/lib/compliance";
 import { emit } from "@/lib/events/eventBus";
 import type { RequestCompletedPayload, RequestFailedPayload } from "@/lib/events/types";
-import { saveCallLog } from "@/lib/usageDb";
+import { saveCallLog, normalizeTtftMs } from "@/lib/usageDb";
 import { FORMATS } from "../../translator/formats.ts";
 import { takeEarlyKeepaliveBytes } from "../../utils/earlyKeepaliveByteBuffer.ts";
 import { cloneBoundedChatLogPayload, truncateForLog } from "./logTruncation.ts";
@@ -57,6 +57,8 @@ export type PersistAttemptLogsArgs = {
   claudeCacheMeta?: Record<string, unknown>;
   claudeCacheUsageMeta?: Record<string, unknown>;
   cacheSource?: "upstream" | "semantic";
+  ttft?: number | null;
+  timeToFirstTokenMs?: number | null;
 };
 
 export type PersistAttemptLogsContext = {
@@ -285,6 +287,7 @@ export function persistAttemptLogs(args: PersistAttemptLogsArgs, ctx: PersistAtt
     provider,
     connectionId: finalConnectionId || undefined,
     duration: Date.now() - startTime,
+    timeToFirstTokenMs: normalizeTtftMs(args.ttft ?? args.timeToFirstTokenMs),
     tokens: tokens || {},
     requestBody: cloneBoundedChatLogPayload(
       attachLogMeta(truncateForLog(body as Record<string, unknown>), {

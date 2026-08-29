@@ -7054,6 +7054,14 @@
     "providerAccountRoutingDesc": "Ghi đè chiến lược tài khoản toàn cầu cho nhà cung cấp này (tương thích với 9router).",
     "providerRoutingStrategy": "Chiến lược tài khoản",
     "providerRoutingInheritGlobal": "Kế thừa mặc định toàn cầu",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Bí danh mô hình",
     "modelAliasesTitle": "Bí danh mô hình",
     "modelAliasesDesc": "Ánh xạ lại tên mô hình bằng cách khớp chính xác hoặc mẫu ký tự đại diện.",
@@ -8313,15 +8321,7 @@
     "cliproxyapiHealth": "Sức Khỏe",
     "cliproxyapiPort": "Cổng",
     "qdrantHost": "Máy chủ",
-    "qdrantCollection": "Bộ Sưu Tập",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "Bộ Sưu Tập"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11244,6 +11244,8 @@
       "tokens": "Token",
       "compressed": "Nén",
       "tps": "TPS",
+      "ttft": "TTFT",
+      "ttftTitle": "Thời gian nhận token đầu tiên (ước tính phía máy khách)",
       "duration": "Thời lượng",
       "time": "Thời gian",
       "conversation": "Cuộc trò chuyện"
@@ -11281,16 +11283,16 @@
     "detail": {
       "collapse": "Thu gọn {title}",
       "expand": "Mở rộng {title}",
-      "collapseAllLevels": "Thu gọn tất cả",
-      "collapseOneLevel": "Thu gọn một cấp",
-      "currentExpandLevel": "Cấp mở rộng hiện tại",
-      "expandOneLevel": "Mở rộng một cấp",
-      "expandAllLevels": "Mở rộng tất cả",
       "copyTitle": "Sao chép {title}",
       "copied": "Đã sao chép!",
       "copy": "Sao chép",
       "autoscrollOn": "Tự động cuộn: bật",
       "autoscrollOff": "Tự động cuộn: tắt",
+      "collapseAllLevels": "Thu gọn tất cả",
+      "collapseOneLevel": "Thu gọn một cấp",
+      "currentExpandLevel": "Cấp mở rộng hiện tại",
+      "expandOneLevel": "Mở rộng một cấp",
+      "expandAllLevels": "Mở rộng tất cả",
       "payload": {
         "clientRawRequest": "Yêu cầu thô của client",
         "clientRequest": "Yêu cầu client",
@@ -12952,6 +12954,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "Sắp xếp theo",
+      "method": {
+        "manual": "Thủ công",
+        "provider": "Nhà cung cấp",
+        "score": "Điểm (mô hình miễn phí)",
+        "name": "Tên"
+      },
+      "scoreHint": "Xếp hạng theo điểm chỉ áp dụng cho nhà cung cấp miễn phí; các nhà cung cấp khác giữ nguyên vị trí."
+    }
+  },
   "comboControl": {
     "title": "Trung tâm điều khiển combo",
     "unavailable": "Trung tâm điều khiển combo không khả dụng",
@@ -13973,17 +13987,5 @@
     "cta": "Lấy khóa API",
     "partnerLinkNote": "Liên kết đối tác",
     "dismissAriaLabel": "Đóng"
-  },
-  "combo": {
-    "sort": {
-      "label": "Sắp xếp theo",
-      "method": {
-        "manual": "Thủ công",
-        "provider": "Nhà cung cấp",
-        "score": "Điểm (mô hình miễn phí)",
-        "name": "Tên"
-      },
-      "scoreHint": "Xếp hạng theo điểm chỉ áp dụng cho nhà cung cấp miễn phí; các nhà cung cấp khác giữ nguyên vị trí."
-    }
   }
 }

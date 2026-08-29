@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Excluir todos os lotes concluídos",
     "batchListBatchesTable": "Lotes",
     "changelogViewerLoading": "Carregando changelog do GitHub...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "Carregando perfil...",
     "profileHowToEarn": "Como ganhar",
     "bootstrapBannerDismiss": "Dispensar",
@@ -2935,8 +2936,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Terminal Warp AI com suporte para fornecedor personalizado",
       "agent-deck": "Orquestrador multi-agente Agent Deck",
-      "5dive": "5dive — frota auto-alojada de agentes de codificação; um perfil de autenticação aponta todos para o OmniRoute",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — frota auto-alojada de agentes de codificação; um perfil de autenticação aponta todos para o OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -7054,6 +7054,14 @@
     "providerAccountRoutingDesc": "Substituir a estratégia global de conta para este provedor (paridade 9router).",
     "providerRoutingStrategy": "Estratégia de conta",
     "providerRoutingInheritGlobal": "Herdar predefinição global",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Aliases de modelo",
     "modelAliasesTitle": "Aliases de Modelo",
     "modelAliasesDesc": "Remapeia nomes de modelos usando correspondências exatas ou padrões wildcard.",
@@ -8070,6 +8078,14 @@
     "resilienceProviderCooldownEnabledDesc": "Quando ativado, os fornecedores com falhas são monitorizados globalmente e ignorados durante um período de cooldown.",
     "resilienceProviderCooldownMin": "Cooldown mínimo",
     "resilienceProviderCooldownMax": "Cooldown máximo",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Sempre ativado para {provider} — obrigatório para a segurança da conta OAuth; não pode ser desligado.",
     "forcedFingerprintBadge": "Obrigatório",
     "sessionAffinityTitle": "Afinidade de sessão",
@@ -8305,27 +8321,7 @@
     "cliproxyapiHealth": "Saúde",
     "cliproxyapiPort": "Porto",
     "qdrantHost": "Anfitrião",
-    "qdrantCollection": "Coleção",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "Coleção"
   },
   "contextRtk": {
     "title": "Motor RTK",
@@ -11248,6 +11244,8 @@
       "tokens": "Tokens",
       "compressed": "Compressão",
       "tps": "TPS",
+      "ttft": "__MISSING__:TTFT",
+      "ttftTitle": "__MISSING__:Time to first token (client-side estimate)",
       "duration": "Duração",
       "time": "Hora",
       "conversation": "Conversa"
@@ -11290,6 +11288,11 @@
       "copy": "Copiar",
       "autoscrollOn": "Deslocação Automática: ativada",
       "autoscrollOff": "Deslocação Automática: desligada",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "Pedido Bruto do Cliente",
         "clientRequest": "Pedido do Cliente",
@@ -12949,6 +12952,18 @@
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Ativar o acesso à rede na sandbox de competências."
       }
+    }
+  },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
     }
   },
   "comboControl": {

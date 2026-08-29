@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "முடிக்கப்பட்ட அனைத்து தொகுதிகளையும் நீக்கவும்",
     "batchListBatchesTable": "தொகுதிகள்",
     "changelogViewerLoading": "GitHub இலிருந்து சேஞ்ச்லாக்கை ஏற்றுகிறது...",
+    "profile": "__MISSING__:Profile",
     "profileLoading": "சுயவிவரத்தை ஏற்றுகிறது...",
     "profileHowToEarn": "எப்படி சம்பாதிப்பது",
     "bootstrapBannerDismiss": "நிராகரி",
@@ -2935,8 +2936,7 @@
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "தனிப்பயன் வழங்குநர் ஆதரவுடன் கூடிய Warp AI டெர்மினல்",
       "agent-deck": "Agent Deck பல-முகவர் ஒருங்கிணைப்பாளர்",
-      "5dive": "5dive — சுய-ஹோஸ்ட் செய்யப்பட்ட குறியீட்டு முகவர்களின் கூட்டம்; ஒரு auth சுயவிவரம் அனைத்தையும் OmniRoute-க்கு திருப்புகிறது",
-      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
+      "5dive": "5dive — சுய-ஹோஸ்ட் செய்யப்பட்ட குறியீட்டு முகவர்களின் கூட்டம்; ஒரு auth சுயவிவரம் அனைத்தையும் OmniRoute-க்கு திருப்புகிறது"
     },
     "guides": {
       "cursor": {
@@ -7054,6 +7054,14 @@
     "providerAccountRoutingDesc": "இந்த வழங்குநருக்கான உலகளாவிய கணக்கு உத்தியை மேலெழுது (9router சமநிலை).",
     "providerRoutingStrategy": "கணக்கு உத்தி",
     "providerRoutingInheritGlobal": "பொதுவான இயல்புநிலையைப் பெறுக",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Model Aliases",
     "modelAliasesTitle": "Model Aliases",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -8070,6 +8078,14 @@
     "resilienceProviderCooldownEnabledDesc": "இயக்கப்பட்டால், தோல்வியடைந்த வழங்குநர்கள் உலகளவில் கண்காணிக்கப்பட்டு, ஒரு கூல்டவுன் காலத்திற்குத் தவிர்க்கப்படுவார்கள்.",
     "resilienceProviderCooldownMin": "குறைந்தபட்ச கூல்டவுன்",
     "resilienceProviderCooldownMax": "அதிகபட்ச கூல்டவுன்",
+    "resilienceCredentialHealthTitle": "__MISSING__:Credential Health Check",
+    "resilienceCredentialHealthScope": "__MISSING__:All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "__MISSING__:Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "__MISSING__:Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "__MISSING__:Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "__MISSING__:Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "__MISSING__:Every {minutes} min",
+    "resilienceCredentialHealthHint": "__MISSING__:0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "அமர்வு அஃபினிட்டி",
@@ -8305,27 +8321,7 @@
     "cliproxyapiHealth": "ஆரோக்கியம்",
     "cliproxyapiPort": "போர்ட்",
     "qdrantHost": "விருந்தினர்",
-    "qdrantCollection": "கலெக்ஷன்",
-    "presetAll": "All",
-    "presetAllDesc": "Show everything",
-    "presetEssentials": "Essentials",
-    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
-    "presetMinimal": "Minimal",
-    "presetMinimalDesc": "Core pages only",
-    "presetDeveloper": "Developer",
-    "presetDeveloperDesc": "Dev & proxy tools",
-    "presetAdmin": "Admin",
-    "presetAdminDesc": "Monitoring & audit",
-    "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
-    "quotaPreflightTitle": "Quota Preflight Cutoff",
-    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
-    "quotaPreflightEnable": "Enable quota preflight",
-    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
-    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
-    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
-    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
-    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
+    "qdrantCollection": "கலெக்ஷன்"
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11248,6 +11244,8 @@
       "tokens": "Tokens",
       "compressed": "சுருக்கம்",
       "tps": "TPS",
+      "ttft": "__MISSING__:TTFT",
+      "ttftTitle": "__MISSING__:Time to first token (client-side estimate)",
       "duration": "Duration",
       "time": "Time",
       "conversation": "Conversation"
@@ -11290,6 +11288,11 @@
       "copy": "பதிப்பேற்றவும்",
       "autoscrollOn": "ஆட்டோஸ்கிரோல்: இயக்கம்",
       "autoscrollOff": "ஆட்டோஸ்க்ரோல்: அணைப்பு",
+      "collapseAllLevels": "__MISSING__:Collapse all",
+      "collapseOneLevel": "__MISSING__:Collapse one level",
+      "currentExpandLevel": "__MISSING__:Current expand level",
+      "expandOneLevel": "__MISSING__:Expand one level",
+      "expandAllLevels": "__MISSING__:Expand all",
       "payload": {
         "clientRawRequest": "கிளையனின் கச்சா கோரிக்கை",
         "clientRequest": "கிளையனின் கோரிக்கை",
@@ -12949,6 +12952,18 @@
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "skills சாண்ட்பாக்ஸில் நெட்வொர்க் அணுகலை இயக்கவும்."
       }
+    }
+  },
+  "combo": {
+    "sort": {
+      "label": "__MISSING__:Sort by",
+      "method": {
+        "manual": "__MISSING__:Manual",
+        "provider": "__MISSING__:Provider",
+        "score": "__MISSING__:Score (free models)",
+        "name": "__MISSING__:Name"
+      },
+      "scoreHint": "__MISSING__:Score ranking applies to free providers only; others stay in place."
     }
   },
   "comboControl": {
