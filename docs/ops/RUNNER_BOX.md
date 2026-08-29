@@ -50,10 +50,19 @@ a time, only when idle**, with the idle check and the restart in the same comman
 ## Operating rules
 
 - **Heavy-build ceiling: ONE at a time — enforced by label (since 2026-08-29).** Every job
-  that runs a `next build` (`ci.yml` `build`, `npm-publish.yml` `publish`, both
-  `nightly-release-green` validations) targets `[self-hosted, omni-build]`, and only
+  that runs a full `next build` targets `[self-hosted, omni-build]`, and only
   **`omniroute-113-5`** carries that label (added through the runners API — no
-  re-registration). Two was the previous ceiling and it was wrong for 31 GB: on
+  re-registration): `ci.yml` `Build`, `npm-publish.yml` `publish`, both
+  `nightly-release-green` validations, and `docker-publish.yml` **amd64** (hosted
+  7 GB ResourceExhausted this tree — #11976). The arm64 Docker leg stays on
+  `ubuntu-24.04-arm` (no ARM box) with webpack. Docker amd64 also uses webpack:
+  Turbopack on this tree panicked inside BuildKit (`TurbopackInternalError:
+  there must be a path to a root`, run 33253576569) even with 31 GB; the same
+  tree's arm64 webpack build on hosted ARM succeeded. `docker-publish` amd64
+  shares the `heavy-build-main` concurrency group with `ci.yml` `Build`
+  (`cancel-in-progress: false`) so it queues on the one slot. Docker Engine
+  must be on `omniroute-113-5` (`docker info` is the first step of the publish
+  job). Two was the previous ceiling and it was wrong for 31 GB: on
   2026-08-29 17:26 UTC two concurrent `next-build`s (15.4 GB + 17.2 GB RSS) drove the box
   to 5 GB free with 4 GB of swap in use and the kernel OOM-killed one of them — systemd
   booked the kill on the _other_ runner's unit, `runsvc.sh` SIGKILLed that listener, and

@@ -126,16 +126,20 @@ jobs:
     name: Build Docker (${{ matrix.platform }})
     needs: prepare
     if: needs.prepare.outputs.skip != 'true'
-    # amd64: the .113 omni-build pool (31 GB / 32 cores, two listeners). A
-    # next-build peaks at 14–16 GB; hosted ubuntu-24.04 is ~7 GB and dies
-    # ResourceExhausted (#11976). Falls back to hosted + webpack when
-    # USE_VPS_RUNNER is off. arm64: no ARM box — stay on GitHub's ubuntu-24.04-arm
-    # with webpack (Turbopack native RSS does not fit 7 GB).
+    # amd64: the .113 omni-build pool (31 GB / 32 cores, ONE listener since
+    # #12048). Hosted ubuntu-24.04 is ~7 GB and dies ResourceExhausted (#11976).
+    # Falls back to hosted when USE_VPS_RUNNER is off. arm64: no ARM box — stay
+    # on GitHub's ubuntu-24.04-arm.
+    # Webpack on BOTH arches: Turbopack on omniroute-113-6 hit
+    # TurbopackInternalError "there must be a path to a root" after 26 min
+    # (run 33253576569). The same tree's arm64 webpack build on hosted ARM
+    # succeeded (run 33264823398). Dockerfile already documents webpack as the
+    # Docker escape hatch (OMNIROUTE_USE_TURBOPACK=0).
     runs-on: ${{ matrix.arch == 'amd64' && (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-build"]') || 'ubuntu-24.04') || 'ubuntu-24.04-arm' }}
-    # Share the 2-slot omni-build ceiling with ci.yml `Build` / npm-publish.
-    # Same group as main's Build so a :next publish waits beside the artefact
-    # instead of becoming the third heavy and getting kernel-OOM'd (2026-08-28).
-    # arm64 is hosted — its own group, cancelled by the workflow-level concurrency.
+    # Share the 1-slot omni-build ceiling (#12048) with ci.yml `Build` /
+    # npm-publish. Same group as main's Build so a :next publish waits beside
+    # the artefact instead of sitting next to it. arm64 is hosted — its own
+    # group, cancelled by the workflow-level concurrency.
     concurrency:
       group: ${{ matrix.arch == 'amd64' && 'heavy-build-main' || format('docker-publish-arm-{0}', github.ref) }}
       cancel-in-progress: ${{ matrix.arch != 'amd64' }}
@@ -153,8 +157,6 @@ jobs:
     env:
       IMAGE_NAME: diegosouzapw/omniroute
       GHCR_IMAGE_NAME: ghcr.io/diegosouzapw/omniroute
-      # Turbopack on the 31 GB box; webpack on any hosted 7 GB fallback / ARM.
-      USE_TURBOPACK: ${{ (matrix.arch == 'amd64' && vars.USE_VPS_RUNNER == 'true') && '1' || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -190,7 +192,7 @@ jobs:
           target: runner-base
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -209,7 +211,7 @@ jobs:
           target: runner-web
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -236,7 +238,7 @@ jobs:
           target: runner-base
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
@@ -263,7 +265,7 @@ jobs:
           target: runner-web
           platforms: ${{ matrix.platform }}
           build-args: |
-            OMNIROUTE_USE_TURBOPACK=${{ env.USE_TURBOPACK }}
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
