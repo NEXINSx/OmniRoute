@@ -300,33 +300,44 @@ test("OAuth routes that can create provider connections require auth guard", () 
     "src/app/api/oauth/kiro/social-exchange/route.ts",
   ];
 
-  // cursor/import and kiro/import delegate to the shared requireManagementAuth()
-  // guard, which internally performs the same checks the older inline literals
-  // asserted: isAuthRequired() (auth active?), isDashboardSessionAuthenticated()
-  // (user authenticated?) and a 401 "Authentication required" response for
-  // anonymous callers. Asserting the guard wiring keeps this contract
-  // refactor-proof.
-  const guardDelegatingTargets = new Set([
-    "src/app/api/oauth/cursor/import/route.ts",
-    "src/app/api/oauth/kiro/import/route.ts",
-  ]);
 
   for (const relPath of targets) {
     const content = readIfExists(relPath);
     assert.ok(content, `${relPath} should exist`);
-    if (guardDelegatingTargets.has(relPath)) {
-      assert.ok(
-        content.includes("requireOAuthImportAuth") && content.includes("requireManagementAuth"),
-        `${relPath} must delegate auth to requireManagementAuth via requireOAuthImportAuth`
+
+    // Two accepted guard shapes. GHSA-mg76 moved the cursor/kiro *import* routes
+    // onto requireManagementAuth, which is strictly STRONGER than the legacy
+    // pair: it demands a management principal (dashboard session, manage-scoped
+    // key, CLI token) instead of merely "any authenticated caller", and answers
+    // 401/403 itself — so the literal "Unauthorized" no longer appears in the
+    // route file. The remaining routes still carry the legacy triple.
+    const usesManagementGuard = content.includes("requireManagementAuth(request");
+    const usesLegacyGuard =
+      content.includes("isAuthRequired") &&
+      content.includes("isAuthenticated") &&
+      content.includes("Unauthorized");
+    assert.ok(
+      usesManagementGuard || usesLegacyGuard,
+      `${relPath} must guard connection-creating handlers with requireManagementAuth or the isAuthRequired/isAuthenticated pair`
+    );
+
+    // Positive anchor: a guard somewhere in the file proves nothing if one of the
+    // exported handlers skips it. Slice the file per exported handler and require
+    // EACH body to await a guard on its own `request` — a guard living only in a
+    // helper (or in a sibling handler) no longer satisfies this.
+    const handlerSlices = content
+      .split(/(?=export\s+async\s+function\s+(?:GET|POST|PUT|PATCH|DELETE)\b)/)
+      .filter((slice) =>
+        /^export\s+async\s+function\s+(?:GET|POST|PUT|PATCH|DELETE)\b/.test(slice)
       );
-      assert.ok(
-        content.includes("invalidApiKeyStatus: 401"),
-        `${relPath} must reject anonymous requests with 401`
+    assert.ok(handlerSlices.length > 0, `${relPath} should export at least one HTTP handler`);
+    for (const slice of handlerSlices) {
+      const verb = /export\s+async\s+function\s+(\w+)/.exec(slice)?.[1];
+      assert.match(
+        slice,
+        /await\s+(?:require\w*Auth|isAuthRequired)\s*\(\s*(?:request|req)\b/,
+        `${relPath}: exported handler ${verb} does not await an auth guard on its own request`
       );
-      continue;
     }
-    assert.ok(content.includes("isAuthRequired"), `${relPath} should check whether auth is active`);
-    assert.ok(content.includes("isAuthenticated"), `${relPath} should require authenticated users`);
-    assert.ok(content.includes("Unauthorized"), `${relPath} should reject anonymous requests`);
   }
 });

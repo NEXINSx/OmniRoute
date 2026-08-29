@@ -79,14 +79,15 @@ test.afterEach(async () => {
   if (originalAllowContainerWrite === undefined)
     delete process.env.OMNIROUTE_ALLOW_CONTAINER_CONFIG_WRITE;
   else process.env.OMNIROUTE_ALLOW_CONTAINER_CONFIG_WRITE = originalAllowContainerWrite;
-  for (const root of testRoots) await fs.rm(root, { recursive: true, force: true });
+  for (const root of testRoots)
+    await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   testRoots.clear();
 });
 
 test.after(async () => {
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;
-  await fs.rm(databaseRoot, { recursive: true, force: true });
+  await fs.rm(databaseRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("apply writes back to the selected opencode.jsonc and does not create opencode.json (#10227)", async () => {

@@ -118,7 +118,7 @@ async function fetchCatalog(
 
 test.before(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   // requireLogin + requireAuthForModels ON so the API-key surface is gated.
   await localDb.updateSettings({ requireLogin: true, requireAuthForModels: true, password: "" });
@@ -127,7 +127,7 @@ test.before(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test.describe("provider journey — in-process contract (#8330)", () => {

@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
-import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
-
-const volcengineIdentitySchema = z.object({
-  index: z.number().int().min(0),
-  timeout: z.number().int().positive().max(600_000).optional(),
-});
+import { formatValidationMessage, validateBody } from "@/shared/validation/helpers";
+import { volcenginePlanIdentitySchema } from "@/shared/validation/schemas/volcenginePlan";
 
 /**
  * POST /api/providers/volcengine-plan/connect/[sessionId]/identity
@@ -23,19 +18,21 @@ export async function POST(
   if (auth) return auth;
 
   const { sessionId } = await params;
-  const rawBody = await request.json().catch(() => ({}));
-  const validation = validateBody(volcengineIdentitySchema, rawBody);
-  if (isValidationFailure(validation)) {
+  const raw = await request.json().catch(() => ({}));
+  // Validate BEFORE the session lookup — see the sibling code/route.ts note.
+  const validation = validateBody(volcenginePlanIdentitySchema, raw);
+  if (!validation.success) {
     return NextResponse.json(
-      { success: false, error: validation.error.message, details: validation.error.details },
+      { success: false, error: formatValidationMessage(validation.error) },
       { status: 400 }
     );
   }
-  const body = validation.data;
+  const { index, timeout } = validation.data;
 
   try {
-    const { volcengineConsoleAutoLoginService } =
-      await import("@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts");
+    const { volcengineConsoleAutoLoginService } = await import(
+      "@omniroute/open-sse/services/volcengineConsoleAutoLogin.ts"
+    );
 
     if (!volcengineConsoleAutoLoginService.getStatus(sessionId)) {
       return NextResponse.json(
@@ -44,8 +41,7 @@ export async function POST(
       );
     }
 
-    const timeout = body.timeout;
-    const session = await volcengineConsoleAutoLoginService.selectIdentity(sessionId, body.index, {
+    const session = await volcengineConsoleAutoLoginService.selectIdentity(sessionId, index, {
       timeout,
     });
     if (!session) {

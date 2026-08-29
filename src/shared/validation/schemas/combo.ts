@@ -260,6 +260,12 @@ export const comboRuntimeConfigSchema = z
       })
       .strict()
       .optional(),
+    // Optional client-side sort hint for combo models.
+    // Honored in the dashboard builder; reserved for future server-side use. Inert on execution.
+    modelSort: z
+      .object({ method: z.enum(["manual", "provider", "score", "name"]) })
+      .passthrough()
+      .optional(),
   })
   .passthrough()
   .transform((config) => {

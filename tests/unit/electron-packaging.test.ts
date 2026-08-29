@@ -7,7 +7,29 @@ import { pruneElectronRuntimeDocs } from "../../scripts/build/electronRuntimeDoc
 
 const ROOT = join(import.meta.dirname, "..", "..");
 
-test("electron build copies the standalone runtime into resources/app exactly once", () => {
+// The SECOND entry looks like a redundant duplicate of the first — it is not, and
+// removing it ships a desktop app that cannot boot.
+//
+// electron-builder's file matcher hard-codes an exclusion of the source root's
+// `node_modules` directory for extraResources/extraFiles, BEFORE any `filter`
+// pattern is consulted (app-builder-lib/out/util/filter.js: `if (relative ===
+// "node_modules") return false`). So `{ from: ".build/electron-standalone", to:
+// "app", filter: ["**/*"] }` copies server.js, server-ws.mjs and every NESTED
+// node_modules, but silently drops `.build/electron-standalone/node_modules` —
+// the tree that holds `next`, `better-sqlite3` and the whole server closure.
+//
+// Pointing a second matcher AT the node_modules directory sidesteps the check
+// (its relative paths never equal "node_modules") and is the only way to get that
+// tree into `resources/app/node_modules`, which main.js also puts on the server's
+// NODE_PATH.
+//
+// Regression history: #10325 "de-duplicated" the two entries into one on
+// 2026-08-16; the packaged app then died on `Cannot find module 'next'` at
+// resources/app/server.js. It went unnoticed for nine days because the Electron
+// Package Smoke was already red on an earlier defect (lib/loginHeaderCapture.js
+// missing from build.files since #9984), so the main process never got far enough
+// to spawn the server.
+test("electron build copies the standalone runtime AND its root node_modules into resources/app", () => {
   const electronPackage = JSON.parse(readFileSync(join(ROOT, "electron", "package.json"), "utf8"));
 
   const extraResources = electronPackage.build?.extraResources;
@@ -21,6 +43,11 @@ test("electron build copies the standalone runtime into resources/app exactly on
     {
       from: "../.build/electron-standalone",
       to: "app",
+      filter: ["**/*", "node_modules/**/*"],
+    },
+    {
+      from: "../.build/electron-standalone/node_modules",
+      to: "app/node_modules",
       filter: ["**/*"],
     },
   ]);
@@ -88,7 +115,7 @@ test("electron docs manifest prunes authoring payloads without removing runtime 
       removedPaths: [],
     });
   } finally {
-    rmSync(bundleRoot, { recursive: true, force: true });
+    rmSync(bundleRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

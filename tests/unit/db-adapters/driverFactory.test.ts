@@ -7,7 +7,6 @@ import { createRequire } from "node:module";
 import type * as NodePath from "node:path";
 import { runtimeRequire } from "../../../src/lib/db/adapters/runtimeRequire.ts";
 
-
 const {
   createSyncDriverFactory,
   createBetterSqliteProbe,
@@ -33,10 +32,9 @@ function forceNodeSqlite() {
 function createTempDatabasePath(t: TestContext) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-node-sqlite-"));
   const databasePath = path.join(dir, "database.sqlite");
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   return databasePath;
 }
-
 
 describe("driverFactory", () => {
   test("runtimeRequire loads Node built-ins outside webpack", () => {

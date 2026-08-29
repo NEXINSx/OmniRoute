@@ -389,7 +389,11 @@ export async function sendAntigravityRequest(
       // know yet (pinned-catalog staleness). Kick a discovery sync for this
       // connection so the fresh list lands in the synced catalog and the next
       // request can resolve. Cooldown + in-flight dedup live in the trigger.
-      maybeTriggerReactiveModelSync(provider, credentials.connectionId);
+      // credentials.connectionId is optional (base.ts): no connection row means
+      // there is no synced catalog to refresh, so skip rather than pass undefined.
+      if (credentials.connectionId) {
+        maybeTriggerReactiveModelSync(provider, credentials.connectionId);
+      }
     }
   }
 

@@ -12918,6 +12918,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "Sort by",
+      "method": {
+        "manual": "Manual",
+        "provider": "Provider",
+        "score": "Score (free models)",
+        "name": "Name"
+      },
+      "scoreHint": "Score ranking applies to free providers only; others stay in place."
+    }
+  },
   "comboControl": {
     "title": "Combo Control Center",
     "unavailable": "Combo Control Center unavailable",
