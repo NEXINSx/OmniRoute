@@ -112,6 +112,39 @@ export function getModelsCatalogPrefixMode(): ModelsCatalogPrefixMode {
   return "dual";
 }
 
+/**
+ * No-thinking gateway alias master switch (`no-think/<provider>/<model>`).
+ *
+ * Fail-safe on: an unreadable flag store must not silently strip catalog
+ * variants a client already has configured, nor stop suppressing reasoning for
+ * a `no-think/…` id that was selected precisely to disable thinking. Matches the
+ * definition default (`"true"`), so the only way the feature turns off is an
+ * explicit operator override.
+ */
+export function isNoThinkingAliasEnabled(): boolean {
+  try {
+    return isFeatureFlagEnabled("NO_THINKING_ALIAS_ENABLED");
+  } catch (error) {
+    console.error(
+      "[featureFlags] Failed to resolve NO_THINKING_ALIAS_ENABLED, defaulting to enabled:",
+      error instanceof Error ? error.message : error
+    );
+    return true;
+  }
+}
+
+export function isDisableThinkingLevelVariantsEnabled(): boolean {
+  try {
+    return isFeatureFlagEnabled("OMNIROUTE_DISABLE_THINKING_LEVEL_VARIANTS");
+  } catch (error) {
+    console.error(
+      "[featureFlags] Failed to resolve OMNIROUTE_DISABLE_THINKING_LEVEL_VARIANTS, defaulting to disabled:",
+      error instanceof Error ? error.message : error
+    );
+    return false;
+  }
+}
+
 export function isArenaEloSyncEnabled(): boolean {
   return isFeatureFlagEnabled("ARENA_ELO_SYNC_ENABLED");
 }

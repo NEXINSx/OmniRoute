@@ -29,13 +29,16 @@ const {
   isArenaEloSyncEnabled,
   isControlPlaneProxyDirectFallbackEnabled,
   areContextWindowChecksDisabled,
+  isDisableThinkingLevelVariantsEnabled,
 } = await import("../../src/shared/utils/featureFlags.ts");
 
 // #10889 added OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN, bumping the count to 51.
 // The codex-app-server work then added OMNIROUTE_CODEX_APP_SERVER_ENABLED
 // (feature flag gating the opt-in Codex app-server WebSocket transport),
-// bumping it from 51 to 52.
-const EXPECTED_FEATURE_FLAG_COUNT = 52;
+// bumping it from 51 to 52. NO_THINKING_ALIAS_ENABLED (master switch for the
+// no-think/<provider>/<model> gateway aliases) then bumped it from 52 to 53.
+// OMNIROUTE_DISABLE_THINKING_LEVEL_VARIANTS bumped it from 53 to 54.
+const EXPECTED_FEATURE_FLAG_COUNT = 54;
 
 // ──────────────────────────────────────────────────────
 // Test group 1 — Flag definitions registry
@@ -195,6 +198,17 @@ describe("featureFlagDefinitions", () => {
     assert.strictEqual(def.category, "runtime");
     assert.strictEqual(def.type, "boolean");
     assert.strictEqual(def.defaultValue, "false");
+    assert.strictEqual(def.requiresRestart, false);
+  });
+
+  it("defines the no-thinking alias master switch as a runtime boolean enabled by default", () => {
+    // Default ON: turning the shipped no-think/ alias feature into a flag must not
+    // silently drop catalog variants operators already point their clients at.
+    const def = FEATURE_FLAG_DEFINITIONS.find((d) => d.key === "NO_THINKING_ALIAS_ENABLED");
+    assert.ok(def, "NO_THINKING_ALIAS_ENABLED should exist");
+    assert.strictEqual(def.category, "runtime");
+    assert.strictEqual(def.type, "boolean");
+    assert.strictEqual(def.defaultValue, "true");
     assert.strictEqual(def.requiresRestart, false);
   });
 
