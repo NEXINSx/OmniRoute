@@ -1,14 +1,7 @@
 import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS } from "@/shared/constants/models";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
-import {
-  getCachedRawProviderConnections,
-  getCombos,
-  getAllCustomModels,
-  getSettings,
-  getCachedProviderNodes,
-  getModelAliases,
-  getHiddenModelsByProvider,
-} from "@/lib/localDb";
+import { getCombos } from "@/lib/db/combos";
+import { getSettings } from "@/lib/db/settings";
 import { getUserDatabaseSettings } from "@/lib/db/databaseSettings";
 import { createLazyConnectionView } from "@/lib/db/providers/lazyConnectionView";
 import { extractAliasBackedModels } from "./aliasBackedModels";
@@ -49,9 +42,16 @@ import {
   getSyncedAvailableModelsByConnection,
   SYNCED_AVAILABLE_MODELS_MALFORMED,
   type SyncedAvailableModel,
+  getAllCustomModels,
+  getModelAliases,
+  getHiddenModelsByProvider,
 } from "@/lib/db/models";
 import { getAllActiveSyncedModels } from "@/lib/db/models/activeSyncedCatalog";
-import { getModelCatalogCacheVersion } from "@/lib/db/readCache";
+import {
+  getModelCatalogCacheVersion,
+  getCachedRawProviderConnections,
+  getCachedProviderNodes,
+} from "@/lib/db/readCache";
 import { getCompatibleFallbackModels } from "@/lib/providers/managedAvailableModels";
 import {
   providerUsesCuratedModelsOnly,
@@ -342,7 +342,12 @@ async function buildUnifiedModelsResponseCore(
     // explicitly — a disabled router rejects every auto/* id with a 400, so
     // listing them offers the client a choice that cannot succeed.
     const hideAuto = settings.hideAutoCombos === true || settings.autoRoutingEnabled === false;
-    const shouldHidePaid = (providerKey: string, modelId: string, pricing?: unknown, isFree?: boolean): boolean => {
+    const shouldHidePaid = (
+      providerKey: string,
+      modelId: string,
+      pricing?: unknown,
+      isFree?: boolean
+    ): boolean => {
       if (!hidePaid) return false;
       const provider = aliasToProviderId[providerKey] || providerKey;
       // isFree:true is the first door — custom row kept even when its provider is outside FREE_MODEL_BUDGETS.
@@ -1590,7 +1595,12 @@ async function buildUnifiedModelsResponseCore(
           // Custom entries do not carry pricing, so shouldHidePaid() decides
           // via FREE_MODEL_IDS_BY_PROVIDER — matches synced/PROVIDER_MODELS.
           if (
-            shouldHidePaid(canonicalProviderId, modelId, (model as { pricing?: unknown }).pricing, (model as any).isFree)
+            shouldHidePaid(
+              canonicalProviderId,
+              modelId,
+              (model as { pricing?: unknown }).pricing,
+              (model as any).isFree
+            )
           )
             continue;
           if (shouldHideByExposure(canonicalProviderId, modelId)) continue;

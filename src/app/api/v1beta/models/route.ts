@@ -5,7 +5,7 @@ import {
   getAllSyncedAvailableModels,
   getSyncedAvailableModels,
 } from "@/lib/db/models";
-import { getProviderConnections } from "@/lib/localDb";
+import { getProviderConnections } from "@/lib/db/providers";
 import { getResolvedModelCapabilities } from "@/lib/modelCapabilities";
 import { getSyncedCapabilities } from "@/lib/modelsDevSync";
 import { mergeCustomModelMetadata } from "@/lib/providers/modelMetadataPrecedence";

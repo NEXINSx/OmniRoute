@@ -9,7 +9,7 @@ import {
 } from "@/lib/semanticCache";
 import { getIdempotencyStats } from "@/lib/idempotencyLayer";
 import { getCacheMetrics, getCacheTrend } from "@/lib/db/settings";
-import { getCachedSettings } from "@/lib/localDb";
+import { getCachedSettings } from "@/lib/db/readCache";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 

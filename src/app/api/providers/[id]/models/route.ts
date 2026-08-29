@@ -11,11 +11,8 @@ import { resolveAlibabaProviderModelsUrl } from "@/shared/constants/alibabaProvi
 import { getStaticModelsForProvider } from "@/lib/providers/staticModels";
 import { providerUsesCuratedModelsOnly } from "@/lib/providers/modelListingCapability";
 import { mergeModelsWithCustomPrecedence } from "@/lib/providers/modelMetadataPrecedence";
-import {
-  getCachedProviderConnectionById,
-  getModelIsHidden,
-  resolveProxyForProvider,
-} from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { resolveProxyForProvider } from "@/lib/db/proxies";
 import {
   SAFE_OUTBOUND_FETCH_PRESETS,
   SafeOutboundFetchError,
@@ -86,7 +83,7 @@ import {
 import { buildProviderModelsUrl, getDiscoveryClientVersionOptions } from "./discoveryClientVersion";
 import { getAdobeModels } from "./adobeFireflyDiscovery";
 import { parseGeminiModelsList } from "@/lib/providerModels/geminiModelsParser";
-import { getSyncedAvailableModels, getCustomModels } from "@/lib/db/models";
+import { getSyncedAvailableModels, getCustomModels, getModelIsHidden } from "@/lib/db/models";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { fetchCursorAgentModels } from "@/lib/providerModels/cursorAgent";
 import { fetchCursorAvailableModels } from "@/lib/providerModels/cursorAvailableModels";

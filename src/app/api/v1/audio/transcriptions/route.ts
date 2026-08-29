@@ -24,7 +24,8 @@ import {
 } from "@/app/api/v1/_shared/rateLimit";
 import { attachOmniRouteMetaToResponse } from "@/domain/omnirouteResponseMeta";
 import { generateRequestId } from "@/shared/utils/requestId";
-import { getComboByName, getCombos, getDatabaseSettings } from "@/lib/localDb";
+import { getComboByName, getCombos } from "@/lib/db/combos";
+import { getDatabaseSettings } from "@/lib/db/databaseSettings";
 import { handleComboChat } from "@omniroute/open-sse/services/combo.ts";
 import { log } from "@omniroute/open-sse/utils/logger.ts";
 
