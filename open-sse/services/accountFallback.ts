@@ -271,6 +271,37 @@ export const MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS = [
   /\b(?:deprecated|retired|discontinued|decommissioned)[\s\S]{0,40}?\bmodel\b/i,
 ];
 
+// A provider that has permanently retired its API base_url — the old endpoint
+// keeps returning 410/404 on EVERY future request until the connection's
+// base_url is updated by an operator; no cooldown short enough to retry soon
+// is ever correct. Without this check these fall through to the generic
+// "all other errors" branch, which only applies a short (seconds-to-minutes)
+// transient cooldown, so combo/auto-routing keeps re-selecting the dead
+// endpoint roughly every cooldown window, forever — wasted upstream calls
+// that, at volume, look like abusive traffic (observed: freeaiapikey's moved
+// endpoint retried every ~1 minute for a full day: "This API endpoint has
+// moved. Please update your base_url to https://api.freeaiapikey.com/v1 —
+// the old endpoint on freeaiapikey.com no longer works.").
+export const ENDPOINT_PERMANENTLY_MOVED_PATTERNS = [
+  /\bendpoint has moved\b/i,
+  /\bno longer works\b/i,
+  /\bupdate your base.?url\b/i,
+];
+
+// A billing/account suspension that requires manual operator action (unpaid
+// invoice, spending limit) — text varies per provider/account name, e.g.
+// Fireworks: "Account hummern is suspended, possibly due to reaching the
+// monthly spending limit or failure to pay past invoices." This does not
+// match ACCOUNT_DEACTIVATED_SIGNALS' fixed "your account has been suspended"
+// substring, and several providers surface it on a status (412) that
+// checkFallbackError does not otherwise classify — so it fell through to the
+// generic transient-error branch and got retried every few minutes, all day,
+// against an account that cannot succeed until billing is fixed.
+export const ACCOUNT_SUSPENDED_BILLING_PATTERNS = [
+  /\bsuspended\b[\s\S]{0,120}?\b(?:spending limit|billing|invoice|payment)\b/i,
+  /\b(?:spending limit|billing|invoice|payment)\b[\s\S]{0,120}?\bsuspended\b/i,
+];
+
 // Context overflow patterns — the prompt exceeds the model's maximum context length.
 // Different providers phrase this differently. Used to decide whether a 400 error
 // should trigger combo fallback (a different model may have a larger context window).
@@ -450,6 +481,25 @@ export function isCreditsExhausted(errorText: string): boolean {
 export function isModelPermanentlyUnavailable(errorText: string): boolean {
   const text = String(errorText || "");
   return MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Returns true if response body indicates the provider's API endpoint/base_url
+ * has permanently moved (see ENDPOINT_PERMANENTLY_MOVED_PATTERNS).
+ */
+export function isEndpointPermanentlyMoved(errorText: string): boolean {
+  const text = String(errorText || "");
+  return ENDPOINT_PERMANENTLY_MOVED_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Returns true if response body indicates the account is suspended for a
+ * billing reason (unpaid invoice, spending limit) — see
+ * ACCOUNT_SUSPENDED_BILLING_PATTERNS.
+ */
+export function isAccountSuspendedForBilling(errorText: string): boolean {
+  const text = String(errorText || "");
+  return ACCOUNT_SUSPENDED_BILLING_PATTERNS.some((p) => p.test(text));
 }
 
 /**
@@ -1805,6 +1855,34 @@ export function checkFallbackError(
         cooldownMs,
         reason: "not_found",
         quotaResetHintMs: cooldownMs,
+      };
+    }
+
+    // The provider's API endpoint/base_url has permanently moved — every future
+    // request against the stale base_url fails identically, so lock it for a
+    // long, fixed window instead of the generic transient-error branch's short
+    // backoff (see ENDPOINT_PERMANENTLY_MOVED_PATTERNS).
+    if (isEndpointPermanentlyMoved(errorStr)) {
+      const cooldownMs = 24 * 60 * 60 * 1000; // 24h
+      return {
+        shouldFallback: true,
+        cooldownMs,
+        reason: "not_found",
+        quotaResetHintMs: cooldownMs,
+      };
+    }
+
+    // The account is suspended for a billing reason (unpaid invoice, spending
+    // limit) that varies per provider/account name and can arrive on a status
+    // checkFallbackError does not otherwise classify (e.g. Fireworks 412) —
+    // treat it like a credits-exhausted account so it stops being retried
+    // every few minutes until billing is fixed (see ACCOUNT_SUSPENDED_BILLING_PATTERNS).
+    if (isAccountSuspendedForBilling(errorStr)) {
+      return {
+        shouldFallback: true,
+        cooldownMs: COOLDOWN_MS.paymentRequired ?? 3600 * 1000, // 1h cooldown
+        reason: RateLimitReason.QUOTA_EXHAUSTED,
+        creditsExhausted: true,
       };
     }
 
