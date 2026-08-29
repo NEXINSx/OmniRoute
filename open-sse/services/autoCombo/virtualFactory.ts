@@ -6,6 +6,9 @@ import { getSettings } from "@/lib/db/settings";
 import { getProviderRegistry } from "./providerRegistryAccessor";
 import type { ConnectionFields } from "@/lib/db/encryption";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
+import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
+import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
+import { isCommonChatGptWebRetiredProviderId } from "@/shared/constants/chatgptWebRetirement";
 import { hasUsableWebSessionCredential } from "@/shared/providers/webSessionCredentials";
 import { toNumber } from "@/shared/utils/numeric";
 import { isCompatibleProviderConnectionId } from "@/shared/utils/compatibleProviderId";
@@ -309,8 +312,8 @@ const SYNTHETIC_NOAUTH_CONNECTION_ID = RESILIENCE_NOAUTH_CONNECTION_ID;
 
 // Allowlist of no-auth (keyless) providers permitted to enter the `auto`/`auto-*`
 // candidate pool. Narrowed to the backends verified to answer without any
-// configuration on our reference egress (VPS .15): `opencode` and `felo-web`
-// both return 200 there, while duckduckgo-web (429/VQD rate limit), theoldllm
+// configuration on our reference egress (VPS .15): `opencode` returns 200
+// there, while duckduckgo-web (429/VQD rate limit), theoldllm
 // (403 Vercel egress block), chipotle (502), aihorde (401, anon key rejected)
 // and the others are unreliable. The excluded providers stay fully usable via
 // direct `<alias>/<model>` calls — they are just kept OUT of auto-routing until
@@ -324,7 +327,7 @@ const SYNTHETIC_NOAUTH_CONNECTION_ID = RESILIENCE_NOAUTH_CONNECTION_ID;
 // pool, so it admits any no-auth backend that genuinely serves the family (e.g.
 // auggie, a local CLI subprocess with zero HTTP egress, belongs in auto/glm
 // regardless of this list). See the `bypassAllowlist` param below.
-const AUTO_COMBO_NOAUTH_ALLOWLIST = new Set<string>(["opencode", "felo-web"]);
+const AUTO_COMBO_NOAUTH_ALLOWLIST = new Set<string>(["opencode"]);
 
 function isChatAutoComboNoAuthProvider(
   providerDef: NoAuthProviderDefinition,
@@ -583,15 +586,17 @@ export async function prepareVirtualAutoComboInputs(
     resolutionSnapshot?: ModelCapabilityResolutionSnapshot;
   } = {}
 ): Promise<PreparedVirtualAutoComboInputs> {
-  const [connections, disabledNoAuthConnections, settings] = await Promise.all([
+  const [rawConnections, rawDisabledNoAuthConnections, settings] = await Promise.all([
     getCachedProviderConnections({ isActive: true }) as Promise<VirtualFactoryConn[]>,
-    // #6557: no-auth providers (opencode/mimocode/etc.) don't get an isActive
-    // filter applied above since their credential is synthetic, but a real
-    // provider_connections row CAN exist for them (created via "Add Account")
-    // and its own isActive=false must gate the auto-combo pool too — not just
+    // #6557: synthetic no-auth credentials bypass active filtering, but a real Add Account
+    // row may exist; its isActive=false must also gate auto-combo.
     getCachedProviderConnections({ isActive: false }) as Promise<VirtualFactoryConn[]>,
     getSettings().catch(() => ({}) as Record<string, unknown>),
   ]);
+  const available = (conn: VirtualFactoryConn) =>
+    !isCommonChatGptWebRetiredProviderId(conn.provider);
+  const connections = rawConnections.filter(available);
+  const disabledNoAuthConnections = rawDisabledNoAuthConnections.filter(available);
   const blockedProviders = new Set(
     Array.isArray(settings.blockedProviders) ? (settings.blockedProviders as string[]) : []
   );
@@ -600,19 +605,24 @@ export async function prepareVirtualAutoComboInputs(
       .filter((conn) => conn.provider in NOAUTH_PROVIDERS)
       .map((conn) => conn.provider)
   );
+  const runtimeConnections = connections.filter(
+    (connection) =>
+      !isMicrosoftDesignerWebRetiredProviderId(connection.provider) &&
+      !isRuntimeRetiredProviderId(connection.provider)
+  );
   const hiddenModelsMap = getHiddenModelsByProvider();
   // #7622: a no-auth provider's own provider_connections row (#6557) can carry
   // `providerSpecificData.excludedModels` regardless of its isActive state (the
   // dispatch-time enforcement in auth.ts does not gate on isActive either), so
   // gather it from BOTH the active and disabled connection lists.
   const noAuthProviderSpecificData = new Map<string, Record<string, unknown> | null | undefined>();
-  for (const conn of [...connections, ...disabledNoAuthConnections]) {
+  for (const conn of [...runtimeConnections, ...disabledNoAuthConnections]) {
     if (conn.provider in NOAUTH_PROVIDERS) {
       noAuthProviderSpecificData.set(conn.provider, conn.providerSpecificData);
     }
   }
 
-  const validConnections = connections.filter(hasUsableConnectionCredential);
+  const validConnections = runtimeConnections.filter(hasUsableConnectionCredential);
 
   const candidatePool: VirtualAutoComboCandidate[] = [];
   const registry = getProviderRegistry();
@@ -699,7 +709,7 @@ export async function prepareVirtualAutoComboInputs(
   // #7623: honor existing model lockouts + connection cooldown/terminal state so
   // auto/* never advertises models the dispatch path would immediately skip.
   const connectionsById = new Map<string, ConnectionResilienceView>();
-  for (const conn of [...connections, ...disabledNoAuthConnections]) {
+  for (const conn of [...runtimeConnections, ...disabledNoAuthConnections]) {
     connectionsById.set(conn.id, conn);
   }
 

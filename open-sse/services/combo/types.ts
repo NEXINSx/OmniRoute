@@ -143,7 +143,7 @@ export type HandleComboChatOptions = {
   requestHeaders?: Headers | Record<string, unknown> | null;
 };
 
-export type HandleRoundRobinOptions = Omit<HandleComboChatOptions, "apiKeyAllowedConnections">;
+export type HandleRoundRobinOptions = HandleComboChatOptions;
 
 export type HistoricalLatencyStatsEntry = {
   totalRequests?: number;

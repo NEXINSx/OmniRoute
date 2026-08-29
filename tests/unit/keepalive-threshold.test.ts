@@ -46,8 +46,13 @@ describe("resolveKeepaliveThreshold", () => {
     assert.equal(resolveKeepaliveThreshold("opencode-zen/gpt-4"), 15000);
   });
 
-  it("returns 15000ms for web-session provider (chatgpt-web)", () => {
-    assert.equal(resolveKeepaliveThreshold("chatgpt-web/gpt-5"), 15000);
+  it("uses the default for retired common ChatGPT Web ids", () => {
+    assert.equal(resolveKeepaliveThreshold("chatgpt-web/gpt-5"), 2000);
+    assert.equal(resolveKeepaliveThreshold("cgpt-web/gpt-5"), 2000);
+  });
+
+  it("keeps the longer threshold for ChatGPT Web Codex", () => {
+    assert.equal(resolveKeepaliveThreshold("chatgpt-web-codex/high"), 15000);
   });
 
   it("returns 15000ms for web-session provider (grok-web)", () => {
@@ -62,7 +67,8 @@ describe("resolveKeepaliveThreshold", () => {
     assert.ok(SLOW_KEEPALIVE_PROVIDERS.has("pollinations"));
     assert.ok(SLOW_KEEPALIVE_PROVIDERS.has("pol"));
     assert.ok(SLOW_KEEPALIVE_PROVIDERS.has("opencode-zen"));
-    assert.ok(SLOW_KEEPALIVE_PROVIDERS.has("chatgpt-web"));
+    assert.ok(!SLOW_KEEPALIVE_PROVIDERS.has("chatgpt-web"));
+    assert.ok(SLOW_KEEPALIVE_PROVIDERS.has("chatgpt-web-codex"));
     assert.ok(SLOW_KEEPALIVE_PROVIDERS.has("grok-web"));
     assert.ok(SLOW_KEEPALIVE_PROVIDERS.has("claude-web"));
   });

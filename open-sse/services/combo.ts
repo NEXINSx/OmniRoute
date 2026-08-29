@@ -20,6 +20,7 @@ import {
   recordModelLockoutFailure,
   recordProviderFailure,
   recordProviderSuccess,
+  retryHintBypassesMaxCooldownMs,
   selectLockoutCooldownMs,
 } from "./accountFallback.ts";
 import {
@@ -167,6 +168,7 @@ import {
   recordStickyWeightedSuccess,
   resolveComboStickyRoundRobinLimit,
 } from "./combo/rrState.ts";
+import { expandTargetsForAllStrategies } from "./combo/connectionAwareExpansion.ts";
 import {
   validateResponseQuality,
   releaseQualityClone,
@@ -838,6 +840,8 @@ async function handleComboChatInner({
     combo,
     config,
     strategy,
+    settings,
+    apiKeyAllowedConnections,
     allCombos,
     handleSingleModelWithTimeout,
     log,
@@ -888,6 +892,7 @@ async function handleComboChatInner({
       settings,
       allCombos,
       signal,
+      apiKeyAllowedConnections,
       hiddenModelsByProvider,
       clientManagedResponsesContext,
       deferContextOverflowWhenCompressible,
@@ -2142,12 +2147,12 @@ async function handleComboChatInner({
             fallbackResult.usedUpstreamRetryHint === true
               ? cooldownMs
               : (fallbackResult.quotaResetHintMs ?? 0);
-          // #6863 vs #7940: lockoutHintMs is only ever nonzero when it traces back to
-          // a genuine upstream signal (usedUpstreamRetryHint or a parsed quotaResetHintMs)
-          // — never a synthetic estimate. Tell recordModelLockoutFailure to honor it
-          // exactly instead of clamping it to maxCooldownMs (#7940's cap still applies
-          // to the exponential-backoff / synthetic-default paths).
-          const lockoutHintVerified = lockoutHintMs > 0;
+          // Only a transport header or google.rpc.RetryInfo is authoritative enough
+          // to bypass maxCooldownMs. Prose and generic JSON remain useful exact hints,
+          // but the operator cap still bounds them.
+          const lockoutHintVerified = retryHintBypassesMaxCooldownMs(
+            fallbackResult.retryHintSource
+          );
           const selectedConnectionId =
             result.headers?.get("X-OmniRoute-Selected-Connection-Id") ||
             result.headers?.get("x-omniroute-selected-connection-id") ||
@@ -2342,10 +2347,8 @@ async function handleComboChatInner({
                     // upstream reset (lockoutHintVerified) bypasses it.
                     exactCooldownMs: selectLockoutCooldownMs(lockoutHintMs, mlSettings),
                     maxCooldownMs: mlSettings.maxCooldownMs,
-                    // #6863: a parsed upstream quota reset is authoritative — the upstream
-                    // told us exactly when it resets, so honor it in full instead of
-                    // clamping to maxCooldownMs (which only bounds computed backoff).
-                    exactCooldownIsUpstreamReset: lockoutHintMs > mlSettings.baseCooldownMs,
+                    // Preserve authoritative structured/header resets; clamp body prose.
+                    exactCooldownIsUpstreamReset: lockoutHintVerified,
                   }
                 );
                 lockoutRecorded = true;
@@ -2434,9 +2437,8 @@ async function handleComboChatInner({
                   // upstream reset (lockoutHintVerified) bypasses it.
                   exactCooldownMs: selectLockoutCooldownMs(lockoutHintMs, mlSettings),
                   maxCooldownMs: mlSettings.maxCooldownMs,
-                  // #6863: an authoritative parsed upstream reset must be honored in full,
-                  // never clamped to maxCooldownMs (which only bounds computed backoff).
-                  exactCooldownIsUpstreamReset: lockoutHintMs > mlSettings.baseCooldownMs,
+                  // Preserve authoritative structured/header resets; clamp body prose.
+                  exactCooldownIsUpstreamReset: lockoutHintVerified,
                 }
               );
             }
@@ -2878,6 +2880,7 @@ async function handleRoundRobinCombo({
   settings,
   allCombos,
   signal,
+  apiKeyAllowedConnections = null,
   nesting = null,
   hiddenModelsByProvider = getHiddenModelsByProvider(),
   clientManagedResponsesContext,
@@ -2934,12 +2937,25 @@ async function handleRoundRobinCombo({
         }
     : allCombos;
 
-  const orderedTargets = resolveComboTargets(
+  let orderedTargets = resolveComboTargets(
     rrExpandedCombo,
     rrExpandedAllCombos,
     clampComboDepth(config.maxComboDepth),
     hiddenModelsByProvider
   );
+  // Connection-aware expansion is opt-in. RR runs outside
+  // resolveComboTargetPipeline, so it wires the same stage here. Rotation
+  // granularity becomes model x connection: rrStartIndex takes mod over the
+  // expanded list, so each account occupies its own rotation slot.
+  orderedTargets = await expandTargetsForAllStrategies({
+    strategy: "round-robin",
+    targets: orderedTargets,
+    comboName: combo.name,
+    config: combo.config,
+    settings: settings as Record<string, unknown> | null | undefined,
+    log,
+    apiKeyAllowedConnectionIds: apiKeyAllowedConnections,
+  });
   const tagFilteredTargets = await applyRequestTagRouting(orderedTargets, body, log);
   const evalRankedTargets = orderTargetsByEvalScores(tagFilteredTargets, config.evalRouting, log);
   // Align with the main/auto paths: combo config OR top-level settings (#8488 / #8494).

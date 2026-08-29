@@ -21,7 +21,7 @@ Think of a provider like a **phone carrier**. Just as you need a phone carrier t
 | **Free**       | No payment required       | Kiro, OpenCode Free, Pollinations | $0                     |
 | **API Key**    | You need an API key       | OpenAI, Anthropic, Google         | Pay per use            |
 | **OAuth**      | Login with your account   | Claude Code, GitHub Copilot       | Subscription           |
-| **Web Cookie** | Uses your browser session | ChatGPT Web, Gemini Web           | $0 (uses your account) |
+| **Web Cookie** | Uses your browser session | ChatGPT Web (Codex), Gemini Web   | $0 (uses your account) |
 
 ### Web Cookie Providers
 
@@ -184,7 +184,6 @@ These providers offer **free access** with no credit card:
 | **Cloudflare AI** | 10K neurons/day  | 50+ models                               | No auth needed |
 | **NVIDIA NIM**    | ~40 RPM          | 129 models                               | API key needed |
 | **Cerebras**      | 1M tokens/day    | Qwen3 235B, GPT-OSS 120B                 | API key needed |
-| **Qwen**          | Unlimited        | Qwen3-coder-plus/flash/next              | No auth needed |
 | **Qoder**         | Unlimited        | Kimi-K2, DeepSeek-R1, Qwen3-coder        | No auth needed |
 
 **Tip**: Connect multiple free providers for **unlimited free AI** with automatic fallback!

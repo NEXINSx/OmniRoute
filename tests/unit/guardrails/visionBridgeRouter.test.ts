@@ -24,8 +24,22 @@ const {
   clearSelectionCache,
   getLatencyStats,
 } = await import("../../../src/lib/guardrails/visionBridgeRouter.ts");
+const { PROVIDER_MODELS } = await import("../../../open-sse/config/providerModels.ts");
 type VisionBridgeRouterDepsT =
   import("../../../src/lib/guardrails/visionBridgeRouter.ts").VisionBridgeRouterDeps;
+
+function authoritativeCatalogDeps(
+  provider: string,
+  modelIds: () => string[]
+): VisionBridgeRouterDepsT {
+  return {
+    hasUsableCredentials: async (fullModelId) => fullModelId.startsWith(`${provider}/`),
+    getActiveSyncedCatalog: async (providerAlias) => ({
+      authoritative: providerAlias === provider,
+      models: providerAlias === provider ? modelIds().map((id) => ({ id })) : [],
+    }),
+  };
+}
 
 // Fail-open default: credential store "unreadable" (indeterminate `null`),
 // matching hasUsableCredentialsForModel's real behavior when the DB call
@@ -33,6 +47,7 @@ type VisionBridgeRouterDepsT =
 // candidate is still eligible when the credential store can't be checked.
 const FAIL_OPEN_DEPS: VisionBridgeRouterDepsT = {
   hasUsableCredentials: async () => null,
+  getActiveSyncedCatalog: async () => ({ authoritative: false, models: [] }),
 };
 
 test.beforeEach(() => {
@@ -72,6 +87,24 @@ test("getBestVisionModel — excludes a candidate with no usable active connecti
   assert.equal(model, null);
 });
 
+test("getBestVisionModel — does not query live catalogs for providers without usable credentials", async () => {
+  let catalogCalls = 0;
+
+  const model = await getBestVisionModel(
+    {},
+    {
+      hasUsableCredentials: async () => false,
+      getActiveSyncedCatalog: async () => {
+        catalogCalls += 1;
+        return { authoritative: false, models: [] };
+      },
+    }
+  );
+
+  assert.equal(model, null);
+  assert.equal(catalogCalls, 0);
+});
+
 test(
   "getBestVisionModel — selects a credentialed candidate over an uncredentialed higher-priority one",
   async () => {
@@ -86,6 +119,56 @@ test(
     assert.equal(model.startsWith("openai/"), false);
   }
 );
+
+test("getBestVisionModel — excludes static models missing from an authoritative live catalog", async () => {
+  const model = await getBestVisionModel(
+    {},
+    authoritativeCatalogDeps("gemini", () => ["gemini-2.5-flash"])
+  );
+
+  assert.equal(model, "gemini/gemini-2.5-flash");
+});
+
+test("getBestVisionModel — revalidates a cached model against the current live catalog", async () => {
+  let liveModelIds = ["gemini-3.7-flash"];
+  const deps = authoritativeCatalogDeps("gemini", () => liveModelIds);
+
+  assert.equal(await getBestVisionModel({}, deps), "gemini/gemini-3.7-flash");
+
+  liveModelIds = ["gemini-2.5-flash"];
+  assert.equal(await getBestVisionModel({}, deps), "gemini/gemini-2.5-flash");
+});
+
+test("getBestVisionModel — accepts a registry model whose liveCatalogIds match upstream", async () => {
+  // #11754 retired ChatGPT Web (cgpt-web) after this test was authored — it was the
+  // only registry provider populating `liveCatalogIds` (curated ids whose public name
+  // differs from the id sent upstream). No live provider currently uses that field, so
+  // this exercises the same production predicate (createCatalogModelPredicate's
+  // `model.liveCatalogIds?.some(...)` branch in visionBridgeRouter.ts) against a
+  // synthetic registry entry instead of trusting stale fixture data. PROVIDER_MODELS is
+  // a mutable Proxy over a lazily-generated object (open-sse/config/providerModels.ts),
+  // so direct assignment is safe and reverted in `finally`.
+  const testProvider = "__vision-bridge-live-catalog-test__";
+  PROVIDER_MODELS[testProvider] = [
+    {
+      id: "synthetic-vision-model-xhigh",
+      name: "Synthetic Vision Model (XHigh)",
+      liveCatalogIds: ["synthetic-live-id"],
+      supportsVision: true,
+    },
+  ];
+
+  try {
+    const model = await getBestVisionModel(
+      {},
+      authoritativeCatalogDeps(testProvider, () => ["synthetic-live-id"])
+    );
+
+    assert.equal(model, `${testProvider}/synthetic-vision-model-xhigh`);
+  } finally {
+    delete PROVIDER_MODELS[testProvider];
+  }
+});
 
 // ── getFallbackModels ───────────────────────────────────────────────────────
 
@@ -116,6 +199,26 @@ test(
     assert.ok(!fallbacks.some((m) => m.startsWith("anthropic/")));
   }
 );
+
+test("getFallbackModels — excludes fallbacks missing from an authoritative live catalog", async () => {
+  const fallbacks = await getFallbackModels(
+    "gemini/gemini-2.5-flash",
+    {},
+    authoritativeCatalogDeps("gemini", () => ["gemini-2.5-pro", "gemini-2.5-flash"])
+  );
+
+  assert.deepEqual(fallbacks, ["gemini/gemini-2.5-pro"]);
+});
+
+test("getFallbackModels — keeps registered effort variants backed by a live base model", async () => {
+  const fallbacks = await getFallbackModels(
+    "cu/gpt-5.3-codex",
+    { maxFallbackAttempts: 6 },
+    authoritativeCatalogDeps("cu", () => ["gpt-5.3-codex"])
+  );
+
+  assert.ok(fallbacks.includes("cu/gpt-5.3-codex-low"));
+});
 
 // ── recordLatency / getLatencyStats ─────────────────────────────────────────
 

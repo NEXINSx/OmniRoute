@@ -8,7 +8,6 @@ import {
   KiroOAuthWrapper,
   CursorAuthModal,
   TraeAuthModal,
-  RaycastAuthModal,
   ProxyConfigModal,
 } from "@/shared/components";
 import RiskNoticeModal from "../../components/RiskNoticeModal";
@@ -276,13 +275,6 @@ export default function ProviderModalsPanel({
           />
         ) : providerId === "trae" ? (
           <TraeAuthModal
-            isOpen={showOAuthModal}
-            reauthConnection={reauthConnection}
-            onSuccess={handleOAuthSuccess}
-            onClose={() => setShowOAuthModal(false)}
-          />
-        ) : providerId === "raycast" ? (
-          <RaycastAuthModal
             isOpen={showOAuthModal}
             reauthConnection={reauthConnection}
             onSuccess={handleOAuthSuccess}

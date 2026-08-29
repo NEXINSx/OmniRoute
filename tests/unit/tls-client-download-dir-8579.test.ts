@@ -11,7 +11,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
 
 const TLS_CLIENT_WRAPPERS = [
-  "open-sse/services/chatgptTlsClient.ts",
   "open-sse/services/claudeTlsClient.ts",
   "open-sse/services/grokTlsClient.ts",
   "open-sse/services/perplexityTlsClient.ts",
@@ -52,7 +51,7 @@ test("buildNativeTlsClientOptions passes downloadDir to tls-client-node (#8579)"
   assert.equal(options.downloadDir, join(dataDir, "tls-client", "bin"));
 });
 
-test("all web-provider tls clients wire downloadDir through buildNativeTlsClientOptions (#8579)", () => {
+test("all remaining web-provider tls clients wire downloadDir through buildNativeTlsClientOptions (#8579)", () => {
   const base = readFileSync(join(ROOT, "open-sse/services/tlsClientBase.ts"), "utf8");
   assert.match(
     base,

@@ -124,7 +124,7 @@ test("resolveLocalBinEntry reads the package's own bin map, never node_modules/.
       "the resolved entry must bypass the platform-specific .bin shim"
     );
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -145,7 +145,7 @@ test("resolveLocalBinEntry returns null for a missing package or a missing entry
       "an advertised entry that is not on disk must not be spawned"
     );
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -164,7 +164,7 @@ test("isNativeExecutable distinguishes an executable image from a JS shim", () =
     assert.equal(isNativeExecutable(pe), true);
     assert.equal(isNativeExecutable(join(root, "absent")), false, "a missing file is not native");
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -186,7 +186,7 @@ test("runBuildTool actually runs esbuild from this repo's dependency tree", () =
 
     assert.match(readFileSync(dest, "utf8"), /42/, "esbuild produced the bundle");
   } finally {
-    rmSync(out, { recursive: true, force: true });
+    rmSync(out, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

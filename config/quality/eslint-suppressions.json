@@ -194,11 +194,6 @@
       "count": 7
     }
   },
-  "open-sse/executors/raycast.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "open-sse/executors/t3-chat-web.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 11
@@ -317,11 +312,6 @@
       "count": 1
     }
   },
-  "open-sse/lib/deepseek-pow.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 5
-    }
-  },
   "open-sse/mcp-server/__tests__/a2aLifecycle.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1
@@ -409,11 +399,6 @@
   "open-sse/services/accountFallback.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
-    }
-  },
-  "open-sse/services/adobeFireflyClient.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
     }
   },
   "open-sse/services/adobeFireflySession.ts": {
@@ -522,7 +507,7 @@
   },
   "open-sse/services/combo.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 22
+      "count": 21
     }
   },
   "open-sse/services/combo/concurrencyCaps.ts": {
@@ -945,7 +930,7 @@
   },
   "src/app/(dashboard)/dashboard/combos/page.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 9
+      "count": 6
     }
   },
   "src/app/(dashboard)/dashboard/costs/CostOverviewTab.tsx": {
@@ -2367,11 +2352,6 @@
       "count": 1
     }
   },
-  "src/lib/guardrails/visionBridgeRouter.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/lib/idempotencyLayer.ts": {
     "no-restricted-imports": {
       "count": 1
@@ -2579,11 +2559,6 @@
   "src/lib/providers/validation/searchProviders.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    }
-  },
-  "src/lib/providers/validation/webProvidersA.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
     }
   },
   "src/lib/providers/validation/webProvidersB.ts": {
@@ -3771,11 +3746,6 @@
       "count": 5
     }
   },
-  "tests/unit/build/check-lockfile.test.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "tests/unit/bypass-handler.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 2
@@ -3888,11 +3858,6 @@
   "tests/unit/chatcore-translation-paths.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 31
-    }
-  },
-  "tests/unit/chatgpt-web-tools-5240.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
     }
   },
   "tests/unit/check-docs-symbols.test.ts": {
@@ -4945,11 +4910,6 @@
       "count": 4
     }
   },
-  "tests/unit/executor-qwen-web.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 40
-    }
-  },
   "tests/unit/fetch-timeout.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 7
@@ -5567,11 +5527,6 @@
       "count": 6
     }
   },
-  "tests/unit/provider-validation-qwen-web-5855.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "tests/unit/provider-validation-specialty.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 4
@@ -5723,11 +5678,6 @@
   },
   "tests/unit/quota-summed-budget.test.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "tests/unit/qwen-web-cookie-validation-3958.test.ts": {
-    "@typescript-eslint/no-explicit-any": {
       "count": 1
     }
   },
