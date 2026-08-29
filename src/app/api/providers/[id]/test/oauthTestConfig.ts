@@ -205,14 +205,6 @@ export const OAUTH_TEST_CONFIG: Record<string, OAuthTestConfigEntry> = {
     // Validate using token presence/expiry as a lightweight auth check.
     checkExpiry: true,
   },
-  raycast: {
-    // #8895 — Raycast Pro is an `import_token` provider: the token is imported
-    // from the local Raycast install, `refreshToken` is always null and the
-    // stored `expiresIn` defaults to 30 days. There is nothing to refresh, so
-    // the test is the expiry check on the imported token; without an entry here
-    // Test Connection persists testStatus="error" on a healthy account (#8408).
-    checkExpiry: true,
-  },
   "zed-hosted": {
     // Zed Hosted Models uses a long-lived native-app access token with no
     // expiry or refresh token. Validate presence here; real connectivity is

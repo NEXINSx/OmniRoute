@@ -25,7 +25,7 @@ const MiB = 1024 ** 2;
 async function resetStorage() {
   resetAllCircuitBreakers();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   // Restore a non-shedding resource pressure runtime between tests.
   reloadResourcePressureRuntime({
@@ -53,7 +53,7 @@ test.beforeEach(async () => {
 
 test.after(async () => {
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("executeChatWithBreaker returns typed pressure 503 before normal, bypass, and shadow breaker paths", async () => {

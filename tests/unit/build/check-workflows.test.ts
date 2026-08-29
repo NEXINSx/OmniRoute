@@ -179,7 +179,7 @@ test("collectWorkflowFiles: returns .yml files from directory", () => {
     assert.ok(files.some((f) => f.endsWith("deploy.yml")));
     assert.ok(!files.some((f) => f.endsWith("README.md")));
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -194,7 +194,7 @@ test("collectWorkflowFiles: also collects .yaml extension", () => {
     assert.ok(files.some((f) => f.endsWith(".yaml")));
     assert.ok(files.some((f) => f.endsWith(".yml")));
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -206,7 +206,7 @@ test("collectWorkflowFiles: returns absolute paths", () => {
     assert.equal(files.length, 1);
     assert.ok(path.isAbsolute(files[0]));
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -216,7 +216,7 @@ test("collectWorkflowFiles: empty directory returns empty array", () => {
     const files = collectWorkflowFiles(dir);
     assert.deepEqual(files, []);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -282,7 +282,7 @@ function withTmpBaseline(content: string | null, fn: (p: string) => void) {
   try {
     fn(p);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 

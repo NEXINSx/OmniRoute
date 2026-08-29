@@ -18,6 +18,7 @@ import {
   TokenExtractionConfig,
   type TokenSource,
 } from "./tokenExtractionConfig";
+import { matchesCookieDomain } from "../utils/cookieDomain";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ export class InAppLoginService extends EventEmitter {
 
   /**
    * Start a login flow for a web-cookie provider using Playwright.
-   * @param providerId - e.g. "claude-web", "chatgpt-web"
+   * @param providerId - e.g. "claude-web", "perplexity-web"
    * @param options.timeout - Total timeout in ms (default: config value or 300s)
    */
   async startLogin(providerId: string, options?: { timeout?: number }): Promise<LoginResult> {
@@ -196,9 +197,14 @@ export class InAppLoginService extends EventEmitter {
         for (const source of tokenSources) {
           if (source.type === "cookie") {
             const domain = source.domain || undefined;
+            // Exact host or dot-boundary suffix, never `includes()`: a cookie
+            // from `<domain>.attacker.tld` would otherwise be captured and
+            // persisted as the operator's credential. Same class CodeQL flagged
+            // in volcengineConsoleAutoLogin (#860/#861); this callsite was not
+            // flagged because the expected domain is config-supplied.
             const matched = cookies.find(
               (c: any) =>
-                c.name === source.name && (!domain || c.domain.includes(domain.replace(/^\./, "")))
+                c.name === source.name && (!domain || matchesCookieDomain(c.domain, domain))
             );
             if (matched && !credentials[source.name]) {
               credentials[source.name] = matched.value;

@@ -91,8 +91,6 @@ import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLease
 import { fetchCursorAgentModels } from "@/lib/providerModels/cursorAgent";
 import { fetchCursorAvailableModels } from "@/lib/providerModels/cursorAvailableModels";
 import { ensureCursorAutoCatalogEntry } from "@/lib/providerModels/cursorAutoCatalog";
-import { fetchRaycastModels } from "@omniroute/open-sse/services/raycast.ts";
-import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
 import {
   type JsonRecord,
   asRecord,
@@ -1298,58 +1296,6 @@ export async function GET(
       });
     }
 
-    if (provider === "raycast") {
-      const cachedResponse = maybeReturnCachedDiscovery();
-      if (cachedResponse) return cachedResponse;
-
-      const autoFetchDisabledResponse = maybeReturnAutoFetchDisabled();
-      if (autoFetchDisabledResponse) return autoFetchDisabledResponse;
-
-      const psd = asRecord(connection.providerSpecificData);
-      const deviceId = toNonEmptyString(psd.deviceId);
-      const aid = toNonEmptyString(psd.aid) || deviceId;
-      if (!accessToken || !deviceId) {
-        const fallback = buildDiscoveryFallbackResponse({
-          localWarning: "Raycast credentials incomplete — using local catalog",
-        });
-        if (fallback) return fallback;
-        return NextResponse.json({ error: "Raycast credentials incomplete" }, { status: 400 });
-      }
-
-      try {
-        const raycastModels = await runWithProxyContext(proxy, () =>
-          fetchRaycastModels({
-            accessToken,
-            providerSpecificData: {
-              deviceId,
-              aid: aid || deviceId,
-              sigSecret: toNonEmptyString(psd.sigSecret) || undefined,
-            },
-          })
-        );
-        const models = raycastModels.map((model) => ({
-          id: model.id,
-          name: model.name || model.id,
-          owned_by: model.provider || provider,
-          ...(model.requires_better_ai ? { premium: true } : {}),
-          ...(model.availability ? { availability: model.availability } : {}),
-        }));
-        return buildApiDiscoveryResponse(models);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.log("[models] raycast fetch failed:", message);
-        const fallback = buildDiscoveryFallbackResponse({
-          cacheWarning: `Raycast API unavailable (${message}) — using cached catalog`,
-          localWarning: `Raycast API unavailable (${message}) — using local catalog`,
-        });
-        if (fallback) return fallback;
-        return NextResponse.json(
-          { error: `Failed to fetch Raycast models: ${message}` },
-          { status: 502 }
-        );
-      }
-    }
-
     if (provider === "cursor") {
       const cachedResponse = maybeReturnCachedDiscovery();
       if (cachedResponse) return cachedResponse;
@@ -1906,8 +1852,7 @@ export async function GET(
       // ponytail: Anthropic partner models via Model Garden publisher endpoint (Bearer only)
       if (bearerToken) {
         const psd = asRecord(connection.providerSpecificData);
-        const region =
-          (typeof psd.region === "string" && psd.region.trim()) || "us-central1";
+        const region = (typeof psd.region === "string" && psd.region.trim()) || "us-central1";
 
         // Extract project_id from SA JSON for project-scoped listing (mirrors executor URL pattern).
         // Falls back to global publisher endpoint if no project available.
@@ -1917,7 +1862,9 @@ export async function GET(
           try {
             const sa = JSON.parse(credential);
             if (sa?.project_id) projectId = sa.project_id;
-          } catch { /* not SA JSON, skip */ }
+          } catch {
+            /* not SA JSON, skip */
+          }
         }
         if (projectId) {
           anthropicModelsUrl = `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/anthropic/models`;
@@ -1938,9 +1885,8 @@ export async function GET(
           });
           if (anthropicResponse.ok) {
             const anthropicData = await anthropicResponse.json();
-            const { parseVertexAnthropicModels } = await import(
-              "@/lib/providerModels/vertexAnthropicModelsParser"
-            );
+            const { parseVertexAnthropicModels } =
+              await import("@/lib/providerModels/vertexAnthropicModelsParser");
             allModels.push(...parseVertexAnthropicModels(anthropicData));
           } else {
             console.log("[models] Vertex Anthropic partner discovery failed", {

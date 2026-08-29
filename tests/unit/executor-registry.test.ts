@@ -13,12 +13,11 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 
 const { registerExecutor, getRegisteredExecutor, hasRegisteredExecutor, listExecutorAliases } =
   await import("../../open-sse/executors/registry.ts");
-const { getExecutor, hasSpecializedExecutor, BaseExecutor, DefaultExecutor } = await import(
-  "../../open-sse/executors/index.ts"
-);
+const { getExecutor, hasSpecializedExecutor, BaseExecutor, DefaultExecutor } =
+  await import("../../open-sse/executors/index.ts");
 
 test.after(() => {
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("built-ins are registered at module load and resolve through the registry", async () => {

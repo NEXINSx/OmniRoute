@@ -42,7 +42,7 @@ before(() => {
 
 after(() => {
   resetDbInstance();
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+  fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 const PROVIDER = "openai";

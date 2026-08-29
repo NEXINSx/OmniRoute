@@ -24,6 +24,7 @@ export interface CustomModelEntry {
   // `capabilities.vision: true` even when their id does not match the
   // conservative isVisionModelId heuristic.
   supportsVision?: boolean;
+  isFree?: boolean;
 }
 
 export type ComboCatalogTarget = {

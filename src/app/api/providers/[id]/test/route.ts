@@ -36,9 +36,9 @@ import { classifyAmbiguousOrAuthError, type ClassifyFailureArgs } from "./mistra
 import { buildApiKeyConnectionTestResult } from "./apiKeyTestResult";
 import { classifyOAuthProbeInconclusive, OAUTH_TEST_CONFIG } from "./oauthTestConfig";
 import { isGeoBlockedError } from "@omniroute/open-sse/services/errorClassifier.ts";
+import * as retirement from "@/lib/providers/chatgptWebRetirementResponse";
 
-// Bound the OAuth probe so a hung upstream can't block the connection-test queue
-// forever (#1449). Mirrors the 30s timeout the API-key path uses via validateProviderApiKey.
+// Match the API-key path's 30s timeout so a hung OAuth upstream cannot block the test queue.
 const OAUTH_TEST_TIMEOUT_MS = 30_000;
 
 import { CLI_RUNTIME_PROVIDER_MAP } from "./cliRuntimeProviderMap";
@@ -999,8 +999,8 @@ export async function testSingleConnection(connectionId: string, validationModel
       latencyMs: 0,
     };
   }
+  retirement.assertProviderAvailable(provider);
 
-  // Resolve proxy for this connection (key → combo → provider → global → direct)
   let proxyInfo: any = null;
   try {
     proxyInfo = await resolveProxyForConnection(connectionId);
@@ -1078,7 +1078,6 @@ export async function testSingleConnection(connectionId: string, validationModel
     };
   }
 
-  // Build update data
   const now = new Date().toISOString();
   const diagnosis =
     result.diagnosis ||
@@ -1111,6 +1110,7 @@ export async function testSingleConnection(connectionId: string, validationModel
     connection as { rateLimitedUntil?: string | null },
     result.valid
   );
+  const lastErrorType = result.valid ? connection.lastErrorType : diagnosis.type;
 
   const updateData: Record<string, any> = {
     testStatus: clearErrorState ? "active" : result.valid ? connection.testStatus : "error",
@@ -1125,11 +1125,7 @@ export async function testSingleConnection(connectionId: string, validationModel
     lastError: clearErrorState ? null : result.valid ? connection.lastError : result.error,
     lastErrorAt: clearErrorState ? null : result.valid ? connection.lastErrorAt : now,
     lastTested: now,
-    lastErrorType: clearErrorState
-      ? null
-      : result.valid
-        ? connection.lastErrorType
-        : diagnosis.type,
+    lastErrorType: clearErrorState ? null : lastErrorType,
     lastErrorSource: clearErrorState
       ? null
       : result.valid
@@ -1158,7 +1154,6 @@ export async function testSingleConnection(connectionId: string, validationModel
     if (recovered) updateData.providerSpecificData = recovered;
   }
 
-  // If token was refreshed, update tokens in DB
   if (result.refreshed && result.newTokens) {
     updateData.accessToken = result.newTokens.accessToken;
     if (result.newTokens.refreshToken) {
@@ -1227,7 +1222,6 @@ export async function testSingleConnection(connectionId: string, validationModel
   };
 }
 
-// POST /api/providers/[id]/test - Test connection
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -1252,6 +1246,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     return NextResponse.json(data);
   } catch (error) {
+    const retired = retirement.responseForError(error);
+    if (retired) return retired;
     console.log("Error testing connection:", error);
     return NextResponse.json({ error: "Test failed" }, { status: 500 });
   }

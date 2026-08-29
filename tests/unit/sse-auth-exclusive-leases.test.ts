@@ -68,7 +68,7 @@ async function resetStorage(): Promise<void> {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
   fallback.clearAllModelLockouts();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -76,7 +76,7 @@ test.beforeEach(resetStorage);
 test.after(() => {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("foreign top candidate is skipped and the existing selector chooses the next free candidate", async () => {
@@ -273,16 +273,10 @@ test("generic lease selection is provider-neutral across GLM and OpenAI fixtures
   ] as const) {
     const connection = await seedConnection(1, { provider });
     const key = await seedManagedKey([connection.id]);
-    const selected = await auth.getProviderCredentials(
-      provider,
-      null,
-      [connection.id],
-      model,
-      {
-        lease: { apiKeyId: key.id, context: context(OWNERS[0], 1), mode: "acquire" },
-        materializeCredentials: false,
-      }
-    );
+    const selected = await auth.getProviderCredentials(provider, null, [connection.id], model, {
+      lease: { apiKeyId: key.id, context: context(OWNERS[0], 1), mode: "acquire" },
+      materializeCredentials: false,
+    });
     assert.equal(selected?.connectionId, connection.id, provider);
     leaseDb.releaseExclusiveConnectionLease({
       leaseOwnerId: OWNERS[0],

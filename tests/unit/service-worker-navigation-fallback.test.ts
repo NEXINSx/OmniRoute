@@ -86,7 +86,7 @@ function createServiceWorkerHarness() {
   };
 }
 
-test("#5165: service worker returns cached navigation before offline page", async () => {
+test("#11779: network failure on navigation surfaces an error, not a stale shell", async () => {
   const harness = createServiceWorkerHarness();
   const request = {
     url: "https://app.example/dashboard",
@@ -95,12 +95,13 @@ test("#5165: service worker returns cached navigation before offline page", asyn
     destination: "document",
   };
 
+  // A cached navigation response from a PREVIOUS deploy exists; serving it
+  // would replay a shell whose /_next/static/<old-build>/ chunks are gone.
   harness.cacheEntries.set(request.url, new Response("cached dashboard", { status: 200 }));
-  harness.cacheEntries.set("/offline", new Response("offline page", { status: 200 }));
 
   const response = await harness.dispatchFetch(request);
 
-  assert.equal(await response.text(), "cached dashboard");
+  assert.ok(response.type === "error", "navigation fallback must surface the network failure");
 });
 
 test("#5165: successful navigations are cached for later transient failures", async () => {
@@ -119,5 +120,10 @@ test("#5165: successful navigations are cached for later transient failures", as
     throw new Error("transient network failure");
   });
 
-  assert.equal(await (await harness.dispatchFetch(request)).text(), "fresh dashboard");
+  // #11779: the transient failure surfaces as an error response. The freshly
+  // cached entry stays in the cache (a future navigations-are-cached design
+  // may use it), but it must NOT be replayed as a navigation response -- the
+  // shell's chunk references belong to a specific build.
+  const failed = await harness.dispatchFetch(request);
+  assert.ok(failed.type === "error", "transient failure must surface, not replay cache");
 });

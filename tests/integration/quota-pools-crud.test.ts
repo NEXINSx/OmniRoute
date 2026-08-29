@@ -38,7 +38,7 @@ async function enableManagementAuth() {
 
 function resetDb() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -49,7 +49,7 @@ test.beforeEach(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ test("POST /api/quota/pools with auth + valid body → 201 + pool returned", asy
   });
   const res = await poolsRoute.POST(req);
   assert.equal(res.status, 201);
-  const body = await res.json() as { pool: { id: string; name: string; connectionId: string } };
+  const body = (await res.json()) as { pool: { id: string; name: string; connectionId: string } };
   assert.ok(body.pool.id, "Pool should have an id");
   assert.equal(body.pool.name, "Test Pool Alpha");
   assert.equal(body.pool.connectionId, "conn-test-1");
@@ -109,7 +109,10 @@ test("POST /api/quota/pools → audit event logged", async () => {
   const events = Array.isArray(logs) ? logs : [];
   assert.ok(events.length >= 1, "Should have at least one quota.pool.created audit event");
   const evt = events.find(
-    (e) => typeof e === "object" && e !== null && (e as Record<string, unknown>).action === "quota.pool.created"
+    (e) =>
+      typeof e === "object" &&
+      e !== null &&
+      (e as Record<string, unknown>).action === "quota.pool.created"
   );
   assert.ok(evt, "quota.pool.created audit event must be present");
 });
@@ -267,9 +270,7 @@ test("DELETE /api/quota/pools/[id] → 204 + audit event; subsequent GET → 404
   assert.ok(evt, "quota.pool.deleted audit event must be present");
 
   // Subsequent GET → 404
-  const getReq = await makeManagementSessionRequest(
-    `http://localhost/api/quota/pools/${poolId}`
-  );
+  const getReq = await makeManagementSessionRequest(`http://localhost/api/quota/pools/${poolId}`);
   const getRes = await poolIdRoute.GET(getReq, { params: Promise.resolve({ id: poolId }) });
   assert.equal(getRes.status, 404);
 });

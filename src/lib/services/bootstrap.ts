@@ -1,5 +1,7 @@
 import { getVersionManagerTool } from "@/lib/db/versionManager";
+import { getSettings } from "@/lib/db/settings";
 import { markAllUnavailable } from "@/lib/db/serviceModels";
+import { resolveDedicatedCliproxyapiApiKey } from "@omniroute/open-sse/handlers/chatCore/cliproxyapiCredentials";
 import { registerSupervisor, getSupervisor } from "./registry";
 import { ServiceSupervisor } from "./ServiceSupervisor";
 import { resolveSpawnArgs as nineRouterSpawnArgs } from "./installers/ninerouter";
@@ -8,10 +10,7 @@ import {
   CLIPROXY_DEFAULT_PORT,
 } from "./installers/cliproxy";
 import { resolveSpawnArgs as muxSpawnArgs, MUX_DEFAULT_PORT } from "./installers/mux";
-import {
-  resolveSpawnArgs as bifrostSpawnArgs,
-  BIFROST_DEFAULT_PORT,
-} from "./installers/bifrost";
+import { resolveSpawnArgs as bifrostSpawnArgs, BIFROST_DEFAULT_PORT } from "./installers/bifrost";
 import { resolveSpawnArgs as darioSpawnArgs, DARIO_DEFAULT_PORT } from "./installers/dario";
 import { getOrCreateApiKey } from "./apiKey";
 import { scheduleServiceModelSync, stopServiceModelSync } from "./modelSync";
@@ -59,7 +58,7 @@ const SERVICES: ServiceEntry[] = [
   {
     tool: "cliproxy",
     port: CLIPROXY_PORT,
-    healthPath: "/v1/models",
+    healthPath: "/healthz",
     healthIntervalMs: 5_000,
     stopTimeoutMs: 15_000,
     logsBufferBytes: 5_242_880,
@@ -128,6 +127,11 @@ export async function bootstrapEmbeddedServices(): Promise<void> {
     const apiKey = cfg.needsApiKey
       ? await getOrCreateApiKey(cfg.tool).catch(() => "placeholder")
       : "";
+    // CLIProxyAPI's generated key is management-only; /v1/models uses its dedicated data-plane key.
+    const modelSyncApiKey =
+      cfg.tool === "cliproxy"
+        ? (resolveDedicatedCliproxyapiApiKey(await getSettings()) ?? "")
+        : apiKey;
 
     const supervisor = new ServiceSupervisor({
       tool: cfg.tool,
@@ -148,7 +152,7 @@ export async function bootstrapEmbeddedServices(): Promise<void> {
     const baseUrl = `http://127.0.0.1:${cfg.port}`;
     supervisor.on("stateChange", (status: ServiceStatus) => {
       if (status.state === "running") {
-        scheduleServiceModelSync(cfg.tool, baseUrl, apiKey);
+        scheduleServiceModelSync(cfg.tool, baseUrl, modelSyncApiKey);
       } else if (status.state === "stopped" || status.state === "error") {
         stopServiceModelSync(cfg.tool);
         markAllUnavailable(cfg.tool);

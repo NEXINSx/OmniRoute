@@ -48,7 +48,9 @@ import {
   getModelSyncInternalBaseUrl,
 } from "@/shared/services/modelSyncScheduler";
 import { finalizeValidatedChatGptWebCodexSecrets } from "@omniroute/open-sse/services/chatgptWebCodexAdmin.ts";
+import { isAutoFetchModelsEnabled } from "@/lib/providerModels/modelDiscovery";
 import { testSingleConnection } from "./[id]/test/route";
+import { rejectRetiredCommonChatGptWebProvider } from "@/lib/providers/chatgptWebRetirementResponse";
 
 function projectCodexAccountPoolWithRoutingQuota(
   connection: Parameters<typeof projectCodexAccountPool>[0],
@@ -174,6 +176,10 @@ export async function POST(request: Request) {
       providerSpecificData: incomingPsd,
     } = validation.data;
     const provider = resolveProviderId(requestedProvider);
+    const retirementResponse =
+      rejectRetiredCommonChatGptWebProvider(requestedProvider) ??
+      rejectRetiredCommonChatGptWebProvider(provider);
+    if (retirementResponse) return retirementResponse;
 
     // Business validation
     const isValidProvider =
@@ -282,50 +288,56 @@ export async function POST(request: Request) {
       testStatus: testStatus || "unknown",
     });
 
-    // Auto-trigger model discovery for the newly created connection.
+    // Auto-trigger model discovery only for an explicit autoFetchModels opt-in.
     // Fire-and-forget: model sync can take seconds and should NOT block the
     // POST response. If it fails, we log and move on — the connection itself
     // is already persisted and the user can manually trigger a sync later.
     // We use a self-fetch against our own /sync-models route, forwarding the
     // incoming cookies (preserves management auth) plus the internal sync
     // auth header (defense in depth) and an X-Internal-Auto-Sync marker for
-    // log correlation.
-    try {
-      // SECURITY: use the trusted loopback/env-pinned origin, NOT
-      // `new URL(request.url).origin` — the latter comes from the client-
-      // controlled Host header, which would let a caller redirect this
-      // credential-bearing internal self-fetch to an arbitrary host
-      // (SSRF + internal-auth-header exfiltration; CodeQL js/request-forgery).
-      const internalOrigin = getModelSyncInternalBaseUrl();
-      const cookieHeader = request.headers.get("cookie") || "";
-      const syncHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-        "X-Internal-Auto-Sync": "true",
-        ...(cookieHeader ? { cookie: cookieHeader } : {}),
-        ...buildModelSyncInternalHeaders(),
-      };
-      const syncUrl = `${internalOrigin}/api/providers/${encodeURIComponent(newConnection.id)}/sync-models?mode=import`;
-      // Intentionally not awaited: this is async/non-blocking work.
-      void fetchModelSyncInternal(syncUrl, {
-        method: "POST",
-        headers: syncHeaders,
-        redirect: "error",
-      })
-        .then((syncRes) => {
-          if (!syncRes.ok) {
-            console.log(`[providers] Auto-sync failed for ${newConnection.id}: ${syncRes.status}`);
-          }
+    // log correlation. The dashboard skips this server-owned copy when it
+    // performs the same sync itself so it can render progress.
+    if (
+      isAutoFetchModelsEnabled(providerSpecificData) &&
+      request.headers.get("x-skip-model-sync") !== "true"
+    ) {
+      try {
+        // SECURITY: use the trusted loopback/env-pinned origin, NOT
+        // `new URL(request.url).origin` — the latter comes from the client-
+        // controlled Host header, which would let a caller redirect this
+        // credential-bearing internal self-fetch to an arbitrary host
+        // (SSRF + internal-auth-header exfiltration; CodeQL js/request-forgery).
+        const internalOrigin = getModelSyncInternalBaseUrl();
+        const cookieHeader = request.headers.get("cookie") || "";
+        const syncHeaders: Record<string, string> = {
+          "Content-Type": "application/json",
+          "X-Internal-Auto-Sync": "true",
+          ...(cookieHeader ? { cookie: cookieHeader } : {}),
+          ...buildModelSyncInternalHeaders(),
+        };
+        const syncUrl = `${internalOrigin}/api/providers/${encodeURIComponent(newConnection.id)}/sync-models?mode=import`;
+        // Intentionally not awaited: this is async/non-blocking work.
+        void fetchModelSyncInternal(syncUrl, {
+          method: "POST",
+          headers: syncHeaders,
+          redirect: "error",
         })
-        .catch((err) => {
-          console.log(`[providers] Auto-sync error for ${newConnection.id}:`, err?.message || err);
-        });
-    } catch (syncSetupError) {
-      // Defensive: if URL parsing or header construction itself throws, do
-      // not let it break the (already successful) POST response.
-      console.log(
-        `[providers] Auto-sync setup failed for ${newConnection.id}:`,
-        syncSetupError?.message || syncSetupError
-      );
+          .then((syncRes) => {
+            if (!syncRes.ok) {
+              console.log(`[providers] Auto-sync failed for ${newConnection.id}: ${syncRes.status}`);
+            }
+          })
+          .catch((err) => {
+            console.log(`[providers] Auto-sync error for ${newConnection.id}:`, err?.message || err);
+          });
+      } catch (syncSetupError) {
+        // Defensive: if URL parsing or header construction itself throws, do
+        // not let it break the (already successful) POST response.
+        console.log(
+          `[providers] Auto-sync setup failed for ${newConnection.id}:`,
+          syncSetupError?.message || syncSetupError
+        );
+      }
     }
 
     // Auto-test the newly created connection so `testStatus` reflects reality
@@ -413,6 +425,17 @@ export async function PATCH(request: Request) {
   const { ids, isActive } = validation.data;
 
   try {
+    if (isActive) {
+      const requestedIds = new Set(ids);
+      const requestedConnections = (
+        await getProviderConnections({}, undefined, undefined, ["id", "provider"])
+      ).filter((connection) => requestedIds.has(connection.id));
+      for (const connection of requestedConnections) {
+        const retirementResponse = rejectRetiredCommonChatGptWebProvider(connection.provider);
+        if (retirementResponse) return retirementResponse;
+      }
+    }
+
     // Partial-failure semantics: report unknown IDs instead of failing the whole batch
     const updatedIds: string[] = [];
     const notFoundIds: string[] = [];
