@@ -631,6 +631,7 @@ export async function validateNousResearchProvider({ apiKey, providerSpecificDat
         model: modelId,
         messages: [{ role: "user", content: "test" }],
         max_tokens: 1,
+        tags: ["user=omniroute"],
       }),
     });
 
