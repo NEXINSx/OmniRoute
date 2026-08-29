@@ -695,7 +695,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Anonymous access to Groq requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Bake anonymous cake credits at g4f.dev/chat, or create a member API key at g4f.dev/members.html.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
       text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
@@ -714,7 +714,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Anonymous access to Gemini requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Bake anonymous cake credits at g4f.dev/chat, or create a member API key at g4f.dev/members.html.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
       text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
@@ -733,7 +733,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Anonymous access to Pollinations requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Bake anonymous cake credits at g4f.dev/chat, or create a member API key at g4f.dev/members.html.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
       text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
@@ -752,7 +752,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Anonymous access to hosted Ollama requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Bake anonymous cake credits at g4f.dev/chat, or create a member API key at g4f.dev/members.html.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
       text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
@@ -771,7 +771,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Anonymous access to NVIDIA NIM requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
     passthroughModels: true,
     authHint:
-      "Bake anonymous cake credits at g4f.dev/chat, or create a member API key at g4f.dev/members.html.",
+      "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
       text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",

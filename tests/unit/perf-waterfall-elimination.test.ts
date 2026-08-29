@@ -48,9 +48,7 @@ function allPromiseAllBodies(src: string): string[] {
 test("A1: home page fetches settings + machineId concurrently (#11396)", () => {
   const src = readSource("src/app/(dashboard)/home/page.tsx");
 
-  const pair = src.match(
-    /const \[settings, machineId\] = await Promise\.all\(\[([\s\S]*?)\]\);/s
-  );
+  const pair = src.match(/const \[settings, machineId\] = await Promise\.all\(\[([\s\S]*?)\]\);/s);
   assert.ok(pair, "expected `[settings, machineId] = await Promise.all([...])`");
   assert.match(pair![1], /\bgetSettings\(\)/);
   assert.match(pair![1], /\bgetMachineId\(\)/);
@@ -77,10 +75,7 @@ test("F1: cache route GET batches its four async reads (#11396)", () => {
   assert.match(body, /getCacheTrend\(trendHours\)/);
   // settings-load failure must degrade to {} *inside* the batch, not reject
   // the whole Promise.all and 500 the stats endpoint
-  assert.match(
-    body,
-    /getCachedSettings\(\)\.catch\(\s*\(\s*\)\s*=>\s*\(\s*\{\}\s*\)\s*\)/
-  );
+  assert.match(body, /getCachedSettings\(\)\.catch\(\s*\(\s*\)\s*=>\s*\(\s*\{\}\s*\)\s*\)/);
 
   // no serial waterfall remains for the same reads
   assert.doesNotMatch(src, /await getIdempotencyStats\(\)\s*;/);
@@ -102,14 +97,14 @@ test.before(async () => {
 
 test.beforeEach(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 });
 
 test.after(() => {
   core?.resetDbInstance();
   if (TEST_DATA_DIR) {
-    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
   delete process.env.DATA_DIR;
   delete process.env.DISABLE_SQLITE_AUTO_BACKUP;
@@ -147,11 +142,62 @@ test("F1: cache GET returns correct shapes + trend window after batching (#11396
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
   // cache hit (tokens_cache_read > 0)
-  insert.run("test-provider", "test-model", "conn-1", "key-1", "k", 1000, 100, 900, 0, 0, "ok", 1, 123, 45, null, iso(now - 3_600_000));
+  insert.run(
+    "test-provider",
+    "test-model",
+    "conn-1",
+    "key-1",
+    "k",
+    1000,
+    100,
+    900,
+    0,
+    0,
+    "ok",
+    1,
+    123,
+    45,
+    null,
+    iso(now - 3_600_000)
+  );
   // cache creation (tokens_cache_creation > 0)
-  insert.run("test-provider", "test-model", "conn-2", "key-2", "k", 2000, 200, 0, 1500, 0, "ok", 1, 200, 50, null, iso(now - 7_200_000));
+  insert.run(
+    "test-provider",
+    "test-model",
+    "conn-2",
+    "key-2",
+    "k",
+    2000,
+    200,
+    0,
+    1500,
+    0,
+    "ok",
+    1,
+    200,
+    50,
+    null,
+    iso(now - 7_200_000)
+  );
   // plain request — must not pollute cache metrics
-  insert.run("test-provider", "test-model", "conn-3", "key-3", "k", 500, 50, 0, 0, 0, "ok", 1, 90, 30, null, iso(now - 300_000));
+  insert.run(
+    "test-provider",
+    "test-model",
+    "conn-3",
+    "key-3",
+    "k",
+    500,
+    50,
+    0,
+    0,
+    0,
+    "ok",
+    1,
+    90,
+    30,
+    null,
+    iso(now - 300_000)
+  );
 
   const req = new Request("http://localhost/api/cache?trendHours=48", {
     method: "GET",
@@ -174,7 +220,10 @@ test("F1: cache GET returns correct shapes + trend window after batching (#11396
   assert.ok(body.idempotency && typeof body.idempotency === "object");
   // trend honors the requested window and carries the seeded rows
   assert.ok(Array.isArray(body.trend));
-  assert.equal(body.trend.reduce((s: number, p: { requests: number }) => s + p.requests, 0), 3);
+  assert.equal(
+    body.trend.reduce((s: number, p: { requests: number }) => s + p.requests, 0),
+    3
+  );
   // config reads settings through the batched getCachedSettings(.catch → {})
   assert.equal(body.config.semanticCacheEnabled, true);
 
@@ -222,7 +271,11 @@ test("N2: provider deletion cleanup helpers run in parallel (#11396)", () => {
   const src = readSource("src/lib/db/providers/deletion.ts");
 
   const batches = allPromiseAllBodies(src);
-  assert.equal(batches.length, 3, "expected 3 Promise.all batches in deletion.ts (one per delete function)");
+  assert.equal(
+    batches.length,
+    3,
+    "expected 3 Promise.all batches in deletion.ts (one per delete function)"
+  );
   for (const batch of batches) {
     assert.match(batch, /_cleanupDeletedComboConnectionRefs\(/);
     assert.match(batch, /_cleanupDeletedLKGPConnectionRefs\(/);

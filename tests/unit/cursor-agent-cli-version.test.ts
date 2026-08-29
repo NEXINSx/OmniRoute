@@ -59,7 +59,7 @@ test("newestVersionInDir picks lexicographically newest matching child", () => {
     fs.mkdirSync(path.join(tmp, "3.9.0"));
     assert.equal(newestVersionInDir(tmp), "2026.07.08-0c04a8a");
   } finally {
-    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -79,7 +79,7 @@ test("detectCursorAgentCliVersionFromFs uses shim realpath under versions/<id>",
       assert.equal(detectCursorAgentCliVersionFromFs(home), id);
     });
   } finally {
-    fs.rmSync(home, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -93,8 +93,8 @@ test("detectCursorAgentCliVersionFromFs uses CURSOR_DATA_DIR versions when no sh
       assert.equal(detectCursorAgentCliVersionFromFs(home), id);
     });
   } finally {
-    fs.rmSync(home, { recursive: true, force: true });
-    fs.rmSync(data, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(data, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -123,7 +123,7 @@ test("getCursorAgentCliVersion ignores invalid env and uses pin when FS empty", 
     );
   } finally {
     resetCursorAgentCliVersionCache();
-    fs.rmSync(home, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -160,8 +160,8 @@ test("getCursorAgentCliVersion reads CURSOR_DATA_DIR via isolated HOME", () => {
     );
   } finally {
     resetCursorAgentCliVersionCache();
-    fs.rmSync(home, { recursive: true, force: true });
-    fs.rmSync(data, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(data, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -209,8 +209,8 @@ test("disk cache hit serves immediately without blocking on network", async () =
     );
   } finally {
     resetCursorAgentCliVersionTestHooks();
-    fs.rmSync(cacheDir, { recursive: true, force: true });
-    fs.rmSync(home, { recursive: true, force: true });
+    fs.rmSync(cacheDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -235,7 +235,7 @@ test("refreshCursorAgentCliVersionFromInstaller writes disk cache from HTML", as
     assert.equal(onDisk.version, scrapedId);
   } finally {
     resetCursorAgentCliVersionTestHooks();
-    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(cacheDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -264,7 +264,7 @@ test("invalid installer HTML falls through to pin", async () => {
     assert.equal(id, null);
   } finally {
     resetCursorAgentCliVersionTestHooks();
-    fs.rmSync(cacheDir, { recursive: true, force: true });
-    fs.rmSync(home, { recursive: true, force: true });
+    fs.rmSync(cacheDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

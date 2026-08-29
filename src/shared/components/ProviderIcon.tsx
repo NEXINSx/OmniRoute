@@ -335,11 +335,19 @@ const ProviderIcon = memo(function ProviderIcon({
   fallbackColor,
 }: ProviderIconProps) {
   const { isDark } = useTheme();
-  const normalizedId = PROVIDER_ICON_ALIASES[providerId.toLowerCase()] || providerId.toLowerCase();
-  const localSvgId = LOCAL_SVG_ALIASES[normalizedId] || normalizedId;
+  // Own-property guards: a providerId such as "constructor" or "__proto__" otherwise
+  // resolves through Object.prototype, yielding a truthy-looking value that corrupts
+  // downstream lookups instead of falling through to the unknown-provider path (#11853).
+  const providerIdLower = providerId.toLowerCase();
+  const normalizedId = Object.hasOwn(PROVIDER_ICON_ALIASES, providerIdLower)
+    ? PROVIDER_ICON_ALIASES[providerIdLower]
+    : providerIdLower;
+  const localSvgId = Object.hasOwn(LOCAL_SVG_ALIASES, normalizedId)
+    ? LOCAL_SVG_ALIASES[normalizedId]
+    : normalizedId;
   const usesGenericIcon =
     GENERIC_PROVIDER_IDS.has(normalizedId) || GENERIC_PROVIDER_IDS.has(localSvgId);
-  const themedSvg = THEMED_SVGS[normalizedId];
+  const themedSvg = Object.hasOwn(THEMED_SVGS, normalizedId) ? THEMED_SVGS[normalizedId] : undefined;
   const hasSvg = KNOWN_SVGS.has(localSvgId);
 
   const [failedAssets, setFailedAssets] = useState<Record<string, true>>({});

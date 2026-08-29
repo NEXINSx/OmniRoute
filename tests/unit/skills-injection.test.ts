@@ -28,7 +28,7 @@ function resetRegistryState() {
 async function resetStorage() {
   resetRegistryState();
   coreDb.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -60,7 +60,7 @@ test.beforeEach(async () => {
 test.after(() => {
   resetRegistryState();
   coreDb.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("injectSkills renders enabled tools in provider-specific shapes", async () => {
@@ -81,7 +81,7 @@ test("injectSkills renders enabled tools in provider-specific shapes", async () 
     function: {
       name: "omr_skill_c2VhcmNoQDEuMC4w", // encodedName("search@1.0.0")
       description: "search the web",
-      parameters: { type: "object", properties: { query: "string" } },
+      parameters: { type: "object", properties: { query: { type: "string" } } },
     },
   });
   assert.equal(decodeSkillToolName("omr_skill_c2VhcmNoQDEuMC4w"), "search@1.0.0");
@@ -90,14 +90,14 @@ test("injectSkills renders enabled tools in provider-specific shapes", async () 
     {
       name: "omr_skill_c2VhcmNoQDEuMC4w",
       description: "search the web",
-      input_schema: { type: "object", properties: { query: "string" } },
+      input_schema: { type: "object", properties: { query: { type: "string" } } },
     },
   ]);
   assert.deepEqual(geminiTools, [
     {
       name: "omr_skill_c2VhcmNoQDEuMC4w",
       description: "search the web",
-      parameters: { type: "object", properties: { query: "string" } },
+      parameters: { type: "object", properties: { query: { type: "string" } } },
     },
   ]);
   assert.deepEqual(fallbackTools, [openaiTools[0]]);
@@ -219,7 +219,7 @@ test("injectSkills auto mode matches message/context semantics and applies score
     function: {
       name: encodedName("issueSearch@1.0.0"),
       description: "search github issues and pull requests",
-      parameters: { type: "object", properties: { query: "string" } },
+      parameters: { type: "object", properties: { query: { type: "string" } } },
     },
   });
 });
@@ -337,4 +337,61 @@ test("injectSkills auto mode limits selected auto skills and keeps on-mode skill
   );
   assert.equal(names.includes("alwaysOnUtility@1.0.0"), true);
   assert.equal(names.filter((name) => name.startsWith("searchSkill")).length, 5);
+});
+
+/**
+ * Regression for #11856 — injected skill tools carried a malformed JSON Schema.
+ *
+ * Skills may declare their input in shorthand (`{ "content": "string" }`).
+ * normalizeInputSchema() wrapped that bare property map as
+ * `{ type: "object", properties: { content: "string" } }` without expanding the
+ * shorthand values — and `"string"` is not a JSON Schema object. Zhipu GLM
+ * behind the Console Go tier validates tool schemas strictly and rejected the
+ * whole request with `[1210] Invalid API parameter`, giving a 100% failure rate
+ * on that provider regardless of request content or credentials. Most other
+ * providers tolerate the malformed schema, which is why it surfaced late.
+ *
+ * SkillSchema is `z.record(z.string(), z.unknown())`, so shorthand values pass
+ * validation from every skill source — the skills API, the GitHub collector and
+ * the skillssh marketplace alike.
+ */
+test("#11856 injectSkills expands shorthand property types into valid JSON Schema", async () => {
+  await skillRegistry.register({
+    name: "generation",
+    version: "1.0.0",
+    description: "generate content",
+    schema: {
+      input: {
+        content: "string",
+        count: "number",
+        // already-expanded entries must survive untouched
+        options: { type: "object", properties: { tone: { type: "string" } } },
+      },
+      output: { result: "string" },
+    },
+    handler: "generation-handler",
+    enabled: true,
+    apiKeyId: "key-11856",
+  });
+
+  const expected = {
+    type: "object",
+    properties: {
+      content: { type: "string" },
+      count: { type: "number" },
+      options: { type: "object", properties: { tone: { type: "string" } } },
+    },
+  };
+
+  const openaiTools = injectSkills({ provider: "openai", apiKeyId: "key-11856" });
+  assert.deepEqual(
+    (openaiTools[0] as { function: { parameters: unknown } }).function.parameters,
+    expected
+  );
+
+  const claudeTools = injectSkills({ provider: "anthropic", apiKeyId: "key-11856" });
+  assert.deepEqual((claudeTools[0] as { input_schema: unknown }).input_schema, expected);
+
+  const geminiTools = injectSkills({ provider: "google", apiKeyId: "key-11856" });
+  assert.deepEqual((geminiTools[0] as { parameters: unknown }).parameters, expected);
 });

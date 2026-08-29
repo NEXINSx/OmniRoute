@@ -155,7 +155,7 @@ test("MCP bundle never emits await inside a synchronous __esm initializer", () =
     runEsbuild(bundleArgs, ROOT);
     assertNoSyncEsmAwait(outputFile);
   } finally {
-    rmSync(outputDir, { recursive: true, force: true });
+    rmSync(outputDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -186,6 +186,6 @@ test("esbuild propagates async initialization through wrapped import cycles", ()
     );
     assertNoSyncEsmAwait(outputFile);
   } finally {
-    rmSync(fixtureDir, { recursive: true, force: true });
+    rmSync(fixtureDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

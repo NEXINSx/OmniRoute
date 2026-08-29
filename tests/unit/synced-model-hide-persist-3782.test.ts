@@ -35,7 +35,7 @@ after(() => {
   // Release the SQLite handle so the Node test runner can exit, then remove the
   // throwaway DATA_DIR (CLAUDE.md "Database Handles in Tests").
   resetDbInstance();
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+  fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 const PROVIDER = "llama-cpp";

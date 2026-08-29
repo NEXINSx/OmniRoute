@@ -203,7 +203,10 @@ test("OpenAI to Claude: finish flushes a fully-held boundary before message stop
     },
     state
   );
-  const result = flatten([chunk1, chunk2]);
+  // End-of-stream flush (see dd35750e5f): a finish chunk without usage is deferred
+  // until production's null flush, so mirror it before asserting the terminal events.
+  const chunk3 = openaiToClaudeResponse(null, state);
+  const result = flatten([chunk1, chunk2, chunk3]);
 
   assert.deepEqual(getTextDeltas(result), ["`"]);
   assert.equal(state._markdownBuffer, "");
@@ -251,7 +254,10 @@ test("OpenAI to Claude: tool call flushes a fully-held boundary before tool use"
     },
     state
   );
-  const result = flatten([chunk1, chunk2]);
+  // End-of-stream flush (see dd35750e5f): a finish chunk without usage is deferred
+  // until production's null flush, so mirror it before asserting the terminal events.
+  const chunk3 = openaiToClaudeResponse(null, state);
+  const result = flatten([chunk1, chunk2, chunk3]);
   const contentEvents = result.filter((event) =>
     String((event as Record<string, unknown>).type).startsWith("content_block_")
   );

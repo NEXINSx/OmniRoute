@@ -31,6 +31,7 @@ import { getAllMusicModels } from "@omniroute/open-sse/config/musicRegistry";
 import {
   getRegistryModelThinkingEfforts,
   getRegistryThinkingEfforts,
+  providerUsesAuthoritativeLiveCatalog,
   REGISTRY,
 } from "@omniroute/open-sse/config/providerRegistry";
 import { CODEX_NATIVE_UNPREFIXED_MODELS } from "@omniroute/open-sse/services/model";
@@ -994,11 +995,13 @@ async function buildUnifiedModelsResponseCore(
         // the fix, a provider with any synced model silently dropped ALL its
         // static models.
         //
-        // Cursor exclusive listing: when an active synced catalog exists, drop
-        // ALL static rows (including effort variants) so Test All / clients only
-        // see live AvailableModels + injected auto*.
+        // An authoritative active synced catalog replaces the static registry.
+        // Partial discovery providers still use exact-id coverage suppression so
+        // their intentionally omitted static routes remain available.
         const syncedForProvider = syncedModelIdsByCanonicalProvider.get(canonicalProviderId);
-        const exclusiveListing = providerUsesExclusiveSyncedListing(canonicalProviderId);
+        const exclusiveListing =
+          providerUsesExclusiveSyncedListing(canonicalProviderId) ||
+          providerUsesAuthoritativeLiveCatalog(canonicalProviderId);
         const providerHasSynced = syncedForProvider !== undefined && syncedForProvider.size > 0;
         const coveredBySynced = shouldSuppressStaticModelForExclusiveListing({
           exclusiveListing,
@@ -1227,7 +1230,7 @@ async function buildUnifiedModelsResponseCore(
             continue;
           }
 
-          if (includeAlias) {
+          if (includeAlias || Boolean(prefix)) {
             models.push({
               id: aliasId,
               object: "model",
@@ -1239,7 +1242,7 @@ async function buildUnifiedModelsResponseCore(
               ...syncedFields,
             });
           }
-          if (includeAlias && modelType === "audio") {
+          if ((includeAlias || Boolean(prefix)) && modelType === "audio") {
             models.push({
               id: aliasId,
               object: "model",
@@ -1652,7 +1655,7 @@ async function buildUnifiedModelsResponseCore(
             ? getCustomVisionCapabilityFields(model, aliasId, modelId)
             : null;
 
-          if (includeAlias) {
+          if (includeAlias || Boolean(prefix)) {
             models.push({
               id: aliasId,
               object: "model",
@@ -1770,7 +1773,7 @@ async function buildUnifiedModelsResponseCore(
         const visionFields =
           getVisionCapabilityFields(aliasId) || getVisionCapabilityFields(modelId);
 
-        if (includeAlias) {
+        if (includeAlias || Boolean(nodePrefix)) {
           models.push({
             id: aliasId,
             object: "model",

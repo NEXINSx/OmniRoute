@@ -90,7 +90,7 @@ test("generator resolves a $ref path parameter into --id and substitutes {id} in
       "generated command must declare --body for the requestBody"
     );
   } finally {
-    rmSync(workDir, { recursive: true, force: true });
+    rmSync(workDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -126,17 +126,23 @@ components:
   try {
     assert.throws(() => runGenerator(specPath, outDir));
   } finally {
-    rmSync(workDir, { recursive: true, force: true });
+    rmSync(workDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
 test("real generated bin/cli/api-commands/combos.mjs has --id and --body on the PATCH combo command (#10955)", () => {
   const src = readFileSync(REAL_COMBOS, "utf8");
-  const patchBlockMatch = src.match(/ {2}tag\.command\("patch-[^"]*"\)[\s\S]*?\n {2}(?=tag\.command\(|\})/);
+  const patchBlockMatch = src.match(
+    / {2}tag\.command\("patch-[^"]*"\)[\s\S]*?\n {2}(?=tag\.command\(|\})/
+  );
   assert.ok(patchBlockMatch, "combos.mjs must have a generated patch-* command block");
   const patchBlock = patchBlockMatch[0];
 
-  assert.match(patchBlock, /\.requiredOption\("--id <id>"/, "PATCH combo command must require --id");
+  assert.match(
+    patchBlock,
+    /\.requiredOption\("--id <id>"/,
+    "PATCH combo command must require --id"
+  );
   assert.match(
     patchBlock,
     /\.option\("--body <jsonOrPath>"/,

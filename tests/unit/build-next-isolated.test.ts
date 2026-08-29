@@ -13,14 +13,13 @@ import {
   syncStandaloneNativeAssets,
 } from "../../scripts/build/build-next-isolated.mjs";
 
-
 async function withTempDir(fn) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "omniroute-build-next-isolated-"));
 
   try {
     await fn(tempDir);
   } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
+    await fs.rm(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 
