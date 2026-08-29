@@ -96,7 +96,7 @@ test("assembleStandalone copies standalone + static + public + sidecars into out
     "static is NOT placed under a literal .next (would 404 against distDir server)"
   );
   assert.ok(fs.existsSync(path.join(outDir, "public/logo.svg")), "public copied");
-  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("patchTurbopackChunks restores canonical external package names in a custom distDir", () => {
@@ -116,7 +116,7 @@ test("patchTurbopackChunks restores canonical external package names in a custom
   assert.match(patched, /require\("ws"\)/);
   assert.match(patched, /require\("@ngrok\/ngrok"\)/);
   assert.doesNotMatch(patched, /-[0-9a-f]{16}/);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // Drift guard: the async path (syncStandaloneNativeAssets / syncStandaloneExtraModules,
@@ -173,7 +173,7 @@ test("async and sync sidecar copy paths produce identical bundle trees", async (
   ]) {
     assert.ok(asyncTree.includes(sqlJsFile), `sql.js runtime file copied: ${sqlJsFile}`);
   }
-  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("the TPROXY addon source is skipped gracefully when it was not built (non-Linux)", async () => {
@@ -189,7 +189,7 @@ test("the TPROXY addon source is skipped gracefully when it was not built (non-L
     !fs.existsSync(path.join(out, "src/mitm/tproxy/native/build/Release/transparent.node")),
     "absent addon is simply not copied (graceful skip)"
   );
-  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // Regression guard (#deploy 2026-07-11): server-ws.mjs gained an import of
@@ -214,7 +214,7 @@ test("every relative import of standalone-server-ws.mjs is shipped into the bund
       `server-ws.mjs imports ./${imp} but EXTRA_MODULE_ENTRIES does not ship it — the bundle would crash at boot (ERR_MODULE_NOT_FOUND)`
     );
   }
-  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // Regression guard (deploy 2026-08-19): under heavy concurrent build I/O the bulk
@@ -287,5 +287,5 @@ test("copy passes tolerate a dest that already resolves to src, or a stale-typed
     "sql.js content reachable through the pre-existing symlink"
   );
 
-  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });

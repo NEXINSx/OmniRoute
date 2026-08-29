@@ -25,7 +25,7 @@ before(async () => {
 
 after(() => {
   coreDb.resetDbInstance();
-  fs.rmSync(testDataDir, { recursive: true, force: true });
+  fs.rmSync(testDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("pins the target model when it differs from the translated body model", async () => {

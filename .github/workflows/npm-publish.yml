@@ -23,11 +23,12 @@ on:
           - next
           - historic
       publish_mode:
-        description: "staged = npm stage publish (owner approves with 2FA after the staged boot-verify); direct = legacy immediate publish (emergency fallback only)"
+        description: "auto = publish through npm Trusted Publishing (OIDC, no token, no 2FA prompt — the default); staged = npm stage publish (owner approves with 2FA); direct = legacy token publish (emergency fallback only)"
         required: false
-        default: "staged"
+        default: "auto"
         type: choice
         options:
+          - auto
           - staged
           - direct
   workflow_call:
@@ -62,7 +63,7 @@ jobs:
     # mid-"Creating an optimized production build" while v3.8.48 had still fit in 16min.
     # This job never runs on `pull_request`, so the fork-safety clause is always true here;
     # it is kept verbatim so the expression stays greppable against ci.yml.
-    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && fromJSON('["self-hosted","omni-release"]') || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && fromJSON('["self-hosted","omni-build"]') || 'ubuntu-latest' }}
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       tag: ${{ steps.resolve.outputs.tag }}
@@ -204,8 +205,11 @@ jobs:
             exit 0
           fi
           RUN=""
+          # $RUNNER_TEMP, never /tmp: on the .113 pool /tmp is a 12 GB tmpfs (RAM). Parking
+          # this 1.3 GB artefact there took 27–32 min of the 76-min publish job — the
+          # same bytes upload from disk in 2 min. RUNNER_TEMP is per-runner and on disk.
           for candidate in $CANDIDATES; do
-            if gh run download "$candidate" --repo "$REPO" --name next-build --dir /tmp/next-build 2>/dev/null; then
+            if gh run download "$candidate" --repo "$REPO" --name next-build --dir "$RUNNER_TEMP/next-build" 2>/dev/null; then
               RUN="$candidate"
               break
             fi
@@ -215,8 +219,8 @@ jobs:
             echo "::notice::none of the candidate runs still carries next-build (1-day retention) — falling back to a full build"
             exit 0
           fi
-          tar -xzf /tmp/next-build/e2e-build.tar.gz -C .
-          rm -rf /tmp/next-build
+          tar -xzf "$RUNNER_TEMP/next-build/e2e-build.tar.gz" -C .
+          rm -rf "$RUNNER_TEMP/next-build"
           if [ -f .build/next/standalone/server.js ]; then
             echo "✅ standalone tree restored from CI run $RUN — build:cli will skip next build"
           else
@@ -404,8 +408,34 @@ jobs:
           fi
           npm --version
 
+      # Trusted Publishing (OIDC): npm mints a short-lived credential for THIS run from
+      # GitHub's id-token — no NPM_TOKEN secret, no 2FA prompt, provenance included, and
+      # it is the bypass npm sanctions now that tokens which skip 2FA are being retired
+      # (gh.io/npm-gat-bypass2fa-deprecation). Requires the package's Trusted Publisher to
+      # be configured on npmjs.com (owner: diegosouzapw/OmniRoute, workflow
+      # npm-publish.yml) and a github-hosted runner — which is why this job exists.
+      # Without that configuration `npm publish` fails with ENEEDAUTH: re-dispatch with
+      # publish_mode=staged or direct. Automatic publishing was the flow up to v3.8.48;
+      # v3.8.49 moved to staged (WS1.3) to keep a leaked token from publishing alone —
+      # OIDC gives the same guarantee without the manual approve.
+      - name: Publish to npm (Trusted Publishing / OIDC — automatic)
+        if: github.event_name != 'workflow_dispatch' || inputs.publish_mode == 'auto'
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+          TAG: ${{ needs.publish.outputs.tag }}
+        run: |
+          set -euo pipefail
+          TARBALL="omniroute-${VERSION}.tgz"
+          test -f "$TARBALL" || { echo "tarball $TARBALL did not arrive from the publish job" >&2; ls -la; exit 1; }
+          # Deliberately NO NODE_AUTH_TOKEN in this step: npm >= 11.5 detects the GitHub
+          # OIDC token itself. Always pass --tag explicitly (defense in depth: an older
+          # VERSION can never claim `@latest`).
+          npm publish "$TARBALL" --provenance --access public --tag "$TAG" --ignore-scripts
+          echo "✅ Published omniroute@$VERSION (dist-tag=$TAG) via Trusted Publishing"
+
       - name: Publish to npm (staged — owner approves with 2FA)
-        if: github.event_name != 'workflow_dispatch' || inputs.publish_mode != 'direct'
+        # Only on an explicit request now: Trusted Publishing below is the default.
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_mode == 'staged'
         env:
           VERSION: ${{ needs.publish.outputs.version }}
           TAG: ${{ needs.publish.outputs.tag }}

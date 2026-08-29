@@ -2037,7 +2037,9 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [config, setConfig] = useState(sanitizeComboRuntimeConfig(combo?.config));
   // Validate persisted enum; ensure reset on combo change not just first mount.
-  const initialSortMethod = normalizeSortMethod(config.modelSort?.method);
+  const initialSortMethod = normalizeSortMethod(
+    (config.modelSort as { method?: unknown } | undefined)?.method
+  );
   const [sortMethod, setSortMethod] = useState<SortMethod>(initialSortMethod);
   useEffect(() => {
     // Sync point: when the combo identity changes, re-derive sort method.
@@ -2733,13 +2735,15 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
         const rankings = await fetchProviderRankings();
         // Functional note: `next` is the post-batch snapshot. Concurrent single-add
         // racing this batch is low-probability single-user; last write wins.
-        const sorted = await sortComboStepsByScore(next, rankings);
-        setModels(sorted);
+        const sorted = await sortComboStepsByScore(next as ComboStep[], rankings);
+        setModels(sorted as typeof next);
       } catch {
         setModels(next);
       }
     } else {
-      setModels(sortComboStepsSync(next, currentMethod as "provider" | "name"));
+      setModels(
+        sortComboStepsSync(next as ComboStep[], currentMethod as "provider" | "name") as typeof next
+      );
     }
     setBuilderError("");
   };
@@ -3642,7 +3646,11 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
               </div>
 
               <div className="flex items-center justify-between gap-2 mb-2">
-                <ComboSortSelect value={sortMethod} onChange={handleSortChange} t={t} />
+                <ComboSortSelect
+                  value={sortMethod}
+                  onChange={handleSortChange}
+                  t={(k, f) => getI18nOrFallback(t, k, f)}
+                />
               </div>
 
               {models.length === 0 ? (

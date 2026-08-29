@@ -153,32 +153,60 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Combo not found" }, { status: 404 });
       }
       const persistedSteps = Array.isArray(combo.models) ? combo.models : [];
-      const modelSteps = persistedSteps.filter(
-        (step: any) =>
+      let unsupportedStepCount = 0;
+      const targets = persistedSteps.flatMap((step: any) => {
+        if (
           typeof step === "string" ||
           ((step.kind === undefined || step.kind === "model") && typeof step.model === "string")
-      );
-      const unsupportedStepCount = persistedSteps.length - modelSteps.length;
+        ) {
+          const value = typeof step === "string" ? step : step.model;
+          const separator = value.indexOf("/");
+          const parsedProvider = separator === -1 ? undefined : value.slice(0, separator);
+          const parsedModel = separator === -1 ? value : value.slice(separator + 1);
+
+          return [
+            {
+              provider:
+                typeof step === "string"
+                  ? parsedProvider || "unknown"
+                  : step.providerId || step.provider || parsedProvider || "unknown",
+              model: parsedModel,
+              weight: typeof step === "string" ? undefined : step.weight,
+            },
+          ];
+        }
+
+        // #11822 follow-up (see #11882): surface combo-ref and provider-wildcard
+        // steps with a specific warning instead of folding them into a generic
+        // "unsupported step" count. Structural combo references and wildcard
+        // expansion are out of scope for this route-local simulator.
+        if (step?.kind === "combo-ref") {
+          warnings.push(
+            `Step references combo "${String(step.comboName)}" — nested combos are not expanded by the simulator.`
+          );
+          return [];
+        }
+        if (step?.kind === "provider-wildcard") {
+          warnings.push(
+            `Step "${String(step.providerId)}/${String(step.modelPattern)}" is a provider wildcard — expanded at runtime, shown here unresolved.`
+          );
+          return [
+            {
+              provider: String(step.providerId ?? "unknown"),
+              model: String(step.modelPattern ?? "*"),
+              weight: typeof step.weight === "number" ? step.weight : undefined,
+            },
+          ];
+        }
+
+        unsupportedStepCount += 1;
+        return [];
+      });
       if (unsupportedStepCount > 0) {
         warnings.push(
           `Skipped ${unsupportedStepCount} unsupported persisted combo ${unsupportedStepCount === 1 ? "step" : "steps"}.`
         );
       }
-      const targets = modelSteps.map((step: any) => {
-        const value = typeof step === "string" ? step : step.model;
-        const separator = value.indexOf("/");
-        const parsedProvider = separator === -1 ? undefined : value.slice(0, separator);
-        const parsedModel = separator === -1 ? value : value.slice(separator + 1);
-
-        return {
-          provider:
-            typeof step === "string"
-              ? parsedProvider || "unknown"
-              : step.providerId || step.provider || parsedProvider || "unknown",
-          model: parsedModel,
-          weight: typeof step === "string" ? undefined : step.weight,
-        };
-      });
       comboInfo = { name: combo.name, strategy: combo.strategy, targets };
     } else if (body.combo) {
       comboInfo = body.combo;

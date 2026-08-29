@@ -64,7 +64,7 @@ test("the interceptor keeps the component and substitutes printf formats", () =>
     assert.equal(plain, 'plain message {"a":1}');
   } finally {
     __consoleInterceptorInternals.reset();
-    fs.rmSync(LOG_DIR, { recursive: true, force: true });
+    fs.rmSync(LOG_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -90,6 +90,6 @@ test("a first argument that coincidentally contains a printf token does not swal
     assert.ok(entry.includes(err.stack || ""), "Error stack was dropped");
   } finally {
     __consoleInterceptorInternals.reset();
-    fs.rmSync(LOG_DIR, { recursive: true, force: true });
+    fs.rmSync(LOG_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

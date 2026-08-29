@@ -40,19 +40,19 @@ function withEnv(overrides: Record<string, string | undefined>, run: () => void)
 }
 
 test("G1: a test context with no DATA_DIR never resolves to the operator's real data dir", () => {
-  withEnv({ DATA_DIR: undefined, NODE_ENV: "test", OMNIROUTE_ALLOW_DEFAULT_DATA_DIR: undefined }, () => {
-    const resolved = resolveWritableDataDir();
-    assert.notEqual(
-      resolved,
-      getDefaultDataDir(),
-      "a test run must never be handed the operator's real DATA_DIR"
-    );
-    assert.ok(
-      resolved.startsWith(os.tmpdir()),
-      `expected a throwaway temp dir, got ${resolved}`
-    );
-    assert.ok(fs.existsSync(resolved), "the redirected dir must exist and be usable");
-  });
+  withEnv(
+    { DATA_DIR: undefined, NODE_ENV: "test", OMNIROUTE_ALLOW_DEFAULT_DATA_DIR: undefined },
+    () => {
+      const resolved = resolveWritableDataDir();
+      assert.notEqual(
+        resolved,
+        getDefaultDataDir(),
+        "a test run must never be handed the operator's real DATA_DIR"
+      );
+      assert.ok(resolved.startsWith(os.tmpdir()), `expected a throwaway temp dir, got ${resolved}`);
+      assert.ok(fs.existsSync(resolved), "the redirected dir must exist and be usable");
+    }
+  );
 });
 
 test("G2: an explicit DATA_DIR still wins inside a test context", () => {
@@ -60,20 +60,17 @@ test("G2: an explicit DATA_DIR still wins inside a test context", () => {
   withEnv({ DATA_DIR: explicit, NODE_ENV: "test" }, () => {
     assert.equal(resolveWritableDataDir(), explicit);
   });
-  fs.rmSync(explicit, { recursive: true, force: true });
+  fs.rmSync(explicit, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("G3: the escape hatch restores the old behavior for deliberate runs", () => {
-  withEnv(
-    { DATA_DIR: undefined, NODE_ENV: "test", OMNIROUTE_ALLOW_DEFAULT_DATA_DIR: "1" },
-    () => {
-      assert.equal(
-        resolveWritableDataDir(),
-        getDefaultDataDir(),
-        "an explicit opt-in must still reach the real dir, so the intent is recorded"
-      );
-    }
-  );
+  withEnv({ DATA_DIR: undefined, NODE_ENV: "test", OMNIROUTE_ALLOW_DEFAULT_DATA_DIR: "1" }, () => {
+    assert.equal(
+      resolveWritableDataDir(),
+      getDefaultDataDir(),
+      "an explicit opt-in must still reach the real dir, so the intent is recorded"
+    );
+  });
 });
 
 test("G4: a normal server run (no test markers) is untouched", () => {

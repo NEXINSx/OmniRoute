@@ -13939,5 +13939,17 @@
     "cta": "Lấy khóa API",
     "partnerLinkNote": "Liên kết đối tác",
     "dismissAriaLabel": "Đóng"
+  },
+  "combo": {
+    "sort": {
+      "label": "Sắp xếp theo",
+      "method": {
+        "manual": "Thủ công",
+        "provider": "Nhà cung cấp",
+        "score": "Điểm (mô hình miễn phí)",
+        "name": "Tên"
+      },
+      "scoreHint": "Xếp hạng theo điểm chỉ áp dụng cho nhà cung cấp miễn phí; các nhà cung cấp khác giữ nguyên vị trí."
+    }
   }
 }

@@ -67,7 +67,7 @@ async function seedKey(
 async function resetStorage(): Promise<void> {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   attemptedExternalCalls = 0;
   modelAliasResolver.invalidateAliasCache();
@@ -84,7 +84,7 @@ test.after(() => {
   globalThis.fetch = originalFetch;
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("requires authentication, managed scope, and canonical explicit owner", async () => {
