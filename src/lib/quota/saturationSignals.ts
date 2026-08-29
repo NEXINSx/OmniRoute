@@ -306,10 +306,7 @@ async function fetchCodexSaturation(
   return Math.min(1, Math.max(0, quota.percentUsed ?? 0));
 }
 
-async function fetchBailianSaturation(
-  connectionId: string,
-  dim: DimensionSpec
-): Promise<number> {
+async function fetchBailianSaturation(connectionId: string, dim: DimensionSpec): Promise<number> {
   const mod = await import("@omniroute/open-sse/services/bailianQuotaFetcher");
   const quota = await mod.fetchBailianQuota(connectionId);
   if (!quota) return 0;
@@ -318,13 +315,13 @@ async function fetchBailianSaturation(
   let pct = 0;
   switch (dim.window) {
     case "5h":
-      pct = (q.window5h as Record<string, unknown>)?.percentUsed as number ?? 0;
+      pct = ((q.window5h as Record<string, unknown>)?.percentUsed as number) ?? 0;
       break;
     case "weekly":
-      pct = (q.windowWeekly as Record<string, unknown>)?.percentUsed as number ?? 0;
+      pct = ((q.windowWeekly as Record<string, unknown>)?.percentUsed as number) ?? 0;
       break;
     case "monthly":
-      pct = (q.windowMonthly as Record<string, unknown>)?.percentUsed as number ?? 0;
+      pct = ((q.windowMonthly as Record<string, unknown>)?.percentUsed as number) ?? 0;
       break;
     default:
       pct = (q.percentUsed as number) ?? 0;
@@ -361,15 +358,13 @@ interface AnthropicSaturationDeps {
 let _anthropicDepsOverride: AnthropicSaturationDeps | null = null;
 
 /** Test-only: inject ({loadConnection, fetchUsage}); pass null to restore. */
-export function __setAnthropicSaturationDepsForTests(
-  deps: AnthropicSaturationDeps | null
-): void {
+export function __setAnthropicSaturationDepsForTests(deps: AnthropicSaturationDeps | null): void {
   _anthropicDepsOverride = deps;
 }
 
 async function defaultAnthropicDeps(): Promise<AnthropicSaturationDeps> {
   const [localDbMod, usageMod] = await Promise.all([
-    import("@/lib/localDb"),
+    import("@/lib/db/readCache"),
     import("@omniroute/open-sse/services/usage"),
   ]);
   return {
@@ -423,10 +418,7 @@ function planUtilizationFromUsage(usage: unknown, window: QuotaWindow): number |
   return Math.min(1, Math.max(0, used / 100));
 }
 
-async function fetchAnthropicSaturation(
-  connectionId: string,
-  dim: DimensionSpec
-): Promise<number> {
+async function fetchAnthropicSaturation(connectionId: string, dim: DimensionSpec): Promise<number> {
   // Try the REAL plan-window utilization first (5h / weekly), via the same
   // /api/oauth/usage path usage.ts already uses. This is the signal fairShare
   // actually needs for Claude Pro/Max — the per-minute request headers do not
@@ -478,19 +470,13 @@ export function __setGenericUsageFetcherForTests(fetcher: GenericUsageFetcher | 
   _genericUsageFetcherOverride = fetcher;
 }
 
-async function defaultGenericUsageFetch(
-  connectionId: string,
-  provider: string
-): Promise<unknown> {
+async function defaultGenericUsageFetch(connectionId: string, provider: string): Promise<unknown> {
   const mod = await import("@omniroute/open-sse/services/usage");
   const conn = { id: connectionId, provider } as Parameters<typeof mod.getUsageForProvider>[0];
   return mod.getUsageForProvider(conn);
 }
 
-async function fetchGenericSaturation(
-  connectionId: string,
-  provider: string
-): Promise<number> {
+async function fetchGenericSaturation(connectionId: string, provider: string): Promise<number> {
   // 1. Real usage percent is authoritative when present (a provider that
   //    actually reports utilization beats the burst-window token headers).
   try {
@@ -501,9 +487,8 @@ async function fetchGenericSaturation(
 
       // Prefer the normalized quota shape (handles nested `quotas` map for
       // Antigravity / Claude / etc.). Fall back to legacy top-level fields.
-      const { convertUsageToQuotaInfo } = await import(
-        "@omniroute/open-sse/services/genericQuotaFetcher"
-      );
+      const { convertUsageToQuotaInfo } =
+        await import("@omniroute/open-sse/services/genericQuotaFetcher");
       const quota = convertUsageToQuotaInfo(result);
       if (quota && Number.isFinite(quota.percentUsed)) {
         return Math.min(1, Math.max(0, quota.percentUsed));
@@ -570,7 +555,10 @@ export async function getSaturation(
         break;
     }
   } catch (err) {
-    log.warn({ err: (err as Error)?.message, connectionId, provider }, "saturation fetch failed — failing open with 0");
+    log.warn(
+      { err: (err as Error)?.message, connectionId, provider },
+      "saturation fetch failed — failing open with 0"
+    );
     value = 0;
   }
 

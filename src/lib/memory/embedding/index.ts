@@ -5,7 +5,7 @@ import {
   type EmbeddingProviderNodeRow,
 } from "@omniroute/open-sse/config/embeddingRegistry.ts";
 import { getProviderCredentials } from "@/sse/services/auth";
-import { getCachedProviderNodes } from "@/lib/localDb";
+import { getCachedProviderNodes } from "@/lib/db/readCache";
 import type { MemorySettingsExtended } from "@/shared/schemas/memory";
 import type {
   EmbeddingResolution,

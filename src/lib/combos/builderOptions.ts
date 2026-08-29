@@ -1,12 +1,7 @@
-import {
-  getAllCustomModels,
-  getAllSyncedAvailableModels,
-  getCombos,
-  getModelIsHidden,
-  getProviderConnections,
-  getProviderNodes,
-  getSettings,
-} from "@/lib/localDb";
+import { getAllCustomModels, getAllSyncedAvailableModels, getModelIsHidden } from "@/lib/db/models";
+import { getCombos } from "@/lib/db/combos";
+import { getProviderConnections, getProviderNodes } from "@/lib/db/providers";
+import { getSettings } from "@/lib/db/settings";
 import { getAccountDisplayName, getProviderDisplayName } from "@/lib/display/names";
 import { getCompatibleFallbackModels } from "@/lib/providers/managedAvailableModels";
 import { getResolvedModelCapabilities } from "@/lib/modelCapabilities";
