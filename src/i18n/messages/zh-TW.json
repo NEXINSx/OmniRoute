@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "將預算耗盡的請求路由到緊急免費備用提供者/模型。",
   "featureFlagArenaEloSyncEnabledDescription": "啟用定期 Arena AI 排行榜 ELO 同步，用於模型智慧排名。",
   "featureFlagExposeCcDiscoveryAliasesDescription": "在 /v1/models 上廣告 claude/&lt;provider&gt;/&lt;model&gt; 鏡像 ID，以便 Claude Code 閘道模型發現列出非 Claude 模型。警告：當全域啟用時，會為所有客戶端重複目錄條目。",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "為提供者調度啟用按租戶的自適應虛擬准入通道（#9654）：一個租戶的突發流量不再導致另一個租戶收到 503。OMNIROUTE_CHAT_VIRTUAL_LANES 環境變數優先於此儀表板設定；變更在伺服器重新啟動後生效。",
   "sidebar": {
     "home": "首頁",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "請求之間的最小時間（毫秒）。覆蓋預設速率限制器延遲。",
     "rateLimitOverridesMinTimeLabel": "最小間隔（毫秒）",
+    "rateLimitOverridesRpdHint": "此連線的每天最大請求數。覆蓋提供者預設值。",
+    "rateLimitOverridesRpdLabel": "RPD（請求數/天）",
     "rateLimitOverridesRpmHint": "此連線的每分鐘最大請求數。覆蓋提供者預設值。",
     "rateLimitOverridesRpmLabel": "RPM（請求/分鐘）",
     "rateLimitOverridesTpdHint": "此連線的每日最大權杖數。覆蓋提供者預設值。",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "時長",
       "time": "時間",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "正在載入日誌...",
     "noLogs": "暫無日誌記錄。進行一些API呼叫以在此處檢視它們。",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

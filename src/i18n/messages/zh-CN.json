@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "将预算耗尽的请求路由到紧急免费备用提供者/模型。",
   "featureFlagArenaEloSyncEnabledDescription": "启用定期同步 Arena AI 排行榜 ELO，用于模型智能排名。",
   "featureFlagExposeCcDiscoveryAliasesDescription": "在 /v1/models 上发布 claude/&lt;provider&gt;/&lt;model&gt; 镜像 ID，让 Claude Code 网关模型发现能列出非 Claude 模型。警告：全局启用会使所有客户端的目录条目翻倍。",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "为提供者调度启用按租户的自适应虚拟准入通道（#9654）：一个租户的突发流量不再导致另一个租户收到 503。OMNIROUTE_CHAT_VIRTUAL_LANES 环境变量优先于此仪表板设置；更改在服务器重启后生效。",
   "sidebar": {
     "home": "首页",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "请求之间的最小时间（毫秒）。覆盖默认速率限制器延迟。",
     "rateLimitOverridesMinTimeLabel": "最小间隔（毫秒）",
+    "rateLimitOverridesRpdHint": "此连接的每天最大请求数。覆盖提供者默认值。",
+    "rateLimitOverridesRpdLabel": "RPD（请求数/天）",
     "rateLimitOverridesRpmHint": "此连接的每分钟最大请求数。覆盖提供者默认值。",
     "rateLimitOverridesRpmLabel": "RPM（请求/分钟）",
     "rateLimitOverridesTpdHint": "此连接的每日最大令牌数。覆盖提供者默认值。",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "时长",
       "time": "时间",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "正在加载日志...",
     "noLogs": "暂无日志记录。进行一些API调用以在此处查看它们。",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Redirecționează cererile cu buget epuizat către furnizorul/modelul de rezervă gratuit de urgență.",
   "featureFlagArenaEloSyncEnabledDescription": "Activează sincronizarea periodică ELO a clasamentului Arena AI pentru clasamentele de inteligență ale modelelor.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Publica id-urile mirror claude/&lt;provider&gt;/&lt;model&gt; pe /v1/models astfel încât lista de descoperire a modelului Claude Code să includă modele non-Claude. Atenție: dublează intrările din catalog pentru toți clienții când este activat global.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Activați benzile de admitere virtuale adaptive per-tenant pentru expedierea către furnizori (#9654): un vârf de trafic al unui tenant nu mai returnează 503 altui tenant. Variabila de mediu OMNIROUTE_CHAT_VIRTUAL_LANES are prioritate față de această setare din panou; modificările intră în vigoare la repornirea serverului.",
   "sidebar": {
     "home": "Acasă",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Timpul minim (ms) între solicitări. Suprascrie întârzierea implicită a limitatorului de rată.",
     "rateLimitOverridesMinTimeLabel": "Min Interval (ms)",
+    "rateLimitOverridesRpdHint": "Numărul maxim de cereri pe zi pentru această conexiune. Suprascrie valoarea implicită a furnizorului.",
+    "rateLimitOverridesRpdLabel": "RPD (Cereri/zi)",
     "rateLimitOverridesRpmHint": "Numărul maxim de solicitări pe minut pentru această conexiune. Suprascrie valoarea implicită a furnizorului.",
     "rateLimitOverridesRpmLabel": "RPM (Solicitări/min)",
     "rateLimitOverridesTpdHint": "Numărul maxim de tokenuri pe zi pentru această conexiune. Suprascrie valoarea implicită a furnizorului.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

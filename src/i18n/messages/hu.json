@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "A keretet kimerítő kérések átirányítása a vészhelyzeti ingyenes tartalék szolgáltatóhoz/modellhez.",
   "featureFlagArenaEloSyncEnabledDescription": "Rendszeres Arena AI ranglista ELO szinkronizáció engedélyezése a modellintelligencia rangsorokhoz.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Hirdesse a claude/&lt;provider&gt;/&lt;model&gt; tükör azonosítókat a /v1/models-on, hogy a Claude Code átjáró modell felfedezése nem Claude modelleket is listázzon. Figyelmeztetés: globális engedélyezés esetén megduplázza a katalógus bejegyzéseket minden kliens számára.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Tegye lehetővé a bérlőnkénti adaptív virtuális beléptetősávokat a szolgáltatók felé történő továbbításhoz (#9654): az egyik bérlő kiugró terhelése már nem okoz 503-as hibát egy másiknál. Az OMNIROUTE_CHAT_VIRTUAL_LANES környezeti változó felülírja ezt a vezérlőpult-beállítást; a változtatások a szerver újraindításakor lépnek életbe.",
   "sidebar": {
     "home": "Otthon",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Kérések közötti minimális idő (ms). Felülbírálja az alapértelmezett sebességkorlátozó késleltetést.",
     "rateLimitOverridesMinTimeLabel": "Min. intervallum (ms)",
+    "rateLimitOverridesRpdHint": "Maximális kérések száma naponta ehhez a kapcsolathoz. Felülbírálja a szolgáltató alapértelmezését.",
+    "rateLimitOverridesRpdLabel": "RPD (Kérés/nap)",
     "rateLimitOverridesRpmHint": "Maximális percenkénti kérésszám ehhez a kapcsolathoz. Felülbírálja a szolgáltató alapértelmezését.",
     "rateLimitOverridesRpmLabel": "RPM (kérés/perc)",
     "rateLimitOverridesTpdHint": "Maximális napi tokenszám ehhez a kapcsolathoz. Felülbírálja a szolgáltató alapértelmezését.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Dirigera anrop med förbrukad budget till den kostnadsfria reservleverantören/-modellen för nödfall.",
   "featureFlagArenaEloSyncEnabledDescription": "Aktivera periodisk synkronisering av Arena AI-topplistans ELO för rankning av modellintelligens.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Reklamera claude/&lt;provider&gt;/&lt;model&gt; spegel-id på /v1/models så att Claude Code gateway-modellens upptäcktslista visar icke-Claude-modeller. Varning: dubblerar katalogposter för alla klienter när det är aktiverat globalt.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Aktivera adaptiva virtuella åtkomstfiler per tenant för providerutskick (#9654): en tenants burst ger inte längre en annan 503. Miljövariabeln OMNIROUTE_CHAT_VIRTUAL_LANES har företräde framför den här inställningen i instrumentpanelen; ändringarna träder i kraft vid omstart av servern.",
   "sidebar": {
     "home": "Hem",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minsta tid (ms) mellan förfrågningar. Åsidosätter standardfördröjningen för hastighetsbegränsaren.",
     "rateLimitOverridesMinTimeLabel": "Minsta intervall (ms)",
+    "rateLimitOverridesRpdHint": "Maximalt antal förfrågningar per dag för denna anslutning. Åsidosätter leverantörens standard.",
+    "rateLimitOverridesRpdLabel": "RPD (Förfrågningar/dag)",
     "rateLimitOverridesRpmHint": "Maximalt antal förfrågningar per minut för denna anslutning. Åsidosätter leverantörens standardvärde.",
     "rateLimitOverridesRpmLabel": "RPM (Förfrågningar/min)",
     "rateLimitOverridesTpdHint": "Maximalt antal tokens per dag för denna anslutning. Åsidosätter leverantörens standardvärde.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

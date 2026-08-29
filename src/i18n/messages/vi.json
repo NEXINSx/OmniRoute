@@ -986,8 +986,10 @@
   },
   "disabled": "Đã tắt",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Định tuyến các yêu cầu đã hết ngân sách đến nhà cung cấp/mô hình dự phòng khẩn cấp miễn phí.",
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Tắt tính năng tạo biến thể cấp độ suy nghĩ (ví dụ: -low, -medium, -high) trong danh mục /v1/models.",
   "featureFlagArenaEloSyncEnabledDescription": "Bật đồng bộ ELO định kỳ từ bảng xếp hạng Arena AI để xếp hạng năng lực của mô hình.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Quảng bá các id phản chiếu claude/&lt;provider&gt;/&lt;model&gt; trên /v1/models để tính năng khám phá mô hình qua gateway của Claude Code liệt kê được các mô hình không phải Claude. Cảnh báo: khi bật ở phạm vi toàn cục, số mục trong danh mục tăng gấp đôi với mọi client.",
+  "featureFlagNoThinkingAliasEnabledDescription": "Công tắc chính cho các bí danh gateway no-think/&lt;provider&gt;/&lt;model&gt;. Bật (mặc định): /v1/models quảng bá biến thể không suy nghĩ cho mọi mô hình Claude có khả năng suy nghĩ đủ điều kiện, và id no-think/ được gửi trên một yêu cầu sẽ giải quyết lại về mô hình thực với phần lý luận bị triệt tiêu. Tắt: không có biến thể nào được quảng bá và id no-think/ được xử lý như bất kỳ id mô hình không xác định nào khác. Tùy chọn tham gia/từ chối ModelSpec.noThinkingAlias theo từng mô hình vẫn áp dụng khi tính năng này bật.",
   "featureFlagChatVirtualLanesEnabledDescription": "Bật làn tiếp nhận ảo thích ứng cho từng đối tượng thuê (tenant) để phân phối nhà cung cấp (#9654): một đợt bùng phát của tenant này không còn trả 503 cho tenant khác. Biến môi trường OMNIROUTE_CHAT_VIRTUAL_LANES được ưu tiên hơn cài đặt bảng điều khiển này; các thay đổi có hiệu lực khi khởi động lại máy chủ.",
   "sidebar": {
     "home": "Trang chủ",
@@ -5883,6 +5885,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "Thời gian chờ hàng đợi tối đa (ms)",
     "rateLimitOverridesMinTimeHint": "Thời gian tối thiểu (ms) giữa các yêu cầu. Ghi đè độ trễ bộ giới hạn tốc độ mặc định.",
     "rateLimitOverridesMinTimeLabel": "Khoảng thời gian tối thiểu (ms)",
+    "rateLimitOverridesRpdHint": "Số lượng yêu cầu tối đa mỗi ngày cho kết nối này. Ghi đè cài đặt mặc định của nhà cung cấp.",
+    "rateLimitOverridesRpdLabel": "RPD (Yêu cầu/ngày)",
     "rateLimitOverridesRpmHint": "Số yêu cầu tối đa mỗi phút cho kết nối này. Ghi đè giá trị mặc định của nhà cung cấp.",
     "rateLimitOverridesRpmLabel": "RPM (Số yêu cầu/phút)",
     "rateLimitOverridesTpdHint": "Số token tối đa mỗi ngày cho kết nối này. Ghi đè giá trị mặc định của nhà cung cấp.",
@@ -11246,7 +11250,8 @@
       "tps": "TPS",
       "duration": "Thời lượng",
       "time": "Thời gian",
-      "conversation": "Cuộc trò chuyện"
+      "conversation": "Cuộc trò chuyện",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Đang tải nhật ký...",
     "noLogs": "Chưa có nhật ký nào. Hãy thực hiện một số cuộc gọi API để xem chúng ở đây.",

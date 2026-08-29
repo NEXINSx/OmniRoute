@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Перенаправлять запросы при исчерпании бюджета на резервный бесплатный провайдер/модель.",
   "featureFlagArenaEloSyncEnabledDescription": "Включить периодическую синхронизацию ELO из таблицы лидеров Arena AI для рейтинга интеллектуальности моделей.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Публиковать claude/&lt;провайдер&gt;/&lt;модель&gt; зеркальные ID на /v1/models, чтобы Claude Code мог видеть не-Claude модели. Внимание: удваивает записи каталога для всех клиентов при глобальном включении.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Включите адаптивные виртуальные полосы допуска для каждого тенанта при маршрутизации к провайдерам (#9654): всплеск нагрузки одного тенанта больше не вызывает 503 у другого. Переменная окружения OMNIROUTE_CHAT_VIRTUAL_LANES имеет приоритет над этой настройкой в панели; изменения вступают в силу после перезапуска сервера.",
   "sidebar": {
     "home": "Главная",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Минимальное время (мс) между запросами. Переопределяет задержку ограничителя запросов по умолчанию.",
     "rateLimitOverridesMinTimeLabel": "Мин. интервал (мс)",
+    "rateLimitOverridesRpdHint": "Максимальное количество запросов в день для этого подключения. Переопределяет значение по умолчанию провайдера.",
+    "rateLimitOverridesRpdLabel": "RPD (Запросов/день)",
     "rateLimitOverridesRpmHint": "Максимальное количество запросов в минуту для этого подключения. Переопределяет значение по умолчанию для провайдера.",
     "rateLimitOverridesRpmLabel": "RPM (запросов/мин)",
     "rateLimitOverridesTpdHint": "Максимальное количество токенов в день для этого подключения. Переопределяет значение по умолчанию для провайдера.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

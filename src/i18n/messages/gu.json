@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "બજેટ-સમાપ્ત વિનંતીઓને કટોકટીના મફત ફોલબેક પ્રદાતા/મોડેલ પર રૂટ કરો.",
   "featureFlagArenaEloSyncEnabledDescription": "મોડેલ ઇન્ટેલિજન્સ રેન્કિંગ માટે સમયાંતરે Arena AI લીડરબોર્ડ ELO સિંક સક્ષમ કરો.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models પર claude/&lt;provider&gt;/&lt;model&gt; મિરર આઈડીઓનું જાહેરાત કરો જેથી Claude Code ગેટવે મોડલ શોધી કાઢે છે non-Claude મોડલ. ચેતવણી: જ્યારે વૈશ્વિક રીતે સક્રિય કરવામાં આવે ત્યારે તમામ ક્લાયન્ટ માટે કૅટલોગ એન્ટ્રીઓ ડબલ કરે છે.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "પ્રોવાઇડર ડિસ્પેચ માટે પ્રતિ-ટેનન્ટ અનુકૂલનશીલ વર્ચ્યુઅલ એડમિશન લેન સક્ષમ કરો (#9654): એક ટેનન્ટનો બર્સ્ટ હવે બીજા ટેનન્ટને 503 આપતો નથી. OMNIROUTE_CHAT_VIRTUAL_LANES એન્વાયર્નમેન્ટ વેરિયેબલ આ ડેશબોર્ડ સેટિંગ કરતાં વધુ પ્રાધાન્ય ધરાવે છે; ફેરફારો સર્વર પુનઃપ્રારંભ પર અસરકારક થાય છે.",
   "sidebar": {
     "home": "Home",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "વિનંતીઓ વચ્ચેનો ન્યૂનતમ સમય (ms). ડિફૉલ્ટ રેટ લિમિટર વિલંબને ઓવરરાઇડ કરે છે.",
     "rateLimitOverridesMinTimeLabel": "ન્યૂનતમ અંતરાલ (ms)",
+    "rateLimitOverridesRpdHint": "આ કનેક્શન માટે પ્રતિ દિવસ મહત્તમ વિનંતીઓ. પ્રદાતા ડિફૉલ્ટને ઓવરરાઇડ કરે છે.",
+    "rateLimitOverridesRpdLabel": "RPD (વિનંતીઓ/દિવસ)",
     "rateLimitOverridesRpmHint": "આ કનેક્શન માટે પ્રતિ મિનિટ મહત્તમ વિનંતીઓ. પ્રદાતા ડિફૉલ્ટને ઓવરરાઇડ કરે છે.",
     "rateLimitOverridesRpmLabel": "RPM (વિનંતીઓ/મિનિટ)",
     "rateLimitOverridesTpdHint": "આ કનેક્શન માટે પ્રતિ દિવસ મહત્તમ ટોકન્સ. પ્રદાતા ડિફૉલ્ટને ઓવરરાઇડ કરે છે.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Kierowanie żądań z wyczerpanym budżetem do awaryjnego, bezpłatnego fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Włączenie okresowej synchronizacji ELO tabeli liderów Arena AI dla rankingów inteligencji model.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Reklamuj identyfikatory luster claude/&lt;provider&gt;/&lt;model&gt; na /v1/models, aby brama modelu Claude Code wyświetlała listę modeli niebędących Claude. Uwaga: podwaja wpisy w katalogu dla wszystkich klientów, gdy jest włączone globalnie.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Włącz adaptacyjne wirtualne pasma przyjęć dla każdego tenanta przy wysyłce do dostawców (#9654): przeciążenie jednego tenanta nie powoduje już błędu 503 u innego. Zmienna środowiskowa OMNIROUTE_CHAT_VIRTUAL_LANES ma pierwszeństwo przed tym ustawieniem w panelu; zmiany wchodzą w życie po restarcie serwera.",
   "sidebar": {
     "home": "Strona główna",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimalny czas (ms) między żądaniami. Nadpisuje domyślne opóźnienie rate limiter.",
     "rateLimitOverridesMinTimeLabel": "Min. odstęp (ms)",
+    "rateLimitOverridesRpdHint": "Maksymalna liczba żądań dziennie dla tego połączenia. Nadpisuje wartość domyślną dostawcy.",
+    "rateLimitOverridesRpdLabel": "RPD (Żądań/dzień)",
     "rateLimitOverridesRpmHint": "Maksymalna liczba żądań na minutę dla tego połączenia. Nadpisuje wartość domyślną provider.",
     "rateLimitOverridesRpmLabel": "RPM (żądania/min)",
     "rateLimitOverridesTpdHint": "Maksymalna liczba tokens na dzień dla tego połączenia. Nadpisuje wartość domyślną provider.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Czas trwania",
       "time": "Czas",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Wczytywanie logów...",
     "noLogs": "Brak logów. Wykonaj połączenia API, aby zobaczyć je tutaj.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

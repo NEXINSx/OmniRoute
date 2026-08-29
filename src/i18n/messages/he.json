@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "ניתוב בקשות שחרגו מהתקציב לספק/מודל גיבוי חינמי לשעת חירום.",
   "featureFlagArenaEloSyncEnabledDescription": "הפעלת סנכרון ELO תקופתי מלוח המובילים של Arena AI עבור דירוגי אינטליגנציית מודלים.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "פרסם את מזהי המראה של claude/&lt;provider&gt;/&lt;model&gt; ב-/v1/models כך שרשימות גילוי המודלים של Claude Code יכללו מודלים שאינם של Claude. אזהרה: מכפיל את רשומות הקטלוג עבור כל הלקוחות כאשר זה מופעל באופן גלובלי.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "הפעל נתיבי קבלה וירטואליים אדפטיביים לכל דייר (tenant) עבור שליחת ספקים (#9654): פרץ עומס של דייר אחד כבר לא מחזיר 503 לדייר אחר. משתנה הסביבה OMNIROUTE_CHAT_VIRTUAL_LANES גובר על הגדרה זו בלוח הבקרה; השינויים נכנסים לתוקף לאחר הפעלת השרת מחדש.",
   "sidebar": {
     "home": "בית",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "זמן מינימלי (במילישניות) בין בקשות. עוקף את השהיית מגביל הקצב כברירת מחדל.",
     "rateLimitOverridesMinTimeLabel": "מרווח מינימלי (מילישניות)",
+    "rateLimitOverridesRpdHint": "מקסימום בקשות ליום עבור חיבור זה. עוקף את ברירת המחדל של הספק.",
+    "rateLimitOverridesRpdLabel": "RPD (בקשות/יום)",
     "rateLimitOverridesRpmHint": "מקסימום בקשות לדקה עבור חיבור זה. עוקף את ברירת המחדל של הספק.",
     "rateLimitOverridesRpmLabel": "RPM (בקשות לדקה)",
     "rateLimitOverridesTpdHint": "מקסימום אסימונים ליום עבור חיבור זה. עוקף את ברירת המחדל של הספק.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }
