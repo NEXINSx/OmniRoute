@@ -7,13 +7,13 @@ title: Self-Hosted Runner Box Operations
 The self-hosted pool (`self-hosted, omni-release` on all eight runners; `omni-build` on two) runs on the **.113** box.
 Measured 2026-08-28 (v3.8.50 postmortem, Parte III):
 
-| resource  | value                                                                                  | what it means for scheduling                                                                                                                  |
-| --------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| RAM / CPU | **31 GB / 32 cores** (was 16 GB when this doc was first written)                       | one `next-build` peaks at **~14 GB** → 2 concurrent heavy builds saturate the box, 3 take it down (2026-08-28 06:42Z: load 56, two jobs lost) |
-| swap      | 15 GB                                                                                  | it swapped its way through the v3.8.50 publish; pressure shows in `/proc/pressure/memory`                                                     |
-| `/tmp`    | **12 GB tmpfs = RAM**                                                                  | anything parked there is memory; leftovers are swept after 3 h                                                                                |
-| disk      | 188 GB                                                                                 | `_work` checkouts of 8 runners reach ~70 GB with no cap                                                                                       |
-| runners   | **6 listeners**: 4 OmniRoute (2 `omni-build` + 2 `omni-light`) + OmniHeuris + OmniMind | all share the memory above; `omniroute-113-3/-4/-7/-8` are disabled (`systemctl enable --now` brings one back)                                |
+| resource  | value                                                                                                          | what it means for scheduling                                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| RAM / CPU | **31 GB / 32 cores** (was 16 GB when this doc was first written)                                               | one `next-build` peaks at **~14 GB** → 2 concurrent heavy builds saturate the box, 3 take it down (2026-08-28 06:42Z: load 56, two jobs lost) |
+| swap      | 15 GB                                                                                                          | it swapped its way through the v3.8.50 publish; pressure shows in `/proc/pressure/memory`                                                     |
+| `/tmp`    | **12 GB tmpfs = RAM**                                                                                          | anything parked there is memory; leftovers are swept after 3 h                                                                                |
+| disk      | 188 GB                                                                                                         | `_work` checkouts of 8 runners reach ~70 GB with no cap                                                                                       |
+| runners   | **6 listeners**: 4 OmniRoute (1 `omni-build` + 1 `omni-release`-only + 2 `omni-light`) + OmniHeuris + OmniMind | all share the memory above; `omniroute-113-3/-4/-7/-8` are disabled (`systemctl enable --now` brings one back)                                |
 
 ## Install the janitor (one-time, on the box)
 
@@ -21,7 +21,7 @@ Measured 2026-08-28 (v3.8.50 postmortem, Parte III):
 scp scripts/ops/runner-janitor.sh root@192.168.0.113:/opt/omniroute-ops/runner-janitor.sh
 ssh root@192.168.0.113 'chmod +x /opt/omniroute-ops/runner-janitor.sh; apt-get install -y lsof'
 # cron (root): every 30 min, log to /var/log/runner-janitor.log
-*/30 * * * * MAX_ACTIVE_RUNNERS=4 /opt/omniroute-ops/runner-janitor.sh >> /var/log/runner-janitor.log 2>&1
+*/30 * * * * MAX_ACTIVE_RUNNERS=6 /opt/omniroute-ops/runner-janitor.sh >> /var/log/runner-janitor.log 2>&1
 ```
 
 `lsof` is required: the janitor proves a path is idle with one snapshot of open
@@ -49,26 +49,19 @@ a time, only when idle**, with the idle check and the restart in the same comman
 
 ## Operating rules
 
-- **Heavy-build ceiling: 2 at a time — enforced by label.** Every job that runs a
-  full `next build` targets `[self-hosted, omni-build]`, and only **two** runners carry
-  that label (`omniroute-113-5`, `omniroute-113-6`, added through the runners API — no
-  re-registration):
-  - `ci.yml` `Build` and `npm-publish.yml` `publish`
-  - both `nightly-release-green` validations
-  - `docker-publish.yml` **amd64** (the hosted 7 GB runner ResourceExhausted this
-    tree — #11976). The arm64 leg stays on `ubuntu-24.04-arm` (no ARM box) with
-    webpack.
-    The other listeners keep `omni-release` / `omni-light` and take nothing heavy;
-    GitHub queues a third build instead of the kernel killing one. Pair with the
-    `heavy-build-*` concurrency lanes: `ci.yml` `Build` on `main` and docker-publish
-    amd64 share `heavy-build-main` (`cancel-in-progress: false`) so a `:next` publish
-    waits beside the artefact instead of sitting next to it. PR builds use
-    `heavy-build-pr`. To add capacity, label another runner — never raise the count
-    past what 31 GB holds (one next-build ≈ 14–16 GB; a Docker amd64 build is the
-    same class plus the daemon — still one slot).
-    Docker Engine must be on those two units (`docker info` is the first step of
-    the publish job). If it is missing, the job fails closed instead of hanging on
-    `setup-buildx`.
+- **Heavy-build ceiling: ONE at a time — enforced by label (since 2026-08-29).** Every job
+  that runs a `next build` (`ci.yml` `build`, `npm-publish.yml` `publish`, both
+  `nightly-release-green` validations) targets `[self-hosted, omni-build]`, and only
+  **`omniroute-113-5`** carries that label (added through the runners API — no
+  re-registration). Two was the previous ceiling and it was wrong for 31 GB: on
+  2026-08-29 17:26 UTC two concurrent `next-build`s (15.4 GB + 17.2 GB RSS) drove the box
+  to 5 GB free with 4 GB of swap in use and the kernel OOM-killed one of them — systemd
+  booked the kill on the _other_ runner's unit, `runsvc.sh` SIGKILLed that listener, and
+  the job on it died with "The runner has received a shutdown signal" (same text as a
+  hosted-runner OOM). `omniroute-113-6` keeps `omni-release` only. Heavy builds from
+  `main` merges, PRs and the nightly now serialize on one slot; the queue is the price.
+  The second slot comes back the day the Proxmox VM gets more RAM (48–64 GB):
+  `gh api -X POST repos/<repo>/actions/runners/<id of omniroute-113-6>/labels -f 'labels[]=omni-build'`.
 - **Light pool: `omni-light` (2026-08-29, #11965).** `omniroute-113` and `omniroute-113-2` carry
   `omni-light` for jobs that need a backend-only `next build` (~5–6 GB) but not a full one: the
   nightly Schemathesis, promptfoo, garak and axe-a11y jobs. They ran on the hosted 7 GB runner and
@@ -77,7 +70,8 @@ a time, only when idle**, with the idle check and the restart in the same comman
   on the Proxmox VM (`tomni-proxmox-113`), which turns the label ceilings into 3 heavy + 2 light.
 - **Fewer listeners on purpose.** Four OmniRoute units were disabled on 2026-08-29 — with only
   `ci.yml` `Build` and the nightlies using the box, 8 listeners were idle and each extra one is a
-  potential 14 GB tenant. The janitor ceiling is 4 (`MAX_ACTIVE_RUNNERS=4` in cron).
+  potential 14 GB tenant. The janitor ceiling is 6 (`MAX_ACTIVE_RUNNERS=6` in cron): it counts
+  every `Runner.Listener` on the box, and OmniHeuris + OmniMind add two to our four.
 - **Never clean `/tmp` or `_work` by hand while any runner is busy.** A
   check-then-delete with a gap between the two is how a live Build job lost its
   `_work` on 2026-08-27. The janitor does the check and the removal in one step;
