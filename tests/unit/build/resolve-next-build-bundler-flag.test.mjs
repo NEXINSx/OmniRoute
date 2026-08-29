@@ -17,7 +17,9 @@ function makeProjectDir(envLine) {
 }
 
 test("resolveNextBuildBundlerFlag returns --turbopack by default", () => {
-  const flag = resolveNextBuildBundlerFlag({});
+  // Platform pinned: the default is platform-dependent since #12059, so a bare call
+  // would assert this machine's architecture instead of the rule being tested.
+  const flag = resolveNextBuildBundlerFlag({}, "linux", "x64");
   assert.equal(flag, "--turbopack");
 });
 
@@ -55,5 +57,31 @@ test("honorBundlerFlagFromEnvFile is a no-op when .env is missing", () => {
   const env = {};
   honorBundlerFlagFromEnvFile(env, fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-no-env-")));
   assert.equal(env.OMNIROUTE_USE_TURBOPACK, undefined);
-  assert.equal(resolveNextBuildBundlerFlag(env), "--turbopack");
+  // Platform pinned for the same reason as the default case above.
+  assert.equal(resolveNextBuildBundlerFlag(env, "linux", "x64"), "--turbopack");
+});
+
+// Turbopack is unusable on macOS arm64 with Next 16.3.2: `next build` never converges
+// (25 min+, chunks pinned at 20) and `next dev` never reaches listen state, while the
+// same commits are green in CI on Linux x64. See issue #12059.
+test("resolveNextBuildBundlerFlag defaults to --webpack on darwin/arm64", () => {
+  assert.equal(resolveNextBuildBundlerFlag({}, "darwin", "arm64"), "--webpack");
+});
+
+test("resolveNextBuildBundlerFlag still defaults to --turbopack on linux", () => {
+  assert.equal(resolveNextBuildBundlerFlag({}, "linux", "x64"), "--turbopack");
+});
+
+test("resolveNextBuildBundlerFlag defaults to --turbopack on darwin/x64 (Intel Mac)", () => {
+  // The stall is specific to arm64; do not penalise Intel Macs on a guess.
+  assert.equal(resolveNextBuildBundlerFlag({}, "darwin", "x64"), "--turbopack");
+});
+
+test("an explicit OMNIROUTE_USE_TURBOPACK=1 still wins on darwin/arm64", () => {
+  // The platform default only applies when the operator has NOT chosen. Overriding an
+  // explicit request is exactly what the original env-only design guarded against.
+  assert.equal(
+    resolveNextBuildBundlerFlag({ OMNIROUTE_USE_TURBOPACK: "1" }, "darwin", "arm64"),
+    "--turbopack"
+  );
 });

@@ -132,13 +132,39 @@ function runNextBuild() {
   });
 }
 
-export function resolveNextBuildBundlerFlag(baseEnv = process.env) {
+/**
+ * True where Turbopack is known not to converge: Apple silicon on Next 16.3.2 (#12059).
+ * `next build` never completes (25 min+ with no progress, chunks pinned at 20) and
+ * `next dev` never reaches listen state, while the same commits build green in CI on
+ * Linux x64. Narrow on purpose — Intel Macs are untouched, so this does not penalise
+ * platforms we have not measured.
+ */
+export function isTurbopackStallPlatform(platform = process.platform, arch = process.arch) {
+  return platform === "darwin" && arch === "arm64";
+}
+
+export function resolveNextBuildBundlerFlag(
+  baseEnv = process.env,
+  platform = process.platform,
+  arch = process.arch
+) {
   // Turbopack is the default; OMNIROUTE_USE_TURBOPACK=0 is the documented escape hatch
   // to webpack (Windows, native-binding trouble, RAM-constrained machines — #6409, and
-  // docs/reference/ENVIRONMENT.md). The choice is env-only ON PURPOSE: the variable is
-  // the operator's control and CI sets it explicitly, so sniffing the runtime here would
-  // silently override an operator who asked for Turbopack.
+  // docs/reference/ENVIRONMENT.md). The variable is the operator's control and CI sets
+  // it explicitly, so an explicit value always wins below and runtime sniffing never
+  // overrides an operator who asked for Turbopack.
+  //
+  // What changed (#12059): the platform now selects the DEFAULT when nobody asked. On
+  // Apple silicon, picking Turbopack by default means a build that silently never
+  // finishes, which is worse than the slower-but-reliable webpack path (13 min).
+  // Operators who want Turbopack back set OMNIROUTE_USE_TURBOPACK=1 explicitly.
   if (baseEnv.OMNIROUTE_USE_TURBOPACK === "0") {
+    return "--webpack";
+  }
+  if (baseEnv.OMNIROUTE_USE_TURBOPACK !== undefined) {
+    return "--turbopack";
+  }
+  if (isTurbopackStallPlatform(platform, arch)) {
     return "--webpack";
   }
   return "--turbopack";
