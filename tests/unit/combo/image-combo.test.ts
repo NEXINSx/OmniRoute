@@ -62,7 +62,7 @@ async function cleanupTestDataDir() {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       core.resetDbInstance();
-      fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+      fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
       return;
     } catch (error: unknown) {
       lastError = error;
@@ -220,7 +220,10 @@ test("non-combo bare model names pass through model resolution unchanged", async
   assert.equal(response.status, 400);
   const body = await response.json();
   const bodyStr = JSON.stringify(body);
-  assert.ok(bodyStr.includes("not found") || bodyStr.includes("not a valid"), "Combo not found error");
+  assert.ok(
+    bodyStr.includes("not found") || bodyStr.includes("not a valid"),
+    "Combo not found error"
+  );
 });
 
 test("provider/model format (with slash) is not treated as a combo name", async () => {

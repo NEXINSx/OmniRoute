@@ -547,7 +547,7 @@ test.after(async () => {
   }
   await relay.stop();
   core.closeDbInstance();
-  await fsp.rm(TEST_DATA_DIR, { recursive: true, force: true });
+  await fsp.rm(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("resilience API only exposes configuration, not runtime breaker state", async () => {

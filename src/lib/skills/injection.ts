@@ -63,9 +63,17 @@ function normalizeInputSchema(input: Record<string, unknown>): Record<string, un
   if (typeof input.type === "string") {
     return input;
   }
+  // Expand shorthand values: skills may declare `{ "content": "string" }`
+  // instead of `{ "content": { "type": "string" } }`. Forwarding the shorthand
+  // verbatim produces invalid JSON Schema, which strict-validating upstreams
+  // (Zhipu GLM behind Console Go) reject with a 400 for the entire request.
+  const properties: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    properties[key] = typeof value === "string" ? { type: value } : value;
+  }
   return {
     type: "object",
-    properties: input,
+    properties,
   };
 }
 
