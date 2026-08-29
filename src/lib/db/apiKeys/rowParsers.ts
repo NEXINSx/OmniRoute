@@ -9,6 +9,7 @@
  */
 
 import type { AccessSchedule, RateLimitRule } from "./types";
+import { ALL_COMBOS_ACCESS_RULE } from "@/shared/constants/comboAccess";
 export { parseModelAccessMode } from "./modelAccessMode";
 export type { ModelAccessMode } from "./modelAccessMode";
 
@@ -30,6 +31,9 @@ export function parseAllowedModels(value: unknown): string[] {
 }
 
 export function parseAllowedCombos(value: unknown): string[] {
+  // Migration 149 may already be recorded before an older writer creates a key.
+  // Preserve those legacy NULL rows as allow-all while keeping explicit [] deny-all.
+  if (value === null || value === undefined) return [ALL_COMBOS_ACCESS_RULE];
   return parseStringList(value);
 }
 

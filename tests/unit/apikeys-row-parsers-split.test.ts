@@ -39,6 +39,13 @@ test("parseAllowedModels keeps only string entries, tolerates junk", () => {
   assert.deepEqual(P.parseAllowedModels(null), []);
 });
 
+test("parseAllowedCombos preserves legacy NULL as allow-all without widening explicit []", () => {
+  assert.deepEqual(P.parseAllowedCombos(null), ["combo/*"]);
+  assert.deepEqual(P.parseAllowedCombos(undefined), ["combo/*"]);
+  assert.deepEqual(P.parseAllowedCombos("[]"), []);
+  assert.deepEqual(P.parseAllowedCombos('["fast-chat"]'), ["fast-chat"]);
+});
+
 test("flag parsers honor the 0/1/true/false matrix", () => {
   assert.equal(P.parseNoLog(1), true);
   assert.equal(P.parseNoLog("1"), true);
