@@ -228,6 +228,7 @@ export {
   isModelScoped400,
 };
 import { applyComboTargetExhaustion } from "./combo/targetExhaustion.ts";
+import { clearLKGPOnExhaustion } from "./combo/lkgpClearing.ts";
 import {
   applyNativeCodexTurnPin,
   getNativeCodexTurnPin,
@@ -2185,28 +2186,15 @@ async function handleComboChatInner({
           // #11911: when the provider/connection is marked exhausted (providerExhausted
           // or the connection added to exhaustedConnections), clear the LKGP pin so
           // the next request doesn't re-select the same dead provider first.
-          const exhaustedProvider = targetWithConnection.provider;
-          const exhaustedConnId = targetWithConnection.connectionId;
-          if (
-            exhaustedProvider &&
-            exhaustedProvider !== "unknown" &&
-            (providerExhausted ||
-              exhaustedConnections.has(`${exhaustedProvider}:${exhaustedConnId}`))
-          ) {
-            void (async () => {
-              try {
-                const { clearLKGP } = await import("../../src/lib/localDb");
-                await Promise.all([
-                  clearLKGP(combo.name, targetWithConnection.executionKey),
-                  clearLKGP(combo.name, combo.id || combo.name),
-                ]);
-              } catch (err) {
-                log.warn("COMBO", "Failed to clear Last Known Good Provider. This is non-fatal.", {
-                  err,
-                });
-              }
-            })();
-          }
+          void clearLKGPOnExhaustion({
+            comboName: combo.name,
+            comboKey: combo.id || combo.name,
+            target: targetWithConnection,
+            providerExhausted,
+            exhaustedConnections,
+            log,
+            tag: "COMBO",
+          });
 
           // #2101: Prevent infinite fallback loops with 400 Bad Request errors that are genuinely
           // body-specific (malformed JSON, bad format, missing required fields).
@@ -3720,32 +3708,15 @@ async function handleRoundRobinCombo({
           // #11911: when the provider/connection is marked exhausted (providerExhausted
           // or the connection added to exhaustedConnections), clear the LKGP pin so
           // the next request doesn't re-select the same dead provider first.
-          const exhaustedProvider = targetWithConnection.provider;
-          const exhaustedConnId = targetWithConnection.connectionId;
-          if (
-            exhaustedProvider &&
-            exhaustedProvider !== "unknown" &&
-            (providerExhausted ||
-              exhaustedConnections.has(`${exhaustedProvider}:${exhaustedConnId}`))
-          ) {
-            void (async () => {
-              try {
-                const { clearLKGP } = await import("../../src/lib/localDb");
-                await Promise.all([
-                  clearLKGP(combo.name, targetWithConnection.executionKey),
-                  clearLKGP(combo.name, combo.id || combo.name),
-                ]);
-              } catch (err) {
-                log.warn(
-                  "COMBO-RR",
-                  "Failed to clear Last Known Good Provider. This is non-fatal.",
-                  {
-                    err,
-                  }
-                );
-              }
-            })();
-          }
+          void clearLKGPOnExhaustion({
+            comboName: combo.name,
+            comboKey: combo.id || combo.name,
+            target: targetWithConnection,
+            providerExhausted,
+            exhaustedConnections,
+            log,
+            tag: "COMBO-RR",
+          });
 
           // Transient errors → mark in semaphore so round-robin stops stampeding this target.
           if (
