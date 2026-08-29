@@ -67,13 +67,13 @@ const log = {
 
 test.beforeEach(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 });
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("#8488 filter: some tool-capable targets kept (unchanged)", () => {
@@ -121,16 +121,19 @@ test("#8488 filter: zero tool-capable targets → empty (fail closed)", () => {
   assert.ok(exhaustion!.excluded.some((e) => e.reason.includes("tools")));
 });
 
-test("#8488 filter: chatgpt-web emulation providers stay eligible for tools (#5240)", () => {
-  // Registry honestly tags chatgpt-web models toolCalling:false; the prompt
+test("#8488 filter: Gemini Web emulation stays eligible for tools (#5240)", () => {
+  // Registry honestly tags Gemini Web models toolCalling:false; the prompt
   // shim is what makes tools work. Fail-closed must not hard-reject them.
-  assert.equal(providerSupportsEmulatedToolCalling("chatgpt-web"), true);
-  assert.equal(providerSupportsEmulatedToolCalling("cgpt-web"), true);
+  assert.equal(providerSupportsEmulatedToolCalling("gemini-web"), true);
+  assert.equal(providerSupportsEmulatedToolCalling("gweb"), true);
   assert.equal(providerSupportsEmulatedToolCalling("claude-web"), false); // toolCalling:"none"
   assert.equal(providerSupportsEmulatedToolCalling("openai"), false);
 
   const kept = filterTargetsByRequestCompatibility(
-    [target("chatgpt-web", "chatgpt-web/gpt-5.5"), target("chatgpt-web", "chatgpt-web/o3")],
+    [
+      target("gemini-web", "gemini-web/gemini-3.1-pro"),
+      target("gemini-web", "gemini-web/gemini-3.7-flash"),
+    ],
     {
       messages: [{ role: "user", content: "Use a tool." }],
       tools: [{ type: "function", function: { name: "lookup", parameters: {} } }],
@@ -140,11 +143,14 @@ test("#8488 filter: chatgpt-web emulation providers stay eligible for tools (#52
   assert.equal(kept.length, 2);
   assert.deepEqual(
     kept.map((t) => t.modelStr),
-    ["chatgpt-web/gpt-5.5", "chatgpt-web/o3"]
+    ["gemini-web/gemini-3.1-pro", "gemini-web/gemini-3.7-flash"]
   );
 
   const exhaustion = describeCapabilityFilterExhaustion(
-    [target("chatgpt-web", "chatgpt-web/gpt-5.5"), target("chatgpt-web", "chatgpt-web/o3")],
+    [
+      target("gemini-web", "gemini-web/gemini-3.1-pro"),
+      target("gemini-web", "gemini-web/gemini-3.7-flash"),
+    ],
     {
       messages: [{ role: "user", content: "Use a tool." }],
       tools: [{ type: "function", function: { name: "lookup", parameters: {} } }],
@@ -154,9 +160,9 @@ test("#8488 filter: chatgpt-web emulation providers stay eligible for tools (#52
   assert.equal(exhaustion, null, "emulation-capable pool must not report capability_mismatch");
 });
 
-test("#8488 auto: chatgpt-web emulation survives tool pre-filter (#5240)", async () => {
+test("#8488 auto: Gemini Web emulation survives tool pre-filter (#5240)", async () => {
   const result = await resolveAutoStrategyOrder({
-    orderedTargets: [target("chatgpt-web", "chatgpt-web/gpt-5.5")] as never,
+    orderedTargets: [target("gemini-web", "gemini-web/gemini-3.1-pro")] as never,
     body: {
       messages: [{ role: "user", content: "hi" }],
       tools: [{ type: "function", function: { name: "lookup", parameters: {} } }],
@@ -176,7 +182,7 @@ test("#8488 auto: chatgpt-web emulation survives tool pre-filter (#5240)", async
   );
   if ("orderedTargets" in result) {
     assert.equal(result.orderedTargets.length, 1);
-    assert.equal(result.orderedTargets[0].modelStr, "chatgpt-web/gpt-5.5");
+    assert.equal(result.orderedTargets[0].modelStr, "gemini-web/gemini-3.1-pro");
   }
 });
 

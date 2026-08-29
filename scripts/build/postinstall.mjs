@@ -15,7 +15,7 @@
  * Modules repaired:
  *   - better-sqlite3 (SQLite bindings)
  *   - wreq-js (TLS client for OAuth providers)
- *   - tls-client-node (TLS client for chatgpt-web/claude-web/grok-web/lmarena/perplexity-web)
+ *   - tls-client-node (TLS client for claude-web/grok-web/lmarena/perplexity-web)
  *   - sql.js (WASM SQLite fallback runtime)
  *   - node-machine-id (local CLI machine-token server runtime)
  *

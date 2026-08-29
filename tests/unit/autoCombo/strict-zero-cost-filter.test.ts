@@ -41,11 +41,11 @@ const BASE_OPTIONS = { minRemainingAllowance: 1, maxStateAgeMs: 180_000, now: no
 
 const REAL_CONN = "conn-real-1";
 
-// A real keyless entry from the catalog (felo-web, all models keyless/tos=avoid),
+// A real keyless entry from the catalog (OpenCode Free, all models keyless/tos=avoid),
 // as a genuine no-auth candidate (the only shape that legitimately gets the shortcut).
 const KEYLESS = {
-  provider: "felo-web",
-  model: "felo-chat",
+  provider: "opencode",
+  model: "big-pickle",
   connectionId: SYNTHETIC_NOAUTH_CONNECTION_ID,
 };
 // A real quota-based entry with hardStopGuaranteed: true (added by this feature),
@@ -80,17 +80,21 @@ test("sanity: fixtures exist in the real catalog with the metadata these tests a
     true,
     "agentrouter must NOT carry hardStopGuaranteed: true (no documented hard-stop guarantee)"
   );
-  const feloEntry = FREE_MODEL_BUDGETS.find(
-    (m) => m.provider === "felo-web" && m.modelId === "felo-chat"
+  const keylessEntry = FREE_MODEL_BUDGETS.find(
+    (m) => m.provider === "opencode" && m.modelId === "big-pickle"
   );
-  assert.equal(feloEntry?.freeType, "keyless");
-  assert.equal(feloEntry?.tos, "avoid", "felo-web must be tos=avoid for the ToS-guard tests below");
+  assert.equal(keylessEntry?.freeType, "keyless");
+  assert.equal(
+    keylessEntry?.tos,
+    "avoid",
+    "opencode must be tos=avoid for the ToS-guard tests below"
+  );
 });
 
 // 1. keyless SAFE (genuine no-auth candidate) → PASS
 test("keyless candidate from the genuine no-auth path passes with no state at all", () => {
   const entry = FREE_MODEL_BUDGETS.find(
-    (m) => m.provider === "felo-web" && m.modelId === "felo-chat"
+    (m) => m.provider === "opencode" && m.modelId === "big-pickle"
   );
   assert.deepEqual(
     evaluateCandidateConnections(KEYLESS, entry, () => undefined, BASE_OPTIONS),
@@ -210,7 +214,7 @@ test("hardStopGuaranteed explicitly false excludes", () => {
 // 12 & 13. ToS guard, independent of economic evaluation
 test("tos=avoid + excludeTosAvoid=true excludes a keyless-safe candidate", () => {
   const result = filterTosAvoidCandidates([KEYLESS], true);
-  assert.deepEqual(result, [], "felo-web (tos=avoid) must be dropped when the guard is on");
+  assert.deepEqual(result, [], "opencode (tos=avoid) must be dropped when the guard is on");
 });
 
 test("tos=avoid + excludeTosAvoid=false leaves normal economic evaluation untouched", () => {

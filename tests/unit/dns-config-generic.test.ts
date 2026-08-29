@@ -272,7 +272,7 @@ test("addDNSEntries: generates both IPv4 and IPv6 lines per host", () => {
 // ---------------------------------------------------------------------------
 test.after(() => {
   try {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   } catch {
     // best effort
   }

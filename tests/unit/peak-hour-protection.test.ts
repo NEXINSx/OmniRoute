@@ -55,6 +55,73 @@ test("peak-hour protection honors weekdays and end boundary", () => {
   );
 });
 
+test("overnight windows apply their start day after midnight", () => {
+  const mondayWindow = {
+    peakHourProtection: {
+      enabled: true,
+      mode: "block",
+      windows: [{ days: ["mon"], startUtc: "22:00", endUtc: "02:00" }],
+    },
+  };
+
+  const mondayNight = evaluatePeakHourProtection(
+    mondayWindow,
+    new Date("2026-08-24T23:00:00.000Z")
+  );
+  assert.equal(mondayNight.active, true);
+  assert.equal(mondayNight.retryAfter, "2026-08-25T02:00:00.000Z");
+
+  const tuesdayEarly = evaluatePeakHourProtection(
+    mondayWindow,
+    new Date("2026-08-25T01:00:00.000Z")
+  );
+  assert.equal(tuesdayEarly.active, true);
+  assert.equal(tuesdayEarly.retryAfter, "2026-08-25T02:00:00.000Z");
+
+  assert.deepEqual(evaluatePeakHourProtection(mondayWindow, new Date("2026-08-25T02:00:00.000Z")), {
+    active: false,
+  });
+  assert.deepEqual(evaluatePeakHourProtection(mondayWindow, new Date("2026-08-25T23:00:00.000Z")), {
+    active: false,
+  });
+
+  const tuesdayWindow = {
+    peakHourProtection: {
+      enabled: true,
+      mode: "block",
+      windows: [{ days: ["tue"], startUtc: "22:00", endUtc: "02:00" }],
+    },
+  };
+  assert.deepEqual(
+    evaluatePeakHourProtection(tuesdayWindow, new Date("2026-08-25T01:00:00.000Z")),
+    { active: false }
+  );
+
+  const sundayWindow = {
+    peakHourProtection: {
+      enabled: true,
+      mode: "block",
+      windows: [{ days: ["sun"], startUtc: "22:00", endUtc: "02:00" }],
+    },
+  };
+  assert.equal(
+    evaluatePeakHourProtection(sundayWindow, new Date("2026-08-24T01:00:00.000Z")).active,
+    true
+  );
+
+  const dailyWindow = {
+    peakHourProtection: {
+      enabled: true,
+      mode: "block",
+      windows: [{ startUtc: "22:00", endUtc: "02:00" }],
+    },
+  };
+  assert.equal(
+    evaluatePeakHourProtection(dailyWindow, new Date("2026-08-25T01:00:00.000Z")).active,
+    true
+  );
+});
+
 test("peak-hour protection supports daily Z.ai-style windows", () => {
   const state = evaluatePeakHourProtection(
     {

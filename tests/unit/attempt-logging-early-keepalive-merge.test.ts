@@ -63,7 +63,7 @@ before(async () => {
 
 after(() => {
   coreDb.resetDbInstance();
-  fs.rmSync(testDataDir, { recursive: true, force: true });
+  fs.rmSync(testDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("bytes recorded before persistAttemptLogs are prepended into pipeline.streamChunks.client", async () => {

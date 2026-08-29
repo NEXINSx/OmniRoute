@@ -17,8 +17,8 @@
 // sarvam+plamo in regional) to 193, then #8170 (inception/typhoon — inception in frontier-labs,
 // typhoon in regional) to 195, then Firecrawl dual search+fetch under SEARCH_PROVIDERS.firecrawl
 // (removed specialty-media duplicate) to 194, #8861 (Xiaomi MiMo Token Plan, regional) to 195, and
-// the Cheaper Inference gateway (OSS-sponsor reseller, gateways family) to 198 (UnoRouter #9009,
-// Raycast Pro #8895), then later additions to 199; retiring GitHub Models brings it to 198.
+// the Cheaper Inference gateway (OSS-sponsor reseller, gateways family) to 198 (UnoRouter #9009),
+// then later additions to 199; retiring GitHub Models brings it to 198.
 // The v3.8.50 free-tier gateway waves (#9631 registry cycle, waves 2-5, #9210 phase 3) grew the
 // gateways family to 228 measured on the tip; Puter retired (#10210) and chatanywhere restored
 // (base-reds round 3, #9985) are both included in that measurement; Cursor API (specialty-media,

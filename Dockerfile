@@ -104,7 +104,7 @@ RUN test -f package-lock.json \
 # instead of `npx --yes`, which would install an arbitrary registry version
 # on-demand and run its lifecycle scripts (Sonar docker:S6505).
 #
-# tls-client-node (chatgpt-web/claude-web/grok-web/lmarena/perplexity-web TLS
+# tls-client-node (claude-web/grok-web/lmarena/perplexity-web TLS
 # impersonation) hits the same --ignore-scripts wall: its own postinstall.js
 # fetches a platform .so/.dylib/.dll from the bogdanfinn/tls-client GitHub
 # Releases API and is never invoked when npm ci skips lifecycle scripts. Unlike

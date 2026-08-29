@@ -41,6 +41,7 @@ import { errorResponseWithComboDiagnostics } from "../../utils/error.ts";
 import { getCircuitBreaker } from "../../../src/shared/utils/circuitBreaker";
 import type { ResilienceSettings } from "../../../src/lib/resilience/settings";
 import { applyStrategyOrdering } from "./applyStrategyOrdering.ts";
+import { expandTargetsForAllStrategies } from "./connectionAwareExpansion.ts";
 import { clampComboDepth } from "./comboPredicates.ts";
 import {
   describeCapabilityFilterExhaustion,
@@ -695,7 +696,7 @@ async function applyPromptCacheStage(
 export async function resolveComboTargetPipeline(
   deps: ResolveComboTargetPipelineDeps
 ): Promise<ResolveComboTargetPipelineResult> {
-  const { body, combo, strategy, config, allCombos, log, isModelAvailable } = deps;
+  const { body, combo, strategy, config, allCombos, log, isModelAvailable, settings } = deps;
 
   const { expandedCombo, expandedAllCombos } = await expandComboWildcards(combo, allCombos);
   const stickyWeightedLimit = clampStickyWeightedTargetLimit(
@@ -719,6 +720,21 @@ export async function resolveComboTargetPipeline(
         );
 
   orderedTargets = await applyRequestTagRouting(orderedTargets, body, log);
+
+  // Connection-aware expansion for group-B strategies is opt-in. Runs
+  // BEFORE orderByStrategy so every downstream consumer (strategy ordering,
+  // continuity/stickiness, prompt-cache stage) sees per-connection targets.
+  // Stickiness is applied later inside applyContinuityFilters, so its pin key
+  // naturally matches the expanded connectionId targets.
+  orderedTargets = await expandTargetsForAllStrategies({
+    strategy,
+    targets: orderedTargets,
+    comboName: combo.name,
+    config: combo.config,
+    settings: settings as Record<string, unknown> | null | undefined,
+    log,
+    apiKeyAllowedConnectionIds: deps.apiKeyAllowedConnections,
+  });
 
   logTargetPoolSize(strategy, allCombos, orderedTargets, stickyWeightedKey, log);
 

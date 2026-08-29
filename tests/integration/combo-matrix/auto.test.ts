@@ -47,7 +47,6 @@ function body(model: string) {
 const NO_AUTH_PROVIDER_IDS = [
   "opencode",
   "duckduckgo-web",
-  "felo-web",
   "theoldllm",
   "chipotle",
   "veoaifree-web",
