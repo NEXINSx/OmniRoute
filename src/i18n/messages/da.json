@@ -6254,7 +6254,7 @@
       "galadriel": "Forbind Galadriel med en API-nøgle.",
       "predibase": "$25 gratis prøvekredit (30 dages gyldighed)",
       "chenzk": "OpenAI-kompatibel gateway med et live modelkatalog på chenzk.top.",
-      "magnific": "Generer billeder med Freepiks Mystic API.",
+      "magnific": "Generer billeder med Magnifics Mystic API.",
       "freetheai": "Gratis OpenAI-kompatibel gateway med understøttelse af passthrough-modeller.",
       "g4f-gemini": "Ekstern g4f.space-gateway til Gemini. Anonym adgang kræver proof-of-work-kreditter fra g4f.dev/chat eller en medlems-API-nøgle fra g4f.dev/members.html; grænserne varierer.",
       "g4f-groq": "Ekstern g4f.space-gateway til Groq. Anonym adgang kræver proof-of-work-kreditter fra g4f.dev/chat eller en medlems-API-nøgle fra g4f.dev/members.html; grænserne varierer.",

@@ -6254,7 +6254,7 @@
       "galadriel": "APIキーを使用してGaladrielに接続します。",
       "predibase": "$25の無料トライアルクレジット（有効期限30日間）",
       "chenzk": "chenzk.top でライブモデルカタログを提供するOpenAI互換ゲートウェイ。",
-      "magnific": "FreepikのMystic APIで画像を生成します。",
+      "magnific": "MagnificのMystic APIで画像を生成します。",
       "freetheai": "パススルーモデルをサポートする無料のOpenAI互換ゲートウェイ。",
       "g4f-gemini": "Gemini 向けのリモート g4f.space ゲートウェイ。匿名アクセスには g4f.dev/chat のプルーフ・オブ・ワーククレジット、または g4f.dev/members.html のメンバー API キーが必要です。上限は変動します。",
       "g4f-groq": "Groq 向けのリモート g4f.space ゲートウェイ。匿名アクセスには g4f.dev/chat のプルーフ・オブ・ワーククレジット、または g4f.dev/members.html のメンバー API キーが必要です。上限は変動します。",

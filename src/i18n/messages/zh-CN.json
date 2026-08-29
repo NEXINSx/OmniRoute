@@ -6254,7 +6254,7 @@
       "galadriel": "使用 API 密钥连接 Galadriel。",
       "predibase": "$25 免费试用额度（30 天有效期）",
       "chenzk": "兼容 OpenAI 的网关，在 chenzk.top 提供实时模型目录。",
-      "magnific": "使用 Freepik 的 Mystic API 生成图像。",
+      "magnific": "使用 Magnific 的 Mystic API 生成图像。",
       "freetheai": "免费的 OpenAI 兼容网关，支持直通模型。",
       "g4f-gemini": "通往 Gemini 的远程 g4f.space 网关。匿名访问需要来自 g4f.dev/chat 的工作量证明额度，或来自 g4f.dev/members.html 的会员 API 密钥；限制可能变化。",
       "g4f-groq": "通往 Groq 的远程 g4f.space 网关。匿名访问需要来自 g4f.dev/chat 的工作量证明额度，或来自 g4f.dev/members.html 的会员 API 密钥；限制可能变化。",

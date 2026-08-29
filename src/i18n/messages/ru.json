@@ -6254,7 +6254,7 @@
       "galadriel": "Подключите Galadriel с помощью API-ключа.",
       "predibase": "Бесплатный пробный баланс $25 (срок действия 30 дней)",
       "chenzk": "Совместимый с OpenAI шлюз с актуальным каталогом моделей на chenzk.top.",
-      "magnific": "Генерация изображений с помощью Freepik Mystic API.",
+      "magnific": "Генерация изображений с помощью Magnific Mystic API.",
       "freetheai": "Бесплатный совместимый с OpenAI шлюз с поддержкой сквозной передачи моделей (passthrough).",
       "g4f-gemini": "Удалённый шлюз g4f.space к Gemini. Для анонимного доступа нужны proof-of-work-кредиты с g4f.dev/chat либо API-ключ участника с g4f.dev/members.html; лимиты меняются.",
       "g4f-groq": "Удалённый шлюз g4f.space к Groq. Для анонимного доступа нужны proof-of-work-кредиты с g4f.dev/chat либо API-ключ участника с g4f.dev/members.html; лимиты меняются.",
