@@ -544,11 +544,29 @@ async function buildUnifiedModelsResponseCore(
     const getProviderPrefixes = (providerId: string, rawProvider: string) =>
       getProviderPrefixesFromMaps(aliasMaps, providerId, rawProvider);
 
+    const getComboTargetMemoKey = (target: ComboCatalogTarget) =>
+      JSON.stringify([
+        target.providerId ?? target.provider,
+        target.modelStr,
+        target.connectionId,
+        target.allowedConnectionIds,
+      ]);
+    const comboTargetModelIdMemo = new Map<
+      string,
+      { providerId: string; modelId: string } | null
+    >();
     const getComboTargetModelId = (target: ComboCatalogTarget) => {
+      const cacheKey = getComboTargetMemoKey(target);
+      if (comboTargetModelIdMemo.has(cacheKey)) return comboTargetModelIdMemo.get(cacheKey)!;
       const resolved = getComboTargetModelIdFromMaps(aliasMaps, target);
-      if (!resolved) return null;
-      const nodeId = providerNodeIdByPrefix[resolved.providerId];
-      return nodeId ? { ...resolved, providerId: nodeId } : resolved;
+      const nodeId = resolved ? providerNodeIdByPrefix[resolved.providerId] : undefined;
+      const targetModel = resolved
+        ? nodeId
+          ? { ...resolved, providerId: nodeId }
+          : resolved
+        : null;
+      comboTargetModelIdMemo.set(cacheKey, targetModel);
+      return targetModel;
     };
 
     const resolvedComboTargets = combos.flatMap(
@@ -580,7 +598,7 @@ async function buildUnifiedModelsResponseCore(
       })
     );
 
-    const getComboTargetCatalogMetadata = (
+    const resolveComboTargetCatalogMetadata = (
       target: ComboCatalogTarget
     ): ComboTargetCatalogMetadata | null => {
       const targetModel = getComboTargetModelId(target);
@@ -733,6 +751,18 @@ async function buildUnifiedModelsResponseCore(
         ...(outputModalities && outputModalities.length > 0 ? { outputModalities } : {}),
         capabilities,
       };
+    };
+    const comboTargetCatalogMetadataMemo = new Map<string, ComboTargetCatalogMetadata | null>();
+    const getComboTargetCatalogMetadata = (
+      target: ComboCatalogTarget
+    ): ComboTargetCatalogMetadata | null => {
+      const cacheKey = getComboTargetMemoKey(target);
+      if (comboTargetCatalogMetadataMemo.has(cacheKey)) {
+        return comboTargetCatalogMetadataMemo.get(cacheKey)!;
+      }
+      const metadata = resolveComboTargetCatalogMetadata(target);
+      comboTargetCatalogMetadataMemo.set(cacheKey, metadata);
+      return metadata;
     };
 
     const buildBuiltinAutoModalityMetadata = (
