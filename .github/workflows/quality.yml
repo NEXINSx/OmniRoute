@@ -78,7 +78,8 @@ jobs:
     # workflow_dispatch-only in #11962. Pre-merge build signal for release/**
     # is nightly-release-green (omni-build); for main it is ci.yml `Build`.
     # Restore this job when a runner that actually fits the tree is wired here.
-    if: ${{ false }}
+    # Bare `false` (not `${{ false }}`) — zizmor obfuscation flags the expression form.
+    if: false
     # PINNED to hosted — this was the last job in THIS workflow still on the USE_VPS_RUNNER
     # switch (ci.yml's Build, nightly-release-green and npm-publish keep it, so the variable
     # stays meaningful), and with USE_VPS_RUNNER=true it produced NO signal at all here.
