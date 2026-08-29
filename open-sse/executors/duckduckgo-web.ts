@@ -16,6 +16,7 @@ import { prepareToolMessages, buildToolAwareResult } from "../translator/webTool
 import type { Session } from "../services/sessionPool/session.ts";
 import { tryBackedChat } from "../services/browserBackedChat.ts";
 import { sanitizeErrorMessage } from "../utils/error.ts";
+import { normalizeSystemRole } from "../services/roleNormalizer.ts";
 
 // Issue #6999: Lightweight circuit breaker for the DuckDuckGo executor.
 // After CB_THRESHOLD consecutive failures (429, 5xx, or network errors),
@@ -559,8 +560,17 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
         }
       }
 
+      // #ddgw defense-in-depth: duckchat/v1/chat accepts only user/assistant roles.
+      // Normalize after catalog resolution so the effective upstream model is used.
+      // This also shields the system tool prompt injected by prepareToolMessages.
+      const normalizedMessages = normalizeSystemRole(
+        messages,
+        "duckduckgo-web",
+        upstreamModel
+      ) as typeof messages;
+
       const sendChat = async (vqdHeaders: DuckDuckGoAuthHeaders): Promise<Response> => {
-        const payload = buildDuckDuckGoPayload(upstreamModel, messages);
+        const payload = buildDuckDuckGoPayload(upstreamModel, normalizedMessages);
         const response = await fetch(CHAT_URL, {
           method: "POST",
           headers: mergeHeadersCaseInsensitive(
@@ -786,10 +796,7 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
           try {
             return {
               vqd4: retry.vqd4,
-              vqdHash1: await solveDuckDuckGoChallenge(
-                retry.vqdHash1,
-                FAKE_HEADERS["User-Agent"]
-              ),
+              vqdHash1: await solveDuckDuckGoChallenge(retry.vqdHash1, FAKE_HEADERS["User-Agent"]),
               status: retry.status,
               retryAfter: retry.retryAfter,
             };

@@ -70,6 +70,12 @@ interface QuotaWindowStatus {
   reachedThreshold: boolean;
 }
 
+export interface QuotaWindowObservation {
+  usedPercentage: number;
+  resetAt: string | null;
+  observedAt: string | null;
+}
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const ACTIVE_TTL_MS = 5 * 60 * 1000; // 5 minutes for active accounts
@@ -662,6 +668,28 @@ export function getQuotaWindowStatus(
         : remainingPercentage <= 0
           ? true
           : usedPercentage >= thresholdPercent,
+  };
+}
+
+/** Return the display-safe observation behind the routing decision for one quota window. */
+export function getQuotaWindowObservation(
+  connectionId: string,
+  windowName: string
+): QuotaWindowObservation | null {
+  const entry = getState().cache.get(connectionId) || hydrateQuotaCacheFromSnapshots(connectionId);
+  if (!entry) return null;
+
+  const window = resolveQuotaWindow(entry.quotas, windowName);
+  if (!window || window.fractionReported === false) return null;
+
+  const status = getQuotaWindowStatus(connectionId, windowName);
+  if (!status) return null;
+  const observedDate = new Date(entry.fetchedAt);
+
+  return {
+    usedPercentage: status.usedPercentage,
+    resetAt: status.resetAt,
+    observedAt: Number.isFinite(observedDate.getTime()) ? observedDate.toISOString() : null,
   };
 }
 

@@ -6,7 +6,7 @@ import { getApiBridgeTimeoutConfig } from "@/shared/utils/runtimeTimeouts";
 import {
   attachRequestStreamGuards,
   installProcessCrashGuard,
-} from "@/shared/utils/httpClientAbortGuard";
+} from "@/shared/utils/httpClientAbortGuard.mjs";
 
 const API_BRIDGE_TIMEOUTS = getApiBridgeTimeoutConfig(process.env, (message) => {
   console.warn(`[API Bridge] ${message}`);

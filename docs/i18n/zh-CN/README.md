@@ -331,12 +331,12 @@ Combo: "always-on"                         策略: priority
     <td align="center" width="120"><img src="./public/providers/continue.png" width="52" alt="Continue"/><br/><b>Continue</b></td>
   </tr>
   <tr>
-    <td align="center" width="120"><a href="https://github.com/anomalyco/opencode"><img src="./public/providers/opencode.svg" width="52" alt="OpenCode"/><br/><b>OpenCode</b></a></td>
-    <td align="center" width="120"><a href="https://github.com/Kilo-Org/kilocode"><img src="./public/providers/kilocode.svg" width="52" alt="Kilo Code"/><br/><b>Kilo Code</b></a></td>
-    <td align="center" width="120"><img src="./public/providers/droid.svg" width="52" alt="Droid"/><br/><b>Droid</b></td>
+    <td align="center" width="120"><a href="https://github.com/anomalyco/opencode"><img src="../../../public/providers/cli-generic.svg" width="52" alt="OpenCode"/><br/><b>OpenCode</b></a></td>
+    <td align="center" width="120"><a href="https://github.com/Kilo-Org/kilocode"><img src="../../../public/providers/cli-generic.svg" width="52" alt="Kilo Code"/><br/><b>Kilo Code</b></a></td>
+    <td align="center" width="120"><img src="../../../public/providers/cli-generic.svg" width="52" alt="Droid"/><br/><b>Droid</b></td>
     <td align="center" width="120"><img src="./public/providers/openclaw.png" width="52" alt="OpenClaw"/><br/><b>OpenClaw</b></td>
     <td align="center" width="120"><img src="./public/providers/kiro.svg" width="52" alt="Kiro"/><br/><b>Kiro</b></td>
-    <td align="center" width="120"><img src="./public/providers/command-code.svg" width="52" alt="Command Code"/><br/><b>Command</b></td>
+    <td align="center" width="120"><img src="../../../public/providers/cli-generic.svg" width="52" alt="Command Code"/><br/><b>Command</b></td>
   </tr>
 </table>
 </div>
@@ -726,7 +726,7 @@ podman compose --profile base up -d --build
 | 💳 **订阅制**              | Claude Code Pro / Codex / Copilot        | $10–200/月                    |
 | 🔑 **API Key（含免费层）** | NVIDIA NIM、Cerebras、Groq               | **免费**                      |
 | 💰 **廉价**                | GLM-5 $0.5/1M · MiniMax M2.5 $0.3/1M     | 几分钱                        |
-| 🆓 **免费访问／注册额度**  | Kiro、Qoder、Qwen、Pollinations、LongCat | **当前列为 $0；各自限制适用** |
+| 🆓 **免费访问／注册额度**  | Kiro、Qoder、Pollinations、LongCat | **当前列为 $0；各自限制适用** |
 
 **免费访问示例 — 可合并为一条具有多层回退的 Combo：**
 
@@ -734,7 +734,6 @@ podman compose --profile base up -d --build
 | ----------------- | ----------- | ----------------------------------------------- | ------------------------------------- |
 | **Kiro**          | `kr/`       | Claude Sonnet 4.5、Haiku 4.5、Opus 4.6          | 50 积分/月                            |
 | **Qoder**         | `if/`       | kimi-k2-thinking、qwen3-coder-plus、deepseek-r1 | 未公布 Token 上限；账户／速率限制适用 |
-| **Qwen**          | `qw/`       | qwen3-coder-plus/flash/next                     | 未公布 Token 上限；账户／速率限制适用 |
 | **Pollinations**  | `pol/`      | GPT-5、Claude、Gemini、DeepSeek、Llama 4        | 无需密钥                              |
 | **LongCat**       | `lc/`       | LongCat-2.0                                     | 一次性 10M (需 KYC)                   |
 | **Cloudflare AI** | `cf/`       | 50+ 模型                                        | 10K 神经元/天                         |

@@ -140,7 +140,12 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        className="flex items-center justify-center min-h-[400px]"
+      >
         <div className="text-text-muted">{t("profileLoading")}</div>
       </div>
     );
@@ -172,7 +177,12 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {error && <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">{error}</div>}
+      <h1 className="sr-only lg:hidden">{t("profile")}</h1>
+      {error && (
+        <div role="alert" className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Level & XP Card */}
       <Card>
@@ -209,7 +219,14 @@ export default function ProfilePage() {
                 {xpInCurrentLevel.toLocaleString()} / {xpForNext.toLocaleString()} XP
               </span>
             </div>
-            <div className="w-full h-3 rounded-full bg-border overflow-hidden">
+            <div
+              role="progressbar"
+              aria-label={tg("levelProgress", { current: level, next: level + 1 })}
+              aria-valuemin={0}
+              aria-valuemax={xpForNext}
+              aria-valuenow={Math.min(Math.max(xpInCurrentLevel, 0), xpForNext)}
+              className="w-full h-3 rounded-full bg-border overflow-hidden"
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
                 style={{ width: `${Math.min(xpProgress, 100)}%` }}

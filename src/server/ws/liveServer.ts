@@ -36,7 +36,7 @@ import { isAutomatedTestProcess, isBuildProcess } from "@/shared/utils/testProce
 import {
   attachRequestStreamGuards,
   installProcessCrashGuard,
-} from "@/shared/utils/httpClientAbortGuard";
+} from "@/shared/utils/httpClientAbortGuard.mjs";
 
 import {
   buildAllowedOrigins,

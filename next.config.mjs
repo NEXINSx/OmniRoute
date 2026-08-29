@@ -126,6 +126,15 @@ const nextConfig = {
   // examples. Empty by default (root deploys unchanged).
   env: {
     NEXT_PUBLIC_OMNIROUTE_BASE_PATH: normalizeBasePath(process.env.OMNIROUTE_BASE_PATH),
+    // Deployment identity for the PWA service worker URL (PwaRegister):
+    // a browser holding a worker from an older deployment must see a
+    // different /sw.js?v=<id> URL so the browser treats it as an update
+    // instead of keeping the old generation in control. Falls back to a
+    // value that is unique per build run when git is absent (CI tarball).
+    NEXT_PUBLIC_SW_BUILD_ID:
+      process.env.OMNIROUTE_SW_BUILD_ID ||
+      process.env.SOURCE_VERSION ||
+      `${Date.now()}`,
   },
   distDir,
   // Turbopack config: redirect native modules to stubs at build time
@@ -244,8 +253,8 @@ const nextConfig = {
       "./src/mitm/server.cjs",
       "./open-sse/services/compression/engines/rtk/filters/**/*.json",
       "./open-sse/services/compression/rules/**/*.json",
-      "./open-sse/lib/sha3_wasm_bg.wasm",
-      "./open-sse/lib/deepseek-pow-solver.cjs",
+      "./open-sse/lib/deepseek-pow-hash.js",
+      "./open-sse/lib/deepseek-pow-worker.mjs",
       // sql.js WASM is loaded at runtime by the sqljsAdapter fallback tier
       // (better-sqlite3 → node:sqlite → sql.js). Next traces sql-wasm.js but can
       // omit the runtime sql-wasm.wasm asset from the standalone bundle.

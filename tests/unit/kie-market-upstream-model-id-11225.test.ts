@@ -103,13 +103,21 @@ function resolveLiveKieMarketCatalog() {
   }));
 }
 
-test("KIE Market resolver changes exactly the 4 google-imagen ids in the live market catalog", () => {
+test("KIE Market resolver changes exactly the documented mismatched ids in the live market catalog", () => {
   const roundTrips = resolveLiveKieMarketCatalog();
   const changed = roundTrips.filter(({ publicModelId, upstreamModelId }) => {
     return upstreamModelId !== publicModelId;
   });
 
   assert.deepEqual(changed, [
+    {
+      publicModelId: "seedream/5.0-lite-text-to-image",
+      upstreamModelId: "seedream/5-lite-text-to-image",
+    },
+    {
+      publicModelId: "seedream/5.0-lite-image-to-image",
+      upstreamModelId: "seedream/5-lite-image-to-image",
+    },
     {
       publicModelId: "google-imagen/nano-banana-2",
       upstreamModelId: "nano-banana-2",
@@ -126,19 +134,71 @@ test("KIE Market resolver changes exactly the 4 google-imagen ids in the live ma
       publicModelId: "google-imagen/nano-banana-edit",
       upstreamModelId: "google/nano-banana-edit",
     },
+    {
+      publicModelId: "flux/2-pro-image-to-image",
+      upstreamModelId: "flux-2/pro-image-to-image",
+    },
+    {
+      publicModelId: "flux/2-pro-text-to-image",
+      upstreamModelId: "flux-2/pro-text-to-image",
+    },
+    {
+      publicModelId: "flux/2-image-to-image",
+      upstreamModelId: "flux-2/flex-image-to-image",
+    },
+    {
+      publicModelId: "flux/2-text-to-image",
+      upstreamModelId: "flux-2/flex-text-to-image",
+    },
+    {
+      publicModelId: "gpt/gpt-image-1.5-text-to-image",
+      upstreamModelId: "gpt-image/1.5-text-to-image",
+    },
+    {
+      publicModelId: "gpt/gpt-image-1.5-image-to-image",
+      upstreamModelId: "gpt-image/1.5-image-to-image",
+    },
+    {
+      publicModelId: "gpt/gpt-image-2-text-to-image",
+      upstreamModelId: "gpt-image-2-text-to-image",
+    },
+    {
+      publicModelId: "gpt/gpt-image-2-image-to-image",
+      upstreamModelId: "gpt-image-2-image-to-image",
+    },
+    {
+      publicModelId: "wan/2.7-image",
+      upstreamModelId: "wan/2-7-image",
+    },
+    {
+      publicModelId: "wan/2.7-image-pro",
+      upstreamModelId: "wan/2-7-image-pro",
+    },
   ]);
 });
 
-const REWRITTEN_GOOGLE_IMAGEN_MARKET_IDS = new Set([
+const REWRITTEN_MARKET_IDS = new Set([
   "google-imagen/nano-banana",
   "google-imagen/nano-banana-2",
   "google-imagen/nano-banana-pro",
   "google-imagen/nano-banana-edit",
+  "gpt/gpt-image-2-text-to-image",
+  "gpt/gpt-image-2-image-to-image",
+  "gpt/gpt-image-1.5-text-to-image",
+  "gpt/gpt-image-1.5-image-to-image",
+  "seedream/5.0-lite-text-to-image",
+  "seedream/5.0-lite-image-to-image",
+  "flux/2-pro-text-to-image",
+  "flux/2-pro-image-to-image",
+  "flux/2-text-to-image",
+  "flux/2-image-to-image",
+  "wan/2.7-image",
+  "wan/2.7-image-pro",
 ]);
 
 test("KIE Market resolver preserves every other live market catalog id byte-identically", () => {
   for (const { publicModelId, upstreamModelId } of resolveLiveKieMarketCatalog()) {
-    if (!REWRITTEN_GOOGLE_IMAGEN_MARKET_IDS.has(publicModelId)) {
+    if (!REWRITTEN_MARKET_IDS.has(publicModelId)) {
       assert.equal(
         upstreamModelId,
         publicModelId,
@@ -148,8 +208,8 @@ test("KIE Market resolver preserves every other live market catalog id byte-iden
   }
 });
 
-test("KIE Market resolver keeps exactly the explicit google-imagen upstream id mappings (#11296)", () => {
-  assert.equal(KIE_MARKET_UPSTREAM_MODEL_IDS.size, 4);
+test("KIE Market resolver keeps exactly the explicit upstream id mappings (#11296)", () => {
+  assert.equal(KIE_MARKET_UPSTREAM_MODEL_IDS.size, 16);
 });
 
 test("KIE Market resolver passes an unknown namespaced id through byte-identically", () => {
@@ -207,6 +267,78 @@ test("KIE Market createTask sends the KIE upstream id for Nano Banana Edit (#112
     "google/nano-banana-edit",
     "KIE Market createTask must send the KIE-documented google/nano-banana-edit upstream id"
   );
+});
+
+test("KIE Market createTask sends the unprefixed upstream id for GPT Image 2 T2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/gpt/gpt-image-2-text-to-image");
+
+  assert.equal(captured.create.body.model, "gpt-image-2-text-to-image");
+});
+
+test("KIE Market createTask sends the unprefixed upstream id for GPT Image 2 I2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/gpt/gpt-image-2-image-to-image");
+
+  assert.equal(captured.create.body.model, "gpt-image-2-image-to-image");
+});
+
+test("KIE Market createTask sends the 'gpt-image/' namespace for GPT Image 1.5 T2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/gpt/gpt-image-1.5-text-to-image");
+
+  assert.equal(captured.create.body.model, "gpt-image/1.5-text-to-image");
+});
+
+test("KIE Market createTask sends the 'gpt-image/' namespace for GPT Image 1.5 I2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/gpt/gpt-image-1.5-image-to-image");
+
+  assert.equal(captured.create.body.model, "gpt-image/1.5-image-to-image");
+});
+
+test("KIE Market createTask drops the '.0' for Seedream 5.0 Lite T2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/seedream/5.0-lite-text-to-image");
+
+  assert.equal(captured.create.body.model, "seedream/5-lite-text-to-image");
+});
+
+test("KIE Market createTask drops the '.0' for Seedream 5.0 Lite I2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/seedream/5.0-lite-image-to-image");
+
+  assert.equal(captured.create.body.model, "seedream/5-lite-image-to-image");
+});
+
+test("KIE Market createTask sends the 'flux-2/' namespace for Flux 2 Pro T2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/flux/2-pro-text-to-image");
+
+  assert.equal(captured.create.body.model, "flux-2/pro-text-to-image");
+});
+
+test("KIE Market createTask sends the 'flux-2/' namespace for Flux 2 Pro I2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/flux/2-pro-image-to-image");
+
+  assert.equal(captured.create.body.model, "flux-2/pro-image-to-image");
+});
+
+test("KIE Market createTask sends the 'flux-2/flex-' name for Flux 2 T2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/flux/2-text-to-image");
+
+  assert.equal(captured.create.body.model, "flux-2/flex-text-to-image");
+});
+
+test("KIE Market createTask sends the 'flux-2/flex-' name for Flux 2 I2I (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/flux/2-image-to-image");
+
+  assert.equal(captured.create.body.model, "flux-2/flex-image-to-image");
+});
+
+test("KIE Market createTask sends the dash-separated id for Wan 2.7 Image (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/wan/2.7-image");
+
+  assert.equal(captured.create.body.model, "wan/2-7-image");
+});
+
+test("KIE Market createTask sends the dash-separated id for Wan 2.7 Image Pro (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/wan/2.7-image-pro");
+
+  assert.equal(captured.create.body.model, "wan/2-7-image-pro");
 });
 
 test("KIE Market createTask leaves genuinely namespaced upstream ids untouched (#11225 control)", async () => {

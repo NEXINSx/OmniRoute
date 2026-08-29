@@ -73,6 +73,14 @@ export const SEARCH_VALIDATOR_CONFIGS: Record<
       body: JSON.stringify({ query: "test", numResults: 1 }),
     },
   }),
+  "anysearch-search": (apiKey) => ({
+    url: "https://api.anysearch.com/v1/search",
+    init: {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ query: "test", max_results: 1 }),
+    },
+  }),
   "tavily-search": (apiKey) => ({
     url: "https://api.tavily.com/search",
     init: {

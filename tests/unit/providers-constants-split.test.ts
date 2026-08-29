@@ -17,8 +17,8 @@
 // sarvam+plamo in regional) to 193, then #8170 (inception/typhoon — inception in frontier-labs,
 // typhoon in regional) to 195, then Firecrawl dual search+fetch under SEARCH_PROVIDERS.firecrawl
 // (removed specialty-media duplicate) to 194, #8861 (Xiaomi MiMo Token Plan, regional) to 195, and
-// the Cheaper Inference gateway (OSS-sponsor reseller, gateways family) to 198 (UnoRouter #9009,
-// Raycast Pro #8895), then later additions to 199; retiring GitHub Models brings it to 198.
+// the Cheaper Inference gateway (OSS-sponsor reseller, gateways family) to 198 (UnoRouter #9009),
+// then later additions to 199; retiring GitHub Models brings it to 198.
 // The v3.8.50 free-tier gateway waves (#9631 registry cycle, waves 2-5, #9210 phase 3) grew the
 // gateways family to 228 measured on the tip; Puter retired (#10210) and chatanywhere restored
 // (base-reds round 3, #9985) are both included in that measurement; Cursor API (specialty-media,
@@ -30,6 +30,7 @@
 // The v3.8.50 back-merge (f95b03d) adds Synthetic (specialty-media) and
 // Kilo Gateway (gateways); #11434 adds volcengine-agent-plan and
 // volcengine-coding-plan (regional family) — both land at 233.
+// release/v3.8.51 adds Opper (gateways, #11629) and 1min.ai (gateways, #11631) — lands at 235.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -58,12 +59,12 @@ test("barrel still exports every catalog + key helpers", () => {
   }
 });
 
-test("APIKEY_PROVIDERS merges the 6 family files into 233 entries (no loss / no dup)", async () => {
+test("APIKEY_PROVIDERS merges the 6 family files into 235 entries (no loss / no dup)", async () => {
   const keys = Object.keys((P as Record<string, object>).APIKEY_PROVIDERS);
-  assert.equal(keys.length, 233);
-  assert.equal(new Set(keys).size, 233, "duplicate keys after spread-merge");
+  assert.equal(keys.length, 235);
+  assert.equal(new Set(keys).size, 235, "duplicate keys after spread-merge");
   // the merged object's entry-count equals the sum of the 6 semantic family files; families are a
-  // strict partition (every provider in exactly one), so the sum must be exactly 233.
+  // strict partition (every provider in exactly one), so the sum must be exactly 235.
   const families: [string, string][] = [
     ["gateways", "APIKEY_PROVIDERS_GATEWAYS"],
     ["frontier-labs", "APIKEY_PROVIDERS_FRONTIER"],
@@ -83,7 +84,7 @@ test("APIKEY_PROVIDERS merges the 6 family files into 233 entries (no loss / no 
       seen.add(k);
     }
   }
-  assert.equal(famTotal, 233, "families must partition all 233 providers");
+  assert.equal(famTotal, 235, "families must partition all 235 providers");
 });
 
 test("AI_PROVIDERS Proxy aggregates all sections; lookups resolve", () => {

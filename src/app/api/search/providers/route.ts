@@ -61,6 +61,13 @@ const FETCH_PROVIDERS: FetchProviderDef[] = [
     freeMonthlyQuota: 0,
     fetchFormats: ["markdown", "html", "links", "screenshot"],
   },
+  {
+    id: "anysearch-search",
+    name: "AnySearch",
+    costPerQuery: 0,
+    freeMonthlyQuota: 0,
+    fetchFormats: ["markdown"],
+  },
 ];
 
 // ---------------------------------------------------------------------------

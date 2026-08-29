@@ -408,25 +408,6 @@ export const PROVIDER_MODELS_CONFIG: Record<string, ProviderModelsConfigEntry> =
     authPrefix: "Bearer ",
     parseResponse: (data) => normalizeOpenAiLikeModelsResponse(data, "huggingface"),
   },
-  // #3931: qwen-web (cookie provider) was missing here, so its discovery page
-  // showed nothing.
-  // `chat.qwen.ai/api/v2/models/` is public (no auth header configured/sent);
-  // shape `{ data: { data: [{ id, name, owned_by }] } }`, flatter `{ data: [] }` fallback.
-  "qwen-web": {
-    url: "https://chat.qwen.ai/api/v2/models/",
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    parseResponse: (data) => {
-      const innerData = data?.data?.data || data?.data || [];
-      return (Array.isArray(innerData) ? innerData : [])
-        .map((item: any) => ({
-          id: item.id || item.name,
-          name: item.name || item.id,
-          owned_by: item.owned_by || "qwen",
-        }))
-        .filter((m: any) => m.id);
-    },
-  },
   "qwen-cloud": QWEN_CLOUD_TEXT_MODELS_CONFIG,
   antigravity: {
     url: getAntigravityModelsDiscoveryUrls()[0],

@@ -127,9 +127,9 @@ test("pack → restore roundtrip restores the tree byte-for-byte", async () => {
       );
     }
   } finally {
-    fs.rmSync(src, { recursive: true, force: true });
-    fs.rmSync(path.dirname(out), { recursive: true, force: true });
-    fs.rmSync(dst, { recursive: true, force: true });
+    fs.rmSync(src, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(path.dirname(out), { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(dst, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -144,8 +144,8 @@ test("packing is byte-deterministic across runs", async () => {
     await runPack({ dir: src, out: b });
     assert.equal(sha256File(a), sha256File(b), "two packs of the same tree must be identical");
   } finally {
-    fs.rmSync(src, { recursive: true, force: true });
-    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.rmSync(src, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(outDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -161,8 +161,8 @@ test("restore rejects a corrupted archive before extraction", async () => {
     fs.writeFileSync(out, raw);
     await assert.rejects(() => runRestore({ archive: out, dir: path.join(outDir, "dst") }), /sha/);
   } finally {
-    fs.rmSync(src, { recursive: true, force: true });
-    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.rmSync(src, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(outDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -191,9 +191,9 @@ test("manifest verification flags modified and smuggled files in a restored tree
       `smuggled file detected: ${verdict.errors.join("; ")}`
     );
   } finally {
-    fs.rmSync(src, { recursive: true, force: true });
-    fs.rmSync(outDir, { recursive: true, force: true });
-    fs.rmSync(dst, { recursive: true, force: true });
+    fs.rmSync(src, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(outDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(dst, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -207,7 +207,7 @@ test("manifest verification rejects an unsupported manifest version", async () =
     assert.equal(verdict.ok, false);
     assert.match(verdict.errors[0] ?? "", /unsupported manifest version/);
   } finally {
-    fs.rmSync(dst, { recursive: true, force: true });
+    fs.rmSync(dst, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -257,8 +257,8 @@ test("hydratePlatformNatives swaps install-machine-forked packages for this leg"
       "fsevents dropped on non-matching leg"
     );
   } finally {
-    fs.rmSync(standalone, { recursive: true, force: true });
-    fs.rmSync(source, { recursive: true, force: true });
+    fs.rmSync(standalone, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(source, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -299,6 +299,6 @@ test("verifyBundledNatives asserts serviceability and honors the onnx darwin-x64
       `darwin-x64 must pass via exemption: ${(exempted as { errors?: string[] }).errors?.join("; ")}`
     );
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

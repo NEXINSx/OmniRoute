@@ -31,9 +31,19 @@ export function PwaRegister() {
       return;
     }
 
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // Ignore registration failures to avoid blocking app rendering.
-    });
+    // The server stamps the current build id on the worker URL. A browser
+    // holding a worker from an older deployment keeps serving its cached
+    // shell, whose /_next/static/<old-build>/ chunk references 404 after
+    // the deploy -- a stuck broken page that a plain reload does not fix,
+    // because the worker intercepts the navigation again. Changing the
+    // query string makes the browser treat the worker as an update, so
+    // the new generation takes over and the old generation's caches are
+    // dropped by the activate handler.
+    navigator.serviceWorker
+      .register(`/sw.js?v=${process.env.NEXT_PUBLIC_SW_BUILD_ID}`)
+      .catch(() => {
+        // Ignore registration failures to avoid blocking app rendering.
+      });
   }, []);
 
   return null;

@@ -60,6 +60,19 @@ export const SEARCH_PROVIDERS = {
     authHint: "API key from app.tavily.com (format: tvly-...)",
     serviceKinds: ["webSearch", "webFetch"],
   },
+  "anysearch-search": {
+    id: "anysearch-search",
+    alias: "anysearch",
+    name: "AnySearch",
+    icon: "travel_explore",
+    color: "#0D9488",
+    textIcon: "AS",
+    website: "https://anysearch.com",
+    hasFree: true,
+    authHint:
+      "Optional API key from anysearch.com (as_sk_...) - free 1000/day; keyless tier has lower limits",
+    serviceKinds: ["webSearch", "webFetch"],
+  },
   firecrawl: {
     id: "firecrawl",
     alias: "fc",

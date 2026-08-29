@@ -55,7 +55,6 @@ Complete guide for configuring providers, creating combos, integrating CLI tools
 |                     | MiniMax M2.1      | $0.2/1M     | 5-hour rolling | Cheapest option      |
 |                     | Kimi K2           | $9/mo flat  | 10M tokens/mo  | Predictable cost     |
 | **🆓 FREE**         | Qoder             | $0          | Provider limits apply | Verify current catalog |
-|                     | Qwen              | $0          | Provider limits apply | Verify current catalog |
 |                     | Kiro              | $0          | ~50 credits/mo | Claude free          |
 
 ---
@@ -1027,7 +1026,6 @@ If only OpenRouter is configured, use `openrouter/deepgram/nova-3`.
 - `kie/`
 - `aws-polly/`
 - `xiaomi-mimo/`
-- `edgetts/` (Microsoft Edge "Read Aloud" — free, no API key; unofficial/reverse-engineered endpoint)
 - `coqui/`, `tortoise/`
 - `qwen/`
 

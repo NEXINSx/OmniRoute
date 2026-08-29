@@ -30,7 +30,7 @@ import { getOrCreateApiKey } from "./apiKey";
 import {
   attachRequestStreamGuards,
   installProcessCrashGuard,
-} from "@/shared/utils/httpClientAbortGuard";
+} from "@/shared/utils/httpClientAbortGuard.mjs";
 
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 20131;

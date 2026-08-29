@@ -1,4 +1,5 @@
 import { createHmac } from "crypto";
+import { timingSafeCompare } from "@/shared/utils/timingSafeCompare";
 
 const ADMISSION_BYPASS_VALUE = "internal";
 const SELF_LOOP_KEY = "sk_omniroute";
@@ -31,7 +32,10 @@ export function isInternalAdmissionBypass(request: Request): boolean {
 
   const auth = request.headers.get("authorization") || "";
   const match = /^bearer\s+(\S+)$/i.exec(auth.trim());
-  return Boolean(match && match[1].trim().toLowerCase() === resolveSelfLoopBearer().toLowerCase());
+  if (!match) return false;
+  // This gates an admission-lane bypass on a shared secret, so the compare is
+  // constant-time — `===` leaks matching-prefix length (GHSA-7434 class).
+  return timingSafeCompare(match[1].trim().toLowerCase(), resolveSelfLoopBearer().toLowerCase());
 }
 
 function fingerprint(value: string): string {

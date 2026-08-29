@@ -130,6 +130,9 @@ export async function executeWebSearch(
   if (input.provider === "xquik" || input.provider === "xquik_search") {
     input.provider = "xquik-search";
   }
+  if (input.provider === "anysearch" || input.provider === "anysearch_search") {
+    input.provider = "anysearch-search";
+  }
   if (input.provider === "x-search" || input.provider === "xquik-search") input.search_type = "x";
   const searchType = input.search_type || "web";
 
@@ -201,27 +204,7 @@ export async function executeWebSearch(
     }
 
     if (!credentials) {
-      // 1. Try credentialed providers first, sorted by cost. Fallback-only
-      // providers are reached only if no configured provider is available.
-      const sortedIds = Object.values(SEARCH_PROVIDERS)
-        .filter((provider) => !provider.fallbackOnly && supportsSearchType(provider, searchType))
-        .sort((a, b) => a.costPerQuery - b.costPerQuery)
-        .map((provider) => provider.id);
-
-      for (const providerId of sortedIds) {
-        if (providerId === providerConfig.id) continue;
-        const altConfig = getSearchProvider(providerId);
-        const altCreds = await resolveSearchCredentials(providerId);
-        if (altConfig && altCreds) {
-          providerConfig = altConfig;
-          credentials = altCreds;
-          break;
-        }
-      }
-    }
-
-    if (!credentials) {
-      // 2. Last resort: fallback-only providers so out-of-the-box search
+      // Last resort: fallback-only providers so out-of-the-box search
       // still works when no credentialed provider is configured.
       const fallbackProviders = Object.values(SEARCH_PROVIDERS)
         .filter((provider) => provider.fallbackOnly && supportsSearchType(provider, searchType))

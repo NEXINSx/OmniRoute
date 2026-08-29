@@ -33,10 +33,10 @@ describe("providerLacksModelListing (#5420)", () => {
   it("keeps curated web providers visible while disabling remote model import", () => {
     assert.equal(providerLacksModelListing("kimi-web", ["llm"]), false);
     assert.equal(providerLacksModelListing("zai-web", ["llm"]), false);
-    assert.equal(providerLacksModelListing("chatgpt-web", ["llm"]), false);
     assert.equal(providerUsesCuratedModelsOnly("kimi-web"), true);
     assert.equal(providerUsesCuratedModelsOnly("zai-web"), true);
-    assert.equal(providerUsesCuratedModelsOnly("chatgpt-web"), true);
+    assert.equal(providerUsesCuratedModelsOnly("chatgpt-web"), false);
+    assert.equal(providerUsesCuratedModelsOnly("cgpt-web"), false);
     assert.equal(providerUsesCuratedModelsOnly("qwen-cloud"), false);
     assert.equal(providerUsesCuratedModelsOnly("kimi-coding"), false);
   });

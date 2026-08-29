@@ -2,7 +2,7 @@
  * Flat-rate (subscription / cookie-web) provider classification — issue #5552.
  *
  * Some providers are billed at a flat rate (a subscription or a coding plan),
- * not per token: cookie/web sessions (ChatGPT Web, grok-web, …) are backed by a
+ * not per token: cookie/web sessions (ChatGPT Web (Codex), grok-web, …) are backed by a
  * consumer subscription, and several "Coding Plan" providers (Codex, MiniMax
  * Coding, Kimi Coding, GLM Coding, …) bill a fixed monthly fee. These providers
  * still carry per-token pricing rows (used for pre-flight estimates), so cost
