@@ -11,7 +11,7 @@
  * Uses Promise.allSettled so one slow/down node doesn't block others.
  */
 
-import { getCachedProviderNodes } from "@/lib/localDb";
+import { getCachedProviderNodes } from "@/lib/db/readCache";
 import { isAutomatedTestProcess } from "@/shared/utils/testProcess";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -37,7 +37,6 @@ const TRUE_ENV_VALUES = new Set(["1", "true", "yes", "on"]);
 function isBuildProcess(): boolean {
   return typeof process !== "undefined" && process.env.NEXT_PHASE === "phase-production-build";
 }
-
 
 // ── State (globalThis survives HMR re-evaluation) ───────────────────────
 
