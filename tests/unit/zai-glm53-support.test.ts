@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { DefaultExecutor } from "../../open-sse/executors/default.ts";
+import { GlmExecutor } from "../../open-sse/executors/glm.ts";
 import { GLM_SHARED_MODELS } from "../../open-sse/config/glmProvider.ts";
 import { getModelTargetFormat, getProviderModel } from "../../open-sse/config/providerModels.ts";
 
@@ -104,4 +105,26 @@ test("zai GLM-5.3 effort aliases rewrite to base model and native effort", () =>
   assert.equal(out.model, "glm-5.3-flash");
   assert.equal(out.reasoning_effort, "low");
   assert.deepEqual(out.thinking, { type: "enabled", clear_thinking: false });
+});
+
+test("GlmExecutor resolves glm-5.3-flash effort aliases on the OpenAI coding transport", () => {
+  const executor = new GlmExecutor("glm");
+
+  for (const [alias, effort] of [
+    ["glm-5.3-flash-high", "high"],
+    ["glm-5.3-flash-low", "low"],
+    ["glm-5.3-flash-max", "max"],
+  ] as const) {
+    const transformed = executor.transformForTransport(
+      alias,
+      { messages: [{ role: "user", content: "hi" }] },
+      false,
+      { apiKey: "glm-key" },
+      "openai"
+    ) as Record<string, unknown>;
+
+    assert.equal(transformed.model, "glm-5.3-flash", alias);
+    assert.equal(transformed.reasoning_effort, effort, alias);
+    assert.equal((transformed.thinking as { type?: string } | undefined)?.type, "enabled", alias);
+  }
 });

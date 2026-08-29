@@ -591,6 +591,7 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     thinkingBudgetCap: 38912,
     supportsThinking: true,
     supportsTools: true,
+    supportsVision: true,
   },
   "glm-5.3-flash-high": {
     maxOutputTokens: 131072,
@@ -598,6 +599,7 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     thinkingBudgetCap: 38912,
     supportsThinking: true,
     supportsTools: true,
+    supportsVision: true,
   },
   "glm-5.3-flash-low": {
     maxOutputTokens: 131072,
@@ -605,6 +607,7 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     thinkingBudgetCap: 38912,
     supportsThinking: true,
     supportsTools: true,
+    supportsVision: true,
   },
   "glm-5.3-flash-max": {
     maxOutputTokens: 131072,
@@ -612,6 +615,7 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     thinkingBudgetCap: 38912,
     supportsThinking: true,
     supportsTools: true,
+    supportsVision: true,
   },
 
   // ── Z.AI GLM-5.2 (1M context, 128K max output, effort tiers) ────
