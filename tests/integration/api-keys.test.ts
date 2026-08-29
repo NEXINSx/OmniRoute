@@ -12,7 +12,8 @@ process.env.CLOUD_URL = "http://cloud.example";
 
 const core = await import("../../src/lib/db/core.ts");
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 const compliance = await import("../../src/lib/compliance/index.ts");
 const listRoute = await import("../../src/app/api/keys/route.ts");
 const keyRoute = await import("../../src/app/api/keys/[id]/route.ts");

@@ -26,7 +26,8 @@ process.env.API_KEY_SECRET = "test-quota-pools-secret";
 
 // Import in dependency order to ensure migrations run before routes
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 const compliance = await import("../../src/lib/compliance/index.ts");
 const poolsRoute = await import("../../src/app/api/quota/pools/route.ts");
 const poolIdRoute = await import("../../src/app/api/quota/pools/[id]/route.ts");

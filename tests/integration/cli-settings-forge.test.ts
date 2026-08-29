@@ -16,7 +16,8 @@ process.env.JWT_SECRET = "test-jwt-secret-forge";
 
 // Import DB reset helpers (must be before route import)
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 
 // Import route handlers
 const { GET, POST, DELETE } = await import("../../src/app/api/cli-tools/forge-settings/route.ts");
