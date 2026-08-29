@@ -327,6 +327,25 @@ test("selectMessagesForSummary handles schema-locked vs standard relayMode", () 
   assert.equal(locked.length, 2); // only non-system slice
 });
 
+test("selectMessagesForSummary trims non-system messages and excludes system in schema-locked token overflow", () => {
+  // Input with system messages and huge non-system messages exceeding token limit
+  const hugeText = "x".repeat(35000);
+  const messages = [
+    { role: "system", content: "System prompt" },
+    { role: "developer", content: "Developer prompt" },
+    { role: "user", content: `User msg 1: ${hugeText}` },
+    { role: "assistant", content: `Assistant msg 2: ${hugeText}` },
+    { role: "user", content: "User msg 3 short" },
+  ];
+
+  const trimmedLocked = contextHandoff.selectMessagesForSummary(messages, 10, "schema-locked");
+  // Should exclude system and developer messages
+  assert.ok(trimmedLocked.every((m) => m.role !== "system" && m.role !== "developer"));
+  // Should have trimmed down to non-overflowing messages (or last non-system)
+  assert.ok(trimmedLocked.length < 3);
+  assert.equal(trimmedLocked[trimmedLocked.length - 1].content, "User msg 3 short");
+});
+
 test("resolveUniversalHandoffConfig correctly parses relayMode", async () => {
   const comboSchema = await import("../../src/shared/validation/schemas/combo.ts");
   const parsedLocked = comboSchema.comboRuntimeConfigSchema.parse({

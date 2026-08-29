@@ -254,7 +254,9 @@ export function selectMessagesForSummary(
       : [...system, ...nonSystem.slice(-maxMessages)];
   let working = [...recentMessages];
 
-  while (working.length > system.length + 1) {
+  const minWorkingLength = relayMode === "schema-locked" ? 1 : system.length + 1;
+
+  while (working.length > minWorkingLength) {
     const history = formatMessagesForPrompt(working);
     if (estimateTokens(history) <= MAX_HISTORY_TOKENS_FOR_SUMMARY) {
       return working;
@@ -270,7 +272,7 @@ export function selectMessagesForSummary(
     // If there are system messages, return them so the caller can still produce context.
     // If there are no system messages (system=[]), fall back to the single most-recent
     // non-system message rather than returning [] which would silently drop the handoff.
-    if (system.length > 0) {
+    if (relayMode !== "schema-locked" && system.length > 0) {
       return system;
     }
     const lastNonSystem = nonSystem[nonSystem.length - 1];
