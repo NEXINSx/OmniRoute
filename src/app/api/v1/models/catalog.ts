@@ -869,17 +869,56 @@ async function buildUnifiedModelsResponseCore(
         const virtualCombo = await createBuiltinAutoCombo(autoId, suffix, preparedAutoInputs);
         const contextLength = virtualCombo.advertisedContextLength || 128000;
         const maxOutputTokens = virtualCombo.advertisedMaxOutputTokens || 8192;
+
+        // #11947: derive modalities and vision from the effective target pool so
+        // OpenAI-compatible clients can detect vision support for auto/* combos.
+        const autoTargets: ComboCatalogTarget[] = virtualCombo.models.map((m) => ({
+          modelStr: m.model,
+          providerId: m.providerId,
+          connectionId: m.connectionId,
+          ...(m.allowedConnectionIds ? { allowedConnectionIds: m.allowedConnectionIds } : {}),
+        }));
+        const autoTargetMetadata = autoTargets.map((t) => getComboTargetCatalogMetadata(t));
+        const knownAutoMeta = autoTargetMetadata.filter(
+          (m): m is ComboTargetCatalogMetadata => m !== null
+        );
+        const autoInputModalities =
+          knownAutoMeta.length > 0 &&
+          knownAutoMeta.every(
+            (m) => Array.isArray(m.inputModalities) && m.inputModalities.length > 0
+          )
+            ? intersectStringArrays(knownAutoMeta.map((m) => m.inputModalities || []))
+            : [];
+        const autoOutputModalities =
+          knownAutoMeta.length > 0 &&
+          knownAutoMeta.every(
+            (m) => Array.isArray(m.outputModalities) && m.outputModalities.length > 0
+          )
+            ? intersectStringArrays(knownAutoMeta.map((m) => m.outputModalities || []))
+            : [];
+        const autoCapabilities: Record<string, boolean | string[]> = {
+          tool_calling: true,
+          reasoning: true,
+          thinking: true,
+          temperature: true,
+        };
+        if (knownAutoMeta.length > 0) {
+          const allVision = knownAutoMeta.every((m) => m.capabilities.vision === true);
+          if (allVision) autoCapabilities.vision = true;
+        }
+
         models.push({
           ...baseAutoEntry,
           context_length: contextLength,
           max_input_tokens: contextLength,
           max_output_tokens: maxOutputTokens,
-          capabilities: {
-            tool_calling: true,
-            reasoning: true,
-            thinking: true,
-            temperature: true,
-          },
+          ...(autoInputModalities.length > 0
+            ? { input_modalities: autoInputModalities }
+            : {}),
+          ...(autoOutputModalities.length > 0
+            ? { output_modalities: autoOutputModalities }
+            : {}),
+          capabilities: autoCapabilities,
         });
       } catch (err) {
         console.log(`[catalog] Could not materialize built-in auto model ${autoId}:`, err);
