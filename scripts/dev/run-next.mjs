@@ -5,6 +5,7 @@ import http from "node:http";
 import path from "node:path";
 import next from "next";
 import { bootstrapEnv } from "../build/bootstrap-env.mjs";
+import { isTurbopackStallPlatform } from "../build/build-next-isolated.mjs";
 import { resolveRuntimePorts, withRuntimePortEnv } from "../build/runtime-env.mjs";
 import { createOmnirouteWsBridge } from "./v1-ws-bridge.mjs";
 import { createResponsesWsProxy } from "./responses-ws-proxy.mjs";
@@ -16,10 +17,7 @@ import { isTurbopackCacheCorruption, purgeAllTurbopackCaches } from "./turbopack
 import { randomUUID } from "node:crypto";
 import { getMainServerTimeoutConfig } from "./main-server-timeouts.mjs";
 import { createSystemdNotifier } from "./systemd-notify.mjs";
-import {
-  attachRequestStreamGuards,
-  installProcessCrashGuard,
-} from "./httpClientAbortGuard.mjs";
+import { attachRequestStreamGuards, installProcessCrashGuard } from "./httpClientAbortGuard.mjs";
 
 const { maybeHandleDisallowedMethod } = methodGuard;
 const { wrapRequestListenerWithHeadResponseGuard } = headResponseGuard;
@@ -108,8 +106,18 @@ const hostname = process.env.HOST || "0.0.0.0";
 // build default in build-next-isolated.mjs); OMNIROUTE_USE_TURBOPACK=0 is the
 // webpack escape hatch. Under Bun, Turbopack native V8 bindings are unavailable,
 // so Bun automatically disables Turbopack and uses Webpack.
+//
+// #12059: on Apple silicon Turbopack does not converge and `next dev` never reaches
+// listen state — measured at 5 min with zero progress past "Compiling instrumentation
+// Node.js", where webpack dev listens normally. So when the operator has NOT chosen,
+// fall back to the same platform default the build path uses, keeping dev and build
+// consistent. An explicit OMNIROUTE_USE_TURBOPACK still wins either way.
 const isBun = Boolean(process.versions.bun);
-const useTurbopack = dev && mergedEnv.OMNIROUTE_USE_TURBOPACK !== "0" && !isBun;
+const devBundlerExplicit = mergedEnv.OMNIROUTE_USE_TURBOPACK;
+const useTurbopack =
+  dev &&
+  !isBun &&
+  (devBundlerExplicit !== undefined ? devBundlerExplicit !== "0" : !isTurbopackStallPlatform());
 process.env.OMNIROUTE_WS_BRIDGE_SECRET ||= randomUUID();
 // Per-process secret used to prove the trusted peer-IP stamp came from this
 // server (read by the authz middleware in the same process). See peer-stamp.mjs.

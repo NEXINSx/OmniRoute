@@ -41,3 +41,26 @@ test("NODE_ENV normalization runs after the merged-env copy and before next()", 
   );
   assert.ok(normalizeIdx < nextCallIdx, "NODE_ENV must be normalized BEFORE next() reads it");
 });
+
+// run-next.mjs still cannot be imported in-process, so this stays a source guard like
+// the cases above. #12059: on macOS arm64 Turbopack never finishes the first dev
+// compile — measured at 5 min with zero progress past "Compiling instrumentation
+// Node.js", where webpack dev reaches listen state. The dev path must therefore fall
+// back to the same platform default the build path uses instead of hardcoding
+// Turbopack, while still letting an operator-set value win.
+test("run-next.mjs falls back to the platform bundler default when unset", () => {
+  assert.match(
+    source,
+    /isTurbopackStallPlatform\s*\(/,
+    "run-next.mjs must consult isTurbopackStallPlatform() so dev and build agree on the default"
+  );
+  assert.match(
+    source,
+    /devBundlerExplicit\s*!==\s*undefined/,
+    "the platform default must only apply when OMNIROUTE_USE_TURBOPACK is unset, so an explicit operator choice still wins"
+  );
+  assert.ok(
+    !/const useTurbopack = dev && [^;]*OMNIROUTE_USE_TURBOPACK !== "0" && !isBun;/.test(source),
+    "run-next.mjs must not unconditionally default dev to Turbopack (#12059)"
+  );
+});
