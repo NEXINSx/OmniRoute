@@ -1,4 +1,7 @@
 import { SEARCH_PROVIDERS } from "../config/searchRegistry.ts";
+import { assertMicrosoftDesignerWebProviderAvailable } from "@/shared/constants/designerWebRetirement";
+import { assertRuntimeProviderAvailable } from "@/shared/constants/providerRetirement";
+import { assertCommonChatGptWebProviderAvailable } from "@/shared/constants/chatgptWebRetirement";
 import {
   registerLazyExecutor,
   loadRegisteredExecutor,
@@ -95,8 +98,6 @@ const lazyExecutors: Record<string, () => Promise<BaseExecutor>> = {
     import("./gemini-business.ts").then((m) => new m.GeminiBusinessExecutor()),
   gembiz: () =>
     import("./gemini-business.ts").then((m) => new m.GeminiBusinessExecutor()), // Alias
-  "chatgpt-web": () => import("./chatgpt-web.ts").then((m) => new m.ChatGptWebExecutor()),
-  "cgpt-web": () => import("./chatgpt-web.ts").then((m) => new m.ChatGptWebExecutor()), // Alias
   "blackbox-web": () => import("./blackbox-web.ts").then((m) => new m.BlackboxWebExecutor()),
   "bb-web": () => import("./blackbox-web.ts").then((m) => new m.BlackboxWebExecutor()), // Alias
   "muse-spark-web": () =>
@@ -124,10 +125,6 @@ const lazyExecutors: Record<string, () => Promise<BaseExecutor>> = {
   "copilot-m365-web": () =>
     import("./copilot-m365-web.ts").then((m) => new m.CopilotM365WebExecutor()),
   copilot: () => import("./copilot-web.ts").then((m) => new m.CopilotWebExecutor()), // Alias
-  "microsoft-designer-web": () =>
-    import("./microsoft-designer-web.ts").then((m) => new m.MicrosoftDesignerWebExecutor()),
-  msdesigner: () =>
-    import("./microsoft-designer-web.ts").then((m) => new m.MicrosoftDesignerWebExecutor()), // Alias
   "adobe-firefly": () => import("./adobe-firefly.ts").then((m) => new m.AdobeFireflyExecutor()),
   firefly: () => import("./adobe-firefly.ts").then((m) => new m.AdobeFireflyExecutor()), // Alias
   "veoaifree-web": () => import("./veoaifree-web.ts").then((m) => new m.VeoAIFreeWebExecutor()),
@@ -135,8 +132,6 @@ const lazyExecutors: Record<string, () => Promise<BaseExecutor>> = {
   "duckduckgo-web": () =>
     import("./duckduckgo-web.ts").then((m) => new m.DuckDuckGoWebExecutor()),
   ddgw: () => import("./duckduckgo-web.ts").then((m) => new m.DuckDuckGoWebExecutor()), // Alias
-  "felo-web": () => import("./felo-web.ts").then((m) => new m.FeloWebExecutor()),
-  felo: () => import("./felo-web.ts").then((m) => new m.FeloWebExecutor()), // Alias
   "t3-web": () => import("./t3-chat-web.ts").then((m) => new m.T3ChatWebExecutor()),
   t3chat: () => import("./t3-chat-web.ts").then((m) => new m.T3ChatWebExecutor()), // Alias
   "inner-ai": () => import("./inner-ai.ts").then((m) => new m.InnerAiExecutor()),
@@ -175,10 +170,6 @@ const lazyExecutors: Record<string, () => Promise<BaseExecutor>> = {
     ), // Alias
   "doubao-web": () => import("./doubao-web.ts").then((m) => new m.DoubaoWebExecutor()),
   db: () => import("./doubao-web.ts").then((m) => new m.DoubaoWebExecutor()), // Alias
-  "qwen-web": () => import("./qwen-web.ts").then((m) => new m.QwenWebExecutor()),
-  raycast: () => import("./raycast.ts").then((m) => new m.RaycastExecutor()),
-  rc: () => import("./raycast.ts").then((m) => new m.RaycastExecutor()), // Alias
-  "hailuo-web": () => import("./hailuo-web.ts").then((m) => new m.HailuoWebExecutor()),
   "zai-web": () => import("./zai-web.ts").then((m) => new m.ZaiWebExecutor()),
   zw: () => import("./zai-web.ts").then((m) => new m.ZaiWebExecutor()), // Alias
   theoldllm: () => import("./theoldllm.ts").then((m) => new m.TheOldLlmExecutor()),
@@ -205,7 +196,6 @@ const lazyExecutors: Record<string, () => Promise<BaseExecutor>> = {
   xai: () => import("./xai.ts").then((m) => new m.XaiExecutor()),
   "xai-oauth": () => import("./xai.ts").then((m) => new m.XaiExecutor("xai-oauth")),
   xao: () => import("./xai.ts").then((m) => new m.XaiExecutor("xai-oauth")),
-  qw: () => import("./qwen-web.ts").then((m) => new m.QwenWebExecutor()), // Alias
   "conol-web": () => import("./conol-web.ts").then((m) => new m.ConolWebExecutor()),
   cnl: () => import("./conol-web.ts").then((m) => new m.ConolWebExecutor()), // Alias
 };
@@ -242,6 +232,9 @@ const CHAT_UNSUPPORTED_CLOUD_AGENT_PROVIDERS = new Set(["jules"]);
 const CHAT_UNSUPPORTED_SEARCH_PROVIDERS = new Set(Object.keys(SEARCH_PROVIDERS));
 
 export async function getExecutor(provider: string): Promise<BaseExecutor> {
+  assertMicrosoftDesignerWebProviderAvailable(provider);
+  assertRuntimeProviderAvailable(provider);
+  assertCommonChatGptWebProviderAvailable(provider);
   const loaded = await loadRegisteredExecutor(provider);
   if (loaded) return loaded;
   if (CHAT_UNSUPPORTED_CLOUD_AGENT_PROVIDERS.has(provider)) {

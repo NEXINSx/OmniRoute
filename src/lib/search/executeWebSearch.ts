@@ -130,6 +130,9 @@ export async function executeWebSearch(
   if (input.provider === "xquik" || input.provider === "xquik_search") {
     input.provider = "xquik-search";
   }
+  if (input.provider === "anysearch" || input.provider === "anysearch_search") {
+    input.provider = "anysearch-search";
+  }
   if (input.provider === "x-search" || input.provider === "xquik-search") input.search_type = "x";
   const searchType = input.search_type || "web";
 

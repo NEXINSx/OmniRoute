@@ -38,9 +38,10 @@ test("SEARCH_PROVIDERS has all registered providers", () => {
   assert.ok(SEARCH_PROVIDERS["duckduckgo-free"], "duckduckgo-free should exist");
   assert.ok(SEARCH_PROVIDERS["x-search"], "x-search should exist");
   assert.ok(SEARCH_PROVIDERS["xquik-search"], "xquik-search should exist");
+  assert.ok(SEARCH_PROVIDERS["anysearch-search"], "anysearch-search should exist");
   // #11140: context7 provides library-docs search
   assert.ok(SEARCH_PROVIDERS["context7"], "context7 should exist");
-  assert.equal(Object.keys(SEARCH_PROVIDERS).length, 19);
+  assert.equal(Object.keys(SEARCH_PROVIDERS).length, 20);
 });
 
 test("duckduckgo-free config is a no-key, fallback-only provider", () => {
@@ -174,11 +175,12 @@ test("zai-search config is correct", () => {
 
 test("getAllSearchProviders returns flat list", () => {
   const all = getAllSearchProviders();
-  assert.equal(all.length, 19);
+  assert.equal(all.length, 20);
   assert.ok(all.some((p) => p.id === "duckduckgo-free"));
   assert.ok(all.some((p) => p.id === "jina-search"));
   assert.ok(all.some((p) => p.id === "x-search"));
   assert.ok(all.some((p) => p.id === "xquik-search"));
+  assert.ok(all.some((p) => p.id === "anysearch-search"));
   assert.ok(all.some((p) => p.id === "serper-search"));
   assert.ok(all.some((p) => p.id === "brave-search"));
   assert.ok(all.some((p) => p.id === "perplexity-search"));
@@ -424,6 +426,7 @@ test("v1SearchSchema accepts new search providers", async () => {
     "firecrawl",
     "x-search",
     "xquik-search",
+    "anysearch-search",
   ] as const;
 
   for (const provider of providers) {

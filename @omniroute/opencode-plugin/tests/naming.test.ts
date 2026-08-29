@@ -69,13 +69,13 @@ test("formatFreeBudget: sub-1K token count is not abbreviated", () => {
   );
 });
 
-test("formatFreeBudget: characterises the 999_999 rounding wart (rounds past its own magnitude)", () => {
-  // `toFixed(1)` rounds 999999/1e3 up to "1000.0" before the `>= 1e6`
-  // threshold check has a chance to apply, so this reads "1000K" instead of
-  // the intended "1M". Not this PR's bug to fix — pinned here as the
-  // documented current behaviour so a future fix has a test to flip.
+test("formatFreeBudget: the 999_999 rounding wart is fixed — promotes to 1M", () => {
+  // `toFixed(1)` rounds 999999/1e3 up to "1000.0" before the `>= 1e6` threshold
+  // check has a chance to apply. fmtTokens now promotes a rounded-up "1000" in
+  // any unit to the next unit up, so this correctly reads "1M" instead of the
+  // old "1000K" wart.
   assert.equal(
     formatFreeBudget({ freeType: "recurring-daily", monthlyTokens: 999_999 }),
-    "1000K tokens/day"
+    "1M tokens/day"
   );
 });

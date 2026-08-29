@@ -39,7 +39,7 @@ async function resetStorage() {
   delete process.env.INITIAL_PASSWORD;
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -55,7 +55,7 @@ test.beforeEach(async () => {
 
 test.after(async () => {
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // ── Auth tests ────────────────────────────────────────────────────────────────
@@ -288,6 +288,6 @@ test("grok-build status uses GROK_HOME and returns its managed endpoint", async 
   } finally {
     if (original === undefined) delete process.env.GROK_HOME;
     else process.env.GROK_HOME = original;
-    fs.rmSync(grokHome, { recursive: true, force: true });
+    fs.rmSync(grokHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

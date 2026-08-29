@@ -2,7 +2,7 @@
 //
 // #5088 — When the inline credential "Check" fails, the modal showed only a bare
 // "invalid" badge and threw away the detailed reason returned by
-// /api/providers/validate. For claude-web/chatgpt-web the real cause is often an
+// /api/providers/validate. For browser-session providers the real cause is often an
 // environment error (e.g. "TLS impersonation client failed to start: EACCES …"),
 // which the backend already surfaces in `data.error` — but the UI hid it, so the
 // reporter had to dig it out via a separate Provider Test. The detailed message
@@ -32,7 +32,12 @@ function render(props: Record<string, unknown>) {
   const root = createRoot(el);
   act(() => {
     root.render(
-      <AddApiKeyModal isOpen onSave={async () => undefined} onClose={() => {}} {...(props as any)} />
+      <AddApiKeyModal
+        isOpen
+        onSave={async () => undefined}
+        onClose={() => {}}
+        {...(props as any)}
+      />
     );
   });
   containers.push({ root, el });
@@ -68,7 +73,10 @@ beforeEach(() => {
           json: () => Promise.resolve({ valid: false, error: TLS_EACCES_ERROR }),
         } as Response);
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ valid: true }) } as Response);
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ valid: true }),
+      } as Response);
     })
   );
 });
@@ -92,8 +100,7 @@ describe("AddApiKeyModal — surfaces the detailed validation error (#5088)", ()
     // The validate ("check") button is the first button that follows the
     // credential input in DOM order (it sits right next to it).
     const checkBtn = Array.from(el.querySelectorAll("button")).find(
-      (b) =>
-        (apiKeyInput.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+      (b) => (apiKeyInput.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
     )!;
     expect(checkBtn).toBeTruthy();
     act(() => {

@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Excluir todos os lotes concluídos",
     "batchListBatchesTable": "Lotes",
     "changelogViewerLoading": "Carregando changelog do GitHub...",
+    "profile": "Perfil",
     "profileLoading": "Carregando perfil...",
     "profileHowToEarn": "Como ganhar",
     "bootstrapBannerDismiss": "Dispensar",
@@ -1266,7 +1267,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Interceptar tráfego de agentes IDE",
     "trafficInspector": "Inspector de Tráfego",
-    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorSubtitle": "Inspecione o tráfego de requisições e respostas dos seus apps",
     "trafficInspectorPurpose": "Veja exatamente o que sua aplicação envia e recebe dos provedores de IA. Funciona com qualquer cliente compatível com OpenAI.",
     "cliCode": "CLI Code's",
     "cliCodeSubtitle": "Ferramentas de código que apontam para o OmniRoute",
@@ -6256,11 +6257,11 @@
       "chenzk": "Gateway compatível com OpenAI com um catálogo de modelos ao vivo em chenzk.top.",
       "magnific": "Gere imagens com a API Mystic do Freepik.",
       "freetheai": "Gateway gratuito compatível com OpenAI com suporte a modelos via passthrough.",
-      "g4f-gemini": "Proxy reverso gratuito e sem chave do g4f.space para o Gemini, limitado a 5 solicitações por minuto.",
-      "g4f-groq": "Proxy reverso gratuito e sem chave do g4f.space para o Groq, limitado a 5 solicitações por minuto.",
-      "g4f-nvidia": "Proxy reverso gratuito e sem chave do g4f.space para o NVIDIA NIM, limitado a 5 solicitações por minuto.",
-      "g4f-ollama": "Gateway Ollama hospedado, gratuito e sem chave, do g4f.space, limitado a 5 solicitações por minuto.",
-      "g4f-pollinations": "Proxy reverso gratuito e sem chave do g4f.space para o Pollinations, limitado a 5 solicitações por minuto.",
+      "g4f-gemini": "Gateway remoto do g4f.space para o Gemini. O acesso anônimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
+      "g4f-groq": "Gateway remoto do g4f.space para o Groq. O acesso anônimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
+      "g4f-nvidia": "Gateway remoto do g4f.space para o NVIDIA NIM. O acesso anônimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
+      "g4f-ollama": "Gateway remoto do g4f.space para o Ollama. O acesso anônimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
+      "g4f-pollinations": "Gateway remoto do g4f.space para o Pollinations. O acesso anônimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
       "mixedbread": "Crie embeddings com a API do Mixedbread.",
       "segmind": "Gere imagens e vídeos com os modelos hospedados do Segmind.",
       "amazon-q": "Usa o mesmo AWS Builder ID ou fluxo de refresh-token importado do Kiro, mas mantém as conexões do Amazon Q separadas.",
@@ -7678,7 +7679,8 @@
     "backupCleanupSuccess": "Excluído(s) {backups} conjunto(s) de backup e {files} arquivo(s).",
     "backupCleanupFailed": "Falha ao limpar backups do banco de dados",
     "purgeQuotaSnapshotsSuccess": "{count} snapshots de cota removidos",
-    "purgeQuotaSnapshotsFailed": "Falha ao remover snapshots de cota",    "purgeCallLogsSuccess": "{count} logs de chamadas removidos",
+    "purgeQuotaSnapshotsFailed": "Falha ao remover snapshots de cota",
+    "purgeCallLogsSuccess": "{count} logs de chamadas removidos",
     "purgeCallLogsFailed": "Falha ao remover logs de chamadas",
     "purgeDetailedLogsSuccess": "{count} logs detalhados removidos",
     "purgeDetailedLogsFailed": "Falha ao remover logs detalhados",
@@ -7688,7 +7690,8 @@
     "invalidJsonFileType": "Tipo de arquivo inválido. Apenas arquivos .json são permitidos.",
     "legacyJsonImportSuccess": "JSON legado importado com sucesso!",
     "jsonImportFailed": "Falha ao importar JSON",
-    "jsonImportError": "Erro durante a importação de JSON",    "storagePurgeData": "Limpar dados",
+    "jsonImportError": "Erro durante a importação de JSON",
+    "storagePurgeData": "Limpar dados",
     "storagePurgeDataDesc": "Excluir imediatamente todos os registros sem aplicar verificações de retenção. Use com cautela.",
     "storageRetentionCleanup": "Configurações de Retenção",
     "storageRetentionCleanupDesc": "Configure a retenção de registros operacionais e a limpeza de backup do banco de dados.",
@@ -13936,5 +13939,17 @@
     "cta": "Obter uma chave de API",
     "partnerLinkNote": "Link de parceiro",
     "dismissAriaLabel": "Dispensar"
+  },
+  "combo": {
+    "sort": {
+      "label": "Ordenar por",
+      "method": {
+        "manual": "Manual",
+        "provider": "Provedor",
+        "score": "Pontuação (modelos gratuitos)",
+        "name": "Nome"
+      },
+      "scoreHint": "A ordenação por pontuação vale só para provedores gratuitos; os demais ficam onde estão."
+    }
   }
 }

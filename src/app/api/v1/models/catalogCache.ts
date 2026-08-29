@@ -80,7 +80,7 @@ export type BackgroundRefreshScheduler = (task: () => Promise<unknown>) => void;
  * so fall back to the macrotask there. Those callers have no response being flushed, so
  * the deferral is all they ever needed.
  */
-function defaultBackgroundRefreshScheduler(task: () => Promise<unknown>): void {
+export function defaultBackgroundRefreshScheduler(task: () => Promise<unknown>): void {
   try {
     after(task);
   } catch {
@@ -135,6 +135,31 @@ export type CatalogCacheOptions = {
  */
 export const CATALOG_CACHE_TTL_MS_DEFAULT = 60_000;
 
+/**
+ * Per-call knobs for {@link resolveCachedCatalogResponse}.
+ *
+ * `hideAutoCombos` / `hideNoThinkVariants` are catalog-shape dimensions folded into
+ * the cache key. `getStaleWhileRevalidateMs` and `scheduleBackgroundRefresh` are the
+ * injection points restored in #11551: the route wires Next's `after()` so the
+ * background refresh runs only once the response has been flushed to the client.
+ */
+
+/** Defers `task` until it is safe to run without delaying the current response. */
+
+/**
+ * Default scheduler (#8728 / #11551).
+ *
+ * Next's `after()` runs the task once the response has been flushed, which is the
+ * whole point of the stale-while-revalidate path: the builder is overwhelmingly
+ * synchronous under the single-threaded App Router, so running it before the flush
+ * pins the event loop and the "served immediately" stale body only reaches the
+ * client after the rebuild finishes.
+ *
+ * `after()` requires a Next request scope. Callers outside one (instrumentation
+ * warm-up, direct unit-test imports) fall back to a macrotask, which preserves the
+ * "hand the response back first" ordering within the same process.
+ */
+
 type CatalogInFlight = {
   version: number;
   promise: Promise<CachedCatalog>;
@@ -155,10 +180,7 @@ const catalogInFlight = new Map<string, InFlightBuild>();
 
 let _catalogBuilderRuns = 0;
 
-function buildCatalogCacheKey(
-  request: Request,
-  catalogSettings?: { hideAutoCombos?: boolean; hideNoThinkVariants?: boolean }
-): string {
+function buildCatalogCacheKey(request: Request, catalogSettings?: CatalogCacheOptions): string {
   const url = new URL(request.url);
   const prefix = url.searchParams.get("prefix") || "";
   const apiKey = extractApiKey(request) || "";
@@ -262,7 +284,9 @@ function startBackgroundRefresh(
   const refreshPromise: Promise<CachedCatalog> = new Promise((resolve, reject) => {
     schedule(() =>
       runBuilder(buildPayload, request)
-        .then((payload) => resolve(storePayload(cacheKey, payload, generation)))
+        .then((payload) => {
+          resolve(storePayload(cacheKey, payload, generation));
+        })
         .catch((err) => {
           console.error(
             `[catalog] Background stale-while-revalidate refresh failed for key "${cacheKey}":`,

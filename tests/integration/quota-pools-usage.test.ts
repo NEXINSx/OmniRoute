@@ -42,7 +42,7 @@ async function enableManagementAuth() {
 function resetDb() {
   core.resetDbInstance();
   resetQuotaStoreSingleton();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -54,7 +54,7 @@ test.beforeEach(async () => {
 test.after(() => {
   core.resetDbInstance();
   resetQuotaStoreSingleton();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("GET /api/quota/pools/[id]/usage without auth → 401", async () => {
@@ -137,11 +137,7 @@ test("GET /api/quota/pools/[id]/usage → PoolUsageSnapshot shape with correct f
   // Even with no plan dimensions (empty plan for unknown provider), the response
   // is valid with an empty dimensions array — endpoint falls back to poolUsage()
   // which returns what's available from the store.
-  assert.doesNotMatch(
-    JSON.stringify(body),
-    /\s+at\s+\//,
-    "No stack trace in usage response"
-  );
+  assert.doesNotMatch(JSON.stringify(body), /\s+at\s+\//, "No stack trace in usage response");
 });
 
 test("GET /api/quota/pools/[id]/usage response has required PoolUsageSnapshot fields", async () => {

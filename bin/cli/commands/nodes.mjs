@@ -70,7 +70,7 @@ export function registerNodes(program) {
   nodes
     .command("add")
     .requiredOption("--provider <p>", t("nodes.add.provider"))
-    .requiredOption("--base-url <url>", t("nodes.add.baseUrl"))
+    .requiredOption("--endpoint <url>", t("nodes.add.baseUrl"))
     .option("--name <n>", t("nodes.add.name"))
     .option("--weight <w>", t("nodes.add.weight"), parseInt, 100)
     .option("--region <r>", t("nodes.add.region"))
@@ -83,14 +83,18 @@ export function registerNodes(program) {
     .action(async (opts, cmd) => {
       const body = {
         provider: opts.provider,
-        baseUrl: opts.baseUrl,
+        baseUrl: opts.endpoint,
         name: opts.name,
         weight: opts.weight,
         region: opts.region,
         enabled: true,
         headers: opts.authHeader?.length ? opts.authHeader : undefined,
       };
-      const res = await apiFetch("/api/provider-nodes", { method: "POST", body });
+      const res = await apiFetch("/api/provider-nodes", {
+        ...cmd.optsWithGlobals(),
+        method: "POST",
+        body,
+      });
       if (!res.ok) {
         process.stderr.write(`Error: ${res.status}\n`);
         process.exit(1);
@@ -100,17 +104,22 @@ export function registerNodes(program) {
 
   nodes
     .command("update <nodeId>")
-    .option("--base-url <url>", t("nodes.update.baseUrl"))
+    .option("--endpoint <url>", t("nodes.update.baseUrl"))
     .option("--name <n>", t("nodes.update.name"))
     .option("--weight <w>", t("nodes.update.weight"), parseInt)
     .option("--region <r>", t("nodes.update.region"))
     .option("--enabled <b>", t("nodes.update.enabled"), (v) => v === "true")
     .action(async (id, opts, cmd) => {
       const body = {};
-      for (const k of ["baseUrl", "name", "weight", "region", "enabled"]) {
+      if (opts.endpoint !== undefined) body.baseUrl = opts.endpoint;
+      for (const k of ["name", "weight", "region", "enabled"]) {
         if (opts[k] !== undefined) body[k] = opts[k];
       }
-      const res = await apiFetch(`/api/provider-nodes/${id}`, { method: "PUT", body });
+      const res = await apiFetch(`/api/provider-nodes/${id}`, {
+        ...cmd.optsWithGlobals(),
+        method: "PUT",
+        body,
+      });
       if (!res.ok) {
         process.stderr.write(`Error: ${res.status}\n`);
         process.exit(1);
@@ -136,12 +145,13 @@ export function registerNodes(program) {
 
   nodes
     .command("validate")
-    .requiredOption("--base-url <url>", t("nodes.validate.baseUrl"))
+    .requiredOption("--endpoint <url>", t("nodes.validate.baseUrl"))
     .requiredOption("--provider <p>", t("nodes.validate.provider"))
     .action(async (opts, cmd) => {
       const res = await apiFetch("/api/provider-nodes/validate", {
+        ...cmd.optsWithGlobals(),
         method: "POST",
-        body: { baseUrl: opts.baseUrl, provider: opts.provider },
+        body: { baseUrl: opts.endpoint, provider: opts.provider },
       });
       if (!res.ok) {
         process.stderr.write(`Error: ${res.status}\n`);

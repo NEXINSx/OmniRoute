@@ -15,7 +15,7 @@ const { buildOAuthConnectionCreatePayload } =
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // Regression for #5326: a freshly created OAuth connection (e.g. antigravity) used

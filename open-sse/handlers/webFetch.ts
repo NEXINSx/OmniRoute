@@ -3,6 +3,7 @@
  *
  * Handles POST /v1/web/fetch requests.
  * Dispatches to a web-fetch provider executor (Firecrawl, Jina Reader, Tavily, or TinyFish).
+ * Also AnySearch extract for free public fetch.
  *
  * Request format:
  * {
@@ -22,13 +23,20 @@ import { jinaReaderFetch } from "../executors/jina-reader-fetch.ts";
 import { tavilyFetch } from "../executors/tavily-fetch.ts";
 import { tinyfishFetch } from "../executors/tinyfish-fetch.ts";
 import { nimbleFetch } from "../executors/nimble-fetch.ts";
+import { anysearchFetch } from "../executors/anysearch-fetch.ts";
 
 export type WebFetchFormat = "markdown" | "html" | "links" | "screenshot";
 
 export interface WebFetchRequest {
   url: string;
   provider?:
-    "firecrawl" | "jina-reader" | "tavily-search" | "tinyfish" | "context7" | "nimble-search";
+    | "firecrawl"
+    | "jina-reader"
+    | "tavily-search"
+    | "tinyfish"
+    | "context7"
+    | "nimble-search"
+    | "anysearch-search";
   format?: WebFetchFormat;
   depth?: 0 | 1 | 2;
   wait_for_selector?: string;
@@ -62,6 +70,7 @@ export const WEB_FETCH_PROVIDERS = Object.freeze([
   "jina-reader",
   "tavily-search",
   "tinyfish",
+  "anysearch-search",
   "context7",
   "nimble-search",
 ] as const);
@@ -136,6 +145,13 @@ export async function handleWebFetch(
 
       case "tinyfish":
         return await tinyfishFetch({
+          url: req.url,
+          format,
+          includeMetadata,
+          credentials,
+        });
+      case "anysearch-search":
+        return await anysearchFetch({
           url: req.url,
           format,
           includeMetadata,

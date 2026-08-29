@@ -11,9 +11,10 @@
 //
 // The reserved set is shared between the runtime guard and the validation
 // schemas via src/shared/constants/reservedProviderPrefixes.ts (single source of
-// truth). Set semantics mirror the old inline guard exactly:
-//   - REGISTRY entry ids + aliases only;
-//   - case-sensitive (mixed-case "TokenRouter" does NOT collide at runtime);
+// truth). Live set semantics mirror the old inline guard exactly; exact retired
+// ids remain reserved after registry removal and use trim + lowercase matching:
+//   - REGISTRY entry ids + aliases, plus retired ids;
+//   - live ids remain case-sensitive (mixed-case "TokenRouter" does NOT collide);
 //   - manual alias ids that live outside REGISTRY (xiaomi/llamacpp/aq) are NOT
 //     included — verified they do not intercept nodes at runtime.
 import test from "node:test";
@@ -32,10 +33,15 @@ const { createProviderNodeSchema, updateProviderNodeSchema } =
   await import("../../src/shared/validation/schemas.ts");
 const { RESERVED_PROVIDER_PREFIXES, isReservedProviderPrefix, RESERVED_PREFIX_COUNT } =
   await import("../../src/shared/constants/reservedProviderPrefixes.ts");
+const { buildReservedPrefixes, getProviderPrefixIndex } =
+  await import("../../src/lib/providerNodePrefixes.ts");
+const providerNodesDb = await import("../../src/lib/db/providers/nodes.ts");
+const { isCommonChatGptWebRetiredProviderId } =
+  await import("../../src/shared/constants/chatgptWebRetirement.ts");
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -80,7 +86,7 @@ test.beforeEach(async () => {
 
 test.after(async () => {
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // ──── Shared module ────
@@ -88,6 +94,55 @@ test.after(async () => {
 test("shared set contains REGISTRY ids and aliases (tokenrouter + trk)", () => {
   assert.equal(RESERVED_PROVIDER_PREFIXES.has("tokenrouter"), true);
   assert.equal(RESERVED_PROVIDER_PREFIXES.has("trk"), true);
+});
+
+test("shared guard keeps retired Felo ids reserved after registry removal", () => {
+  assert.equal(RESERVED_PROVIDER_PREFIXES.has("felo-web"), true);
+  assert.equal(RESERVED_PROVIDER_PREFIXES.has("felo"), true);
+  assert.equal(isReservedProviderPrefix(" FeLo-Web "), true);
+  assert.equal(isReservedProviderPrefix("\u00a0FELO\uFEFF"), true);
+});
+
+test("shared guard keeps retired Qwen Web ids reserved after registry removal", () => {
+  assert.equal(RESERVED_PROVIDER_PREFIXES.has("qwen-web"), true);
+  assert.equal(RESERVED_PROVIDER_PREFIXES.has("qw"), true);
+  assert.equal(isReservedProviderPrefix(" QwEn-WeB "), true);
+  assert.equal(isReservedProviderPrefix("\u00a0QW\uFEFF"), true);
+});
+
+test("retired ChatGPT Web ids remain permanently reserved without capturing Codex variants", () => {
+  for (const prefix of ["chatgpt-web", "cgpt-web", " ChatGPT-Web ", "CGPT-WEB"]) {
+    assert.equal(isReservedProviderPrefix(prefix), true, `${prefix} must stay reserved`);
+  }
+  assert.equal(buildReservedPrefixes().has("chatgpt-web"), true);
+  assert.equal(buildReservedPrefixes().has("cgpt-web"), true);
+
+  for (const prefix of ["chatgpt-web-codex", "cgpt-codex"]) {
+    assert.equal(isReservedProviderPrefix(prefix), true, `${prefix} remains a live built-in`);
+    assert.equal(isCommonChatGptWebRetiredProviderId(prefix), false);
+  }
+  assert.equal(isReservedProviderPrefix("chatgpt-web-preview"), false);
+  assert.equal(isCommonChatGptWebRetiredProviderId("chatgpt-web-preview"), false);
+});
+
+test("mixed-case retired ChatGPT Web prefixes are never advertised as compatible nodes", async () => {
+  for (const [index, prefix] of ["ChatGPT-Web", "CGPT-WEB"].entries()) {
+    const id = `openai-compatible-retired-prefix-${index}`;
+    await providerNodesDb.createProviderNode({
+      id,
+      type: "openai-compatible",
+      name: `Retired mixed-case prefix ${index}`,
+      prefix,
+      apiType: "chat",
+      baseUrl: "https://retired.example.invalid/v1",
+    });
+  }
+
+  const index = await getProviderPrefixIndex();
+  for (const prefix of ["ChatGPT-Web", "CGPT-WEB"]) {
+    assert.equal(index.entries.get(prefix)?.status, "reserved");
+    assert.equal(index.prefixToNode.has(prefix), false);
+  }
 });
 
 test("shared set is case-sensitive like the runtime guard", () => {
@@ -106,12 +161,14 @@ test("shared set excludes manual aliases that never intercept nodes at runtime",
   assert.equal(RESERVED_PROVIDER_PREFIXES.has("aq"), false);
 });
 
-test("shared set size matches full REGISTRY scan (398 unique prefixes)", () => {
-  // Count measured against release/v3.8.51 tip after #11629 (opper) and
-  // #11631 (1min.ai) boarded — 398 unique ids/aliases walked from the
-  // provider REGISTRY on top of the 395 pinned post-#11333.
-  // the assertion pins that the set is a full REGISTRY walk, not a
-  // hand-maintained list.
+test("shared set size includes live REGISTRY and retired Designer + Felo + Qwen Web prefixes", () => {
+  // Computed (not hand-derived) after combining Designer's 2 retired
+  // ids/aliases with Felo's 2 retired ids/aliases and Qwen Web's 2 retired
+  // ids/aliases (qwen-web's REGISTRY id/alias were identical strings, so its
+  // live-REGISTRY contribution was 1 unique member; retiring it removes that
+  // 1 and adds 2 distinct tombstones "qwen-web"/"qw", a net +1) on top of the
+  // live REGISTRY walk, minus the 3 GPL-derived Raycast/Hailuo Web
+  // ids/aliases removed from REGISTRY by #11691's migration 166.
   assert.equal(RESERVED_PREFIX_COUNT, 398);
 });
 
@@ -146,6 +203,74 @@ test("createProviderNodeSchema rejects reserved alias 'trk'", () => {
     apiType: "chat",
   });
   assert.equal(result.success, false);
+});
+
+test("provider node schemas reject retired Felo prefixes and normalized variants", () => {
+  for (const prefix of ["felo-web", "felo", " FeLo-Web ", "\u00a0FELO\uFEFF"]) {
+    const created = createProviderNodeSchema.safeParse({
+      name: "Retired prefix",
+      prefix,
+      apiType: "chat",
+    });
+    assert.equal(created.success, false, `create must reject ${JSON.stringify(prefix)}`);
+
+    const updated = updateProviderNodeSchema.safeParse({
+      name: "Retired prefix",
+      prefix,
+      baseUrl: "https://retired.example.invalid/v1",
+    });
+    assert.equal(updated.success, false, `update must reject ${JSON.stringify(prefix)}`);
+
+    const preset = createProviderNodeSchema.safeParse({
+      preset: "vibeproxy-openai",
+      prefix,
+      baseUrl: "http://localhost:8317",
+    });
+    assert.equal(preset.success, false, `preset create must reject ${JSON.stringify(prefix)}`);
+  }
+});
+
+test("provider node schemas reject retired Qwen Web prefixes and normalized variants", () => {
+  for (const prefix of ["qwen-web", "qw", " QwEn-WeB ", "\u00a0QW\uFEFF"]) {
+    const created = createProviderNodeSchema.safeParse({
+      name: "Retired prefix",
+      prefix,
+      apiType: "chat",
+    });
+    assert.equal(created.success, false, `create must reject ${JSON.stringify(prefix)}`);
+
+    const updated = updateProviderNodeSchema.safeParse({
+      name: "Retired prefix",
+      prefix,
+      baseUrl: "https://retired.example.invalid/v1",
+    });
+    assert.equal(updated.success, false, `update must reject ${JSON.stringify(prefix)}`);
+
+    const preset = createProviderNodeSchema.safeParse({
+      preset: "vibeproxy-openai",
+      prefix,
+      baseUrl: "http://localhost:8317",
+    });
+    assert.equal(preset.success, false, `preset create must reject ${JSON.stringify(prefix)}`);
+  }
+});
+
+test("provider-node schemas reject both retired common ChatGPT Web prefixes", () => {
+  for (const prefix of ["chatgpt-web", "cgpt-web", "CHATGPT-WEB"]) {
+    const createResult = createProviderNodeSchema.safeParse({
+      name: "Retired provider shadow",
+      prefix,
+      apiType: "chat",
+      baseUrl: "https://example.invalid/v1",
+    });
+    assert.equal(createResult.success, false, `create accepted ${prefix}`);
+
+    const updateResult = updateProviderNodeSchema.safeParse({
+      name: "Retired provider shadow",
+      prefix,
+    });
+    assert.equal(updateResult.success, false, `update accepted ${prefix}`);
+  }
 });
 
 test("createProviderNodeSchema accepts mixed-case 'TokenRouter' (no runtime collision)", () => {

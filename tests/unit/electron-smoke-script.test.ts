@@ -65,7 +65,7 @@ test("electron smoke pre-creates the USERPROFILE-derived Roaming userData tree o
       assert.ok(fs.existsSync(viaAppData), `expected pre-created APPDATA dir: ${viaAppData}`);
     }
   } finally {
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -85,7 +85,7 @@ test("electron smoke tarPack handles absolute Windows-style tarball paths", () =
     assert.ok(fs.existsSync(tarballPath), "tarball should exist after tarPack");
     assert.ok(fs.statSync(tarballPath).size > 0, "tarball should not be empty");
   } finally {
-    fs.rmSync(staging, { recursive: true, force: true });
+    fs.rmSync(staging, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

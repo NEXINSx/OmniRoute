@@ -22,8 +22,25 @@ process.env.JWT_SECRET = "test-health-cache-secret";
 await import("../../src/lib/db/core.ts");
 const { GET, DELETE } = await import("../../src/app/api/monitoring/health/route.ts");
 
+// GHSA-mvf8-qc78-5mxm: the detailed health payload (the one carrying `timestamp`)
+// is reserved for a management principal — GET now takes the Request and an
+// anonymous caller only gets the liveness verdict. Every probe below therefore
+// authenticates with a dashboard-session cookie, exactly like the DELETE probe.
+const { SignJWT } = await import("jose");
+const AUTH_TOKEN = await new SignJWT({ authenticated: true })
+  .setProtectedHeader({ alg: "HS256" })
+  .setExpirationTime("30d")
+  .sign(new TextEncoder().encode(process.env.JWT_SECRET as string));
+
+function authedRequest(method = "GET"): Request {
+  return new Request("http://localhost/api/monitoring/health", {
+    method,
+    headers: { cookie: `auth_token=${AUTH_TOKEN}` },
+  });
+}
+
 async function healthTimestamp(): Promise<string> {
-  const res = await GET();
+  const res = await GET(authedRequest());
   const body = (await res.json()) as {
     timestamp?: string;
     adaptiveAdmission?: unknown;
@@ -48,19 +65,8 @@ test("cache expires after the TTL — a fresh payload is built", async () => {
 });
 
 test("DELETE (circuit-breaker reset) invalidates the cache immediately", async () => {
-  const { SignJWT } = await import("jose");
-  const authToken = await new SignJWT({ authenticated: true })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("30d")
-    .sign(new TextEncoder().encode(process.env.JWT_SECRET as string));
-
   const t1 = await healthTimestamp(); // populate cache
-  const delRes = await DELETE(
-    new Request("http://localhost/api/monitoring/health", {
-      method: "DELETE",
-      headers: { cookie: `auth_token=${authToken}` },
-    })
-  );
+  const delRes = await DELETE(authedRequest("DELETE"));
   assert.ok(delRes.status < 400, `DELETE should succeed, got ${delRes.status}`);
   await new Promise((r) => setTimeout(r, 5)); // ensure the clock advances past ms precision
   const t2 = await healthTimestamp();

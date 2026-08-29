@@ -363,8 +363,8 @@ export function classifyProviderError(
     if (recoverableProject403) {
       return PROVIDER_ERROR_TYPES.PROJECT_ROUTE_ERROR;
     }
-    // #8813 — ChatGPT Web's Cloudflare Sentinel/Turnstile 403 is a TERMINAL
-    // block: the user's IP/session needs a browser Turnstile challenge, and
+    // A Cloudflare Sentinel/Turnstile 403 is a TERMINAL block for browser-session
+    // providers: the user's IP/session needs a browser Turnstile challenge, and
     // retrying the same connection will keep 403ing. Classify as FORBIDDEN so
     // the connection gets banned and combo routing falls back to other providers.
     // Must be checked BEFORE the generic apikey-403→null return below, which

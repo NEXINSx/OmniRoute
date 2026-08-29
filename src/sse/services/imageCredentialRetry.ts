@@ -9,13 +9,13 @@ interface ImageGenerationResult {
   status?: number;
   error?: unknown;
   data?: unknown;
-  // #10494: opt-in signal a provider handler can set (via
+  // #8307: opt-in signal a provider handler can set (via
   // saveImageErrorResult's `retryable` option) when a non-401 failure is
-  // still account/session-specific — e.g. an expired or blocked Gemini Web
-  // session, which the underlying browser-automation executor surfaces as
-  // 400/500 rather than 401. Only honored together with a connectionId, same
-  // as the existing 401 path, so providers that never set it keep the
-  // original 401-only fallback behavior unchanged.
+  // still account-specific — e.g. a ChatGPT account that can run Codex but
+  // lacks access to the requested image model and returns a specific 400.
+  // Only honored together with a connectionId, same as the existing 401 path,
+  // so providers that never set it keep the original 401-only fallback
+  // behavior unchanged.
   retryable?: boolean;
 }
 

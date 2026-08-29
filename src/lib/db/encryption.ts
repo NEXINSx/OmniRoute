@@ -289,6 +289,36 @@ export function decrypt(
 }
 
 /**
+ * #11500 — decrypt() wrapper for callers outside decryptConnectionFields()
+ * (the lazy-decrypt views in providers/lazyConnectionView.ts, which call
+ * decrypt() directly on every fresh getProviderConnections() cycle). A
+ * fresh Proxy wraps a fresh row object each cycle, so per-proxy memoization
+ * never survives across cycles — without this wrapper the raw
+ * "[Encryption] Decryption failed..." line re-fires every single cycle for
+ * the same corrupt/stale-key credential. Shares the loggedDecryptFailures
+ * Set with decryptConnectionFields() so a credential already flagged via one
+ * path does not re-log via the other, and logs the SAME raw message
+ * decrypt() would emit (unlike decryptConnectionFields()'s enriched
+ * message) — just deduped to once per (provider + connection + field +
+ * ciphertext) instead of once per cycle.
+ */
+export function decryptQuiet(
+  ciphertext: string | null | undefined,
+  meta: { connectionId: string; provider: string; field: string }
+): string | null | undefined {
+  if (!looksEncrypted(ciphertext)) {
+    return decrypt(ciphertext);
+  }
+  const signature = `${meta.provider}::${meta.connectionId}::${meta.field}:${ciphertext}`;
+  const alreadyLogged = loggedDecryptFailures.has(signature);
+  const result = decrypt(ciphertext, { quiet: alreadyLogged });
+  if (result === null && !alreadyLogged) {
+    loggedDecryptFailures.add(signature);
+  }
+  return result;
+}
+
+/**
  * Encrypt sensitive fields in a connection object (mutates in-place).
  * After decryption that required legacy key, re-encrypt with static key
  * to migrate tokens automatically.

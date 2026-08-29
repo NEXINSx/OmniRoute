@@ -10,7 +10,10 @@ permissions:
 jobs:
   promptfoo-guard:
     name: promptfoo — injection guard (block mode, no secret)
-    runs-on: ubuntu-latest
+    # #11965: this job runs a backend-only `next build`; the hosted 7 GB runner cannot build
+    # release/v3.8.51 (VM shutdown ~7 min in), so it targets the box's light pool (`omni-light`:
+    # two listeners, jobs ≤ ~6 GB). Falls back to hosted when USE_VPS_RUNNER is off.
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-light"]')) || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -46,7 +49,10 @@ jobs:
 
   garak:
     name: garak probes (skip without provider secret)
-    runs-on: ubuntu-latest
+    # #11965: this job runs a backend-only `next build`; the hosted 7 GB runner cannot build
+    # release/v3.8.51 (VM shutdown ~7 min in), so it targets the box's light pool (`omni-light`:
+    # two listeners, jobs ≤ ~6 GB). Falls back to hosted when USE_VPS_RUNNER is off.
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-light"]')) || 'ubuntu-latest' }}
     # NOTE: the `secrets` context is NOT available in a job-level `if:` — referencing
     # it there makes GitHub reject the file on push (startup_failure on every push).
     # Map the secret into a job-level env and gate each step on a presence check, so

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
-import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import {
+  formatValidationMessage,
+  isValidationFailure,
+  validateBody,
+} from "@/shared/validation/helpers";
 
 export const tailscaleEnableSchema = z.object({
   sudoPassword: z.string().optional(),
@@ -34,7 +38,15 @@ export async function parseOptionalJsonBody<T extends z.ZodTypeAny>(request: Req
 
   const validation = validateBody(schema, rawBody);
   if (isValidationFailure(validation)) {
-    return { response: validation.response };
+    // validateBody() returns { success, error } — it has no `response` field, so
+    // the previous `{ response: validation.response }` handed every caller an
+    // `undefined` response and Next answered with a framework 500 instead of a 400.
+    return {
+      response: NextResponse.json(
+        { error: formatValidationMessage(validation.error) },
+        { status: 400 }
+      ),
+    };
   }
 
   return { data: validation.data };
