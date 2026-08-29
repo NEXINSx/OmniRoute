@@ -1023,6 +1023,8 @@
     "logs": "Journaux",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Soyez informé des événements",
+    "logExport": "Export des journaux",
+    "logExportSubtitle": "Envoyer les journaux d'appels vers l'extérieur",
     "combosSubtitle": "Fournisseurs de groupe pour le basculement",
     "batchSubtitle": "Traiter plusieurs demandes",
     "contextCavemanSubtitle": "Compression rapide",

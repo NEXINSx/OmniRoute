@@ -1023,6 +1023,8 @@
     "logs": "Log",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Dapatkan pemberitahuan tentang acara",
+    "logExport": "Eksport log",
+    "logExportSubtitle": "Hantar log panggilan ke luar",
     "combosSubtitle": "Pembekal kumpulan untuk failover",
     "batchSubtitle": "Memproses berbilang permintaan",
     "contextCavemanSubtitle": "Pemampatan segera",

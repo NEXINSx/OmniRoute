@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "వెబ్‌బూక్స్",
     "webhooksSubtitle": "ఈవెంట్‌ల గురించి తెలియజేయండి",
+    "logExport": "లాగ్ ఎగుమతి",
+    "logExportSubtitle": "కాల్ లాగ్‌లను బయటకు పంపండి",
     "combosSubtitle": "వైఫల్యం కోసం సమూహ ప్రదాతలు",
     "batchSubtitle": "బహుళ అభ్యర్థనలను ప్రాసెస్ చేయండి",
     "contextCavemanSubtitle": "ప్రాంప్ట్ కుదింపు",

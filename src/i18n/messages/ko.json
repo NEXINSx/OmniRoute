@@ -1023,6 +1023,8 @@
     "logs": "로그",
     "webhooks": "웹훅",
     "webhooksSubtitle": "이벤트 알림 받기",
+    "logExport": "로그 내보내기",
+    "logExportSubtitle": "호출 로그를 외부로 전송",
     "combosSubtitle": "장애 조치를 위해 공급자를 그룹화",
     "batchSubtitle": "여러 요청 처리",
     "contextCavemanSubtitle": "프롬프트 압축",

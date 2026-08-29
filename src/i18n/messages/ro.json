@@ -1023,6 +1023,8 @@
     "logs": "Bușteni",
     "webhooks": "Webhook-uri",
     "webhooksSubtitle": "Primiți notificări despre evenimente",
+    "logExport": "Export jurnale",
+    "logExportSubtitle": "Trimite jurnalele de apeluri în exterior",
     "combosSubtitle": "Furnizori de grup pentru failover",
     "batchSubtitle": "Procesați cereri multiple",
     "contextCavemanSubtitle": "Compresie promptă",

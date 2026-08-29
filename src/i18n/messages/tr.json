@@ -1023,6 +1023,8 @@
     "logs": "Günlükler",
     "webhooks": "Web kancaları",
     "webhooksSubtitle": "Etkinliklerden haberdar olun",
+    "logExport": "Günlük dışa aktarma",
+    "logExportSubtitle": "Çağrı günlüklerini dışarı gönderin",
     "combosSubtitle": "Yük devretme için grup sağlayıcıları",
     "batchSubtitle": "Birden fazla isteği işleyin",
     "contextCavemanSubtitle": "Hızlı sıkıştırma",

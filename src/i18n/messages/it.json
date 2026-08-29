@@ -1023,6 +1023,8 @@
     "logs": "Registri",
     "webhooks": "Webhook",
     "webhooksSubtitle": "Ricevi notifiche sugli eventi",
+    "logExport": "Esportazione log",
+    "logExportSubtitle": "Invia i log delle chiamate all'esterno",
     "combosSubtitle": "Provider di gruppo per il failover",
     "batchSubtitle": "Elabora più richieste",
     "contextCavemanSubtitle": "Compressione immediata",

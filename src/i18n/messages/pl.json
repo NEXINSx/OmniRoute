@@ -1023,6 +1023,8 @@
     "logs": "Logi",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Otrzymywanie powiadomień o zdarzeniach",
+    "logExport": "Eksport logów",
+    "logExportSubtitle": "Wysyłanie logów wywołań na zewnątrz",
     "combosSubtitle": "Grupowanie providers dla failover",
     "batchSubtitle": "Przetwarzanie wielu żądań",
     "contextCavemanSubtitle": "Kompresja promptów",
