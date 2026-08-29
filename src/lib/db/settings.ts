@@ -251,6 +251,14 @@ export async function getSettings() {
     // #9418: Opt-in filter that hides no-think/* gateway variants from the /v1/models catalog.
     // Routing still works for hidden ids sent explicitly.
     hideNoThinkVariants: false,
+    // #11481: Opt-in explicit model exposure allow/deny list, mirrored into the
+    // auto/* combo candidate pool (open-sse/services/autoCombo/modelExposureFilter.ts)
+    // so a denied model can't sneak back in via combo routing — the same trap
+    // #6512 already fixed once for hidePaidModels. See
+    // src/shared/utils/modelExposureList.ts for the matching predicate. Empty
+    // arrays preserve prior behaviour; opt-in only.
+    modelVisibilityAllowlist: [],
+    modelVisibilityDenylist: [],
     // #6977: Opt-in per-connection auto-ping that warms a Codex OAuth connection's
     // quota window right after it resets, so the first real request doesn't land in
     // a cold window. `connections` maps connection id -> enabled. Default empty map

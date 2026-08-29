@@ -43,6 +43,13 @@ const qdrantEmbeddingModelsRoute =
 // returns the Fetch API Request, which is structurally sufficient at runtime.
 const asNextRequest = (req: Request) => req as unknown as import("next/server").NextRequest;
 
+// Mirrors EmbeddingModelOption from the embedding-models route response shape.
+interface EmbeddingModelOptionLike {
+  value: string;
+  label: string;
+  dimensions?: number;
+}
+
 async function resetStorage() {
   core.resetDbInstance();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
@@ -407,6 +414,59 @@ test("GET /api/settings/qdrant/embedding-models — lists only configured provid
   assert.ok(body.models.some((model: any) => model.value === "openai/text-embedding-3-small"));
   const defaultModel = body.models.find((m: any) => m.value === "openai/text-embedding-3-small");
   assert.match(defaultModel.label, /1536d/);
+});
+
+test("GET /api/settings/qdrant/embedding-models — includes an active local no-API-key provider (#11949)", async () => {
+  // Local providers (e.g. ollama-local) are created through the connections
+  // route with authType "apikey" but no apiKey — the connect form never asks
+  // for one (src/shared/constants/providers/local.ts). An active connection
+  // like this must still surface its embedding models.
+  await localDb.createProviderConnection({
+    provider: "ollama-local",
+    authType: "apikey",
+    name: "local-ollama",
+  });
+
+  const headers = await createManagementSessionHeaders();
+  const req = new Request("http://localhost/api/settings/qdrant/embedding-models", {
+    method: "GET",
+    headers: Object.fromEntries(headers.entries()),
+  });
+
+  const res = await qdrantEmbeddingModelsRoute.GET(asNextRequest(req));
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(
+    body.models.some(
+      (model: EmbeddingModelOptionLike) => model.value === "ollama-local/embeddinggemma"
+    ),
+    "should list ollama-local embedding models for an active, key-less local connection"
+  );
+});
+
+test("GET /api/settings/qdrant/embedding-models — still excludes a remote provider with no key", async () => {
+  // A remote provider that DOES require a key must stay excluded when the
+  // connection was created/left without one — regression guard for the fix
+  // above so it does not become "drop the filter entirely".
+  await localDb.createProviderConnection({
+    provider: "openai",
+    authType: "apikey",
+    name: "embedding-test-openai-no-key",
+  });
+
+  const headers = await createManagementSessionHeaders();
+  const req = new Request("http://localhost/api/settings/qdrant/embedding-models", {
+    method: "GET",
+    headers: Object.fromEntries(headers.entries()),
+  });
+
+  const res = await qdrantEmbeddingModelsRoute.GET(asNextRequest(req));
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(
+    body.models.every((model: EmbeddingModelOptionLike) => !model.value.startsWith("openai/")),
+    "should not list a remote provider's models when its active connection has no API key"
+  );
 });
 
 test("GET /api/settings/qdrant/embedding-models — 401 without auth", async () => {

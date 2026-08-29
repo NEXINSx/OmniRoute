@@ -268,7 +268,7 @@ export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
   { provider: "muse-spark-web", modelId: "muse-spark-contemplating", displayName: "Muse Spark Contemplating", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "muse-spark-web", tos: "avoid" },
   { provider: "nebius", modelId: "meta-llama/Llama-3.3-70B-Instruct", displayName: "Llama 3.3 70B Instruct", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "nebius", tos: "caution" },
   { provider: "nlpcloud", modelId: "llama-3-8b-instruct", displayName: "Llama 3 8B", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-monthly", poolKey: "nlpcloud", tos: "avoid" },
-  { provider: "nous-research", modelId: "Hermes-4-405B", displayName: "Hermes 4 7B (Nous Research)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-credit", poolKey: "nous-research", tos: "ambiguous" },
+  { provider: "nous-research", modelId: "Hermes-4-405B", displayName: "Hermes 4 405B (Nous Research)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-credit", poolKey: "nous-research", tos: "ambiguous" },
   { provider: "nous-research", modelId: "Hermes-4-70B", displayName: "Hermes 4 70B (Nous Research)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-credit", poolKey: "nous-research", tos: "ambiguous" },
   { provider: "novita", modelId: "ai-ai/llama-3.1-8b-instruct", displayName: "Llama 3.1 8B", monthlyTokens: 0, creditTokens: 500000, freeType: "one-time-initial", poolKey: "novita", tos: "caution" },
   { provider: "nscale", modelId: "moonshotai/Kimi-K2.5", displayName: "moonshotai/Kimi-K2.5", monthlyTokens: 0, creditTokens: 5000000, freeType: "one-time-initial", poolKey: "nscale", tos: "caution" },
