@@ -16,6 +16,10 @@ const SIZE_LIMIT_EXCEEDED_REASON = "call_log_artifact_size_limit_exceeded";
 const OMITTED_FOR_SIZE_LIMIT = "[omitted: call log artifact size limit exceeded]";
 const STREAM_CHUNKS_OMITTED_FOR_SIZE_LIMIT =
   "[stream chunks omitted: call log artifact size limit exceeded]";
+// Error strings are kept even in the size-limit fallback (truncated to this
+// cap) so every log row stays diagnosable; see buildMinimalArtifactForSizeLimit.
+const MAX_CALL_LOG_ARTIFACT_ERROR_BYTES = 4 * 1024;
+const SIZE_LIMIT_EXCEEDED_SUFFIX = "…[truncated: call log artifact size limit exceeded]";
 
 export type CallLogDetailState = "none" | "ready" | "missing" | "corrupt" | "legacy-inline";
 
@@ -133,7 +137,11 @@ function buildMinimalArtifactForSizeLimit(artifact: CallLogArtifact) {
     summary: artifact.summary,
     requestBody: OMITTED_FOR_SIZE_LIMIT,
     responseBody: OMITTED_FOR_SIZE_LIMIT,
-    error: artifact.error ? OMITTED_FOR_SIZE_LIMIT : null,
+    // Never drop the error: it is the only field that says WHY the request
+    // failed (e.g. "Fetch timeout after 110000ms on https://..."). Diagnosing
+    // provider outages from a log row that shows only an omission marker is
+    // impossible; the error string is tiny next to the request/response bodies.
+    error: artifact.error ? truncateErrorForSizeLimit(artifact.error) : null,
     pipeline: {
       error: {
         _omniroute_truncated: true,
@@ -143,10 +151,28 @@ function buildMinimalArtifactForSizeLimit(artifact: CallLogArtifact) {
   };
 }
 
+function truncateErrorForSizeLimit(error: unknown): string {
+  const text = typeof error === "string" ? error : JSON.stringify(error) ?? String(error);
+  if (Buffer.byteLength(text) <= MAX_CALL_LOG_ARTIFACT_ERROR_BYTES) return text;
+  return `${text.slice(0, MAX_CALL_LOG_ARTIFACT_ERROR_BYTES)}${SIZE_LIMIT_EXCEEDED_SUFFIX}`;
+}
+
 function serializeFinalSizeLimitFallback(artifact: CallLogArtifact, maxBytes: number): string {
   const withSummary = JSON.stringify(buildMinimalArtifactForSizeLimit(artifact));
   if (Buffer.byteLength(withSummary) <= maxBytes) {
     return withSummary;
+  }
+
+  // The summary alone exceeded the cap (pathological). Keep the error so the
+  // row stays diagnosable, drop everything else including the summary body.
+  const errorOnly = JSON.stringify({
+    schemaVersion: artifact.schemaVersion,
+    _omniroute_truncated: true,
+    reason: SIZE_LIMIT_EXCEEDED_REASON,
+    error: artifact.error ? truncateErrorForSizeLimit(artifact.error) : null,
+  });
+  if (Buffer.byteLength(errorOnly) <= maxBytes) {
+    return errorOnly;
   }
 
   return JSON.stringify({
@@ -186,7 +212,7 @@ function serializeArtifactForStorage(artifact: CallLogArtifact): string {
     ...omitOversizedPipeline(artifact),
     requestBody: OMITTED_FOR_SIZE_LIMIT,
     responseBody: OMITTED_FOR_SIZE_LIMIT,
-    error: artifact.error ? OMITTED_FOR_SIZE_LIMIT : null,
+    error: artifact.error ? truncateErrorForSizeLimit(artifact.error) : null,
   });
   if (Buffer.byteLength(minimal) <= maxBytes) {
     return minimal;

@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Ez a réteg csak a sorban állást és az ütemezést szabályozza. Nem tárolja a lehűléseket vagy a megszakítókat.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Alapértelmezés szerint engedélyezi a sorvédelmet az aktív API-kulcs kapcsolatokhoz.",
     "resilienceMaxQueueWait": "Maximális várakozási idő a sorban",
+    "resilienceMaxExecutionWait": "Végrehajtási időkorlát (sebességkorlát tartalék)",
     "resilienceConnectionCooldownScope": "Egyéni kapcsolat",
     "resilienceConnectionCooldownTrigger": "Amikor egy kapcsolat tranziens upstream meghibásodást ad vissza",
     "resilienceConnectionCooldownEffect": "Ideiglenesen kihagyja ezt a kapcsolatot, és ismétlődő hibák esetén növeli a visszalépést",

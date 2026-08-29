@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "เลเยอร์นี้ควบคุมเฉพาะการเข้าคิวและการเว้นจังหวะเท่านั้น ไม่เก็บคูลดาวน์หรือเบรกเกอร์วงจรเปิด",
     "resilienceAutoEnableApiKeyProvidersDesc": "เปิดใช้งานการป้องกันคิวตามค่าเริ่มต้นสำหรับการเชื่อมต่อคีย์ API ที่ใช้งานอยู่",
     "resilienceMaxQueueWait": "เวลารอคิวสูงสุด",
+    "resilienceMaxExecutionWait": "หมดเวลาการดำเนินการ (ขีดจำกัดสำรองของอัตราคำขอ)",
     "resilienceConnectionCooldownScope": "การเชื่อมต่อส่วนบุคคล",
     "resilienceConnectionCooldownTrigger": "เมื่อการเชื่อมต่อส่งคืนความล้มเหลวอัปสตรีมชั่วคราว",
     "resilienceConnectionCooldownEffect": "ข้ามการเชื่อมต่อนั้นชั่วคราว และเพิ่มแบ็คออฟหากเกิดความล้มเหลวซ้ำๆ",

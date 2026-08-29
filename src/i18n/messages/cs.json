@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Tato vrstva řídí pouze řazení a rychlost zobrazování. Neukládá cooldowny ani přerušené jističe.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Ve výchozím nastavení povoluje ochranu fronty pro aktivní připojení klíče API.",
     "resilienceMaxQueueWait": "Maximální doba čekání ve frontě",
+    "resilienceMaxExecutionWait": "Časový limit provádění (pojistný limit rychlosti)",
     "resilienceConnectionCooldownScope": "Individuální připojení",
     "resilienceConnectionCooldownTrigger": "Když připojení vrátí přechodné selhání proti proudu",
     "resilienceConnectionCooldownEffect": "Dočasně toto připojení vynechá a zvýší backoff pro opakované selhání",

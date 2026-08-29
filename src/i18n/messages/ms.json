@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Lapisan ini hanya mengawal baris gilir dan pacing. Ia tidak menyimpan cooldown atau pemutus litar terbuka.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Mendayakan perlindungan baris gilir secara lalai untuk sambungan kunci API aktif.",
     "resilienceMaxQueueWait": "Masa menunggu giliran maksimum",
+    "resilienceMaxExecutionWait": "Tamat masa pelaksanaan (had keselamatan kadar)",
     "resilienceConnectionCooldownScope": "Sambungan individu",
     "resilienceConnectionCooldownTrigger": "Apabila sambungan mengembalikan kegagalan huluan sementara",
     "resilienceConnectionCooldownEffect": "Melangkau sambungan itu buat sementara waktu dan meningkatkan mundur untuk kegagalan berulang",

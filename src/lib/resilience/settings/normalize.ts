@@ -128,6 +128,11 @@ export function normalizeRequestQueueSettings(
     min: 1,
     max: 24 * 60 * 60 * 1000,
   });
+  const executionMaxWaitMs = toInteger(
+    record.executionMaxWaitMs,
+    fallback.executionMaxWaitMs,
+    { min: 1, max: 24 * 60 * 60 * 1000 }
+  );
   const maxQueueDepth = toInteger(record.maxQueueDepth, fallback.maxQueueDepth, {
     min: 0,
     max: 100_000,
@@ -142,6 +147,7 @@ export function normalizeRequestQueueSettings(
     minTimeBetweenRequestsMs,
     concurrentRequests,
     maxWaitMs,
+    executionMaxWaitMs,
     maxQueueDepth,
   };
 }

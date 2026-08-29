@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "این لایه فقط صف و سرعت را کنترل می کند. خنک کننده ها یا کلیدهای مدار باز را ذخیره نمی کند.",
     "resilienceAutoEnableApiKeyProvidersDesc": "حفاظت از صف را به طور پیش فرض برای اتصالات کلید API فعال فعال می کند.",
     "resilienceMaxQueueWait": "حداکثر زمان انتظار صف",
+    "resilienceMaxExecutionWait": "زمان انتظار اجرا (حد پشتیبان نرخ)",
     "resilienceConnectionCooldownScope": "ارتباط فردی",
     "resilienceConnectionCooldownTrigger": "هنگامی که یک اتصال یک شکست گذرا در بالادست را برمی گرداند",
     "resilienceConnectionCooldownEffect": "به طور موقت از آن اتصال پرش می شود و برای خرابی های مکرر، عقب نشینی را افزایش می دهد",

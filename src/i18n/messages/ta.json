@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "இந்த அடுக்கு வரிசை மற்றும் வேகத்தை மட்டுமே கட்டுப்படுத்துகிறது. இது கூல்டவுன்கள் அல்லது ஓபன் சர்க்யூட் பிரேக்கர்களை சேமிக்காது.",
     "resilienceAutoEnableApiKeyProvidersDesc": "செயலில் உள்ள API விசை இணைப்புகளுக்கு இயல்பாக வரிசை பாதுகாப்பை இயக்குகிறது.",
     "resilienceMaxQueueWait": "அதிகபட்ச வரிசையில் காத்திருக்கும் நேரம்",
+    "resilienceMaxExecutionWait": "செயல்படுத்தல் நேர வரம்பு (வீத-வரம்பு பின்னிறுத்தல்)",
     "resilienceConnectionCooldownScope": "தனிப்பட்ட இணைப்பு",
     "resilienceConnectionCooldownTrigger": "ஒரு இணைப்பு தற்காலிகமான அப்ஸ்ட்ரீம் தோல்வியை வழங்கும் போது",
     "resilienceConnectionCooldownEffect": "அந்த இணைப்பைத் தற்காலிகமாகத் தவிர்த்துவிட்டு, மீண்டும் மீண்டும் தோல்வியடைவதால், பின்வாங்கலை அதிகரிக்கிறது",

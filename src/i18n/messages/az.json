@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "This layer only controls queueing and pacing. It does not store cooldowns or open circuit breakers.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Enables queue protection by default for active API key connections.",
     "resilienceMaxQueueWait": "Maximum queue wait time",
+    "resilienceMaxExecutionWait": "İcra vaxt limiti (sürət limiti ehtiyat həddi)",
     "resilienceConnectionCooldownScope": "Individual connection",
     "resilienceConnectionCooldownTrigger": "When a connection returns a transient upstream failure",
     "resilienceConnectionCooldownEffect": "Temporarily skips that connection and increases backoff for repeated failures",

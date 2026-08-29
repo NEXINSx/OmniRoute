@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Cette couche contrôle uniquement la file d’attente et le rythme. Il ne stocke pas les temps de recharge ni les disjoncteurs ouverts.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Active la protection de la file d'attente par défaut pour les connexions de clé API actives.",
     "resilienceMaxQueueWait": "Temps d'attente maximum dans la file d'attente",
+    "resilienceMaxExecutionWait": "Délai d'exécution (garde-fou de limitation de débit)",
     "resilienceConnectionCooldownScope": "Connexion individuelle",
     "resilienceConnectionCooldownTrigger": "Lorsqu'une connexion renvoie un échec transitoire en amont",
     "resilienceConnectionCooldownEffect": "Ignore temporairement cette connexion et augmente l'intervalle en cas d'échecs répétés",

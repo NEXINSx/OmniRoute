@@ -8016,6 +8016,7 @@
     "resilienceRequestQueueDesc": "Esta camada controla apenas o enfileiramento e o ritmo. Ele não armazena resfriamentos ou disjuntores abertos.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Ativa a proteção de fila por padrão para conexões de chave de API ativas.",
     "resilienceMaxQueueWait": "Tempo máximo de espera na fila",
+    "resilienceMaxExecutionWait": "Tempo limite de execução (dispositivo de segurança de rate-limit)",
     "resilienceConnectionCooldownScope": "Conexão individual",
     "resilienceConnectionCooldownTrigger": "Quando uma conexão retorna uma falha transitória de upstream",
     "resilienceConnectionCooldownEffect": "Ignora temporariamente essa conexão e aumenta a espera para falhas repetidas",

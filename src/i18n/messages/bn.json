@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "এই স্তরটি শুধুমাত্র সারিবদ্ধ এবং পেসিং নিয়ন্ত্রণ করে। এটি কুলডাউন বা খোলা সার্কিট ব্রেকার সংরক্ষণ করে না।",
     "resilienceAutoEnableApiKeyProvidersDesc": "সক্রিয় API কী সংযোগের জন্য ডিফল্টরূপে সারি সুরক্ষা সক্ষম করে৷",
     "resilienceMaxQueueWait": "সর্বোচ্চ সারি অপেক্ষার সময়",
+    "resilienceMaxExecutionWait": "এক্সিকিউশন টাইমআউট (রেট-লিমিট ব্যাকস্টপ)",
     "resilienceConnectionCooldownScope": "স্বতন্ত্র সংযোগ",
     "resilienceConnectionCooldownTrigger": "যখন একটি সংযোগ একটি ক্ষণস্থায়ী আপস্ট্রিম ব্যর্থতা প্রদান করে",
     "resilienceConnectionCooldownEffect": "সাময়িকভাবে সেই সংযোগটি এড়িয়ে যায় এবং বারবার ব্যর্থতার জন্য ব্যাকঅফ বাড়ায়",

@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "この層はキューイングとペーシングのみを制御します。クールダウンやオープンサーキットブレーカーは保存されません。",
     "resilienceAutoEnableApiKeyProvidersDesc": "アクティブな API キー接続に対してデフォルトでキュー保護を有効にします。",
     "resilienceMaxQueueWait": "キューの最大待機時間",
+    "resilienceMaxExecutionWait": "実行タイムアウト（レート制限のバックストップ）",
     "resilienceConnectionCooldownScope": "個別接続",
     "resilienceConnectionCooldownTrigger": "接続が一時的なアップストリーム障害を返した場合",
     "resilienceConnectionCooldownEffect": "一時的にその接続をスキップし、失敗が繰り返される場合はバックオフを増加します。",

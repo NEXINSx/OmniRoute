@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Tämä taso ohjaa vain jonotusta ja tahdistusta. Se ei tallenna jäähtymiä tai avoimia katkaisijoita.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Ottaa oletuksena käyttöön jonosuojauksen aktiivisille API-avainyhteyksille.",
     "resilienceMaxQueueWait": "Suurin jonon odotusaika",
+    "resilienceMaxExecutionWait": "Suorituksen aikakatkaisu (nopeusrajan varakerro)",
     "resilienceConnectionCooldownScope": "Yksilöllinen yhteys",
     "resilienceConnectionCooldownTrigger": "Kun yhteys palauttaa ohimenevän ylävirran häiriön",
     "resilienceConnectionCooldownEffect": "Ohittaa väliaikaisesti kyseisen yhteyden ja lisää takaisinkytkentää toistuvien vikojen varalta",

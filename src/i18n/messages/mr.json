@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "हा स्तर फक्त रांग आणि पेसिंग नियंत्रित करतो. हे कूलडाऊन किंवा ओपन सर्किट ब्रेकर संचयित करत नाही.",
     "resilienceAutoEnableApiKeyProvidersDesc": "सक्रिय API की कनेक्शनसाठी डीफॉल्टनुसार रांग संरक्षण सक्षम करते.",
     "resilienceMaxQueueWait": "कमाल रांगेत प्रतीक्षा वेळ",
+    "resilienceMaxExecutionWait": "अंमलबजावणी कालमर्यादा (दर-मर्यादा बॅकस्टॉप)",
     "resilienceConnectionCooldownScope": "वैयक्तिक कनेक्शन",
     "resilienceConnectionCooldownTrigger": "जेव्हा कनेक्शन एक क्षणिक अपस्ट्रीम अपयश परत करते",
     "resilienceConnectionCooldownEffect": "ते कनेक्शन तात्पुरते वगळते आणि वारंवार अपयशी झाल्यास बॅकऑफ वाढते",

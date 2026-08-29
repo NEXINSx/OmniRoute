@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "이 레이어는 대기열 처리와 간격 조절만 제어합니다. 쿨다운을 저장하거나 회로 차단기를 열지는 않습니다.",
     "resilienceAutoEnableApiKeyProvidersDesc": "활성 API 키 연결에 대해 기본적으로 대기열 보호를 활성화합니다.",
     "resilienceMaxQueueWait": "최대 대기열 대기 시간",
+    "resilienceMaxExecutionWait": "실행 시간 초과 (레이트 리밋 백스톱)",
     "resilienceConnectionCooldownScope": "개별 연결",
     "resilienceConnectionCooldownTrigger": "연결이 일시적인 업스트림 오류를 반환하는 경우",
     "resilienceConnectionCooldownEffect": "해당 연결을 일시적으로 건너뛰고 반복되는 실패에 대한 백오프를 높입니다.",

@@ -14,6 +14,7 @@ type RequestQueueSettings = {
   minTimeBetweenRequestsMs: number;
   concurrentRequests: number;
   maxWaitMs: number;
+  executionMaxWaitMs: number;
 };
 
 type ConnectionCooldownProfileSettings = {
@@ -254,6 +255,13 @@ function RequestQueueCard({
               suffix="ms"
               onChange={(maxWaitMs) => setDraft((prev) => ({ ...prev, maxWaitMs }))}
             />
+            <NumberField
+              label={t("resilienceMaxExecutionWait")}
+              value={draft.executionMaxWaitMs}
+              min={1}
+              suffix="ms"
+              onChange={(executionMaxWaitMs) => setDraft((prev) => ({ ...prev, executionMaxWaitMs }))}
+            />
           </>
         ) : (
           <>
@@ -287,6 +295,12 @@ function RequestQueueCard({
               <div className="text-xs text-text-muted">{t("resilienceMaxQueueWait")}</div>
               <div className="mt-1 text-sm font-semibold text-text-main">
                 {formatMs(value.maxWaitMs)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-bg-subtle p-4">
+              <div className="text-xs text-text-muted">{t("resilienceMaxExecutionWait")}</div>
+              <div className="mt-1 text-sm font-semibold text-text-main">
+                {formatMs(value.executionMaxWaitMs)}
               </div>
             </div>
           </>

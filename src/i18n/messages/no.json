@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Dette laget kontrollerer kun kø og pacing. Den lagrer ikke nedkjøling eller åpne kretsbrytere.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Aktiverer købeskyttelse som standard for aktive API-nøkkeltilkoblinger.",
     "resilienceMaxQueueWait": "Maksimal ventetid i kø",
+    "resilienceMaxExecutionWait": "Kjøringstidsavbrudd (sikkerhetsgrense for rate-limit)",
     "resilienceConnectionCooldownScope": "Individuell tilknytning",
     "resilienceConnectionCooldownTrigger": "Når en tilkobling returnerer en forbigående oppstrømsfeil",
     "resilienceConnectionCooldownEffect": "Hopper midlertidig over den tilkoblingen og øker backoff for gjentatte feil",

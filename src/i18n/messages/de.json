@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Diese Ebene steuert nur Warteschlange und Taktung. Sie speichert keine Cooldowns und öffnet keine Circuit Breaker.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Aktiviert den Queue-Schutz standardmäßig für aktive API-Key-Verbindungen.",
     "resilienceMaxQueueWait": "Maximale Wartezeit in der Queue",
+    "resilienceMaxExecutionWait": "Ausführungs-Timeout (Rate-Limit-Rückfallebene)",
     "resilienceConnectionCooldownScope": "Einzelne Verbindung",
     "resilienceConnectionCooldownTrigger": "Wenn eine Verbindung einen vorübergehenden Upstream-Fehler zurückgibt",
     "resilienceConnectionCooldownEffect": "Überspringt diese Verbindung vorübergehend und erhöht den Backoff bei wiederholten Fehlern",

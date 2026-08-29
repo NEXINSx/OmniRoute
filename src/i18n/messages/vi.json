@@ -8016,6 +8016,7 @@
     "resilienceRequestQueueDesc": "Lớp này chỉ kiểm soát việc xếp hàng và nhịp độ. Nó không lưu trữ thời gian hồi hoặc mở bộ ngắt mạch.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Bật tính năng bảo vệ hàng đợi theo mặc định cho các kết nối bằng khóa API đang hoạt động.",
     "resilienceMaxQueueWait": "Thời gian chờ xếp hàng tối đa",
+    "resilienceMaxExecutionWait": "Thời gian chờ thực thi (giới hạn dự phòng của tốc độ)",
     "resilienceConnectionCooldownScope": "Kết nối riêng lẻ",
     "resilienceConnectionCooldownTrigger": "Khi một kết nối trả về lỗi upstream tạm thời",
     "resilienceConnectionCooldownEffect": "Tạm thời bỏ qua kết nối đó và tăng thời gian chờ tăng dần đối với các lỗi lặp lại.",

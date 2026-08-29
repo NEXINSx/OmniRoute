@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Det här lagret styr bara köer och pacing. Den lagrar inte nedkylningar eller öppna strömbrytare.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Aktiverar köskydd som standard för aktiva API-nyckelanslutningar.",
     "resilienceMaxQueueWait": "Maximal väntetid i kö",
+    "resilienceMaxExecutionWait": "Exekveringstimeout (säkerhetsgräns för rate-limit)",
     "resilienceConnectionCooldownScope": "Individuell anslutning",
     "resilienceConnectionCooldownTrigger": "När en anslutning returnerar ett övergående uppströmsfel",
     "resilienceConnectionCooldownEffect": "Hopar tillfälligt över den anslutningen och ökar backoff för upprepade fel",

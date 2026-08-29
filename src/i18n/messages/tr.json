@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Bu katman yalnızca kuyruklamayı ve ilerleme hızını kontrol eder. Soğutma sürelerini veya açık devre kesicileri saklamaz.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Etkin API anahtarı bağlantıları için varsayılan olarak kuyruk korumasını etkinleştirir.",
     "resilienceMaxQueueWait": "Maksimum kuyruk bekleme süresi",
+    "resilienceMaxExecutionWait": "Yürütme zaman aşımı (hız sınırı emniyet supabı)",
     "resilienceConnectionCooldownScope": "Bireysel bağlantı",
     "resilienceConnectionCooldownTrigger": "Bir bağlantı geçici bir yukarı akış hatası döndürdüğünde",
     "resilienceConnectionCooldownEffect": "Bu bağlantıyı geçici olarak atlar ve tekrarlanan arızalarda geri çekilmeyi artırır",

@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "આ સ્તર માત્ર કતાર અને પેસિંગને નિયંત્રિત કરે છે. તે કૂલડાઉન અથવા ઓપન સર્કિટ બ્રેકર્સ સ્ટોર કરતું નથી.",
     "resilienceAutoEnableApiKeyProvidersDesc": "સક્રિય API કી કનેક્શન્સ માટે ડિફૉલ્ટ રૂપે કતાર સુરક્ષાને સક્ષમ કરે છે.",
     "resilienceMaxQueueWait": "મહત્તમ કતાર પ્રતીક્ષા સમય",
+    "resilienceMaxExecutionWait": "એક્ઝિક્યુશન ટાઇમઆઉટ (રેટ-લિમિટ બેકસ્ટોપ)",
     "resilienceConnectionCooldownScope": "વ્યક્તિગત જોડાણ",
     "resilienceConnectionCooldownTrigger": "જ્યારે કનેક્શન ક્ષણિક અપસ્ટ્રીમ નિષ્ફળતા આપે છે",
     "resilienceConnectionCooldownEffect": "અસ્થાયી રૂપે તે જોડાણને છોડી દે છે અને પુનરાવર્તિત નિષ્ફળતાઓ માટે બેકઓફ વધે છે",

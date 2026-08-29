@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Safu hii inadhibiti tu kupanga foleni na mwendo. Haihifadhi baridi au vivunja mzunguko wazi.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Huwasha ulinzi wa foleni kwa chaguo-msingi kwa miunganisho ya vitufe vya API inayotumika.",
     "resilienceMaxQueueWait": "Muda wa juu zaidi wa kusubiri kwenye foleni",
+    "resilienceMaxExecutionWait": "Muda wa kukatika wa utekelezaji (kikomo cha akiba cha kiwango)",
     "resilienceConnectionCooldownScope": "Muunganisho wa mtu binafsi",
     "resilienceConnectionCooldownTrigger": "Muunganisho unaporudisha hitilafu ya muda ya juu ya mkondo",
     "resilienceConnectionCooldownEffect": "Huruka muunganisho huo kwa muda na huongeza urejesho kwa kushindwa mara kwa mara",

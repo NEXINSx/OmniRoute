@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Този слой контролира само опашката и темпото. Той не съхранява охлаждания или отворени прекъсвачи.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Активира защита на опашката по подразбиране за активни API ключ връзки.",
     "resilienceMaxQueueWait": "Максимално време за изчакване на опашка",
+    "resilienceMaxExecutionWait": "Таймаут на изпълнението (резервен лимит на скоростта)",
     "resilienceConnectionCooldownScope": "Индивидуална връзка",
     "resilienceConnectionCooldownTrigger": "Когато връзката върне преходна грешка нагоре по веригата",
     "resilienceConnectionCooldownEffect": "Временно пропуска тази връзка и увеличава забавянето при повтарящи се повреди",

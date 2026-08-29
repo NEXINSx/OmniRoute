@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Táto vrstva riadi iba radenie a tempo. Neuchováva cooldowny ani otvorené ističe.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Predvolene povoľuje ochranu frontu pre aktívne pripojenia kľúča API.",
     "resilienceMaxQueueWait": "Maximálna doba čakania vo fronte",
+    "resilienceMaxExecutionWait": "Časový limit vykonávania (poistný limit rýchlosti)",
     "resilienceConnectionCooldownScope": "Individuálne pripojenie",
     "resilienceConnectionCooldownTrigger": "Keď spojenie vráti prechodné zlyhanie proti prúdu",
     "resilienceConnectionCooldownEffect": "Dočasne preskočí toto pripojenie a zvýši backoff pre opakované zlyhania",

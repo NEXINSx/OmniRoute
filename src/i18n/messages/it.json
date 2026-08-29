@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Questo livello controlla solo la coda e il ritmo. Non memorizza tempi di raffreddamento o interruttori automatici aperti.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Abilita la protezione della coda per impostazione predefinita per le connessioni con chiave API attive.",
     "resilienceMaxQueueWait": "Tempo massimo di attesa in coda",
+    "resilienceMaxExecutionWait": "Timeout di esecuzione (limite di sicurezza di rate-limit)",
     "resilienceConnectionCooldownScope": "Connessione individuale",
     "resilienceConnectionCooldownTrigger": "Quando una connessione restituisce un errore upstream temporaneo",
     "resilienceConnectionCooldownEffect": "Ignora temporaneamente la connessione e aumenta il backoff in caso di errori ripetuti",

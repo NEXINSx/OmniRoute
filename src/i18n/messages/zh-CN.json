@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "该层仅控制排队和节奏。它不存储冷却时间或打开断路器。",
     "resilienceAutoEnableApiKeyProvidersDesc": "默认情况下为活动 API 密钥连接启用队列保护。",
     "resilienceMaxQueueWait": "最大队列等待时间",
+    "resilienceMaxExecutionWait": "执行超时（速率限制兜底）",
     "resilienceConnectionCooldownScope": "单独连接",
     "resilienceConnectionCooldownTrigger": "当连接返回暂时性上游故障时",
     "resilienceConnectionCooldownEffect": "暂时跳过该连接并增加重复失败的退避时间",

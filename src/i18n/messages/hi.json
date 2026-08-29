@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "यह परत केवल कतार और गति को नियंत्रित करती है। यह कूलडाउन या ओपन सर्किट ब्रेकर को स्टोर नहीं करता है।",
     "resilienceAutoEnableApiKeyProvidersDesc": "सक्रिय एपीआई कुंजी कनेक्शन के लिए डिफ़ॉल्ट रूप से कतार सुरक्षा सक्षम करता है।",
     "resilienceMaxQueueWait": "अधिकतम कतार प्रतीक्षा समय",
+    "resilienceMaxExecutionWait": "निष्पादन टाइमआउट (रेट-लिमिट बैकस्टॉप)",
     "resilienceConnectionCooldownScope": "व्यक्तिगत संबंध",
     "resilienceConnectionCooldownTrigger": "जब कोई कनेक्शन क्षणिक अपस्ट्रीम विफलता लौटाता है",
     "resilienceConnectionCooldownEffect": "अस्थायी रूप से उस कनेक्शन को छोड़ देता है और बार-बार विफलताओं के लिए बैकऑफ़ बढ़ाता है",

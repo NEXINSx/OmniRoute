@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Ta warstwa kontroluje tylko kolejkowanie i tempo wywołań. Nie przechowuje okresów schładzania ani nie otwiera bezpieczników (circuit breakers).",
     "resilienceAutoEnableApiKeyProvidersDesc": "Domyślnie włącza ochronę kolejki dla aktywnych połączeń klucza API.",
     "resilienceMaxQueueWait": "Maksymalny czas oczekiwania w kolejce",
+    "resilienceMaxExecutionWait": "Limit czasu wykonania (zabezpieczenie limitu szybkości)",
     "resilienceConnectionCooldownScope": "Pojedyncze połączenie",
     "resilienceConnectionCooldownTrigger": "Gdy połączenie zwraca tymczasowy błąd upstreamu",
     "resilienceConnectionCooldownEffect": "Tymczasowo pomija to połączenie i zwiększa opóźnienie (backoff) przy powtarzających się błędach",

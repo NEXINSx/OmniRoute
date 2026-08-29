@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Deze laag regelt alleen wachtrijen en tempo. Er worden geen cooldowns of open stroomonderbrekers opgeslagen.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Schakelt standaard wachtrijbeveiliging in voor actieve API-sleutelverbindingen.",
     "resilienceMaxQueueWait": "Maximale wachtrijwachttijd",
+    "resilienceMaxExecutionWait": "Uitvoeringstime-out (rate-limit terugval)",
     "resilienceConnectionCooldownScope": "Individuele verbinding",
     "resilienceConnectionCooldownTrigger": "Wanneer een verbinding een tijdelijke stroomopwaartse fout retourneert",
     "resilienceConnectionCooldownEffect": "Sla die verbinding tijdelijk over en vergroot de back-off bij herhaalde fouten",

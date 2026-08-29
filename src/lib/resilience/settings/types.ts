@@ -17,10 +17,17 @@ export interface RequestQueueSettings {
   minTimeBetweenRequestsMs: number;
   concurrentRequests: number;
   /**
-   * Legacy persisted key used as Bottleneck's post-dispatch execution
-   * expiration. It does not bound time spent in Bottleneck's QUEUED state.
+   * Queue-wait budget: how long a request may wait for a rate-limit slot
+   * (gates + limiter queue) before being dropped. Does NOT bound execution.
    */
   maxWaitMs: number;
+  /**
+   * Limiter-managed execution backstop (Bottleneck `expiration`, which starts
+   * only after a job leaves QUEUED). Kept separate from `maxWaitMs` because
+   * non-incremental gateways legitimately take minutes before first bytes;
+   * the backstop must never undercut the upstream fetch-start timeout.
+   */
+  executionMaxWaitMs: number;
   /**
    * Issue #6593: opt-in admission cap on the local rate-limit queue. When the
    * queue already holds `maxQueueDepth` requests, a new request is

@@ -42,6 +42,7 @@ export const requestQueueSettingsSchema = z
     minTimeBetweenRequestsMs: z.number().int().min(0).optional(),
     concurrentRequests: z.number().int().min(1).optional(),
     maxWaitMs: z.number().int().min(1).optional(),
+    executionMaxWaitMs: z.number().int().min(1).optional(),
     maxQueueDepth: z.number().int().min(0).max(100_000).optional(),
   })
   .strict();

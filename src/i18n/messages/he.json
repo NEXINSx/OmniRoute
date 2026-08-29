@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "שכבה זו שולטת רק בתור ובקצב. הוא אינו מאחסן התקררות או מפסקים פתוחים.",
     "resilienceAutoEnableApiKeyProvidersDesc": "מאפשר הגנת תור כברירת מחדל עבור חיבורי מפתח API פעילים.",
     "resilienceMaxQueueWait": "זמן המתנה מקסימלי בתור",
+    "resilienceMaxExecutionWait": "פסק זמן לביצוע (מגבלת גיבוי של הגבלת קצב)",
     "resilienceConnectionCooldownScope": "חיבור אישי",
     "resilienceConnectionCooldownTrigger": "כאשר חיבור מחזיר כשל חולף במעלה הזרם",
     "resilienceConnectionCooldownEffect": "מדלג באופן זמני על החיבור הזה ומגביר את החזרה לכשלים חוזרים",

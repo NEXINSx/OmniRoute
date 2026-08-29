@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "یہ پرت صرف قطار اور پیسنگ کو کنٹرول کرتی ہے۔ یہ کولڈاؤنز یا اوپن سرکٹ بریکرز کو ذخیرہ نہیں کرتا ہے۔",
     "resilienceAutoEnableApiKeyProvidersDesc": "فعال API کلیدی کنکشنز کے لیے بطور ڈیفالٹ قطار کے تحفظ کو فعال کرتا ہے۔",
     "resilienceMaxQueueWait": "زیادہ سے زیادہ قطار انتظار کا وقت",
+    "resilienceMaxExecutionWait": "عمل کی وقت ختم (ریٹ-لیمیٹ بیک اسٹاپ)",
     "resilienceConnectionCooldownScope": "انفرادی تعلق",
     "resilienceConnectionCooldownTrigger": "جب کوئی کنکشن عارضی اپ اسٹریم کی ناکامی لوٹاتا ہے۔",
     "resilienceConnectionCooldownEffect": "عارضی طور پر اس کنکشن کو چھوڑ دیتا ہے اور بار بار ناکامیوں کے لیے بیک آف کو بڑھاتا ہے۔",

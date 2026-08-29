@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "تتحكم هذه الطبقة في الصف والسرعة فقط. لا يقوم بتخزين فترات التهدئة أو قواطع الدائرة المفتوحة.",
     "resilienceAutoEnableApiKeyProvidersDesc": "لتمكين حماية قائمة الانتظار بشكل افتراضي لاتصالات مفتاح API النشطة.",
     "resilienceMaxQueueWait": "الحد الأقصى لوقت الانتظار في قائمة الانتظار",
+    "resilienceMaxExecutionWait": "مهلة التنفيذ (حد التنفيذ الاحتياطي لتحديد المعدل)",
     "resilienceConnectionCooldownScope": "اتصال فردي",
     "resilienceConnectionCooldownTrigger": "عندما يُرجع الاتصال فشلًا عابرًا في المنبع",
     "resilienceConnectionCooldownEffect": "يتخطى هذا الاتصال مؤقتًا ويزيد من التراجع في حالة الفشل المتكرر",

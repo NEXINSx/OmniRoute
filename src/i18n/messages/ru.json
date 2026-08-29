@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Этот уровень управляет только очередью и скоростью. Он не сохраняет время восстановления или разомкнутые выключатели.",
     "resilienceAutoEnableApiKeyProvidersDesc": "По умолчанию включает защиту очереди для активных подключений ключей API.",
     "resilienceMaxQueueWait": "Максимальное время ожидания в очереди",
+    "resilienceMaxExecutionWait": "Тайм-аут выполнения (аварийный предел частоты запросов)",
     "resilienceConnectionCooldownScope": "Индивидуальное подключение",
     "resilienceConnectionCooldownTrigger": "Когда соединение возвращает временный сбой в восходящем направлении",
     "resilienceConnectionCooldownEffect": "Временно пропускает это соединение и увеличивает отсрочку в случае повторяющихся сбоев.",

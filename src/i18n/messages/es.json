@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Esta capa solo controla las colas y el ritmo. No almacena tiempos de reutilización ni disyuntores abiertos.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Habilita la protección de colas de forma predeterminada para conexiones de clave API activas.",
     "resilienceMaxQueueWait": "Tiempo máximo de espera en cola",
+    "resilienceMaxExecutionWait": "Tiempo de espera de ejecución (límite de respaldo)",
     "resilienceConnectionCooldownScope": "Conexión individual",
     "resilienceConnectionCooldownTrigger": "Cuando una conexión devuelve un error ascendente transitorio",
     "resilienceConnectionCooldownEffect": "Omite temporalmente esa conexión y aumenta la interrupción en caso de fallas repetidas",

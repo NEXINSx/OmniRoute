@@ -183,6 +183,14 @@ test("#6593 DEFAULT_REQUEST_QUEUE_MAX_WAIT_MS is 15s absent RATE_LIMIT_MAX_WAIT_
   assert.equal(resilienceSettings.DEFAULT_RESILIENCE_SETTINGS.requestQueue.maxWaitMs, 15000);
 });
 
+test("requestQueue.executionMaxWaitMs defaults to a 10-minute backstop, separate from maxWaitMs", () => {
+  assert.equal(resilienceSettings.DEFAULT_REQUEST_QUEUE_EXECUTION_MAX_WAIT_MS, 600000);
+  assert.equal(
+    resilienceSettings.DEFAULT_RESILIENCE_SETTINGS.requestQueue.executionMaxWaitMs,
+    600000
+  );
+});
+
 test("#6593 zai-web receives a provider-scoped 60s scheduling budget", () => {
   assert.equal(rateLimitManager.resolveRequestQueueMaxWaitMs("openai", 15_000), 15_000);
   assert.equal(rateLimitManager.resolveRequestQueueMaxWaitMs("zai-web", 15_000), 60_000);

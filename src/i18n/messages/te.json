@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "ఈ లేయర్ క్యూయింగ్ మరియు పేసింగ్‌ను మాత్రమే నియంత్రిస్తుంది. ఇది కూల్‌డౌన్‌లు లేదా ఓపెన్ సర్క్యూట్ బ్రేకర్‌లను నిల్వ చేయదు.",
     "resilienceAutoEnableApiKeyProvidersDesc": "సక్రియ API కీ కనెక్షన్‌ల కోసం డిఫాల్ట్‌గా క్యూ రక్షణను ప్రారంభిస్తుంది.",
     "resilienceMaxQueueWait": "గరిష్ట క్యూ నిరీక్షణ సమయం",
+    "resilienceMaxExecutionWait": "ఎగ్జిక్యూషన్ టైమ్‌అవుట్ (రేటు-పరిమితి బ్యాక్‌స్టాప్)",
     "resilienceConnectionCooldownScope": "వ్యక్తిగత కనెక్షన్",
     "resilienceConnectionCooldownTrigger": "కనెక్షన్ తాత్కాలిక అప్‌స్ట్రీమ్ వైఫల్యాన్ని అందించినప్పుడు",
     "resilienceConnectionCooldownEffect": "ఆ కనెక్షన్‌ని తాత్కాలికంగా దాటవేసి, పునరావృత వైఫల్యాల కోసం బ్యాక్‌ఆఫ్‌ని పెంచుతుంది",

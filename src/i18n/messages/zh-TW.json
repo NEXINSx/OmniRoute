@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "該層僅控制排隊和節奏。它不儲存冷卻時間或開啟斷路器。",
     "resilienceAutoEnableApiKeyProvidersDesc": "預設情況下為活動 API 金鑰連線啟用佇列保護。",
     "resilienceMaxQueueWait": "最大佇列等待時間",
+    "resilienceMaxExecutionWait": "執行逾時（速率限制後備）",
     "resilienceConnectionCooldownScope": "單獨連線",
     "resilienceConnectionCooldownTrigger": "當連線返回暫時性上游故障時",
     "resilienceConnectionCooldownEffect": "暫時跳過該連線並增加重複失敗的退避時間",

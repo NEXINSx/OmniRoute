@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Acest strat controlează doar coada și ritmul. Nu stochează răcirile sau întreruptoarele de circuit deschise.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Activează protecția cozilor în mod implicit pentru conexiunile cheie API active.",
     "resilienceMaxQueueWait": "Timp maxim de așteptare la coadă",
+    "resilienceMaxExecutionWait": "Timeout de execuție (limită de siguranță pentru rata de cereri)",
     "resilienceConnectionCooldownScope": "Conexiune individuală",
     "resilienceConnectionCooldownTrigger": "Când o conexiune returnează o eroare tranzitorie în amonte",
     "resilienceConnectionCooldownEffect": "Omite temporar acea conexiune și crește backoff-ul pentru eșecuri repetate",

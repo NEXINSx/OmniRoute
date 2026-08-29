@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Lapisan ini hanya mengontrol antrian dan mondar-mandir. Itu tidak menyimpan cooldown atau pemutus sirkuit terbuka.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Mengaktifkan perlindungan antrean secara default untuk koneksi kunci API aktif.",
     "resilienceMaxQueueWait": "Waktu tunggu antrian maksimum",
+    "resilienceMaxExecutionWait": "Batas waktu eksekusi (batas pengaman rate-limit)",
     "resilienceConnectionCooldownScope": "Koneksi individu",
     "resilienceConnectionCooldownTrigger": "Ketika koneksi mengembalikan kegagalan hulu sementara",
     "resilienceConnectionCooldownEffect": "Melewati koneksi itu untuk sementara dan meningkatkan backoff jika terjadi kegagalan berulang",

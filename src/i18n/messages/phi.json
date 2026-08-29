@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Kinokontrol lang ng layer na ito ang queuing at pacing. Hindi ito nag-iimbak ng mga cooldown o bukas na mga circuit breaker.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Pinapagana ang proteksyon ng queue bilang default para sa mga aktibong koneksyon sa API key.",
     "resilienceMaxQueueWait": "Pinakamataas na oras ng paghihintay sa pila",
+    "resilienceMaxExecutionWait": "Timeout ng pagpapatakbo (rate-limit na backstop)",
     "resilienceConnectionCooldownScope": "Indibidwal na koneksyon",
     "resilienceConnectionCooldownTrigger": "Kapag ang isang koneksyon ay nagbalik ng isang lumilipas na upstream failure",
     "resilienceConnectionCooldownEffect": "Pansamantalang nilalaktawan ang koneksyon na iyon at pinapataas ang backoff para sa mga paulit-ulit na pagkabigo",

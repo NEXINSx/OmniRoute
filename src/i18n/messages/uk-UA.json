@@ -8004,6 +8004,7 @@
     "resilienceRequestQueueDesc": "Цей рівень контролює лише чергування та темп. Він не зберігає перезарядки або розімкнуті вимикачі.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Вмикає захист черги за замовчуванням для активних підключень ключа API.",
     "resilienceMaxQueueWait": "Максимальний час очікування в черзі",
+    "resilienceMaxExecutionWait": "Тайм-аут виконання (аварійний ліміт частоти запитів)",
     "resilienceConnectionCooldownScope": "Індивідуальне підключення",
     "resilienceConnectionCooldownTrigger": "Коли підключення повертає тимчасову помилку висхідного потоку",
     "resilienceConnectionCooldownEffect": "Тимчасово пропускає це з’єднання та збільшує час відстрочки у разі повторних збоїв",
