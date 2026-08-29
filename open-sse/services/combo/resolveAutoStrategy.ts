@@ -245,7 +245,7 @@ export async function resolveAutoStrategyOrder(
 
   let lastKnownGoodProvider: string | undefined;
   try {
-    const { getLKGP } = await import("../../../src/lib/localDb");
+    const { getLKGP } = await import("@/lib/db/settings");
     const lkgp = await getLKGP(combo.name, combo.id || combo.name);
     if (lkgp) lastKnownGoodProvider = lkgp.provider;
   } catch (err) {

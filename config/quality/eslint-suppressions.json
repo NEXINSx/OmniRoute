@@ -230,11 +230,6 @@
       "count": 1
     }
   },
-  "open-sse/handlers/chatCore/comboContextCache.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "open-sse/handlers/chatCore/executorHelpers.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -465,9 +460,6 @@
     "@typescript-eslint/no-explicit-any": {
       "count": 17
     },
-    "no-restricted-imports": {
-      "count": 2
-    },
     "no-restricted-syntax": {
       "count": 1
     }
@@ -510,18 +502,8 @@
       "count": 21
     }
   },
-  "open-sse/services/combo/concurrencyCaps.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "open-sse/services/combo/providerWildcard.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "open-sse/services/combo/quotaExhaustionCutoff.ts": {
-    "no-restricted-imports": {
       "count": 1
     }
   },
@@ -621,11 +603,6 @@
       "count": 2
     }
   },
-  "open-sse/services/keyGroupAuth.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "open-sse/services/manifestAdapter.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
@@ -688,9 +665,6 @@
   },
   "open-sse/services/tokenLimitCounter.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    },
-    "no-restricted-imports": {
       "count": 1
     }
   },
@@ -824,11 +798,6 @@
   },
   "open-sse/utils/proxyDispatcher.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "open-sse/utils/proxyFallback.ts": {
-    "no-restricted-imports": {
       "count": 1
     }
   },
@@ -2096,11 +2065,6 @@
       "count": 1
     }
   },
-  "src/domain/quotaCache.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "src/hooks/useLiveDashboard.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -2775,11 +2739,6 @@
       "count": 3
     }
   },
-  "src/models/index.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "src/server/ws/liveServer.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 5
@@ -2896,11 +2855,6 @@
       "count": 1
     }
   },
-  "src/shared/services/apiKeyResolver.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "src/shared/services/backupService.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -2909,26 +2863,10 @@
   "src/shared/services/cloudSyncScheduler.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "no-restricted-imports": {
-      "count": 1
     }
   },
   "src/shared/services/initializeCloudSync.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    },
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
-  "src/shared/services/modelSyncScheduler.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
-  "src/shared/utils/apiAuth.ts": {
-    "no-restricted-imports": {
       "count": 1
     }
   },
@@ -2940,9 +2878,6 @@
   "src/shared/utils/apiKeyPolicy.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    },
-    "no-restricted-imports": {
-      "count": 1
     }
   },
   "src/shared/utils/cloud.ts": {
@@ -3040,11 +2975,6 @@
       "count": 11
     }
   },
-  "src/sse/handlers/autoRouting.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "src/sse/handlers/chat.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 9
@@ -3053,24 +2983,6 @@
   "src/sse/handlers/chatHelpers.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
-    },
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
-  "src/sse/services/model.ts": {
-    "no-restricted-imports": {
-      "count": 2
-    }
-  },
-  "src/sse/services/noAuthProviderSettings.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
-  "src/sse/services/tokenRefresh.ts": {
-    "no-restricted-imports": {
-      "count": 1
     }
   },
   "tests/benchmarks/pipeline-accuracy.test.ts": {
