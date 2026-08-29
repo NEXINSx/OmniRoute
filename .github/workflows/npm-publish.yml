@@ -273,11 +273,20 @@ jobs:
           if-no-files-found: error
 
       - name: Attach SBOM to GitHub Release
-        if: steps.resolve.outputs.skip != 'true' && github.event_name == 'release'
+        # Not only on the `release` event: the v3.8.50 package shipped through a
+        # workflow_dispatch (staged publish, 11 attempts) and this step was skipped, so the
+        # GitHub Release carried no SBOM until it was attached by hand from the run's
+        # `sbom-npm` artifact. Attach whenever a release for the published tag exists.
+        if: steps.resolve.outputs.skip != 'true' && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: gh release upload "$TAG" sbom-npm.cdx.json --clobber
+          TAG: ${{ github.event_name == 'release' && github.ref_name || format('v{0}', inputs.version) }}
+        run: |
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::no GitHub Release for $TAG yet — SBOM stays on the sbom-npm workflow artifact"
+            exit 0
+          fi
+          gh release upload "$TAG" sbom-npm.cdx.json --repo "$GITHUB_REPOSITORY" --clobber
 
       # WS1.2/WS1.3 (#7065 class): the artifact that is about to be published must
       # BOOT. build:cli already assembled dist/ above; this packs+installs+boots the

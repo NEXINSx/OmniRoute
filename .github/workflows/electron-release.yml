@@ -15,6 +15,11 @@ on:
         required: false
         default: true
         type: boolean
+      build_ref:
+        description: "Git ref to BUILD from (default: the version tag). Set to a branch when the tag itself cannot build — e.g. a lockfile that was already broken when it was cut — and the assets must come from the repaired line"
+        required: false
+        default: ""
+        type: string
 
 # Least-privilege default: read-only at the top level; each job grants the writes it
 # needs (build/release upload assets, publish-npm forwards npm provenance / packages
@@ -83,7 +88,7 @@ jobs:
           persist-credentials: false
           # workflow_dispatch: build the tag being (re)built, not the dispatching branch. On a
           # tag push this resolves to the same commit.
-          ref: ${{ needs.validate.outputs.version }}
+          ref: ${{ inputs.build_ref || needs.validate.outputs.version }}
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -171,7 +176,7 @@ jobs:
           persist-credentials: false
           # workflow_dispatch: build the tag being (re)built, not the dispatching branch. On a
           # tag push this resolves to the same commit.
-          ref: ${{ needs.validate.outputs.version }}
+          ref: ${{ inputs.build_ref || needs.validate.outputs.version }}
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -359,7 +364,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           # Source archives + SBOM come from the tag being released, not the dispatching branch.
-          ref: ${{ needs.validate.outputs.version }}
+          ref: ${{ inputs.build_ref || needs.validate.outputs.version }}
 
       # `merge-multiple` is deliberately OFF. It resolves same-name collisions by ARRIVAL
       # ORDER, and the two macOS jobs each emit their own `latest-mac.yml` listing only their
@@ -417,7 +422,10 @@ jobs:
           tag_name: ${{ needs.validate.outputs.version }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          # Only on the tag push. A re-attach dispatch runs against a release whose curated
+          # notes already exist, and `true` APPENDS GitHub's auto-generated "What's Changed"
+          # block to them (v3.8.50, run 33238093090: +1,416 chars on a 121 KB body).
+          generate_release_notes: ${{ github.event_name != 'workflow_dispatch' }}
           fail_on_unmatched_files: false
           files: |
             release-assets/*.dmg
