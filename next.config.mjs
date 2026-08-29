@@ -262,20 +262,30 @@ const nextConfig = {
     ],
   },
   outputFileTracingExcludes: {
-    // Planning/task docs are not runtime assets and can break standalone copies
-    // when broad fs/path tracing pulls the whole repository into the NFT graph.
-    "/*": [
-      "./.git/**/*",
-      "./_tasks/**/*",
-      "./_references/**/*",
-      "./_ideia/**/*",
-      "./_mono_repo/**/*",
-      "./coverage/**/*",
-      "./test-results/**/*",
-      "./playwright-report/**/*",
-      "./app.__qa_backup/**/*",
-      "./tests/**/*",
-      "./logs/**/*",
+    // Planning/task docs, tests, and non-production worktrees are not runtime assets
+    // and break standalone copies when broad NFT tracing pulls the whole repository into memory.
+    // Using "**/*" ensures the exclusion applies across all app and API routes, not just "/".
+    "**/*": [
+      "**/.git/**",
+      "**/_tasks/**",
+      "**/_references/**",
+      "**/_ideia/**",
+      "**/_mono_repo/**",
+      "**/coverage/**",
+      "**/test-results/**",
+      "**/playwright-report/**",
+      "**/app.__qa_backup/**",
+      "**/tests/**",
+      "**/logs/**",
+      "**/.claude/**",
+      "**/.opencode/**",
+      "**/.scratch/**",
+      "**/.agents/**",
+      "**/.slim/**",
+      "**/packages/**",
+      "**/.tmp/**",
+      "**/electron/**",
+      "**/docs/**",
     ],
   },
   serverExternalPackages: [

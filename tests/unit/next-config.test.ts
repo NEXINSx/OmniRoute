@@ -75,8 +75,14 @@ test("next config exposes standalone build settings and canonical rewrites", asy
 test("next config declares Turbopack aliases, runtime assets and server externals", async () => {
   const { default: nextConfig } = await loadNextConfig("runtime-assets");
   const serverExternalPackages = new Set(nextConfig.serverExternalPackages);
-  const tracingIncludes = nextConfig.outputFileTracingIncludes["/*"];
-  const tracingExcludes = nextConfig.outputFileTracingExcludes["/*"];
+  const tracingIncludes =
+    nextConfig.outputFileTracingIncludes?.["/*"] ||
+    nextConfig.outputFileTracingIncludes?.["**/*"] ||
+    [];
+  const tracingExcludes =
+    nextConfig.outputFileTracingExcludes?.["**/*"] ||
+    nextConfig.outputFileTracingExcludes?.["/*"] ||
+    [];
 
   assert.equal(nextConfig.turbopack.root, process.cwd());
   // #6344: the @/mitm/manager stub alias is OPT-IN (OMNIROUTE_MITM_STUB=1, Docker only).
@@ -100,8 +106,18 @@ test("next config declares Turbopack aliases, runtime assets and server external
     tracingIncludes.includes("./node_modules/sql.js/dist/sql-wasm.wasm"),
     "sql-wasm.wasm must be trace-included so the sql.js fallback works in standalone builds"
   );
-  assert.ok(tracingExcludes.includes("./_tasks/**/*"));
-  assert.ok(tracingExcludes.includes("./tests/**/*"));
+  assert.ok(
+    tracingExcludes.some((p) => p.includes("_tasks")),
+    "outputFileTracingExcludes should exclude _tasks"
+  );
+  assert.ok(
+    tracingExcludes.some((p) => p.includes("tests")),
+    "outputFileTracingExcludes should exclude tests"
+  );
+  assert.ok(
+    tracingExcludes.some((p) => p.includes(".claude")),
+    "outputFileTracingExcludes should exclude .claude worktrees"
+  );
 
   for (const packageName of [
     "thread-stream",
