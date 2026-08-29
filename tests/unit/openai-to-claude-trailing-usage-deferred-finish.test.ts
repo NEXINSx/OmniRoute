@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { openaiToClaudeResponse } from "../../../open-sse/translator/response/openai-to-claude.ts";
+import { openaiToClaudeResponse } from "../../open-sse/translator/response/openai-to-claude.ts";
 
 type ClaudeUsage = {
   input_tokens: number;

@@ -40,7 +40,10 @@ function writeManifest(
     recordType: "manifest",
     schemaVersion: 1,
     expectedAssetCount: records.filter((record) => record.recordType === "asset").length,
-    auditedCommit: "091589089cd134a94df9f6cdab9ba562b2cefd18",
+    // HEAD instead of a pinned SHA: the fast-unit shards run on a shallow checkout,
+    // where a historical commit object does not exist and the gate would reject
+    // the fixture before exercising what the test is about.
+    auditedCommit: gitObjectId("HEAD"),
     auditedAt: "2026-08-26",
     legalScope:
       "Provenance records source matching only; it does not establish copyright or trademark clearance.",
@@ -98,12 +101,53 @@ function gitObjectId(revision: string) {
   return result.stdout.trim();
 }
 
-function gitRootCommit() {
-  const result = spawnSync("git", ["-C", REPO_ROOT, "rev-list", "--max-parents=0", "HEAD"], {
+function gitHasCommit(objectId: string) {
+  return (
+    spawnSync("git", ["-C", REPO_ROOT, "cat-file", "-e", `${objectId}^{commit}`], {
+      encoding: "utf8",
+    }).status === 0
+  );
+}
+
+function isShallowRepository() {
+  const result = spawnSync("git", ["-C", REPO_ROOT, "rev-parse", "--is-shallow-repository"], {
     encoding: "utf8",
   });
-  assert.equal(result.status, 0, result.stderr);
-  return result.stdout.trim().split(/\r?\n/)[0];
+  return result.status === 0 && result.stdout.trim() === "true";
+}
+
+/**
+ * A commit whose tree is empty, so every physical provider file is "missing"
+ * from its snapshot. Built as a dangling object (no ref is written) so it also
+ * works on the shallow checkouts the unit shards use, where the root commit is
+ * the grafted HEAD itself and would match the physical snapshot exactly.
+ */
+function emptyTreeCommit() {
+  const tree = spawnSync("git", ["-C", REPO_ROOT, "hash-object", "-w", "-t", "tree", "--stdin"], {
+    input: "",
+    encoding: "utf8",
+  });
+  assert.equal(tree.status, 0, tree.stderr);
+  const identity = {
+    GIT_AUTHOR_NAME: "provenance-fixture",
+    GIT_AUTHOR_EMAIL: "provenance-fixture@example.invalid",
+    GIT_COMMITTER_NAME: "provenance-fixture",
+    GIT_COMMITTER_EMAIL: "provenance-fixture@example.invalid",
+  };
+  const commit = spawnSync(
+    "git",
+    [
+      "-C",
+      REPO_ROOT,
+      "commit-tree",
+      tree.stdout.trim(),
+      "-m",
+      "provenance fixture: empty snapshot",
+    ],
+    { encoding: "utf8", env: { ...process.env, ...identity } }
+  );
+  assert.equal(commit.status, 0, commit.stderr);
+  return commit.stdout.trim();
 }
 
 function workflowJob(source: string, name: string) {
@@ -136,7 +180,7 @@ test("provider asset provenance gate rejects a new physical asset without a mani
       /missing from manifest: public\/providers\/surprise\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -155,7 +199,7 @@ test("provider asset provenance gate rejects a symlink that could evade physical
       /non-regular provider asset entry is not allowed: public\/providers\/unregistered-link\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -178,7 +222,7 @@ test("provider asset provenance gate rejects a stale SHA-256", () => {
       /sha256 mismatch: public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -202,7 +246,7 @@ test("provider asset provenance gate validates magic MIME instead of trusting th
       /mediaType mismatch: public\/providers\/misleading\.png \(manifest image\/png, actual image\/jpeg\)/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -226,7 +270,7 @@ test("provider asset provenance gate does not accept a truncated JPEG prefix", (
       /mediaType mismatch: public\/providers\/truncated\.jpg \(manifest image\/jpeg, actual unknown\)/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -242,7 +286,7 @@ test("provider asset provenance gate recognizes an SVG with an XML doctype", () 
 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -264,7 +308,7 @@ test("provider asset provenance gate scans adversarial SVG comment chains within
       /mediaType mismatch: public\/providers\/adversarial\.svg \(manifest image\/svg\+xml, actual unknown\)/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -287,7 +331,7 @@ test("provider asset provenance gate rejects a status that implies legal clearan
       /invalid provenanceStatus for public\/providers\/registered\.svg: licensed/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -309,7 +353,7 @@ test("provider asset provenance gate requires an alias record for duplicate cont
       new RegExp(`duplicate content missing alias record: sha256:${sha256(SVG)}`)
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -332,7 +376,7 @@ test("provider asset provenance gate requires immutable source evidence for prov
       /proven asset requires immutable source evidence: public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -364,7 +408,7 @@ test("provider asset provenance gate rejects malformed pinned-source integrity",
       /proven asset requires immutable source evidence: public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -387,7 +431,7 @@ test("provider asset provenance gate rejects an unstructured upstream license cl
       /invalid upstreamLicenseClaim for public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -420,7 +464,7 @@ test("provider asset provenance gate allows probable and unresolved records and 
       /2\/2 registered; proven=0 probable=1 unresolved=1; duplicate-groups=1/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -440,7 +484,7 @@ test("provider asset provenance gate rejects a stale expected asset count", () =
       /expectedAssetCount mismatch: manifest 225, records 1, physical 1/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -465,7 +509,7 @@ test("provider asset provenance gate rejects a missing or non-commit auditedComm
       assert.ok(`${result.stdout}\n${result.stderr}`.includes(expectedError));
     }
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -479,7 +523,7 @@ test("provider asset provenance gate binds auditedCommit to the physical provide
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-    records[0] = { ...records[0], auditedCommit: gitRootCommit() };
+    records[0] = { ...records[0], auditedCommit: emptyTreeCommit() };
     writeFileSync(
       fixture.manifestPath,
       `${records.map((record) => JSON.stringify(record)).join("\n")}\n`
@@ -493,15 +537,21 @@ test("provider asset provenance gate binds auditedCommit to the physical provide
       /auditedCommit provider snapshot (?:is missing|differs): public\/providers\//
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test("repository provider asset manifest covers the audited 142-file snapshot", () => {
-  const result = runGate(
-    join(REPO_ROOT, "public/providers"),
-    join(REPO_ROOT, "config/quality/provider-assets-provenance.jsonl")
-  );
+test("repository provider asset manifest covers the audited 142-file snapshot", (t) => {
+  const manifestPath = join(REPO_ROOT, "config/quality/provider-assets-provenance.jsonl");
+  const { auditedCommit } = JSON.parse(readFileSync(manifestPath, "utf8").split("\n")[0]);
+  if (!gitHasCommit(auditedCommit) && isShallowRepository()) {
+    // The real manifest pins a historical commit. The unit shards check out with
+    // depth 1, so it is not fetched there; the gate itself still runs on both
+    // blocking rails with fetch-depth 0 (asserted by the test right below).
+    t.skip(`shallow checkout without auditedCommit ${auditedCommit}`);
+    return;
+  }
+  const result = runGate(join(REPO_ROOT, "public/providers"), manifestPath);
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.match(

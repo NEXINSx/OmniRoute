@@ -22,7 +22,7 @@ async function resetStorage() {
   core.resetDbInstance();
   apiKeys.resetApiKeyState();
   costRules.resetCostData();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -34,7 +34,7 @@ test.after(() => {
   core.resetDbInstance();
   apiKeys.resetApiKeyState();
   costRules.resetCostData();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("Codex provider window costs use the weekly reset window and API key USD limit", async () => {

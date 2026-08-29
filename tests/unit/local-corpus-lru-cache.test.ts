@@ -25,13 +25,10 @@ test("dynamic root path traversal outside bounding box throws error", async () =
 
   const outsideFolder = fs.mkdtempSync(path.join(os.tmpdir(), "omni-corpus-outside-"));
 
-  assert.throws(
-    () => getConfiguredLocalCorpusStatus(outsideFolder),
-    /Path traversal forbidden/
-  );
+  assert.throws(() => getConfiguredLocalCorpusStatus(outsideFolder), /Path traversal forbidden/);
 
-  fs.rmSync(tmpBase, { recursive: true, force: true });
-  fs.rmSync(outsideFolder, { recursive: true, force: true });
+  fs.rmSync(tmpBase, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  fs.rmSync(outsideFolder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("path traversal check rejects sibling directory with matching string prefix", async () => {
@@ -41,13 +38,10 @@ test("path traversal check rejects sibling directory with matching string prefix
 
   setLocalCorpusRoot(tmpBase);
 
-  assert.throws(
-    () => getConfiguredLocalCorpusStatus(siblingFolder),
-    /Path traversal forbidden/
-  );
+  assert.throws(() => getConfiguredLocalCorpusStatus(siblingFolder), /Path traversal forbidden/);
 
-  fs.rmSync(tmpBase, { recursive: true, force: true });
-  fs.rmSync(siblingFolder, { recursive: true, force: true });
+  fs.rmSync(tmpBase, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  fs.rmSync(siblingFolder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("search and read configured local corpus support dynamic root within bounds", async () => {
@@ -70,7 +64,7 @@ test("search and read configured local corpus support dynamic root within bounds
   });
   assert.ok(readResult.content.includes("searchable"));
 
-  fs.rmSync(tmpBase, { recursive: true, force: true });
+  fs.rmSync(tmpBase, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("LRU cache respects access order and OMNIROUTE_CORPUS_CACHE_SIZE", async () => {
@@ -101,5 +95,5 @@ test("LRU cache respects access order and OMNIROUTE_CORPUS_CACHE_SIZE", async ()
   assert.equal(idx1.indexedBytes, idx1Again.indexedBytes);
 
   delete process.env.OMNIROUTE_CORPUS_CACHE_SIZE;
-  fs.rmSync(tmpRoot, { recursive: true, force: true });
+  fs.rmSync(tmpRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });

@@ -79,7 +79,7 @@ test.before(async () => {
 test.after(() => {
   proxyServer?.close();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("#7993 getProviderCredentials('opencode-zen') hydrates the proxy saved under the sibling 'opencode' connection", async () => {

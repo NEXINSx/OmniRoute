@@ -44,7 +44,7 @@ const { getDbInstance, resetDbInstance } = await import("../../src/lib/db/core.t
 // or the native test runner can hang indefinitely on a dangling connection.
 test.after(() => {
   resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 const DAY_MS = 86_400_000;
