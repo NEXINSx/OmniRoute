@@ -6256,7 +6256,7 @@
       "galadriel": "Pripojte Galadriel pomocou API kľúča.",
       "predibase": "Bezplatný skúšobný kredit 25 $ (platnosť 30 dní)",
       "chenzk": "Brána kompatibilná s OpenAI so živým katalógom modelov na chenzk.top.",
-      "magnific": "Generujte obrázky pomocou Mystic API od Freepik.",
+      "magnific": "Generujte obrázky pomocou Mystic API od Magnific.",
       "freetheai": "Bezplatná brána kompatibilná s OpenAI s podporou prenosu modelov (passthrough).",
       "g4f-gemini": "Vzdialená brána g4f.space k Gemini. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
       "g4f-groq": "Vzdialená brána g4f.space k Groq. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",

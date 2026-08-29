@@ -16,6 +16,7 @@ import {
   hasPerModelQuota,
   isAccountSemaphoreFull,
   isModelLocked,
+  lockModelIfPerModelQuota,
   MODEL_ACCESS_DENIED_PATTERNS,
   recordModelLockoutFailure,
   recordProviderFailure,
@@ -2236,6 +2237,26 @@ async function handleComboChatInner({
             return { ok: false, response: result };
           }
 
+          // A model-scoped 400 ("The requested model is not supported" / "not
+          // available for integrator") is permanent for THIS connection — the
+          // account/integration will not gain support for the model mid-session.
+          // Combo still advances to the next target immediately (unchanged,
+          // preserves #5249's cross-provider fallback), but without a lockout
+          // here the SAME dead model gets retried on every future, separate
+          // request forever (observed: every auto-combo request wasted several
+          // upstream 400s on the same GitHub models, all day). isModelLocked()
+          // is checked before dispatch (see the pre-check above this loop), so
+          // this lockout is honored on the next request.
+          if (result.status === 400 && isModelScoped400(errorText) && provider && rawModel) {
+            lockModelIfPerModelQuota(
+              provider,
+              targetWithConnection.connectionId || "",
+              rawModel,
+              "model_capacity",
+              60 * 60 * 1000 // 1h
+            );
+          }
+
           // Trigger shared provider circuit breaker for 5xx errors and connection failures. If the
           // next target is on the same provider, don't mark it failed (a different model may still
           // succeed) — #8376: EXCEPT a proxy-unreachable failure, which poisons every model alike.
@@ -3302,24 +3323,20 @@ async function handleRoundRobinCombo({
               "COMBO-RR",
               `Maximum combo attempts (${maxGlobalAttempts}) exceeded. Terminating loop to prevent runaway requests.`
             );
-            return errorResponseWithComboDiagnostics(
-              503,
-              "Maximum combo retry limit reached",
-              {
-                poolSize: modelCount,
-                attempted: globalAttempts,
-                excluded: [
-                  ...[...exhaustedProviders].map((p) => ({ provider: p, reason: "exhausted" })),
-                  ...[...exhaustedConnections].map((c) => formatExhaustedConnectionKey(String(c))),
-                ],
-                attemptOrder: rrOutcomes.map((o) => ({
-                  provider: o.model.split("/")[0] || "unknown",
-                  model: o.model,
-                })),
-                terminalReason: "max_attempts_exceeded",
-                recovery: buildRecoveryHint("max_attempts_exceeded"),
-              }
-            );
+            return errorResponseWithComboDiagnostics(503, "Maximum combo retry limit reached", {
+              poolSize: modelCount,
+              attempted: globalAttempts,
+              excluded: [
+                ...[...exhaustedProviders].map((p) => ({ provider: p, reason: "exhausted" })),
+                ...[...exhaustedConnections].map((c) => formatExhaustedConnectionKey(String(c))),
+              ],
+              attemptOrder: rrOutcomes.map((o) => ({
+                provider: o.model.split("/")[0] || "unknown",
+                model: o.model,
+              })),
+              terminalReason: "max_attempts_exceeded",
+              recovery: buildRecoveryHint("max_attempts_exceeded"),
+            });
           }
           if (retry > 0) {
             log.info(
