@@ -26,7 +26,9 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 process.env.API_KEY_SECRET = "test-secret-qdrant-routes";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings, getSettings } = await import("@/lib/db/settings");
+const { createProviderConnection } = await import("@/lib/db/providers");
+const localDb = { updateSettings, getSettings, createProviderConnection };
 const memorySettings = await import("../../src/lib/memory/settings.ts");
 
 // ── Route imports ──

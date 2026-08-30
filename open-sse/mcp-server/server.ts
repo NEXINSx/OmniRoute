@@ -90,7 +90,7 @@ import {
   clampMcpAccessibilityConfig,
   type McpAccessibilityConfig,
 } from "../services/compression/engines/mcpAccessibility/constants.ts";
-import { getDbInstance } from "../../src/lib/db/core.ts";
+import { getDbInstance, ensureDbInitialized } from "../../src/lib/db/core.ts";
 import { normalizeQuotaResponse } from "../../src/shared/contracts/quota.ts";
 import { resolveOmniRouteBaseUrl } from "../../src/shared/utils/resolveOmniRouteBaseUrl.ts";
 import { sanitizeErrorMessage } from "../utils/error.ts";
@@ -1527,10 +1527,10 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
  * Called when `omniroute --mcp` is used.
  */
 export async function startMcpStdio(): Promise<void> {
+  await ensureDbInitialized();
   // Stdout is reserved for JSON-RPC — bin/mcpStdioConsoleGuard.mjs is preloaded via
   // `node --import` (see bin/mcp-server.mjs) so console.log/warn already redirect to
-  // stderr before this module's own imports evaluate (DB init happens as a side effect of
-  // createMcpServer()'s tool registration, earlier than any code placed here could catch).
+  // stderr before this module's own imports evaluate.
   const server = createMcpServer();
   const transport = new StdioServerTransport();
   const version = process.env.npm_package_version || "1.8.1";

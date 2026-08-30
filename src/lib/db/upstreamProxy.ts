@@ -129,15 +129,6 @@ function rowToConfig(record: Record<string, unknown>): UpstreamProxyConfig {
     updatedAt: record.updated_at as string,
   };
 }
-
-export async function getUpstreamProxyConfigs() {
-  const db = getDbInstance();
-  const rows = db
-    .prepare("SELECT * FROM upstream_proxy_config ORDER BY provider_id")
-    .all() as UpstreamProxyRow[];
-  return rows.map((row) => rowToConfig(toRecord(row)));
-}
-
 export async function getUpstreamProxyConfig(providerId: string) {
   const db = getDbInstance();
   const row = db

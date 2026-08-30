@@ -7,7 +7,7 @@ import {
   getMemoryReindexQueue,
   countMemoryReindexPending,
   markMemoryNeedsReindex,
-} from "@/lib/localDb";
+} from "@/lib/db/memoryVec";
 import { resolveEmbeddingSource, embed } from "./embedding";
 import { getVectorStore } from "./vectorStore";
 import { getMemorySettings } from "./settings";
@@ -23,9 +23,7 @@ const log = logger("MEMORY_REINDEX");
  *
  * @returns { processed: number; errors: number }
  */
-export async function runReindexBatch(
-  limit = 100
-): Promise<{ processed: number; errors: number }> {
+export async function runReindexBatch(limit = 100): Promise<{ processed: number; errors: number }> {
   const queue = getMemoryReindexQueue(limit);
 
   if (queue.length === 0) {

@@ -18,7 +18,8 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 process.env.API_KEY_SECRET = "test-secret-file-dl";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { createFile, deleteFile } = await import("@/lib/db/files");
+const localDb = { createFile, deleteFile };
 const fileContentRoute = await import("../../src/app/api/files/[id]/content/route.ts");
 
 async function resetStorage() {

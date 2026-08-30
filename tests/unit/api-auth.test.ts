@@ -10,7 +10,8 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 process.env.API_KEY_SECRET = "test-api-key-secret";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
 const apiAuth = await import("../../src/shared/utils/apiAuth.ts");
 const { requireManagementAuth } = await import("../../src/lib/api/requireManagementAuth.ts");

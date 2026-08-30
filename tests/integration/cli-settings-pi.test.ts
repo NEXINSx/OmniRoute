@@ -14,7 +14,8 @@ process.env.API_KEY_SECRET = "test-api-key-secret-pi";
 process.env.JWT_SECRET = "test-jwt-secret-pi";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 
 const { GET, POST, DELETE } = await import("../../src/app/api/cli-tools/pi-settings/route.ts");
 

@@ -31,7 +31,7 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 const core = await import("../../src/lib/db/core.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
 const modelsDb = await import("../../src/lib/db/models.ts");
-const { mergeModelCompatOverride } = await import("../../src/lib/localDb.ts");
+const { mergeModelCompatOverride } = await import("@/lib/db/models");
 const v1ModelsCatalog = await import("../../src/app/api/v1/models/catalog.ts");
 
 async function resetStorage() {

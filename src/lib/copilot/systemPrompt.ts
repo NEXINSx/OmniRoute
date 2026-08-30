@@ -64,7 +64,7 @@ Client → API Route (/v1/chat/completions)
 - \`src/lib/db/\`: 45+ domain-specific modules
 - \`core.ts\`: Singleton better-sqlite3 with WAL journaling
 - \`migrationRunner.ts\`: Versioned SQL migrations (55+ files)
-- \`localDb.ts\`: Re-export layer only — no logic
+- \`src/lib/db/*\`: domain modules only — no barrel layer
 
 ### Key Modules
 - **open-sse/**: Core streaming engine (handlers, executors, translator)

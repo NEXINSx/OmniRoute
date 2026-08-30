@@ -9,7 +9,8 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 
 const core = await import("../../src/lib/db/core.ts");
 const modelsDb = await import("../../src/lib/db/models.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { getModelAliases, setModelAlias } = await import("@/lib/db/models");
+const localDb = { getModelAliases, setModelAlias };
 const { importManagedModels } = await import("../../src/lib/providerModels/managedModelImport.ts");
 const { mergeProviderModelListing } =
   await import("../../src/lib/providers/mergeProviderModelListing.ts");

@@ -34,7 +34,8 @@ const core = await import("../../src/lib/db/core.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
 
 import { applyErrorState, resetAccountState } from "../../open-sse/services/accountFallback.ts";
-import { markConnectionRateLimitedUntil, clearConnectionRateLimit } from "../../src/lib/localDb.ts";
+const { markConnectionRateLimitedUntil, clearConnectionRateLimit } =
+  await import("@/lib/db/providers");
 
 test.after(() => {
   core.resetDbInstance();

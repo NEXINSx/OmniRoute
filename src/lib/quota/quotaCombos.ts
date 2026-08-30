@@ -12,7 +12,7 @@
 
 import { getPool } from "@/lib/db/quotaPools";
 import { getGroupName } from "@/lib/db/quotaGroups";
-import { getCachedProviderConnectionById } from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
 import {
   getCombos,
   createCombo,

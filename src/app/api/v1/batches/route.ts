@@ -1,5 +1,6 @@
 import { CORS_HEADERS, handleCorsOptions } from "@/shared/utils/cors";
-import { createBatch, getFile, listBatches, countBatches } from "@/lib/localDb";
+import { createBatch, listBatches, countBatches } from "@/lib/db/batches";
+import { getFile } from "@/lib/db/files";
 import { v1BatchCreateSchema } from "@/shared/validation/schemas";
 import { NextResponse } from "next/server";
 import { getApiKeyRequestScope } from "@/app/api/v1/_helpers/apiKeyScope";

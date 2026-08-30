@@ -11,7 +11,8 @@ process.env.API_KEY_SECRET = "provider-window-costs-test-secret";
 
 const core = await import("../../src/lib/db/core.ts");
 const apiKeys = await import("../../src/lib/db/apiKeys.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updatePricing } = await import("@/lib/db/settings");
+const localDb = { updatePricing };
 const providerLimits = await import("../../src/lib/db/providerLimits.ts");
 const usageHistory = await import("../../src/lib/usage/usageHistory.ts");
 const costRules = await import("../../src/domain/costRules.ts");

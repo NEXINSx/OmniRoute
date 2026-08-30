@@ -8,7 +8,8 @@ const TEST_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-usage-ana
 process.env.DATA_DIR = TEST_DATA_DIR;
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updatePricing } = await import("@/lib/db/settings");
+const localDb = { updatePricing };
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
 const usageHistory = await import("../../src/lib/usage/usageHistory.ts");

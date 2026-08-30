@@ -1,5 +1,5 @@
 import { getMachineId } from "@/shared/utils/machine";
-import { getSettings } from "@/lib/localDb";
+import { getSettings } from "@/lib/db/settings";
 import HomePageClient from "../dashboard/HomePageClient";
 import BootstrapBanner from "../dashboard/BootstrapBanner";
 import KimiSponsorBanner from "../dashboard/KimiSponsorBanner";

@@ -1,7 +1,4 @@
-import {
-  hasSelfAccountQuotaScope,
-  hasSelfUsageScope,
-} from "@/shared/constants/selfServiceScopes";
+import { hasSelfAccountQuotaScope, hasSelfUsageScope } from "@/shared/constants/selfServiceScopes";
 import { USAGE_SUPPORTED_PROVIDERS } from "@/shared/constants/providers";
 
 type JsonRecord = Record<string, unknown>;
@@ -363,7 +360,7 @@ async function normalizeDeps(deps: ApiKeySelfServiceDeps): Promise<RequiredDeps>
   const localDb =
     deps.getProviderConnectionById && deps.getProviderConnections
       ? null
-      : await import("@/lib/localDb");
+      : await import("@/lib/db/providers");
   const providerLimits = deps.fetchAndPersistProviderLimits
     ? null
     : await import("@/lib/usage/providerLimits");
@@ -396,11 +393,11 @@ export async function buildApiKeySelfServiceStatus(
   const tokens = aggregateTokens(
     resolvedDeps.getDbInstance() as DbLike,
     metadata.id,
-    cost.periodStartAt ?? new Date(getCurrentMonthWindow(resolvedDeps.now()).periodStartAt).toISOString()
+    cost.periodStartAt ??
+      new Date(getCurrentMonthWindow(resolvedDeps.now()).periodStartAt).toISOString()
   );
   const accountQuotas = await resolveAccountQuotas(metadata, resolvedDeps);
-  const accountQuota =
-    accountQuotas && accountQuotas.length === 1 ? accountQuotas[0] : undefined;
+  const accountQuota = accountQuotas && accountQuotas.length === 1 ? accountQuotas[0] : undefined;
 
   return {
     apiKey: {

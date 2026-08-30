@@ -11,13 +11,9 @@
  * updates the DB, and logs the result.
  */
 
-import {
-  getProviderConnections,
-  getCachedProviderConnectionById,
-  updateProviderConnection,
-  getSettings,
-  resolveProxyForConnection,
-} from "@/lib/localDb";
+import { getProviderConnections, updateProviderConnection } from "@/lib/db/providers";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { getSettings, resolveProxyForConnection } from "@/lib/db/settings";
 import {
   getAccessToken,
   getDeprecationNotice,

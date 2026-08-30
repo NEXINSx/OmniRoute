@@ -158,7 +158,7 @@ status. CI performs the broader package artifact and ecosystem checks.
 
 **Contracts**
 
-- Domain modules under `src/lib/db/`; `src/lib/localDb.ts` remains a re-export layer only.
+- Domain modules under `src/lib/db/`; import specific modules directly (the old `localDb.ts` re-export layer was removed).
 - Numbered, idempotent SQL migrations under `src/lib/db/migrations/`, transaction safety, upgrade
   behavior, indexes, and every caller affected by the schema.
 - Routes and handlers never issue raw SQL directly.

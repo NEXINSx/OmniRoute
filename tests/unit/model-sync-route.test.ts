@@ -12,7 +12,9 @@ if (!process.env.API_KEY_SECRET) {
 }
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const { setModelAlias, getModelAliases } = await import("@/lib/db/models");
+const localDb = { updateSettings, setModelAlias, getModelAliases };
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
 const modelsDb = await import("../../src/lib/db/models.ts");

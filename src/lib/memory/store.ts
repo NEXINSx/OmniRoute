@@ -10,7 +10,7 @@ import { sanitizeErrorMessage } from "../../../open-sse/utils/error.ts";
 import { resolveEmbeddingSource, embed } from "./embedding";
 import { getVectorStore } from "./vectorStore";
 import { getMemorySettings } from "./settings";
-import { markMemoryNeedsReindex } from "@/lib/localDb";
+import { markMemoryNeedsReindex } from "@/lib/db/memoryVec";
 
 const log = logger("MEMORY_STORE");
 

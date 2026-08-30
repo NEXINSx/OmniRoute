@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCachedSettings } from "@/lib/localDb";
+import { getCachedSettings } from "@/lib/db/readCache";
 
 /**
  * GET /api/auth/oidc/login
