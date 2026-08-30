@@ -413,10 +413,14 @@ jobs:
           tag_name: ${{ needs.validate.outputs.version }}
           draft: false
           prerelease: false
-          # Only on the tag push. A re-attach dispatch runs against a release whose curated
-          # notes already exist, and `true` APPENDS GitHub's auto-generated "What's Changed"
-          # block to them (v3.8.50, run 33238093090: +1,416 chars on a 121 KB body).
-          generate_release_notes: ${{ github.event_name != 'workflow_dispatch' }}
+          # NEVER. Phase 3 of the release flow creates the GitHub Release with the curated
+          # notes seconds after pushing the tag, so by the time this step runs (1-2 h of
+          # builds later) the body already exists — and `true` APPENDS GitHub's
+          # auto-generated "What's Changed" block to it (v3.8.48 shipped that way; the
+          # v3.8.50 re-attach dispatch added +1,416 chars to a 121 KB body, run
+          # 33238093090). A curated body sits ~3 KB under the 125,000-char cap, so the
+          # append can also turn this step RED and leave the release with no assets.
+          generate_release_notes: false
           fail_on_unmatched_files: false
           files: |
             release-assets/*.dmg
