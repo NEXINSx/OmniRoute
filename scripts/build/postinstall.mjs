@@ -14,8 +14,7 @@
  *
  * Modules repaired:
  *   - better-sqlite3 (SQLite bindings)
- *   - wreq-js (TLS client for OAuth providers)
- *   - tls-client-node (TLS client for claude-web/grok-web/lmarena/perplexity-web)
+ *   - wreq-js (TLS client for OAuth and web-cookie providers)
  *   - sql.js (WASM SQLite fallback runtime)
  *   - node-machine-id (local CLI machine-token server runtime)
  *
@@ -26,15 +25,7 @@
  * Fixes: https://github.com/diegosouzapw/OmniRoute/issues/7802
  */
 
-import {
-  copyFileSync,
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,8 +33,8 @@ import { fileURLToPath } from "node:url";
 import { PUBLISHED_BUILD_ARCH, PUBLISHED_BUILD_PLATFORM } from "./native-binary-compat.mjs";
 import { hasStandaloneAppBundle, isTermux } from "./postinstallSupport.mjs";
 import { colocateLlmlinguaOptionals } from "./colocateOptionals.mjs";
-import { fixTlsClientNodeBinary } from "./fixTlsClientNodeBinary.mjs";
 import { fixPlaywrightAndroid } from "./fixPlaywrightAndroid.mjs";
+import { resolveWreqJsNativeBinaryName } from "./wreqJsNative.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -277,7 +268,7 @@ async function fixWreqJsBinary() {
   if (process.platform === "android" || isTermux()) {
     console.log(
       "  [postinstall] wreq-js: skipped on Termux/Android " +
-        "(libgcc not available — OAuth TLS fingerprinting will use the fallback path)"
+        "(wreq-js 3.0.0 does not publish an Android native addon)"
     );
     return;
   }
@@ -289,7 +280,16 @@ async function fixWreqJsBinary() {
     return;
   }
 
-  const binaryName = `wreq-js.${process.platform}-${process.arch}.node`;
+  const binaryName = resolveWreqJsNativeBinaryName({
+    platform: process.platform,
+    arch: process.arch,
+  });
+  if (!binaryName) {
+    console.warn(
+      `  ⚠️  wreq-js 3.0.0 has no native addon for ${process.platform}-${process.arch}.`
+    );
+    return;
+  }
   const appBinaryPath = join(appWreqDir, binaryName);
   const rootBinaryPath = join(rootWreqDir, binaryName);
 
@@ -318,27 +318,7 @@ async function fixWreqJsBinary() {
     }
   }
 
-  // Strategy 2: Copy entire rust/ directory from root (gets all platform binaries)
-  if (existsSync(rootWreqDir)) {
-    try {
-      mkdirSync(appWreqDir, { recursive: true });
-      const files = readdirSync(rootWreqDir);
-      for (const file of files) {
-        if (file.endsWith(".node")) {
-          copyFileSync(join(rootWreqDir, file), join(appWreqDir, file));
-        }
-      }
-      if (existsSync(appBinaryPath)) {
-        process.dlopen({ exports: {} }, appBinaryPath);
-        console.log("  ✅ wreq-js native module fixed (full copy) successfully!\n");
-        return;
-      }
-    } catch (err) {
-      console.warn(`  ⚠️  wreq-js full copy failed: ${err.message}`);
-    }
-  }
-
-  // Strategy 3: Rebuild wreq-js inside dist/
+  // Strategy 2: Rebuild wreq-js inside dist/
   console.log("  📥 Attempting npm rebuild wreq-js...");
   try {
     const { execSync } = await import("node:child_process");
@@ -359,8 +339,10 @@ async function fixWreqJsBinary() {
   console.warn(
     `\n  ⚠️  Could not fix wreq-js native module for ${process.platform}-${process.arch}.`
   );
-  console.warn("     OAuth-based providers (Codex, Cursor, etc.) may not work.");
-  console.warn(`     Manual fix: cd ${join(ROOT, "dist")} && npm install wreq-js --no-save\n`);
+  console.warn("     Browser-TLS OAuth and web-cookie providers may not work.");
+  console.warn(
+    `     Manual fix: cd ${join(ROOT, "dist")} && npm install wreq-js@3.0.0 --save-exact\n`
+  );
 }
 
 async function ensureSwcHelpers() {
@@ -470,7 +452,6 @@ async function ensureStandaloneRuntimePackages() {
 await verifyDevNativeModules();
 await fixBetterSqliteBinary();
 await fixWreqJsBinary();
-await fixTlsClientNodeBinary({ rootDir: ROOT });
 await fixPlaywrightAndroid({ rootDir: ROOT });
 await ensureSwcHelpers();
 await ensureStandaloneRuntimePackages();

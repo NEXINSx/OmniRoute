@@ -205,17 +205,17 @@ test("classifyLicense: exception does not apply to different package", () => {
   assert.equal(result.status, "denied", "exception must be per-package, not per-license");
 });
 
-test("classifyLicense: exception with risk=medium still returns 'exception' (not denied)", () => {
+test("classifyLicense: a medium-risk custom exception still returns 'exception'", () => {
   const allowlist = makeAllowlist({
     exceptions: {
-      "tls-client-node": {
-        license: "Custom: LICENSE",
-        justification: "Commons Clause + Apache-2.0. TODO: revisar.",
+      "custom-runtime": {
+        license: "Custom: reviewed terms",
+        justification: "Reviewed custom runtime terms.",
         risk: "medium",
       },
     },
   });
-  const result = classifyLicense("tls-client-node@0.2.0", "Custom: LICENSE", allowlist);
+  const result = classifyLicense("custom-runtime@1.0.0", "Custom: reviewed terms", allowlist);
   assert.equal(result.status, "exception");
 });
 
@@ -285,13 +285,6 @@ test("loadAllowlist: exceptions entries have required fields", () => {
   }
 });
 
-test("loadAllowlist: tls-client-node exception has risk=medium (Commons Clause)", () => {
-  const allowlist = loadAllowlist();
-  const exc = allowlist.exceptions["tls-client-node"] as any;
-  assert.ok(exc, "tls-client-node exception must be registered");
-  assert.equal(exc.risk, "medium", "tls-client-node is a medium-risk exception (Commons Clause)");
-});
-
 test("loadAllowlist: LGPL packages have registered exceptions", () => {
   const allowlist = loadAllowlist();
   const lgplPkgs = ["@img/sharp-libvips-linux-x64", "@img/sharp-libvips-linuxmusl-x64"];
@@ -324,12 +317,6 @@ test("integration: classifyLicense passes MIT packages against real allowlist", 
   const allowlist = loadAllowlist();
   const result = classifyLicense("lodash@4.17.21", "MIT", allowlist);
   assert.equal(result.status, "allowed");
-});
-
-test("integration: classifyLicense passes tls-client-node as exception against real allowlist", () => {
-  const allowlist = loadAllowlist();
-  const result = classifyLicense("tls-client-node@0.2.0", "Custom: LICENSE", allowlist);
-  assert.equal(result.status, "exception");
 });
 
 test("integration: classifyLicense denies GPL-3.0 against real allowlist", () => {

@@ -237,7 +237,7 @@ jobs:
         #          optionals (@img/sharp-*, @img/sharp-libvips-*, @ngrok/ngrok-*,
         #          fsevents) carry linux forks. Replace them with the forks this
         #          leg's own `npm ci` resolved, then assert every bundled native
-        #          (koffi triplets, better-sqlite3 prebuilds, wreq-js, onnxruntime)
+        #          (better-sqlite3 prebuilds, wreq-js, onnxruntime)
         #          can service this leg's platform/arch before packaging starts.
         run: |
           node scripts/build/standaloneBundle.mjs restore --archive web-bundle.tar.gz

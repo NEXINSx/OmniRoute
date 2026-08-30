@@ -94,6 +94,7 @@ export const PACK_ARTIFACT_ROOT_ALLOWED_EXACT_PATHS: string[] = [
   "LICENSE",
   "README.md",
   "THIRD_PARTY_NOTICES.md",
+  "config/release/wreq-js-native-manifest.json",
   "bin/aliasResolver.mjs",
   "bin/chatgpt-web-codex-mcp.mjs",
   // #7808: ESM loader hook split out of bin/aliasResolver.mjs to silence CodeQL
@@ -136,12 +137,10 @@ export const PACK_ARTIFACT_ROOT_ALLOWED_EXACT_PATHS: string[] = [
   "scripts/build/build-next-isolated.mjs",
   "scripts/check/check-supported-node-runtime.ts",
   "scripts/build/native-binary-compat.mjs",
+  "scripts/build/wreqJsNative.mjs",
   "scripts/build/postinstall.mjs",
   "scripts/build/postinstallSupport.mjs",
   "scripts/build/colocateOptionals.mjs",
-  // #7802: imported by scripts/build/postinstall.mjs to repair tls-client-node's
-  // native binary (claude-web/grok-web/lmarena/perplexity-web transport).
-  "scripts/build/fixTlsClientNodeBinary.mjs",
   // #8859: imported by scripts/build/postinstall.mjs to repair playwright-core's
   // browser resolution on Termux/Android (no glibc, no bundled browsers).
   "scripts/build/fixPlaywrightAndroid.mjs",
@@ -222,13 +221,14 @@ export const PACK_ARTIFACT_REQUIRED_PATHS: string[] = [
   // or the CLI fails to boot — list them REQUIRED so a regression is loud.
   "bin/aliasResolver.mjs",
   "bin/aliasResolverHook.mjs",
+  "config/release/wreq-js-native-manifest.json",
   "package.json",
   "scripts/build/native-binary-compat.mjs",
   "scripts/build/postinstall.mjs",
   "scripts/build/postinstallSupport.mjs",
   "scripts/build/colocateOptionals.mjs",
-  "scripts/build/fixTlsClientNodeBinary.mjs",
   "scripts/build/runtime-env.mjs",
+  "scripts/build/wreqJsNative.mjs",
   // #10382: runtime imports of bin/cli/commands/packs.mjs (optional packs CLI) —
   // listed REQUIRED so their absence from the tarball fails loudly.
   "scripts/packs/optionalPackInstaller.mjs",

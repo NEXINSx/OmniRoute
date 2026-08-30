@@ -7,9 +7,9 @@
  * matrix leg. Everything except install-machine-forked optional packages is
  * platform-independent:
  *
- *  - Bundled-for-all (verify only): koffi ships every triplet under
- *    `build/koffi/<os>_<arch>`, better-sqlite3 v13 ships Node-API prebuilds for
- *    8 platforms, wreq-js ships `rust/wreq-js.<plat>-<arch>[-libc].node`, and
+ *  - Bundled-for-all (verify only): better-sqlite3 v13 ships Node-API prebuilds
+ *    for 8 platforms, wreq-js ships
+ *    `rust/wreq-js.<plat>-<arch>[-libc].node`, and
  *    onnxruntime-node ships `bin/napi-v6/<os>/<arch>`.
  *  - Install-machine-forked (hydrate): `@img/sharp-*`, `@img/sharp-libvips-*`,
  *    `@ngrok/ngrok-*` and macOS-only `fsevents` resolve to whichever platform
@@ -33,8 +33,7 @@ export const HYDRATED_ROOT_PACKAGES = ["fsevents"];
 export const BUNDLED_EXEMPTIONS = new Set(["onnxruntime-node:darwin-x64"]);
 
 function platformTriple(platform, arch) {
-  // koffi uses underscore triplets; better-sqlite3/wreq-js/onnx use dashes.
-  return { koffi: `${platform}_${arch}`, dash: `${platform}-${arch}` };
+  return { dash: `${platform}-${arch}` };
 }
 
 function rmrf(target) {
@@ -105,9 +104,6 @@ export function hydratePlatformNatives({ standaloneNodeModules, sourceNodeModule
 export function verifyBundledNatives({ nodeModulesDir, platform, arch }) {
   const errors = [];
   const triple = platformTriple(platform, arch);
-
-  const koffiDir = path.join(nodeModulesDir, "koffi", "build", "koffi", triple.koffi);
-  if (!fs.existsSync(koffiDir)) errors.push(`koffi: missing bundled triplet ${triple.koffi}`);
 
   const sqlitePrebuild = path.join(
     nodeModulesDir,

@@ -19,9 +19,9 @@ const { default: AddApiKeyModal } =
   await import("../../../src/app/(dashboard)/dashboard/providers/[id]/components/modals/AddApiKeyModal");
 
 const TLS_EACCES_ERROR =
-  "TLS impersonation client failed to start: EACCES: permission denied, mkdir " +
-  "'/usr/lib/node_modules/omniroute/dist/node_modules/tls-client-node/bin'. " +
-  "Verify tls-client-node is installed and its native binary downloaded. " +
+  "TLS impersonation client failed to start: EACCES: permission denied, open " +
+  "'/usr/lib/node_modules/omniroute/dist/node_modules/wreq-js/rust'. " +
+  "Verify wreq-js 3.0.0 and its platform addon are installed. " +
   "(claude-web requires this — without it, Cloudflare blocks every request)";
 
 const containers: Array<{ root: ReturnType<typeof createRoot>; el: HTMLDivElement }> = [];

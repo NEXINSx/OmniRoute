@@ -1,0 +1,44 @@
+{
+  "package": "wreq-js",
+  "version": "3.0.0",
+  "source": "https://registry.npmjs.org/wreq-js/-/wreq-js-3.0.0.tgz",
+  "npmIntegrity": "sha512-RZCoRSevVPpH4A4B4MxbFGo/pVPFveWd2gbe4ENKpPWlKXEYklZSDESOjBMmrIsmnkHh+nhM4PNJvG+NL7wBPA==",
+  "license": "MIT",
+  "nativeAddons": [
+    {
+      "path": "rust/wreq-js.darwin-arm64.node",
+      "size": 7690880,
+      "sha256": "c82eec39df691adb94f2cd09a8ff51335de8587cf132cd8b3ec797469a4b5002"
+    },
+    {
+      "path": "rust/wreq-js.darwin-x64.node",
+      "size": 8192028,
+      "sha256": "073b8a8a4c26aedbce7c14eef3e5567918e62e8dbf4d28296b23f9d2beec2981"
+    },
+    {
+      "path": "rust/wreq-js.linux-arm64-gnu.node",
+      "size": 8520824,
+      "sha256": "861d96a78caf7ce02c9ae8d37f1c59f5b0480e3142775c32917fcfe9b88524b0"
+    },
+    {
+      "path": "rust/wreq-js.linux-arm64-musl.node",
+      "size": 8735472,
+      "sha256": "2409a3578c8c440df419b4d5abe3ac149bec48881611a6dc1571b95e6246552d"
+    },
+    {
+      "path": "rust/wreq-js.linux-x64-gnu.node",
+      "size": 9048992,
+      "sha256": "55b40f4602c52111dfcdcc93db83f9d0de55d0ef7540348757709d58d05a9b64"
+    },
+    {
+      "path": "rust/wreq-js.linux-x64-musl.node",
+      "size": 8974880,
+      "sha256": "bd52d15b1bb4704b11561a8aa95648a6c91150082b5af0e39dd1608b7db2d317"
+    },
+    {
+      "path": "rust/wreq-js.win32-x64-msvc.node",
+      "size": 7967232,
+      "sha256": "7451a8701b82c946b03ba2be2f15257260a250b9e0ed9910611b22564fbec7a9"
+    }
+  ]
+}

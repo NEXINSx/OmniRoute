@@ -74,12 +74,6 @@
       "justification": "CC-BY-4.0 applies to the caniuse browser-support data (a dataset, not code). The Creative Commons Attribution license requires attribution when distributing — OmniRoute does not distribute caniuse-lite data directly to end users; it is consumed by browserslist/PostCSS at build time to generate CSS compatibility info. This is a widely accepted pattern in the Node.js ecosystem (caniuse-lite is in millions of projects). Attribution is satisfied by keeping the package in node_modules with its original license file.",
       "risk": "low",
       "reviewAt": "v4.0.0"
-    },
-    "tls-client-node": {
-      "license": "Custom: LICENSE (Apache-2.0 + Commons Clause)",
-      "justification": "TODO: revisar — tls-client-node uses Apache-2.0 with a 'Commons Clause' addendum that restricts 'Selling' the software (i.e., offering it as a hosted/commercial service whose value derives substantially from tls-client-node). OmniRoute is an open-source proxy; however if deployed as a paid SaaS/hosting service, this restriction could apply. The package is used by grokTlsClient.ts for Grok TLS fingerprinting. RISK: medium — legal review recommended before commercial deployment. Alternatives: consider replacing with a native TLS fingerprinting approach or a truly permissive library.",
-      "risk": "medium",
-      "reviewAt": "v3.9.0"
     }
   }
 }

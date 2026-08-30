@@ -266,7 +266,6 @@ test("verifyBundledNatives asserts serviceability and honors the onnx darwin-x64
   const root = tmpDir("s8-natives-");
   try {
     const nm = path.join(root, "node_modules");
-    writeNative(nm, "koffi/build/koffi/linux_x64/koffi.node", "elf");
     writeNative(nm, "better-sqlite3/prebuilds/linux-x64.node", "napi");
     writeNative(nm, "wreq-js/rust/wreq-js.linux-x64-gnu.node", "rust");
     writeNative(nm, "onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime.so", "ort");
@@ -278,18 +277,18 @@ test("verifyBundledNatives asserts serviceability and honors the onnx darwin-x64
       `expected serviceable: ${(good as { errors?: string[] }).errors?.join("; ")}`
     );
 
-    const missingKoffi = verifyBundledNatives({
+    const missingPlatformNatives = verifyBundledNatives({
       nodeModulesDir: nm,
       platform: "darwin",
       arch: "arm64",
     });
-    assert.equal(missingKoffi.ok, false);
-    assert.ok((missingKoffi as { errors: string[] }).errors.some((e) => e.startsWith("koffi:")));
-
+    assert.equal(missingPlatformNatives.ok, false);
+    assert.ok(
+      (missingPlatformNatives as { errors: string[] }).errors.some((e) => e.startsWith("wreq-js:"))
+    );
     // darwin-x64 has no onnxruntime-node prebuild at all — the exemption must keep it green
     // as long as the other bundled natives service that triple.
     const nm2 = path.join(root, "node_modules2");
-    writeNative(nm2, "koffi/build/koffi/darwin_x64/koffi.node", "macho");
     writeNative(nm2, "better-sqlite3/prebuilds/darwin-x64.node", "napi");
     writeNative(nm2, "wreq-js/rust/wreq-js.darwin-x64.node", "rust");
     const exempted = verifyBundledNatives({ nodeModulesDir: nm2, platform: "darwin", arch: "x64" });

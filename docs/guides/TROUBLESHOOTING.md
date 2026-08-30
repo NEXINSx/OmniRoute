@@ -75,7 +75,7 @@ When you run `npm install -g omniroute`, you may see a wall of warnings like `np
 The warnings come from stale peer-dependency ranges in third-party packages OmniRoute doesn't control:
 
 1. **`marked-terminal` wants `marked >=1 <16`, found `marked@18`** — works fine in practice; the upstream peer range is just stale.
-2. **`deprecated prebuild-install@7.1.3`** — the native-binary fetch helper. Only relevant later if a web-cookie provider reports a missing `tls-client-node` native binary (a separate issue, not caused by this warning).
+2. **`deprecated prebuild-install@7.1.3`** — a transitive native-binary helper used by another dependency. The pinned `wreq-js@3.0.0` package bundles its seven supported platform addons directly; this warning does not diagnose the web-cookie transport.
 
 **No action needed** — the warnings cannot be fully silenced without forking upstream packages.
 
@@ -148,9 +148,10 @@ desktop app, for example:
 - `resources/app/.build/next/node_modules/playwright-<hash>/lib/…/agentParser.js` and
   `workerProcessEntry.js` — [Playwright](https://playwright.dev), the browser-automation
   library used for in-app provider login and browser-backed chat.
-- `resources/app/.build/next/node_modules/tls-client-node-<hash>/bin/tls-client-windows-64-<ver>.dll`
-  — the native binary from `tls-client-node`, used for Cloudflare-tolerant HTTP on some web
-  providers.
+- `resources/app/.build/next/node_modules/wreq-js-<hash>/rust/wreq-js.win32-x64-msvc.node`
+  — the declared MIT-licensed native addon from pinned `wreq-js@3.0.0`, used for
+  browser-fingerprinted HTTP on some web providers. Its expected SHA-256 is recorded in
+  `config/release/wreq-js-native-manifest.json`.
 
 **Why it fires:** the Windows installer is **not yet code-signed**, so an unsigned NSIS
 installer has zero reputation and behavioral heuristics run at maximum aggression. Combined

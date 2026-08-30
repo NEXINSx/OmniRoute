@@ -31,9 +31,9 @@ COPY scripts/dev/sync-env.mjs ./scripts/dev/sync-env.mjs
 # Fast Bun native package install
 RUN bun install --include=optional --quiet
 
-# Fetch tls-client-node native binary if script exists
-RUN if [ -f "node_modules/tls-client-node/scripts/postinstall.js" ] && [ ! -d "node_modules/tls-client-node/bin" ]; then \
-      bun node_modules/tls-client-node/scripts/postinstall.js || true; \
+# Compile native better-sqlite3 Node-API addon under Bun
+RUN if [ -d "node_modules/better-sqlite3" ]; then \
+      (cd node_modules/better-sqlite3 && bunx node-gyp rebuild); \
     fi
 
 # Smoke check native database driver used by Bun (bun:sqlite)

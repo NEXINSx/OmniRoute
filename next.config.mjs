@@ -132,9 +132,7 @@ const nextConfig = {
     // instead of keeping the old generation in control. Falls back to a
     // value that is unique per build run when git is absent (CI tarball).
     NEXT_PUBLIC_SW_BUILD_ID:
-      process.env.OMNIROUTE_SW_BUILD_ID ||
-      process.env.SOURCE_VERSION ||
-      `${Date.now()}`,
+      process.env.OMNIROUTE_SW_BUILD_ID || process.env.SOURCE_VERSION || `${Date.now()}`,
   },
   distDir,
   // Turbopack config: redirect native modules to stubs at build time
@@ -307,9 +305,6 @@ const nextConfig = {
     "keytar",
     "wreq-js",
     "zod",
-    "tls-client-node",
-    "koffi",
-    "tough-cookie",
     "@ngrok/ngrok",
     "@huggingface/transformers",
     // copilot-m365-web.ts imports 'ws' as a client-side WebSocket. When bundled,

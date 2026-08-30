@@ -1,13 +1,13 @@
 ---
 title: "Stealth Guide"
-version: 3.8.40
-lastUpdated: 2026-06-28
+version: 3.8.50
+lastUpdated: 2026-08-26
 ---
 
 # Stealth Guide
 
-> **Source of truth:** `open-sse/utils/tlsClient.ts`, `open-sse/services/{claudeCodeCCH,claudeCodeFingerprint,claudeCodeObfuscation,claudeCodeCompatible}.ts`, `open-sse/config/cliFingerprints.ts`, `src/mitm/`
-> **Last updated:** 2026-06-28 — v3.8.40
+> **Source of truth:** `open-sse/utils/tlsClient.ts`, `open-sse/services/{tlsClientBase,chatgptTlsClient,claudeTlsClient,perplexityTlsClient,grokTlsClient,notionTlsClient,lmarenaTlsClient,claudeCodeCCH,claudeCodeFingerprint,claudeCodeObfuscation,claudeCodeCompatible}.ts`, `open-sse/config/cliFingerprints.ts`, `src/mitm/`
+> **Last updated:** 2026-08-26 — v3.8.50
 > **Audience:** Engineers maintaining provider-specific stealth integrations.
 
 OmniRoute integrates with providers whose edges actively fingerprint non-official clients (TLS JA3/JA4, header ordering, JSON body shape, integrity tokens). This page documents the stealth surfaces OmniRoute exposes and where they are implemented.
@@ -28,6 +28,41 @@ Lazy-loaded `wreq-js` session that impersonates **Chrome 124 on macOS**. Used as
 - Proxy resolution (priority): `HTTPS_PROXY` → `HTTP_PROXY` → `ALL_PROXY` (also lower-case)
 - Timeout: `TLS_CLIENT_TIMEOUT_MS` (inherits from `FETCH_TIMEOUT_MS`, default 600000)
 - `wreq-js` Response is fetch-compatible (`headers`, `text()`, `json()`, `clone()`, `body`).
+
+### Web-cookie provider transport — wreq-js 3.0.0
+
+`open-sse/services/tlsClientBase.ts` is the shared transport for ChatGPT, Claude, Perplexity,
+Grok, Notion, and LMArena web sessions. Each thin provider wrapper selects a browser/OS profile;
+the base loads `wreq-js` lazily, reuses only transport-level connections keyed by
+profile + OS + resolved proxy, and gives every request an ephemeral cookie scope. It never shares a
+wreq session or cookie jar between accounts or requests.
+
+| Provider   | Profile       | Emulated OS | Stream EOF policy                |
+| ---------- | ------------- | ----------- | -------------------------------- |
+| ChatGPT    | `firefox_148` | macOS       | include `[DONE]`                 |
+| Claude     | `chrome_146`  | Linux       | include `[DONE]`                 |
+| Perplexity | `firefox_148` | macOS       | include `event: end_of_stream`   |
+| Grok       | `chrome_146`  | Linux       | exclude `[DONE]`                 |
+| Notion     | `chrome_146`  | Windows     | include `[DONE]`                 |
+| LMArena    | `chrome_146`  | Windows     | no sentinel; close on native EOF |
+
+- Streaming uses the native response `ReadableStream` directly; no temp file or sidecar is created.
+- Up to 256 initial bytes are inspected before exposing a stream. SSE providers buffer non-SSE
+  errors; Grok/LMArena map Cloudflare challenges to `403` and HTML interstitials to `502`.
+- The native request timeout remains wrapped by an absolute JS hard deadline. A hang invalidates
+  and closes only the affected profile/OS/proxy transport before the next request recreates it.
+- Proxy resolution priority is per-call `proxyUrl` → request-scoped account/dashboard context →
+  `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY` (including lowercase variants). Resolution errors fail
+  closed instead of leaking a direct connection. LMArena deliberately resolves against `arena.ai`.
+- `byteResponse` returns a content-typed `data:` URL without UTF-8 corruption.
+- Errors are `TlsClientUnavailableError` (package/addon unavailable) and `TlsClientHangError`
+  (deadline exceeded).
+
+The profiles are supported by the pinned package, but real WAF acceptance can change independently
+of local contract tests. Validate fingerprint changes against an explicitly authorized live account
+before claiming parity with an upstream browser.
+
+---
 
 ## Claude Code Stealth Bundle
 

@@ -114,7 +114,7 @@ export function mapTlsUnavailable(
   return {
     response: errorResponse(
       502,
-      `Arena TLS impersonation unavailable: ${error.message}. Install/repair tls-client-node native binary.`,
+      `Arena TLS impersonation unavailable: ${error.message}. Verify the wreq-js 3.0.0 native addon.`,
       "upstream_error",
       "TLS_CLIENT_UNAVAILABLE"
     ),
