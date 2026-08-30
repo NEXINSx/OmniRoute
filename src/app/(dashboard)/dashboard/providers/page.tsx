@@ -54,9 +54,7 @@ const AddCompatibleProviderModal = dynamic(
 import { CategoryDot } from "./components/CategoryDot";
 const ImportProvidersFromFileModal = dynamic(
   () =>
-    import("./components/ImportProvidersFromFileModal").then(
-      (m) => m.ImportProvidersFromFileModal
-    ),
+    import("./components/ImportProvidersFromFileModal").then((m) => m.ImportProvidersFromFileModal),
   { ssr: false }
 );
 import NoAuthProvidersSection from "./components/NoAuthProvidersSection";
@@ -192,6 +190,27 @@ function getConnectionErrorTag(connection, t: ProviderMessageTranslator) {
   return "ERR";
 }
 
+// OAuth-env repair status fetch, extracted so the callback below only sets
+// state after the await (errors come back as `null` instead of a setState
+// inside the catch block, which the react-hooks compiler rules reject when the
+// callback is invoked from an effect).
+async function loadOauthEnvRepairStatus(): Promise<{
+  available: boolean;
+  missingCount: number;
+} | null> {
+  try {
+    const res = await fetch("/api/system/env/repair", { cache: "no-store" });
+    const data = await res.json();
+    if (!res.ok) return null;
+    return {
+      available: Boolean(data.available),
+      missingCount: Number(data.missingCount || 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function ProvidersPage() {
   const router = useRouter();
   const [connections, setConnections] = useState<any[]>([]);
@@ -297,33 +316,30 @@ export default function ProvidersPage() {
     writeProviderDisplayModePreference(storedDisplayMode);
   }, [connections.length, displayModePreferenceReady, providerDisplayMode, loading]);
 
-  useEffect(() => {
-    if (!shouldSyncProviderDisplayMode(displayModePreferenceReady, loading)) return;
-    if (connections.length === 0 && providerDisplayMode === "configured") {
-      setProviderDisplayMode("all");
-    }
-  }, [connections.length, displayModePreferenceReady, providerDisplayMode, loading]);
+  // "No connections → fall back to the 'all' view" is a state adjustment
+  // derived from other state, applied during render (self-invalidating guard,
+  // converges in one extra pass) instead of a synchronous setState effect.
+  if (
+    shouldSyncProviderDisplayMode(displayModePreferenceReady, loading) &&
+    connections.length === 0 &&
+    providerDisplayMode === "configured"
+  ) {
+    setProviderDisplayMode("all");
+  }
 
   const fetchOauthEnvRepairStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/system/env/repair", { cache: "no-store" });
-      const data = await res.json();
-      if (res.ok) {
-        setOauthEnvRepairStatus({
-          available: Boolean(data.available),
-          missingCount: Number(data.missingCount || 0),
-        });
-      } else {
-        setOauthEnvRepairStatus(null);
-      }
-    } catch {
-      setOauthEnvRepairStatus(null);
-    }
+    setOauthEnvRepairStatus(await loadOauthEnvRepairStatus());
   }, []);
 
+  // Inline-in-effect (calling the component-scope callback synchronously from
+  // an effect is rejected by the compiler rules); setState runs after the await.
   useEffect(() => {
-    void fetchOauthEnvRepairStatus();
-  }, [fetchOauthEnvRepairStatus]);
+    const run = async () => {
+      const status = await loadOauthEnvRepairStatus();
+      setOauthEnvRepairStatus(status);
+    };
+    void run();
+  }, []);
 
   const handleRepairEnv = async () => {
     if (!oauthEnvRepairStatus?.available || repairingEnv) return;

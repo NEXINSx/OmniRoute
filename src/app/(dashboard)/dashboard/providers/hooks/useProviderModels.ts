@@ -133,10 +133,7 @@ export function useProviderModels(providerId: string): UseProviderModelsResult {
   }, [providerId, t]);
 
   useEffect(() => {
-    if (!providerId) {
-      setLoading(false);
-      return;
-    }
+    if (!providerId) return;
     return load();
   }, [providerId, load]);
 
@@ -152,5 +149,7 @@ export function useProviderModels(providerId: string): UseProviderModelsResult {
     load();
   }, [providerId, load]);
 
-  return { models, loading, error, retry };
+  // Without a providerId nothing ever loads, so the exposed loading flag is
+  // derived instead of being reset synchronously inside the effect above.
+  return { models, loading: providerId ? loading : false, error, retry };
 }

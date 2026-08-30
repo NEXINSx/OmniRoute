@@ -91,6 +91,25 @@ function parseContextWindowOverrideInput(raw: string): { value: number | null; i
   return { value: Number(trimmed), invalid: false };
 }
 
+// Fetch + parse extracted from the component so errors surface as a return
+// value (logged here) instead of state writes inside catch/finally blocks —
+// the load callback then only sets state after the await, which lets the
+// mount effect call it without a synchronous setState.
+async function fetchProviderModelsPayload(providerId: string): Promise<{
+  models: CompatModelRow[];
+  overrides: Array<CompatModelRow & { id: string }>;
+} | null> {
+  try {
+    const res = await fetch(`/api/provider-models?provider=${encodeURIComponent(providerId)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { models: data.models || [], overrides: data.modelCompatOverrides || [] };
+  } catch (e) {
+    console.error("Failed to fetch custom models:", e);
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -141,23 +160,28 @@ export default function CustomModelsSection({
   const syncedModelIdSet = useMemo(() => new Set(syncedModelIds), [syncedModelIds]);
 
   const fetchCustomModels = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/provider-models?provider=${encodeURIComponent(providerId)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCustomModels(data.models || []);
-        setModelCompatOverrides(data.modelCompatOverrides || []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch custom models:", e);
-    } finally {
-      setLoading(false);
+    const payload = await fetchProviderModelsPayload(providerId);
+    if (payload) {
+      setCustomModels(payload.models);
+      setModelCompatOverrides(payload.overrides);
     }
+    setLoading(false);
   }, [providerId]);
 
+  // Initial load: the async work is defined INSIDE the effect (calling the
+  // component-scope fetchCustomModels callback synchronously from an effect is
+  // rejected by the compiler rules); every setState here runs after the await.
   useEffect(() => {
-    fetchCustomModels();
-  }, [fetchCustomModels]);
+    const run = async () => {
+      const payload = await fetchProviderModelsPayload(providerId);
+      if (payload) {
+        setCustomModels(payload.models);
+        setModelCompatOverrides(payload.overrides);
+      }
+      setLoading(false);
+    };
+    void run();
+  }, [providerId]);
 
   const handleAdd = async () => {
     if (!newModelId.trim() || adding) return;
@@ -540,8 +564,8 @@ export default function CustomModelsSection({
               FREE
             </label>
           </div>
-          </div>
         </div>
+      </div>
 
       {/* List */}
       {loading ? (

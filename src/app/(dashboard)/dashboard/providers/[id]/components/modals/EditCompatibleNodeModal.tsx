@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Badge, Input, Modal, Select, Toggle } from "@/shared/components";
 import { isValidProviderIconUrl } from "@/shared/validation/iconUrl";
@@ -62,8 +62,23 @@ export default function EditCompatibleNodeModal({
   const [iconUrlError, setIconUrlError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && node) {
+  // Modal-open form initialization from the node being edited — applied as a
+  // render-phase adjustment guarded by the previously initialized node
+  // (react.dev "adjusting state when a prop changes") instead of a
+  // synchronous-setState effect. Closing clears the marker so the next open
+  // re-initializes again.
+  const [initializedFor, setInitializedFor] = useState<{
+    node: EditCompatibleNodeModalNode;
+    isAnthropic?: boolean;
+    isCcCompatible?: boolean;
+  } | null>(null);
+  if (isOpen && node) {
+    if (
+      initializedFor?.node !== node ||
+      initializedFor.isAnthropic !== isAnthropic ||
+      initializedFor.isCcCompatible !== isCcCompatible
+    ) {
+      setInitializedFor({ node, isAnthropic, isCcCompatible });
       const psd = (node.providerSpecificData || {}) as Record<string, unknown>;
       setFormData({
         name: node.name || "",
@@ -94,7 +109,9 @@ export default function EditCompatibleNodeModal({
         )
       );
     }
-  }, [isOpen, node, isAnthropic, isCcCompatible]);
+  } else if (initializedFor !== null) {
+    setInitializedFor(null);
+  }
 
   const apiTypeOptions = [
     { value: "chat", label: t("chatCompletions") },
