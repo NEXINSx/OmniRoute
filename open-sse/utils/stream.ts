@@ -763,6 +763,8 @@ export function createSSEStream(options: StreamOptions = {}) {
   let passthroughAccumulatedContent = "";
   let passthroughAccumulatedReasoning = "";
   let passthroughBufferedTextualToolCallContent = "";
+  /** Passthrough: whether a usage block was already forwarded to the client (prevents double). */
+  let passthroughForwardedUsage = false;
   // Passthrough Responses SSE: snapshots of items seen via `response.output_item.done`,
   // used to backfill `response.completed.response.output` when upstream returns it
   // empty (which happens when `store: false` — see backfillResponsesCompletedOutput).
@@ -839,13 +841,6 @@ export function createSSEStream(options: StreamOptions = {}) {
   const clientPayloadCollector = createStructuredSSECollector({
     stage: "client_response",
   });
-  const requestRecord = asRecord(body);
-  const requestStreamOptions = asRecord(
-    requestRecord.stream_options ?? requestRecord.streamOptions
-  );
-  const expectsOpenAIUsageOnlyChunk =
-    requestStreamOptions.include_usage === true || requestStreamOptions.includeUsage === true;
-
   // Per-stream instances to avoid shared state with concurrent streams
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -1751,7 +1746,7 @@ export function createSSEStream(options: StreamOptions = {}) {
                         !parsed.choices[0]?.finish_reason))
                   ) {
                     const emptyChoicesUsage = extractUsage(parsed) ?? parsed.usage;
-                    if (hasValidUsage(emptyChoicesUsage)) {
+                    if (hasValidUsage(emptyChoicesUsage) && !passthroughForwardedUsage) {
                       // Some upstreams (e.g. Ollama Cloud) emit prompt_tokens: 0
                       // even when input was sent — they simply don't count input
                       // tokens.  When we have a non-zero output but zero input,
@@ -1764,7 +1759,7 @@ export function createSSEStream(options: StreamOptions = {}) {
                       ) {
                         const pt = emptyChoicesUsage.prompt_tokens ?? 0;
                         if (pt === 0) {
-                          const estimated = estimateUsage(body, totalContentLength, FORMATS.OPENAI);
+                          const estimated = estimateUsage(body, totalContentLength, sourceFormat || FORMATS.OPENAI);
                           if (estimated?.prompt_tokens > 0) {
                             emptyChoicesUsage.prompt_tokens = estimated.prompt_tokens;
                             emptyChoicesUsage.total_tokens =
@@ -1773,12 +1768,18 @@ export function createSSEStream(options: StreamOptions = {}) {
                         }
                       }
                       usage = emptyChoicesUsage;
+                      passthroughForwardedUsage = true;
                       output = `data: ${JSON.stringify(parsed)}\n\n`;
                       injectedUsage = true;
                       clientPayload = parsed;
                       clientPayloadCollector.push(clientPayload);
                       reqLogger?.appendConvertedChunk?.(output);
                       forward(controller, encoder.encode(output));
+                      continue;
+                    }
+
+                    // If we already forwarded usage, drop any trailing empty-choices valid usage
+                    if (passthroughForwardedUsage && hasValidUsage(emptyChoicesUsage)) {
                       continue;
                     }
 
@@ -1980,18 +1981,24 @@ export function createSSEStream(options: StreamOptions = {}) {
                   }
                   if (
                     isFinishChunk &&
+                    !passthroughForwardedUsage &&
                     !hasValidUsage(parsed.usage) &&
-                    !expectsOpenAIUsageOnlyChunk
+                    !hasValidUsage(usage) &&
+                    totalContentLength > 0
                   ) {
-                    const estimated = estimateUsage(body, totalContentLength, FORMATS.OPENAI);
-                    parsed.usage = filterUsageForFormat(estimated, FORMATS.OPENAI);
-                    output = `data: ${JSON.stringify(parsed)}\n\n`;
-                    usage = estimated;
-                    injectedUsage = true;
-                  } else if (isFinishChunk && usage) {
+                    const estimated = estimateUsage(body, totalContentLength, sourceFormat || FORMATS.OPENAI);
+                    if (hasValidUsage(estimated)) {
+                      parsed.usage = filterUsageForFormat(estimated, sourceFormat || FORMATS.OPENAI);
+                      output = `data: ${JSON.stringify(parsed)}\n\n`;
+                      usage = estimated;
+                      passthroughForwardedUsage = true;
+                      injectedUsage = true;
+                    }
+                  } else if (isFinishChunk && hasValidUsage(usage) && !passthroughForwardedUsage) {
                     const buffered = addBufferToUsage(usage);
-                    parsed.usage = filterUsageForFormat(buffered, FORMATS.OPENAI);
+                    parsed.usage = filterUsageForFormat(buffered, sourceFormat || FORMATS.OPENAI);
                     output = `data: ${JSON.stringify(parsed)}\n\n`;
+                    passthroughForwardedUsage = true;
                     injectedUsage = true;
                   } else if (textualToolCallConverted) {
                     output = `data: ${JSON.stringify(parsed)}\n\n`;
