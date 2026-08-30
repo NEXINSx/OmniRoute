@@ -8,6 +8,10 @@
    The bundled @font-face uses family "Material Symbols Outlined", matching the
    .material-symbols-outlined rule defined later in this file. */
 @import "material-symbols/outlined.css";
+/* react18-json-view (request/response JSON tree in RequestLoggerDetail) — imported here
+   instead of in the component so node:test / esbuild never see a .css import. */
+@import "react18-json-view/src/style.css";
+@import "react18-json-view/src/dark.css";
 @source "../../node_modules/fumadocs-ui/css/generated/*.css";
 
 /* Keep Tailwind v4 from scanning the entire repository. The UI lives in the

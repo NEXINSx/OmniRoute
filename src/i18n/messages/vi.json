@@ -11253,6 +11253,11 @@
     "detail": {
       "collapse": "Thu gọn {title}",
       "expand": "Mở rộng {title}",
+      "collapseAllLevels": "Thu gọn tất cả",
+      "collapseOneLevel": "Thu gọn một cấp",
+      "currentExpandLevel": "Cấp mở rộng hiện tại",
+      "expandOneLevel": "Mở rộng một cấp",
+      "expandAllLevels": "Mở rộng tất cả",
       "copyTitle": "Sao chép {title}",
       "copied": "Đã sao chép!",
       "copy": "Sao chép",
