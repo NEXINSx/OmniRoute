@@ -424,6 +424,15 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
     // 2026-08-30). Тот же обработчик обслуживает кастомные OpenAI-совместимые
     // ноды, а baseUrl выше — ровно их путь.
     format: "openai-video",
+    // Живая проверка 2026-08-30: адрес выше отдаёт 404 (HTML-страница), как и
+    // вариант во множественном числе /api/v1/videos/generations. Контроль на том
+    // же ключе: /api/v1/images/generations отвечает 401 JSON — то есть 404 здесь
+    // значит «маршрута нет», а не «ключ не тот». Формат исправлен на рабочее имя
+    // заранее, чтобы провайдер ожил правкой одного адреса, когда он появится.
+    unsupported: true,
+    unsupportedReason:
+      "NanoGPT video endpoint returns 404 — no video route is published under " +
+      "/api/v1/video(s)/generations. Use another video provider.",
     models: [{ id: "default", name: "NanoGPT Video" }],
   },
 };
