@@ -120,7 +120,7 @@ async function onboardAntigravityUser(
   config: AntigravityOAuthConfig,
   headers: Record<string, string>,
   tierId: string,
-  metadata: Record<string, string>
+  metadata: ReturnType<typeof getAntigravityLoadCodeAssistMetadata>
 ): Promise<void> {
   // Bounded onboarding: cap retries (was 10) and jitter the delay so a stuck
   // loop cannot look like scripted automation to the upstream (ban-safety).
