@@ -1960,10 +1960,22 @@ export async function handleChatCore({
         // target's window; min(...allTargets) is only a defensive fallback —
         // the old unconditional min compressed a 1M-target request at the
         // smallest sibling's window ("agent keeps forgetting things").
+        // An explicit `context_length` on the combo record (Agent Features →
+        // Context length) is an operator declaration and outranks the inferred
+        // per-target window — see resolveComboContextLimit().
+        const rawComboContextLength = (comboConfig as { context_length?: unknown } | null)
+          ?.context_length;
+        const comboContextLength =
+          typeof rawComboContextLength === "number" &&
+          Number.isFinite(rawComboContextLength) &&
+          rawComboContextLength > 0
+            ? rawComboContextLength
+            : null;
         const resolved = resolveComboContextLimit({
           provider,
           model: effectiveModel,
           comboTargetLimits,
+          comboContextLength,
         });
         contextLimit = resolved.limit;
         log?.info?.(

@@ -143,6 +143,7 @@ export async function GET() {
       comboCooldownWait: resilience.comboCooldownWait,
       quotaShareConcurrencyLimit: resilience.quotaShareConcurrencyLimit,
       providerCooldown: resilience.providerCooldown,
+      quotaPreflight: resilience.quotaPreflight,
       providerQuotaOverrides: resilience.providerQuotaOverrides,
       credentialHealthCheck: resilience.credentialHealthCheck,
       legacy: buildLegacyResilienceCompat(resilience),
@@ -217,6 +218,9 @@ export async function PATCH(request) {
             providerCooldown: body.providerCooldown as ResilienceSettingsPatch["providerCooldown"],
           }
         : {}),
+      ...(body.quotaPreflight
+        ? { quotaPreflight: body.quotaPreflight as ResilienceSettingsPatch["quotaPreflight"] }
+        : {}),
       ...(body.providerQuotaOverrides
         ? {
             providerQuotaOverrides:
@@ -266,6 +270,7 @@ export async function PATCH(request) {
       comboCooldownWait: nextResilience.comboCooldownWait,
       quotaShareConcurrencyLimit: nextResilience.quotaShareConcurrencyLimit,
       providerCooldown: nextResilience.providerCooldown,
+      quotaPreflight: nextResilience.quotaPreflight,
       providerQuotaOverrides: nextResilience.providerQuotaOverrides,
       credentialHealthCheck: nextResilience.credentialHealthCheck,
       legacy: buildLegacyResilienceCompat(nextResilience),

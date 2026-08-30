@@ -111,6 +111,25 @@ export const quotaShareConcurrencyLimitSettingsSchema = z
   })
   .strict();
 
+// Quota preflight cutoff (auth-level account skipping). Thresholds use
+// "minimum remaining %" semantics to match the dashboard's quota bars, and the
+// per-(provider, window) defaults override the global default per window.
+// Values clamp/coerce in normalizeQuotaPreflightSettings — this schema only
+// bounds the wire shape.
+export const quotaPreflightSettingsSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    defaultThresholdPercent: z.number().int().min(0).max(99).optional(),
+    warnThresholdPercent: z.number().int().min(0).max(100).optional(),
+    providerWindowDefaults: z
+      .record(
+        z.string().min(1),
+        z.record(z.string().min(1), z.number().int().min(0).max(100))
+      )
+      .optional(),
+  })
+  .strict();
+
 export const providerCooldownSettingsSchema = z
   .object({
     enabled: z.boolean().optional(),
@@ -161,6 +180,10 @@ export const updateResilienceSchema = z
     comboCooldownWait: comboCooldownWaitSettingsSchema.optional(),
     quotaShareConcurrencyLimit: quotaShareConcurrencyLimitSettingsSchema.optional(),
     providerCooldown: providerCooldownSettingsSchema.optional(),
+    // Quota preflight cutoff (auth-level account skipping) — surfaced in the
+    // Settings → Routing UI. Mirrors QuotaPreflightSettings in
+    // src/lib/resilience/settings/types.ts.
+    quotaPreflight: quotaPreflightSettingsSchema.optional(),
     profiles: z
       .object({
         oauth: legacyResilienceProfileSchema.optional(),
@@ -197,6 +220,7 @@ export const updateResilienceSchema = z
       !value.comboCooldownWait &&
       !value.quotaShareConcurrencyLimit &&
       !value.providerCooldown &&
+      !value.quotaPreflight &&
       !value.profiles &&
       !value.defaults &&
       !value.providerQuotaOverrides &&
