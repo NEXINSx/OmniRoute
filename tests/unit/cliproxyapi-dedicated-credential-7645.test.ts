@@ -29,18 +29,27 @@ const settingsDb = await import("../../src/lib/db/settings.ts");
 const upstreamProxyDb = await import("../../src/lib/db/upstreamProxy.ts");
 const { resolveExecutorWithProxy } =
   await import("../../open-sse/handlers/chatCore/executorProxy.ts");
+const { resolveDedicatedCliproxyapiApiKey } =
+  await import("../../open-sse/handlers/chatCore/cliproxyapiCredentials.ts");
 const { clearUpstreamProxyConfigCache } =
   await import("../../open-sse/handlers/chatCore/comboContextCache.ts");
 const { updateSettingsSchema } = await import("../../src/shared/validation/settingsSchemas.ts");
 
 const NATIVE_KEY = "sk-native-provider-key-cliproxyapi-must-not-see";
 const DEDICATED_KEY = "cpa-dedicated-key-configured-by-operator";
+const ENV_KEY = "cpa-dedicated-key-from-environment";
+const originalEnvKey = process.env.CLIPROXYAPI_API_KEY;
 
 before(async () => {
   await coreDb.ensureDbInitialized();
 });
 
 afterEach(async () => {
+  if (originalEnvKey === undefined) {
+    delete process.env.CLIPROXYAPI_API_KEY;
+  } else {
+    process.env.CLIPROXYAPI_API_KEY = originalEnvKey;
+  }
   clearUpstreamProxyConfigCache();
   const { dbCache } = await import("../../src/lib/db/readCache.ts");
   dbCache?.invalidate?.("settings");
@@ -111,6 +120,34 @@ describe("#7645 — settingsSchemas has a dedicated cliproxyapi_api_key field", 
 });
 
 describe("#7645 — CLIProxyAPI fallback leg authenticates with the dedicated key", () => {
+  it("uses CLIPROXYAPI_API_KEY when settings are unavailable", () => {
+    process.env.CLIPROXYAPI_API_KEY = `  ${ENV_KEY}  `;
+    assert.equal(resolveDedicatedCliproxyapiApiKey(null), ENV_KEY);
+  });
+
+  it("uses CLIPROXYAPI_API_KEY when no settings key is configured", async () => {
+    process.env.CLIPROXYAPI_API_KEY = ENV_KEY;
+    await settingsDb.updateSettings({ cliproxyapi_api_key: "" });
+    await upstreamProxyDb.upsertUpstreamProxyConfig({
+      providerId: "anthropic-7645-env-key",
+      mode: "cliproxyapi",
+      enabled: true,
+    });
+
+    const executor = await resolveExecutorWithProxy("anthropic-7645-env-key", undefined, null);
+    const { headers, called } = await withCapturedCliproxyapiRequest(() =>
+      (executor as ExecutorLike).execute({
+        model: "claude-3-opus",
+        body: { model: "claude-3-opus", messages: [{ role: "user", content: "hi" }] },
+        stream: false,
+        credentials: { apiKey: NATIVE_KEY },
+      })
+    );
+
+    assert.equal(called, true);
+    assert.equal(headers.Authorization, `Bearer ${ENV_KEY}`);
+  });
+
   it("uses the dedicated cliproxyapi_api_key, not the failed native provider's own credential", async () => {
     await settingsDb.updateSettings({ cliproxyapi_api_key: DEDICATED_KEY });
     await upstreamProxyDb.upsertUpstreamProxyConfig({
@@ -210,6 +247,7 @@ describe("#7645 — CLIProxyAPI fallback leg authenticates with the dedicated ke
   });
 
   it("falls back to the connection's own credential when no dedicated key is configured (no regression)", async () => {
+    delete process.env.CLIPROXYAPI_API_KEY;
     await settingsDb.updateSettings({ cliproxyapi_api_key: "" });
     await upstreamProxyDb.upsertUpstreamProxyConfig({
       providerId: "anthropic-7645-no-dedicated-key",

@@ -56,7 +56,7 @@ function parseFallbackCodes(raw: unknown): number[] | null {
  * Reads the CLIProxyAPI-related settings shared by both the direct
  * `mode: "cliproxyapi"` passthrough leg and the `mode: "fallback"` retry leg:
  * the custom fallback status codes and the dedicated credential (#7645).
- * Falls back to defaults / no dedicated key on any read failure.
+ * Falls back to defaults and the environment key on any read failure.
  */
 async function loadCliproxyapiSettings(): Promise<{
   fallbackCodes: number[];
@@ -71,7 +71,10 @@ async function loadCliproxyapiSettings(): Promise<{
       dedicatedApiKey: resolveDedicatedCliproxyapiApiKey(allSettings),
     };
   } catch {
-    return { fallbackCodes: [...DEFAULT_FALLBACK_CODES], dedicatedApiKey: null };
+    return {
+      fallbackCodes: [...DEFAULT_FALLBACK_CODES],
+      dedicatedApiKey: resolveDedicatedCliproxyapiApiKey(null),
+    };
   }
 }
 
