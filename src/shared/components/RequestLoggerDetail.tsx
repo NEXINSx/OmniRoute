@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import JsonView from "react18-json-view";
+import "react18-json-view/src/style.css";
+import "react18-json-view/src/dark.css";
 import {
   PROVIDER_COLORS,
   getHttpStatusStyle as getStatusStyle,
@@ -9,6 +12,13 @@ import {
 } from "@/shared/constants/colors";
 import { formatDuration, formatApiKeyLabel, maskAccount } from "@/shared/utils/formatting";
 import { formatErrorForDisplay } from "@/shared/utils/formatting";
+import { useTheme } from "@/shared/hooks/useTheme";
+import {
+  useTimestampTitles,
+  timestampMarkerCustomizeNode,
+} from "@/shared/hooks/useTimestampTitles";
+import { JsonTreeExpandControls } from "@/shared/components/JsonTreeExpandControls";
+import { useJsonTreeExpandLevel } from "@/store/jsonTreeExpandStore";
 import {
   PayloadSection,
   ConversationContextSection,
@@ -66,7 +76,44 @@ export function buildCopyAllText({
 
 // ─── Stream section + Detail Modal ───────────────────────────────────────────────────────────
 
-function StreamSection({ title, json, onCopy }) {
+// Raw stream chunks are captured at the network level (see streamChunks
+// capture) with a `[HH:MM:SS.mmm] ` prefix inserted per chunk boundary, which
+// can land mid-token inside an SSE event's JSON payload once chunks are
+// joined. Strip those markers first so a `data:` line isn't interrupted.
+const STREAM_TIMESTAMP_PREFIX = /\[\d{2}:\d{2}:\d{2}\.\d{3}\] /g;
+
+type StreamSegment =
+  { type: "text"; value: string } | { type: "json"; value: unknown; raw: string };
+
+// Splits a raw joined SSE capture into renderable segments: each `data:`
+// line that parses as JSON becomes its own segment (rendered as a
+// collapsible tree), everything else (comments, keep-alives, [DONE],
+// non-JSON payloads) stays as plain text, byte-identical to the raw capture.
+function parseStreamIntoSegments(joined: string): StreamSegment[] {
+  const text = joined.replace(STREAM_TIMESTAMP_PREFIX, "");
+  const events = text.split(/(?<=\n\n)/); // keep event boundaries, preserve exact text
+  const segments: StreamSegment[] = [];
+  for (const event of events) {
+    if (!event) continue;
+    const dataLines = event
+      .split("\n")
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim());
+    const payload = dataLines.join("");
+    if (dataLines.length === 0 || !payload || payload === "[DONE]") {
+      segments.push({ type: "text", value: event });
+      continue;
+    }
+    try {
+      segments.push({ type: "json", value: JSON.parse(payload), raw: event });
+    } catch {
+      segments.push({ type: "text", value: event });
+    }
+  }
+  return segments;
+}
+
+function StreamSection({ title, sectionId, json, onCopy }) {
   const t = useTranslations("requestLogger.detail");
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(true);
@@ -79,6 +126,10 @@ function StreamSection({ title, json, onCopy }) {
     }
   });
   const ref = useRef(null);
+  const { isDark } = useTheme();
+  const resolvedSectionId = sectionId || title;
+  const expandLevel = useJsonTreeExpandLevel(resolvedSectionId);
+  const segments = useMemo(() => parseStreamIntoSegments(json), [json]);
 
   const handleCopy = async () => {
     const success = await onCopy();
@@ -107,6 +158,8 @@ function StreamSection({ title, json, onCopy }) {
       localStorage.setItem("pref:stream:autoscroll", next ? "1" : "0");
     } catch {}
   };
+
+  useTimestampTitles(ref, open);
 
   return (
     <div>
@@ -144,14 +197,33 @@ function StreamSection({ title, json, onCopy }) {
             </span>
             {copied ? t("copied") : t("copy")}
           </button>
+          {segments.some((s) => s.type === "json") && (
+            <JsonTreeExpandControls sectionId={resolvedSectionId} />
+          )}
         </div>
       </div>
       {open && (
         <div
           ref={ref}
-          className="p-4 rounded-xl bg-black/5 dark:bg-black/30 border border-border overflow-x-auto text-xs font-mono text-text-main max-h-150 overflow-y-auto leading-relaxed whitespace-pre-wrap break-words"
+          className="p-4 rounded-xl bg-black/5 dark:bg-black/30 border border-border overflow-x-auto text-xs font-mono text-text-main max-h-150 overflow-y-auto leading-relaxed"
         >
-          {json}
+          {segments.map((segment, i) =>
+            segment.type === "json" ? (
+              <div key={i} className="my-1">
+                <JsonView
+                  src={segment.value}
+                  dark={isDark}
+                  collapsed={expandLevel}
+                  customizeNode={timestampMarkerCustomizeNode}
+                  displaySize
+                />
+              </div>
+            ) : (
+              <span key={i} className="whitespace-pre-wrap break-words">
+                {segment.value}
+              </span>
+            )
+          )}
         </div>
       )}
     </div>
@@ -201,6 +273,7 @@ export default function RequestLoggerDetail({
 }) {
   const t = useTranslations("requestLogger.detail");
   const locale = useLocale();
+  const modalScrollRef = useRef(null);
   // Close on Escape key
   useEffect(() => {
     const handler = (e) => {
@@ -209,6 +282,21 @@ export default function RequestLoggerDetail({
     globalThis.addEventListener("keydown", handler);
     return () => globalThis.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  // The overlay is full-viewport, but the modal panel itself is centered and
+  // narrower than the viewport (max-w-225), leaving backdrop margin on every
+  // side. A wheel event there has no scrollable target under the cursor, so
+  // scrolling only worked once the pointer happened to be over the panel's
+  // own content. Forward wheel scrolling from anywhere in the overlay to the
+  // panel instead, so the backdrop margin scrolls it too.
+  const handleOverlayWheel = (e) => {
+    const panel = modalScrollRef.current;
+    // Let native scrolling handle wheel events that already land inside the
+    // panel -- only forward the ones from the backdrop margin around it.
+    if (!panel || panel.contains(e.target)) return;
+    panel.scrollTop += e.deltaY;
+    e.preventDefault();
+  };
 
   const statusStyle = getStatusStyle(log.status);
   const protocolKey = log.sourceFormat || log.provider;
@@ -377,12 +465,14 @@ export default function RequestLoggerDetail({
     <div
       className="fixed inset-0 z-50 flex items-start justify-center px-2 pt-[5vh] sm:px-4"
       onClick={onClose}
+      onWheel={handleOverlayWheel}
       role="dialog"
       aria-modal="true"
       aria-label={t("ariaLabel")}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
+        ref={modalScrollRef}
         className="relative w-full max-w-225 max-h-[90vh] overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-bg-primary shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -722,7 +812,7 @@ export default function RequestLoggerDetail({
                     {detail?.comboName || log.comboName}
                   </span>
                 ) : (
-                  <div className="text-sm text-text-muted">\u2014</div>
+                  <div className="text-sm text-text-muted">{"\u2014"}</div>
                 )}
               </div>
               <div>
@@ -734,10 +824,11 @@ export default function RequestLoggerDetail({
                     className="text-sm font-mono select-all"
                     title={detail?.sessionTag || log.sessionTag}
                   >
-                    {(detail?.sessionTag || log.sessionTag).slice(0, 20)}\u2026
+                    {(detail?.sessionTag || log.sessionTag).slice(0, 20)}
+                    {"\u2026"}
                   </div>
                 ) : (
-                  <div className="text-sm text-text-muted">\u2014</div>
+                  <div className="text-sm text-text-muted">{"\u2014"}</div>
                 )}
               </div>
             </div>
@@ -915,6 +1006,7 @@ export default function RequestLoggerDetail({
               {streamChunks && streamChunks.provider && (
                 <StreamSection
                   title={t("providerEventStream")}
+                  sectionId="providerEventStream"
                   json={
                     Array.isArray(streamChunks.provider)
                       ? streamChunks.provider.join("")
@@ -933,6 +1025,7 @@ export default function RequestLoggerDetail({
               {streamChunks && streamChunks.client && (
                 <StreamSection
                   title={t("clientEventStream")}
+                  sectionId="clientEventStream"
                   json={
                     Array.isArray(streamChunks.client)
                       ? streamChunks.client.join("")
@@ -954,6 +1047,7 @@ export default function RequestLoggerDetail({
                 !streamChunks.client && (
                   <StreamSection
                     title={t("eventStream")}
+                    sectionId="eventStream"
                     json={
                       Array.isArray(streamChunks.openai)
                         ? streamChunks.openai.join("")
@@ -974,6 +1068,7 @@ export default function RequestLoggerDetail({
                   <PayloadSection
                     key={section.key}
                     title={section.title}
+                    sectionId={section.key}
                     json={section.json}
                     onCopy={() => onCopy(section.json)}
                   />
@@ -982,6 +1077,7 @@ export default function RequestLoggerDetail({
               {payloadSections.length === 0 && responseJson && (
                 <PayloadSection
                   title={t("responsePayloadLegacy")}
+                  sectionId="responsePayloadLegacy"
                   json={responseJson}
                   onCopy={() => onCopy(responseJson)}
                 />
@@ -990,6 +1086,7 @@ export default function RequestLoggerDetail({
               {payloadSections.length === 0 && requestJson && (
                 <PayloadSection
                   title={t("requestPayloadLegacy")}
+                  sectionId="requestPayloadLegacy"
                   json={requestJson}
                   onCopy={() => onCopy(requestJson)}
                 />

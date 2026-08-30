@@ -11258,6 +11258,11 @@
       "copy": "Copiar",
       "autoscrollOn": "Rolagem Automática: ativada",
       "autoscrollOff": "Deslocamento Automático: desligado",
+      "collapseAllLevels": "Recolher tudo",
+      "collapseOneLevel": "Recolher um nível",
+      "currentExpandLevel": "Nível de expansão atual",
+      "expandOneLevel": "Expandir um nível",
+      "expandAllLevels": "Expandir tudo",
       "payload": {
         "clientRawRequest": "Solicitação Bruta do Cliente",
         "clientRequest": "Solicitação do Cliente",
