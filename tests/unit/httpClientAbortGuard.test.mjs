@@ -3,6 +3,8 @@
 import assert from "node:assert";
 import { test } from "node:test";
 import { EventEmitter } from "node:events";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   isClientAbortError,
   shouldSwallowUncaught,
@@ -115,5 +117,88 @@ test("shouldSwallowUncaught preserves crash semantics for genuine errors", () =>
 
 test("installProcessCrashGuard does not throw on import and is idempotent", () => {
   assert.doesNotThrow(() => installProcessCrashGuard(() => {}));
-  assert.doesNotThrow(() => installProcessCrashGuard(() => {}));
+});
+test("isClientAbortError matches OmniRoute SSE AbortError shapes (#fix-crash-guard-logger-7)", () => {
+  // Exact production shape from the 2026-08-31 crash log:
+  //   ⨯ unhandledRejection: Error [AbortError]: request_signal_aborted
+  const sseAbort = Object.assign(new Error("request_signal_aborted"), { name: "AbortError" });
+  assert.equal(isClientAbortError(sseAbort), true, "SSE teardown AbortError must be absorbed");
+  // fetch / DOMException-style cancellation
+  const domAbort = new DOMException("This operation was aborted", "AbortError");
+  assert.equal(isClientAbortError(domAbort), true, "DOMException AbortError must be absorbed");
+  // A genuine TypeError that merely MENTIONS 'abort' must NOT be absorbed.
+  const typo = new TypeError("Cannot read properties of undefined (reading 'abort')");
+  assert.equal(isClientAbortError(typo), false);
+});
+
+test("shouldSwallowUncaught absorbs SSE AbortError rejections", () => {
+  const sseAbort = Object.assign(new Error("request_signal_aborted"), { name: "AbortError" });
+  assert.equal(shouldSwallowUncaught(sseAbort, "unhandledRejection"), true);
+});
+
+// Production crash (2026-08-25 → 08-31, ~170 restarts, exit code 7):
+// every real call site installs the guard with NO logger, so the old
+// `const logger = log ?? console` default invoked the console OBJECT as a
+// function inside the uncaughtException handler → TypeError inside
+// process._fatalException → Node exit code 7. These children run the REAL
+// production call shape; the process must survive benign aborts and still
+// crash on genuine errors.
+test("installProcessCrashGuard() with no logger swallows aborts instead of dying (exit-7 regression)", async () => {
+  const guardPath = fileURLToPath(
+    new URL("../../src/shared/utils/httpClientAbortGuard.mjs", import.meta.url)
+  );
+  const script = `
+    const { installProcessCrashGuard } = await import(process.argv[1]);
+    installProcessCrashGuard(); // production call sites pass NO logger
+    process.emit(
+      "uncaughtException",
+      Object.assign(new Error("aborted"), { code: "ECONNRESET" }),
+      "uncaughtException"
+    );
+    process.emit(
+      "unhandledRejection",
+      Object.assign(new Error("request_signal_aborted"), { name: "AbortError" }),
+      Promise.resolve()
+    );
+    console.log("ALIVE");
+    process.exit(0);
+  `;
+  const { status, stdout, stderr } = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--input-type=module", "-e", script, guardPath], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    let err = "";
+    child.stdout.on("data", (d) => (out += d));
+    child.stderr.on("data", (d) => (err += d));
+    child.on("close", (status) => resolve({ status, stdout: out, stderr: err }));
+    child.on("error", reject);
+  });
+  assert.equal(status, 0, `child must survive benign aborts; stderr: ${stderr}`);
+  assert.match(stdout, /ALIVE/);
+});
+
+test("installProcessCrashGuard still crashes on genuine errors (no over-swallowing)", async () => {
+  const guardPath = fileURLToPath(
+    new URL("../../src/shared/utils/httpClientAbortGuard.mjs", import.meta.url)
+  );
+  const script = `
+    const { installProcessCrashGuard } = await import(process.argv[1]);
+    installProcessCrashGuard();
+    process.emit("uncaughtException", new Error("genuine failure"), "uncaughtException");
+    console.log("SHOULD_NOT_REACH");
+  `;
+  const { status, stdout, stderr: _stderr } = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--input-type=module", "-e", script, guardPath], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    let err = "";
+    child.stdout.on("data", (d) => (out += d));
+    child.stderr.on("data", (d) => (err += d));
+    child.on("close", (status) => resolve({ status, stdout: out, stderr: err }));
+    child.on("error", reject);
+  });
+  assert.notEqual(status, 0, "genuine errors must keep crash semantics");
+  assert.doesNotMatch(stdout, /SHOULD_NOT_REACH/);
 });
