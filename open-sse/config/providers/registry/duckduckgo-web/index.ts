@@ -8,6 +8,15 @@ export const duckduckgo_webProvider: RegistryEntry = {
   baseUrl: "https://duck.ai/duckchat/v1/chat",
   authType: "none",
   authHeader: "none",
+  poolConfig: {
+    minSessions: 2,
+    maxSessions: 5,
+    cooldownBase: 1000,
+    cooldownMax: 10000,
+    cooldownJitter: 500,
+    requestTimeout: 30000,
+    requestJitter: 50,
+  },
   // #8000: current Duck.ai free lineup — wire ids per duckchat/v1/models (2026-08-26):
   // gpt-5.4-nano was retired upstream and gpt-5.6-luna joined the free tier.
   models: [
