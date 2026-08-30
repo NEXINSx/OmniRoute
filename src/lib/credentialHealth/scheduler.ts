@@ -129,7 +129,7 @@ export function resolveCredentialHealthSweepInterval(
     const parsed = parseInt(envVal, 10);
     if (!isNaN(parsed) && parsed >= 10_000) return parsed;
   }
-  return 300_000; // default 5 min
+  return 3_600_000; // default 60 min
 }
 
 /**
@@ -142,7 +142,7 @@ function getSweepInterval(): number {
     const parsed = parseInt(envVal, 10);
     if (!isNaN(parsed) && parsed >= 10_000) return parsed;
   }
-  return 300_000; // default 5 min
+  return 3_600_000; // default 60 min
 }
 
 /**

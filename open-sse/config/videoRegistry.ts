@@ -190,6 +190,13 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
     authType: "apikey",
     authHeader: "bearer",
     format: "pollinations-video",
+    // Живая проверка 2026-08-30: диспетчер videoGeneration.ts не разбирает
+    // "pollinations-video" и отвечает 400 Unsupported video format — модель
+    // висела в выдаче каталога, но не исполнялась ни при каких ключах.
+    unsupported: true,
+    unsupportedReason:
+      "Pollinations video has no submit/poll transport in the dispatcher yet. " +
+      "Use an image model or another video provider until one is added.",
     models: [{ id: "default", name: "Pollinations Video (Free)" }],
   },
 
@@ -200,6 +207,12 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
     authType: "apikey",
     authHeader: "bearer",
     format: "minimax-video",
+    // Живая проверка 2026-08-30: 400 Unsupported video format на всех трёх
+    // моделях Hailuo. Свой submit → query API, не покрытый job-пресетами.
+    unsupported: true,
+    unsupportedReason:
+      "MiniMax video uses its own submit/query transport that the dispatcher " +
+      "does not implement yet. Generate video via another provider for now.",
     models: [
       { id: "MiniMax-Hailuo-2.3", name: "Hailuo 2.3" },
       { id: "MiniMax-Hailuo-02", name: "Hailuo 02" },
@@ -214,6 +227,12 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
     authType: "apikey",
     authHeader: "bearer",
     format: "together-video",
+    // Не рекламируется по той же причине, что pollinations/minimax: формат
+    // объявлен, ветки в диспетчере нет (проверено разбором 2026-08-30).
+    unsupported: true,
+    unsupportedReason:
+      "Together video has no transport in the dispatcher yet. " +
+      "Use another video provider until one is added.",
     models: [
       { id: "wan-ai/wan2.1-t2v-480p", name: "Wan 2.1 T2V 480p" },
       { id: "wan-ai/wan2.7-t2v", name: "Wan 2.7 T2V" },
@@ -227,6 +246,12 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
     authType: "apikey",
     authHeader: "bearer",
     format: "replicate-video",
+    // Не рекламируется: формат объявлен, ветки в диспетчере нет
+    // (проверено разбором 2026-08-30).
+    unsupported: true,
+    unsupportedReason:
+      "Replicate video has no prediction submit/poll transport in the " +
+      "dispatcher yet. Use another video provider until one is added.",
     models: [
       { id: "minimax/video-01", name: "MiniMax Video 01" },
       { id: "wan-ai/wan2.1-t2v-480p", name: "Wan 2.1 T2V" },
@@ -394,7 +419,20 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
     baseUrl: "https://nano-gpt.com/api/v1/video/generations",
     authType: "apikey",
     authHeader: "bearer",
-    format: "openai",
+    // Диспетчер знает формат под именем "openai-video" — под "openai" ветки нет,
+    // и провайдер отдавал 400 Unsupported video format (живая проверка
+    // 2026-08-30). Тот же обработчик обслуживает кастомные OpenAI-совместимые
+    // ноды, а baseUrl выше — ровно их путь.
+    format: "openai-video",
+    // Живая проверка 2026-08-30: адрес выше отдаёт 404 (HTML-страница), как и
+    // вариант во множественном числе /api/v1/videos/generations. Контроль на том
+    // же ключе: /api/v1/images/generations отвечает 401 JSON — то есть 404 здесь
+    // значит «маршрута нет», а не «ключ не тот». Формат исправлен на рабочее имя
+    // заранее, чтобы провайдер ожил правкой одного адреса, когда он появится.
+    unsupported: true,
+    unsupportedReason:
+      "NanoGPT video endpoint returns 404 — no video route is published under " +
+      "/api/v1/video(s)/generations. Use another video provider.",
     models: [{ id: "default", name: "NanoGPT Video" }],
   },
 };
