@@ -27,7 +27,10 @@ const RESET_160H = 160 * HOUR + 27 * 60_000 + 24_000; // "160h27m24s"
 test("selectLockoutCooldownMs honors a parsed reset longer than the base cooldown", () => {
   // exponential backoff on, but a 160h upstream reset must win
   assert.equal(
-    selectLockoutCooldownMs(RESET_160H, { baseCooldownMs: 5 * 60_000, useExponentialBackoff: true }),
+    selectLockoutCooldownMs(RESET_160H, {
+      baseCooldownMs: 5 * 60_000,
+      useExponentialBackoff: true,
+    }),
     RESET_160H
   );
 });
@@ -53,9 +56,18 @@ test("model lockout honors the long upstream reset end-to-end (#1308)", () => {
     baseCooldownMs: 5 * 60_000,
     useExponentialBackoff: true,
   });
-  recordModelLockoutFailure("antigravity", "conn-1", "claude-sonnet-4-6", "rate_limit", 429, 5 * 60_000, null, {
-    exactCooldownMs: exact,
-  });
+  recordModelLockoutFailure(
+    "antigravity",
+    "conn-1",
+    "claude-sonnet-4-6",
+    "rate_limit",
+    429,
+    5 * 60_000,
+    null,
+    {
+      exactCooldownMs: exact,
+    }
+  );
   const info = getModelLockoutInfo("antigravity", "conn-1", "claude-sonnet-4-6");
   assert.ok(info, "expected an active lockout");
   // remaining should be ~160h, NOT the ~5min base cooldown
@@ -118,7 +130,13 @@ test("Retry-After remains authoritative for model locks when connection hints ar
   );
 
   assert.equal(result.retryHintSource, "header");
-  assert.equal(result.quotaResetHintMs, 131 * HOUR);
+  const expectedResetMs = 131 * HOUR;
+  const actualResetMs = result.quotaResetHintMs;
+  assert.ok(typeof actualResetMs === "number", "expected a numeric Retry-After reset hint");
+  assert.ok(
+    actualResetMs <= expectedResetMs && actualResetMs >= expectedResetMs - 1_000,
+    `expected Retry-After within one clock tick of ${expectedResetMs}ms, got ${actualResetMs}ms`
+  );
   assert.equal(retryHintBypassesMaxCooldownMs(result.retryHintSource), true);
 });
 
