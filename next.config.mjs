@@ -329,11 +329,12 @@ const nextConfig = {
     // TODO: Re-enable after fixing all sub-component useTranslations scope issues
     ignoreBuildErrors: true,
   },
-  webpack(config, { webpack }) {
+  webpack(config, { dev, webpack }) {
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
       isNextIntlExtractorDynamicImportWarning,
     ];
+    const nextDefaultSplitChunks = config.optimization?.splitChunks;
     config.optimization = config.optimization || {};
     config.optimization.splitChunks = {
       ...config.optimization.splitChunks,
@@ -392,6 +393,9 @@ const nextConfig = {
         },
       },
     };
+    // Next's development defaults are tuned for incremental route compilation.
+    // Retain the custom vendor topology for production without imposing it on dev.
+    if (dev) config.optimization.splitChunks = nextDefaultSplitChunks;
 
     if (isMinimalBuild) {
       // Mirror the turbopack.resolveAlias entries for webpack-built artifacts.
