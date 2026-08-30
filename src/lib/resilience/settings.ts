@@ -184,10 +184,11 @@ export const DEFAULT_RESILIENCE_SETTINGS: ResilienceSettings = {
   // default until an operator adds an override here.
   providerQuotaOverrides: {},
   // Global default cadence for the background credential health check sweep.
-  // 5 minutes preserves the pre-setting scheduler default (300 000 ms);
-  // 0 disables the sweep entirely. Per-connection overrides always win.
+  // 60 minutes: the sweep makes a real upstream probe against EVERY active
+  // connection, so the previous 5-minute default cost 12 requests/hour per
+  // connection. 0 disables the sweep entirely. Per-connection overrides win.
   credentialHealthCheck: {
-    intervalMinutes: 5,
+    intervalMinutes: 60,
   },
 };
 
