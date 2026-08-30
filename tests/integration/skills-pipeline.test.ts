@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME } from "../../open-sse/services/webSearchFallback.ts";
-import { decodeSkillToolName } from "../../src/lib/skills/injection.ts";
+import { decodeSkillToolName, encodeSkillToolName } from "../../src/lib/skills/injection.ts";
 
 import { createChatPipelineHarness } from "./_chatPipelineHarness.ts";
 
@@ -454,8 +454,8 @@ test("responses input context participates in AUTO skill injection", async () =>
     .map((tool) => decodeSkillToolName(tool?.function?.name ?? ""))
     .filter((name) => typeof name === "string" && name.length > 0);
 
-  assert.ok(names.includes(encodeSkillToolName("issueSearch", "1.0.0")));
-  assert.ok(!names.includes(encodeSkillToolName("calendarPlanner", "1.0.0")));
+  assert.ok(names.includes("issueSearch@1.0.0"));
+  assert.ok(!names.includes("calendarPlanner@1.0.0"));
 });
 
 test("handleToolCallExecution() processes a tool call correctly", async () => {
@@ -787,10 +787,7 @@ test("builtin and custom skills coexist in the injected tool list", async () => 
     .sort();
 
   assert.equal(response.status, 200);
-  assert.deepEqual(toolNames, [
-    encodeSkillToolName("lookupWeather", "1.0.0"),
-    encodeSkillToolName("webSearch", "1.0.0"),
-  ]);
+  assert.deepEqual(toolNames, ["lookupWeather@1.0.0", "webSearch@1.0.0"]);
 });
 
 test("web_search fallback converts built-in tools for unsupported providers and executes search", async () => {
