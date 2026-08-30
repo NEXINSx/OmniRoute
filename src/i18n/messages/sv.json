@@ -1023,6 +1023,8 @@
     "logs": "Loggar",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Få besked om händelser",
+    "logExport": "Loggexport",
+    "logExportSubtitle": "Skicka ut anropsloggar",
     "combosSubtitle": "Gruppleverantörer för failover",
     "batchSubtitle": "Behandla flera förfrågningar",
     "contextCavemanSubtitle": "Snabb komprimering",

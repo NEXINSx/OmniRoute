@@ -1023,6 +1023,8 @@
     "logs": "Naplók",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Get notified of events",
+    "logExport": "Naplóexportálás",
+    "logExportSubtitle": "Hívásnaplók küldése kifelé",
     "combosSubtitle": "Csoportos szolgáltatók a feladatátvételhez",
     "batchSubtitle": "Több kérés feldolgozása",
     "contextCavemanSubtitle": "Prompt compression",

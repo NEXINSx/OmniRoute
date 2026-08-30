@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "વેબહુક્સ",
     "webhooksSubtitle": "ઇવેન્ટ્સની સૂચના મેળવો",
+    "logExport": "લોગ નિકાસ",
+    "logExportSubtitle": "કૉલ લોગ બહાર મોકલો",
     "combosSubtitle": "ફેલઓવર માટે જૂથ પ્રદાતાઓ",
     "batchSubtitle": "બહુવિધ વિનંતીઓ પર પ્રક્રિયા કરો",
     "contextCavemanSubtitle": "પ્રોમ્પ્ટ કમ્પ્રેશન",

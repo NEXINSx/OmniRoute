@@ -1023,6 +1023,8 @@
     "logs": "трупи",
     "webhooks": "Уеб кукички",
     "webhooksSubtitle": "Получавайте известия за събития",
+    "logExport": "Експорт на журнали",
+    "logExportSubtitle": "Изпращане на журналите с заявки навън",
     "combosSubtitle": "Групирайте доставчици за преход при срив",
     "batchSubtitle": "Обработка на множество заявки",
     "contextCavemanSubtitle": "Бързо компресиране",

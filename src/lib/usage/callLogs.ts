@@ -178,7 +178,7 @@ function isCompatibleProviderId(providerId: string | null): boolean {
   );
 }
 
-function applyNodePrefix(
+export function applyNodePrefix(
   requestedModel: string | null,
   provider: string | null,
   nodePrefix: string | null
@@ -341,7 +341,7 @@ function readLegacyLogFromDisk(entry: {
   return null;
 }
 
-function resolveProviderDisplay(
+export function resolveProviderDisplay(
   provider: string | null,
   nodeName: string | null,
   nodePrefix: string | null

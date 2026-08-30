@@ -1023,6 +1023,8 @@
     "logs": "लॉग",
     "webhooks": "वेबहुक",
     "webhooksSubtitle": "घटनाओं की सूचना प्राप्त करें",
+    "logExport": "लॉग निर्यात",
+    "logExportSubtitle": "कॉल लॉग बाहर भेजें",
     "combosSubtitle": "फ़ेलओवर के लिए समूह प्रदाता",
     "batchSubtitle": "एकाधिक अनुरोधों को संसाधित करें",
     "contextCavemanSubtitle": "शीघ्र संपीड़न",

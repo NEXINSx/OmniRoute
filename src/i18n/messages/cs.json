@@ -1023,6 +1023,8 @@
     "logs": "Protokoly",
     "webhooks": "Webhooky",
     "webhooksSubtitle": "Získejte upozornění na události",
+    "logExport": "Export protokolů",
+    "logExportSubtitle": "Odesílání protokolů volání ven",
     "combosSubtitle": "Seskupit poskytovatele pro převzetí služeb při selhání",
     "batchSubtitle": "Zpracovat více požadavků",
     "contextCavemanSubtitle": "Okamžitá komprese",

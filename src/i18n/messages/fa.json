@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "وب هوک ها",
     "webhooksSubtitle": "از رویدادها مطلع شوید",
+    "logExport": "برون‌بری گزارش‌ها",
+    "logExportSubtitle": "ارسال گزارش فراخوانی‌ها به بیرون",
     "combosSubtitle": "گروه ارائه دهندگان برای failover",
     "batchSubtitle": "چندین درخواست را پردازش کنید",
     "contextCavemanSubtitle": "فشرده سازی سریع",

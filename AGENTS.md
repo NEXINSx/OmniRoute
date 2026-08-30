@@ -56,7 +56,7 @@ Repository map and Reference Documentation sections below.
 | Translators   | `open-sse/translator/`  | Format conversion (OpenAI↔Claude↔Gemini)                                                                                                                                  |
 | Transformer   | `open-sse/transformer/` | Responses API ↔ Chat Completions                                                                                                                                          |
 | Services      | `open-sse/services/`    | Combo routing, rate limits, caching, etc                                                                                                                                  |
-| Database      | `src/lib/db/`           | SQLite domain modules (166 migrations)                                                                                                                                    |
+| Database      | `src/lib/db/`           | SQLite domain modules (167 migrations)                                                                                                                                    |
 | Domain/Policy | `src/domain/`           | Policy engine, cost rules, fallback logic                                                                                                                                 |
 | MCP Server    | `open-sse/mcp-server/`  | 110 tools (44 canonical + memory/skill/GitHub/pool/gamification/plugin/Notion/Obsidian/local-corpus/RTK modules), 3 transports (stdio / SSE / Streamable HTTP), 33 scopes |
 | A2A Server    | `src/lib/a2a/`          | JSON-RPC 2.0 agent protocol                                                                                                                                               |
@@ -397,6 +397,9 @@ Documentation must describe verified behavior, not plausible behavior.
 - Eval suite: `src/lib/evals/` → docs: `docs/frameworks/EVALS.md`
 - Skill (sandbox): `src/lib/skills/` → docs: `docs/frameworks/SKILLS.md`
 - Webhook event: `src/lib/webhookDispatcher.ts` → docs: `docs/frameworks/WEBHOOKS.md`
+- Log-export destination: add `src/lib/logExport/destinations/<name>.ts` + one line in
+  `src/lib/logExport/registry.ts` → docs: `docs/frameworks/LOG-EXPORT.md`. The runner, REST layer
+  and dashboard form all read the registry, so nothing else changes.
 
 ---
 
@@ -422,6 +425,7 @@ For any non-trivial change, read the matching deep-dive first:
 | Evals                                         | `docs/frameworks/EVALS.md`                              |
 | Compliance / audit                            | `docs/security/COMPLIANCE.md`                           |
 | Webhooks                                      | `docs/frameworks/WEBHOOKS.md`                           |
+| Log export (call logs → BigQuery/…)           | `docs/frameworks/LOG-EXPORT.md`                         |
 | Authorization pipeline                        | `docs/architecture/AUTHZ_GUIDE.md`                      |
 | Stealth (TLS / fingerprint)                   | `docs/security/STEALTH_GUIDE.md`                        |
 | Agent protocols (A2A / ACP / Cloud)           | `docs/frameworks/AGENT_PROTOCOLS_GUIDE.md`              |

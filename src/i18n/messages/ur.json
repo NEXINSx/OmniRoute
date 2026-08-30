@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "ویب ہکس",
     "webhooksSubtitle": "واقعات کی اطلاع حاصل کریں۔",
+    "logExport": "لاگ برآمد",
+    "logExportSubtitle": "کال لاگز باہر بھیجیں",
     "combosSubtitle": "فیل اوور کے لیے گروپ فراہم کرنے والے",
     "batchSubtitle": "متعدد درخواستوں پر کارروائی کریں۔",
     "contextCavemanSubtitle": "فوری کمپریشن",

@@ -1023,6 +1023,8 @@
     "logs": "日志",
     "webhooks": "Webhook",
     "webhooksSubtitle": "获取事件通知",
+    "logExport": "日志导出",
+    "logExportSubtitle": "将调用日志发送到外部",
     "combosSubtitle": "用于故障转移的组提供程序",
     "batchSubtitle": "处理多个请求",
     "contextCavemanSubtitle": "迅速压缩",

@@ -296,6 +296,15 @@ const INTEGRATIONS_GROUP: SidebarItemGroup = {
       subtitleKey: "webhooksSubtitle",
       icon: "webhook",
     },
+    {
+      id: "log-export",
+      href: "/dashboard/log-export",
+      i18nKey: "logExport",
+      subtitleKey: "logExportSubtitle",
+      icon: "cloud_upload",
+      labelFallback: "Log export",
+      subtitleFallback: "Ship call logs out",
+    },
   ],
 };
 

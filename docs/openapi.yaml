@@ -5687,6 +5687,191 @@ paths:
         "500":
           description: Failed to load job runs
 
+  # ─── Log export ─────────────────────────────────────────────────
+
+  /api/log-export/types:
+    get:
+      tags: [System]
+      summary: List log-export destination types
+      description: >-
+        Returns every registered destination type with the config field descriptors the
+        dashboard renders its form from. Adding a destination type needs no UI change.
+      responses:
+        "200":
+          description: Destination types and their config fields
+        "500":
+          description: Failed to list destination types
+
+  /api/log-export/destinations:
+    get:
+      tags: [System]
+      summary: List log-export destinations
+      description: Secrets are redacted; a stored secret is returned as the literal `__stored__`.
+      responses:
+        "200":
+          description: Configured destinations with cursor, backlog, and last-run state
+        "500":
+          description: Failed to list destinations
+    post:
+      tags: [System]
+      summary: Create a log-export destination
+      description: >-
+        The config object is validated against the destination type's own schema. Secret
+        keys declared by the type are encrypted at rest and never echoed back.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, config]
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                enabled:
+                  type: boolean
+                config:
+                  type: object
+                  additionalProperties: true
+                batchSize:
+                  type: integer
+                maxRowsPerRun:
+                  type: integer
+      responses:
+        "201":
+          description: Destination created
+        "400":
+          description: Unknown destination type or invalid configuration
+        "500":
+          description: Failed to create destination
+
+  /api/log-export/destinations/{id}:
+    get:
+      tags: [System]
+      summary: Read one log-export destination
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Destination with secrets redacted
+        "404":
+          description: Destination not found
+        "500":
+          description: Failed to read destination
+    put:
+      tags: [System]
+      summary: Update a log-export destination
+      description: >-
+        Sending `__stored__` for a secret keeps the stored credential. The destination type
+        is immutable after creation.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                enabled:
+                  type: boolean
+                config:
+                  type: object
+                  additionalProperties: true
+                batchSize:
+                  type: integer
+                maxRowsPerRun:
+                  type: integer
+      responses:
+        "200":
+          description: Destination updated
+        "400":
+          description: Invalid configuration
+        "404":
+          description: Destination not found
+        "500":
+          description: Failed to update destination
+    delete:
+      tags: [System]
+      summary: Delete a log-export destination
+      description: Removes the destination and its export cursor.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Destination deleted
+        "404":
+          description: Destination not found
+        "500":
+          description: Failed to delete destination
+
+  /api/log-export/destinations/{id}/test:
+    post:
+      tags: [System]
+      summary: Test a log-export destination
+      description: >-
+        Probes credentials and reachability without writing rows. A failed probe is reported
+        as 200 with `ok: false` and an operator-facing reason.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Probe result
+        "404":
+          description: Destination not found
+
+  /api/log-export/destinations/{id}/run:
+    post:
+      tags: [System]
+      summary: Run a log-export destination now
+      description: >-
+        Drains pending call logs into this destination using the same cursor semantics as the
+        hourly job.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run result with exported count, batches, and remaining backlog
+        "404":
+          description: Destination not found
+        "500":
+          description: Failed to run the export
+
+  /api/log-export/status:
+    get:
+      tags: [System]
+      summary: Log-export scheduler status
+      description: Cron expression, recent job runs, and the per-destination backlog.
+      responses:
+        "200":
+          description: Scheduler state and destination backlog
+        "500":
+          description: Failed to read status
+
   # ─── Resilience & Monitoring ────────────────────────────────────
 
   /api/resilience:

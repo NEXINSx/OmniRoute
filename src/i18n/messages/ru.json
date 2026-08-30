@@ -1023,6 +1023,8 @@
     "logs": "Журналы",
     "webhooks": "Вебхуки",
     "webhooksSubtitle": "Получайте уведомления о событиях",
+    "logExport": "Экспорт журналов",
+    "logExportSubtitle": "Отправка журналов вызовов наружу",
     "combosSubtitle": "Групповые поставщики для аварийного переключения",
     "batchSubtitle": "Обработка нескольких запросов",
     "contextCavemanSubtitle": "Быстрое сжатие",

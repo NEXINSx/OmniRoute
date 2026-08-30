@@ -1023,6 +1023,8 @@
     "logs": "سجلات",
     "webhooks": "خطافات الويب",
     "webhooksSubtitle": "الحصول على إخطار من الأحداث",
+    "logExport": "تصدير السجلات",
+    "logExportSubtitle": "إرسال سجلات الاستدعاءات إلى الخارج",
     "combosSubtitle": "موفري المجموعة لتجاوز الفشل",
     "batchSubtitle": "معالجة طلبات متعددة",
     "contextCavemanSubtitle": "ضغط السياق Caveman",

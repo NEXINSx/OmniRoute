@@ -1024,6 +1024,8 @@
     "logs": "Nhật ký",
     "webhooks": "Webhook",
     "webhooksSubtitle": "Nhận thông báo về các sự kiện",
+    "logExport": "Xuất nhật ký",
+    "logExportSubtitle": "Gửi nhật ký lệnh gọi ra ngoài",
     "combosSubtitle": "Nhóm các nhà cung cấp để chuyển đổi dự phòng",
     "batchSubtitle": "Xử lý nhiều yêu cầu",
     "contextCavemanSubtitle": "Nén prompt",

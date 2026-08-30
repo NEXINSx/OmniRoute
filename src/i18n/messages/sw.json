@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "Viboko vya mtandao",
     "webhooksSubtitle": "Pata arifa kuhusu matukio",
+    "logExport": "Kusafirisha kumbukumbu",
+    "logExportSubtitle": "Tuma kumbukumbu za miito nje",
     "combosSubtitle": "Watoa huduma wa kikundi kwa kushindwa",
     "batchSubtitle": "Shughulikia maombi mengi",
     "contextCavemanSubtitle": "Ukandamizaji wa haraka",

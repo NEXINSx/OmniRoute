@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Få besked om begivenheder",
+    "logExport": "Logeksport",
+    "logExportSubtitle": "Send kaldlogger ud",
     "combosSubtitle": "Gruppeudbydere til failover",
     "batchSubtitle": "Behandle flere anmodninger",
     "contextCavemanSubtitle": "Hurtig komprimering",

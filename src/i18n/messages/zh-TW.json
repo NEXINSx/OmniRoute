@@ -1023,6 +1023,8 @@
     "logs": "日誌",
     "webhooks": "Webhook",
     "webhooksSubtitle": "獲取事件通知",
+    "logExport": "日誌匯出",
+    "logExportSubtitle": "將呼叫日誌傳送到外部",
     "combosSubtitle": "用於故障轉移的組提供程式",
     "batchSubtitle": "處理多個請求",
     "contextCavemanSubtitle": "迅速壓縮",

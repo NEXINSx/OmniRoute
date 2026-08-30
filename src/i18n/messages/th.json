@@ -1023,6 +1023,8 @@
     "logs": "บันทึก",
     "webhooks": "เว็บฮุค",
     "webhooksSubtitle": "รับการแจ้งเตือนเหตุการณ์",
+    "logExport": "ส่งออกบันทึก",
+    "logExportSubtitle": "ส่งบันทึกการเรียกใช้ออกไปภายนอก",
     "combosSubtitle": "ผู้ให้บริการกลุ่มสำหรับการเฟลโอเวอร์",
     "batchSubtitle": "ประมวลผลคำขอหลายรายการ",
     "contextCavemanSubtitle": "การบีบอัดแบบทันที",

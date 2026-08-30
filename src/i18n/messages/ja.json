@@ -1023,6 +1023,8 @@
     "logs": "ログ",
     "webhooks": "Webhook",
     "webhooksSubtitle": "イベントの通知を受け取る",
+    "logExport": "ログエクスポート",
+    "logExportSubtitle": "呼び出しログを外部へ送信",
     "combosSubtitle": "フェイルオーバー用のグループプロバイダー",
     "batchSubtitle": "複数のリクエストを処理する",
     "contextCavemanSubtitle": "即時圧縮",

@@ -1024,6 +1024,8 @@
     "logs": "Registros",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Seja notificado sobre eventos",
+    "logExport": "Exportação de logs",
+    "logExportSubtitle": "Envie os logs de chamadas para fora",
     "combosSubtitle": "Provedores de grupo para failover",
     "batchSubtitle": "Processar várias solicitações",
     "contextCavemanSubtitle": "Compactação imediata",

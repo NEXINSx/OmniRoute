@@ -1023,6 +1023,8 @@
     "logs": "Mga log",
     "webhooks": "Mga Webhook",
     "webhooksSubtitle": "Maabisuhan ng mga kaganapan",
+    "logExport": "Pag-export ng log",
+    "logExportSubtitle": "Ipadala ang mga log ng tawag sa labas",
     "combosSubtitle": "Mga provider ng grupo para sa failover",
     "batchSubtitle": "Iproseso ang maraming kahilingan",
     "contextCavemanSubtitle": "Maagap na compression",

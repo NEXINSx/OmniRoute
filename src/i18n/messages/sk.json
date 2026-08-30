@@ -1023,6 +1023,8 @@
     "logs": "Denníky",
     "webhooks": "Webhooky",
     "webhooksSubtitle": "Získajte upozornenia na udalosti",
+    "logExport": "Export protokolov",
+    "logExportSubtitle": "Odosielanie protokolov volaní von",
     "combosSubtitle": "Zoskupiť poskytovateľov pre zlyhanie",
     "batchSubtitle": "Spracovať viacero žiadostí",
     "contextCavemanSubtitle": "Rýchla kompresia",
