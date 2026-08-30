@@ -2595,19 +2595,11 @@
   "src/shared/components/KiroAuthModal.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/shared/components/LanguageSelector.tsx": {
     "@next/next/no-img-element": {
       "count": 1
-    }
-  },
-  "src/shared/components/ModelSelectModal.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 4
     }
   },
   "src/shared/components/NotificationToast.tsx": {
@@ -2618,42 +2610,15 @@
   "src/shared/components/OAuthModal.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 4
     }
   },
   "src/shared/components/PricingModal.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/immutability": {
-      "count": 1
-    }
-  },
-  "src/shared/components/ProxyConfigModal.tsx": {
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    },
-    "react-hooks/immutability": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/shared/components/ProxyLogDetail.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/ReasoningRoutingRules.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/shared/components/RequestLoggerDetail.sections.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -2676,17 +2641,6 @@
     },
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
-  "src/shared/components/UsageStats.tsx": {
-    "react-hooks/preserve-manual-memoization": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/shared/components/analytics/charts.tsx": {
@@ -2696,16 +2650,6 @@
   },
   "src/shared/components/analytics/rechartsUsageCharts.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/shared/components/analytics/useProviderDailyUsage.ts": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/shared/components/compression/ComboCompressionModeSelect.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
