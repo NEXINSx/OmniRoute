@@ -319,7 +319,7 @@ export async function registerNodejs(): Promise<void> {
   process.title = renameProcessTitle(process.title);
 
   // Initialize proxy fetch patch FIRST (before any HTTP requests)
-  await import("@omniroute/open-sse/index.ts");
+  await import("@omniroute/open-sse/utils/proxyFetch.ts");
   console.log("[STARTUP] Global fetch proxy patch initialized");
 
   // Register quota fetchers early so combo routing can use real quota-aware

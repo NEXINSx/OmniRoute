@@ -22,13 +22,12 @@
 
 import { logger } from "@omniroute/open-sse/utils/logger.ts";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
-import { getExecutor } from "@omniroute/open-sse/executors/index.ts";
 import type { BaseExecutor } from "@omniroute/open-sse/executors/base";
 import { getCodexUsage } from "@omniroute/open-sse/services/usage/codex.ts";
 import { getSettings } from "@/lib/db/settings";
 import { getProviderConnections, updateProviderConnection } from "@/lib/db/providers";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
-import { refreshAndUpdateCredentials } from "@/lib/usage/providerLimits";
+import { refreshAndUpdateCredentialsWithResolver } from "@/lib/usage/providerLimits/credentialRefresh";
 import { getCircuitBreaker } from "@/shared/utils/circuitBreaker";
 import {
   QUOTA_AUTOPING_FAILURE_COOLDOWN_MS,
@@ -63,8 +62,11 @@ export interface QuotaAutoPingDeps {
   refreshAndUpdateCredentials: (
     connection: QuotaAutoPingConnection
   ) => Promise<{ connection: QuotaAutoPingConnection }>;
-  getCodexUsage: (accessToken?: string, providerSpecificData?: JsonRecord) => Promise<JsonRecord>;
-  getExecutor: (provider: string) => Promise<BaseExecutor>;
+  getCodexUsage: (
+    accessToken?: string,
+    providerSpecificData?: JsonRecord
+  ) => Promise<JsonRecord>;
+  getExecutor: (provider: "codex") => Promise<BaseExecutor>;
   canExecuteProvider: (provider: string) => boolean;
   isConnectionUnavailableToAuxiliaryActivity: (connectionId: string) => Promise<boolean>;
 }
@@ -79,15 +81,33 @@ export function createQuotaAutoPingState(): QuotaAutoPingState {
   return { running: false, resetCache: {}, failureCache: {} };
 }
 
+let codexExecutorPromise: Promise<BaseExecutor> | null = null;
+
+async function loadQuotaAutoPingExecutor(provider: string): Promise<BaseExecutor> {
+  if (provider !== "codex") {
+    throw new Error(`Quota auto-ping does not support provider "${provider}"`);
+  }
+
+  try {
+    codexExecutorPromise ??= import("@omniroute/open-sse/executors/codex.ts").then(
+      ({ CodexExecutor }) => new CodexExecutor()
+    );
+    return await codexExecutorPromise;
+  } catch (error) {
+    codexExecutorPromise = null;
+    throw error;
+  }
+}
+
 export function createDefaultQuotaAutoPingDeps(): QuotaAutoPingDeps {
   return {
     getSettings,
     getProviderConnections,
     updateProviderConnection,
     refreshAndUpdateCredentials: async (connection) =>
-      refreshAndUpdateCredentials(connection as never),
+      refreshAndUpdateCredentialsWithResolver(connection, loadQuotaAutoPingExecutor),
     getCodexUsage,
-    getExecutor,
+    getExecutor: loadQuotaAutoPingExecutor,
     canExecuteProvider: (provider) => getCircuitBreaker(provider).canExecute(),
     isConnectionUnavailableToAuxiliaryActivity,
   };
