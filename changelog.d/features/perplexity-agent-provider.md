@@ -1,0 +1,1 @@
+- **feat(providers):** add a Perplexity Agent API provider (`perplexity-agent` / `pplx-agent`) for Perplexity `/v1/responses`, including slash-containing Agent model IDs and Anthropic-model `max_output_tokens` compatibility.

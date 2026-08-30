@@ -111,6 +111,7 @@ import { moonshotProvider } from "./registry/moonshot/index.ts";
 import { poeProvider } from "./registry/poe/index.ts";
 import { bazaarlinkProvider } from "./registry/bazaarlink/index.ts";
 import { perplexityProvider } from "./registry/perplexity/index.ts";
+import { perplexityAgentProvider } from "./registry/perplexity/agent/index.ts";
 import { perplexity_webProvider } from "./registry/perplexity/web/index.ts";
 import { minimaxProvider } from "./registry/minimax/index.ts";
 import { minimax_cnProvider } from "./registry/minimax/cn/index.ts";
@@ -376,6 +377,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   poe: poeProvider,
   bazaarlink: bazaarlinkProvider,
   perplexity: perplexityProvider,
+  "perplexity-agent": perplexityAgentProvider,
   "perplexity-web": perplexity_webProvider,
   minimax: minimaxProvider,
   "minimax-cn": minimax_cnProvider,
