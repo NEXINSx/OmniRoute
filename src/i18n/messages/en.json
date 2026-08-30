@@ -2402,7 +2402,15 @@
     "bypassProviderQuota": "Bypass provider quota cutoffs",
     "bypassProviderQuotaDescription": "Allows this key to ignore upstream provider/account cutoff policy during routing. API key USD quotas still apply.",
     "quotaPill": "QUOTA",
-    "quotaModeOnly": "qtSd-only"
+    "quotaModeOnly": "qtSd-only",
+    "exclusiveLease": "Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "All connections",
+    "onlySelectedConnections": "Only selected connections",
+    "selectAtLeastOneConnection": "Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "This key can use any active connection.",
+    "restrictedToConnections": "Restricted to {count} connection{count, plural, one {} other {s}}."
   },
   "auditLog": {
     "title": "Audit Log",

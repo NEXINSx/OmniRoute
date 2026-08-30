@@ -68,6 +68,7 @@ export async function PATCH(request, { params }) {
     const {
       name,
       modelAccessMode,
+      connectionAccessMode,
       allowedModels,
       blockedModels,
       allowedCombos,
@@ -100,7 +101,11 @@ export async function PATCH(request, { params }) {
     if (allowedModels !== undefined) payload.allowedModels = allowedModels;
     if (blockedModels !== undefined) payload.blockedModels = blockedModels;
     if (allowedCombos !== undefined) payload.allowedCombos = allowedCombos;
-    if (allowedConnections !== undefined) payload.allowedConnections = allowedConnections;
+    if (connectionAccessMode === "all") {
+      payload.allowedConnections = [];
+    } else if (allowedConnections !== undefined) {
+      payload.allowedConnections = allowedConnections;
+    }
     if (noLog !== undefined) payload.noLog = noLog;
     if (autoResolve !== undefined) payload.autoResolve = autoResolve;
     if (isActive !== undefined) payload.isActive = isActive;
@@ -161,11 +166,15 @@ export async function PATCH(request, { params }) {
       ...(chaosModeEnabled !== undefined && { chaosModeEnabled }),
     });
   } catch (error) {
-    if (error instanceof ApiKeyPolicyInvariantError) {
+    if (
+      error instanceof ApiKeyPolicyInvariantError ||
+      (error instanceof Error && (error as { code?: string }).code === "LEASE_KEY_POLICY_INVALID")
+    ) {
+      const err = error as Error & { code?: string };
       return NextResponse.json(
-        buildErrorBody(400, error.message, null, {
+        buildErrorBody(400, err.message, null, {
           type: "lease_error",
-          code: error.code,
+          code: err.code || "LEASE_KEY_POLICY_INVALID",
         }),
         { status: 400 }
       );

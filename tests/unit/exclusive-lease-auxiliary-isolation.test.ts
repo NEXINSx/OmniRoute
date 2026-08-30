@@ -68,11 +68,11 @@ test.after(() => {
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
-test("translator send excludes a FREE lease-only connection before provider fetch", async () => {
-  const connection = await seedConnection("translator-lease-only");
+test("translator send accepts a FREE lease-capable connection and attempts provider fetch", async () => {
+  const connection = await seedConnection("translator-free-lease");
   await markLeaseOnly(connection.id);
 
-  const response = await translator.POST(
+  const _response = await translator.POST(
     new Request("http://omniroute.local/api/translator/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -83,8 +83,7 @@ test("translator send excludes a FREE lease-only connection before provider fetc
     })
   );
 
-  assert.equal(response.status, 400);
-  assert.equal(externalCalls, 0);
+  assert.equal(externalCalls, 1);
 });
 
 test("translator send excludes an ACTIVE leased connection before provider fetch", async () => {
@@ -112,8 +111,8 @@ test("translator send excludes an ACTIVE leased connection before provider fetch
   assert.equal(externalCalls, 0);
 });
 
-test("translator request preview never materializes a lease-only credential", async () => {
-  const connection = await seedConnection("translator-preview-lease-only");
+test("translator request preview materializes a FREE lease-capable credential", async () => {
+  const connection = await seedConnection("translator-preview-free-lease");
   await markLeaseOnly(connection.id);
 
   const response = await translatorPreview.POST(
@@ -129,14 +128,59 @@ test("translator request preview never materializes a lease-only credential", as
   );
   const body = await response.text();
 
-  assert.equal(response.status, 400);
-  assert.equal(body.includes("sk-translator-preview-lease-only"), false);
+  assert.equal(response.status, 200);
+  assert.equal(body.includes("sk-translator-preview-free-lease"), true);
   assert.equal(externalCalls, 0);
 });
 
-test("browser-login start rejects lease-only connections before Docker or provider access", async () => {
-  const connection = await seedConnection("vnc-lease-only");
+test("translator request preview never materializes an ACTIVE leased credential", async () => {
+  const connection = await seedConnection("translator-preview-active-lease");
+  const acquired = leases.acquireExclusiveConnectionLease({
+    leaseOwnerId: OWNER,
+    apiKeyId: "managed-key",
+    provider: "openai",
+    connectionId: connection.id,
+  });
+  assert.equal(acquired.kind, "ACQUIRED");
+
+  const response = await translatorPreview.POST(
+    new Request("http://omniroute.local/api/translator/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        step: 4,
+        provider: "openai",
+        body: { model: "gpt-4.1-mini", messages: [{ role: "user", content: "test" }] },
+      }),
+    })
+  );
+  const body = await response.text();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.includes("sk-translator-preview-active-lease"), false);
+  assert.equal(externalCalls, 0);
+});
+
+test("browser-login start accepts FREE lease-capable connection past isolation check", async () => {
+  const connection = await seedConnection("vnc-free-lease");
   await markLeaseOnly(connection.id);
+
+  await assert.rejects(
+    vnc.startSession(connection.id),
+    /Browser login is not supported for provider 'openai'/
+  );
+  assert.equal(externalCalls, 0);
+});
+
+test("browser-login start rejects ACTIVE leased connections before Docker or provider access", async () => {
+  const connection = await seedConnection("vnc-active-lease-start");
+  const acquired = leases.acquireExclusiveConnectionLease({
+    leaseOwnerId: OWNER,
+    apiKeyId: "managed-key",
+    provider: "openai",
+    connectionId: connection.id,
+  });
+  assert.equal(acquired.kind, "ACQUIRED");
 
   await assert.rejects(
     vnc.startSession(connection.id),
@@ -145,8 +189,9 @@ test("browser-login start rejects lease-only connections before Docker or provid
   assert.equal(externalCalls, 0);
 });
 
-test("forced model tests reject lease-only connections before any model dispatch", async () => {
-  const connection = await seedConnection("model-test-lease-only");
+test("forced model tests accept FREE lease-capable connections and attempt model dispatch", async () => {
+  await apiKeys.createApiKey("internal test key", "test");
+  const connection = await seedConnection("model-test-free-lease");
   await markLeaseOnly(connection.id);
 
   const result = await modelTests.runSingleModelTest({
@@ -155,9 +200,9 @@ test("forced model tests reject lease-only connections before any model dispatch
     connectionId: connection.id,
   });
 
-  assert.equal(result.httpStatus, 409);
-  assert.match(result.error || "", /unavailable for managed lease connections/);
-  assert.equal(externalCalls, 0);
+  assert.notEqual(result.httpStatus, 409);
+  assert.doesNotMatch(result.error || "", /unavailable for managed lease connections/);
+  assert.equal(externalCalls, 1);
 });
 
 test("forced model tests reject ACTIVE leased connections before any model dispatch", async () => {
