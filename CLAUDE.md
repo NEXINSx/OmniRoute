@@ -68,3 +68,16 @@ Before cutting a branch or opening a PR, run the base-green check (`AGENTS.md` �
 "Base-green check"; project skills reference it as `.agents/skills/_shared/base-green.md`). A PR
 opened while the base tip is red must carry `⚠️ base-red inherited: #<issue>` in its body. To
 drain an accumulated red state (base tip + red PRs), use the `/sweep-reds` skill.
+
+## gstack (recommended)
+
+This project uses [gstack](https://github.com/garrytan/gstack) for AI-assisted workflows.
+Install it for the best experience:
+
+```bash
+git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack
+cd ~/.claude/skills/gstack && ./setup --team
+```
+
+Skills like /qa, /ship, /review, /investigate, and /browse become available after install.
+Use /browse for all web browsing. Use ~/.claude/skills/gstack/... for gstack file paths.
