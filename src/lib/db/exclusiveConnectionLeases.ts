@@ -59,7 +59,25 @@ type LeaseUpdateResult<T extends string> =
 
 const database = () => getDbInstance();
 const ACTIVE_SQL = "SELECT * FROM exclusive_connection_leases WHERE state = 'ACTIVE' AND ";
-const lease = (row: LeaseRow) => rowToCamel(row) as ExclusiveConnectionLease;
+// Projection, not a cast: joined SELECTs (the status query) carry connection_*
+// identity columns (email/display name) that must never escape on the lease object.
+const lease = (row: LeaseRow): ExclusiveConnectionLease => {
+  const camel = rowToCamel(row) as ExclusiveConnectionLease;
+  return {
+    id: camel.id,
+    leaseOwnerHash: camel.leaseOwnerHash,
+    apiKeyId: camel.apiKeyId,
+    provider: camel.provider,
+    connectionId: camel.connectionId,
+    generation: camel.generation,
+    state: camel.state,
+    acquiredAt: camel.acquiredAt,
+    renewedAt: camel.renewedAt,
+    expiresAt: camel.expiresAt,
+    endedAt: camel.endedAt,
+    endReason: camel.endReason,
+  };
+};
 function timestamp(value?: string): string {
   const parsed = Date.parse(value ?? new Date().toISOString());
   if (!Number.isFinite(parsed)) throw new Error("now must be a valid ISO timestamp");
