@@ -29,11 +29,6 @@
       "count": 1
     }
   },
-  "open-sse/config/providers/registry/zai/index.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "open-sse/config/providers/shared.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1

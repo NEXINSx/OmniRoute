@@ -87,6 +87,63 @@ function defaultPerplexityAgentMaxOutputTokens<T>(body: T): T {
   } as T;
 }
 
+const ZAI_GLM_53_OPENAI_MODEL_PATTERN = /^glm-5\.3(?:-flash)?$/i;
+const ZAI_GLM_53_EFFORT_MODEL_PATTERN = /^(glm-5\.3(?:-flash)?)-(low|high|max)$/i;
+
+function hasTools(body: unknown): boolean {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+  const tools = (body as Record<string, unknown>).tools;
+  return Array.isArray(tools) && tools.length > 0;
+}
+
+function applyZaiGlm53OpenAIDefaults<T>(
+  provider: string,
+  model: string,
+  body: T,
+  stream: boolean
+): T {
+  if (provider !== "zai" && provider !== "glm-coding-apikey") return body;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+
+  const record = body as Record<string, unknown>;
+  const outboundModel = typeof record.model === "string" ? record.model : model;
+  const effortMatch = outboundModel.match(ZAI_GLM_53_EFFORT_MODEL_PATTERN);
+  const baseModel = effortMatch?.[1] ?? outboundModel;
+  if (!ZAI_GLM_53_OPENAI_MODEL_PATTERN.test(baseModel)) return body;
+
+  let next: Record<string, unknown> | null = null;
+  const mutate = (): Record<string, unknown> => (next ??= { ...record });
+
+  const editableForEffort = mutate();
+  if (effortMatch) editableForEffort.model = baseModel;
+  if (record.reasoning_effort === undefined && record.reasoning === undefined) {
+    // GLM-5.3 always reasons (thinking cannot be disabled upstream), so a
+    // request with no effort — Pi "off", plain API calls — maps to the floor
+    // tier "low" per the declared-tier clamp convention (none/minimal → low),
+    // not the vendor default "max". Explicit max stays opt-in via
+    // reasoning_effort or the -max model aliases; xhigh normalizes to max in
+    // the shared sanitizer via the declared tiers.
+    editableForEffort.reasoning_effort = (effortMatch?.[2] ?? "low").toLowerCase();
+  }
+
+  const existingThinking =
+    record.thinking && typeof record.thinking === "object" && !Array.isArray(record.thinking)
+      ? (record.thinking as Record<string, unknown>)
+      : null;
+  const editableForThinking = mutate();
+  editableForThinking.thinking = {
+    ...(existingThinking || {}),
+    type: "enabled",
+    clear_thinking: false,
+  };
+
+  if (stream && hasTools(record) && record.tool_stream === undefined) {
+    mutate().tool_stream = true;
+  }
+
+  return (next ?? body) as T;
+}
+
 function normalizeNvidiaToolCallId(id: unknown): unknown {
   if (id === null || id === undefined) return id;
   const value = String(id);
@@ -915,6 +972,8 @@ export class DefaultExecutor extends BaseExecutor {
           };
         }
       }
+
+      withDefaults = applyZaiGlm53OpenAIDefaults(this.provider, model, withDefaults, stream);
     }
 
     // Config-driven strip of params unsupported by the target provider/model

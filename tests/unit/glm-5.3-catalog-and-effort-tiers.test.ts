@@ -23,6 +23,12 @@ const { shouldExposeSyncedEffortVariants, SYNCED_EFFORT_SKIP_PROVIDERS } =
   await import("../../open-sse/utils/syncedEffortVariants.ts");
 
 const GLM_5_3_IDS = ["glm-5.3", "glm-5.3-high", "glm-5.3-low", "glm-5.3-max"] as const;
+const GLM_5_3_FLASH_IDS = [
+  "glm-5.3-flash",
+  "glm-5.3-flash-high",
+  "glm-5.3-flash-low",
+  "glm-5.3-flash-max",
+] as const;
 
 // transformForTransport returns an opaque body; surface only the fields asserted below.
 type TransformedRequest = {
@@ -101,6 +107,10 @@ test("catalog exposes only GLM effort tiers that each provider can route", () =>
     ["glm-5.3-high", ["high"]],
     ["glm-5.3-low", ["low"]],
     ["glm-5.3-max", ["max"]],
+    ["glm-5.3-flash", ["low", "high", "max"]],
+    ["glm-5.3-flash-high", ["high"]],
+    ["glm-5.3-flash-low", ["low"]],
+    ["glm-5.3-flash-max", ["max"]],
     ["glm-5.2", ["high", "max"]],
     ["glm-5.2-high", ["high"]],
     ["glm-5.2-max", ["max"]],
@@ -143,8 +153,18 @@ for (const provider of ["glm", "glm-cn", "glmt"]) {
 test("zai advertises the GLM-5.3 base model and GLM-5.3 Flash (DefaultExecutor sends ids verbatim)", () => {
   const ids = modelIds("zai");
   assert.ok(ids.includes("glm-5.3"), `zai should advertise glm-5.3; got ${ids.join(", ")}`);
-  assert.ok(ids.includes("glm-5.3-flash"), `zai should advertise glm-5.3-flash; got ${ids.join(", ")}`);
-  for (const alias of ["glm-5.3-high", "glm-5.3-low", "glm-5.3-max"]) {
+  assert.ok(
+    ids.includes("glm-5.3-flash"),
+    `zai should advertise glm-5.3-flash; got ${ids.join(", ")}`
+  );
+  for (const alias of [
+    "glm-5.3-high",
+    "glm-5.3-low",
+    "glm-5.3-max",
+    "glm-5.3-flash-high",
+    "glm-5.3-flash-low",
+    "glm-5.3-flash-max",
+  ]) {
     assert.ok(
       !ids.includes(alias),
       `zai must not list ${alias}: GlmExecutor-only alias, unknown upstream on the Anthropic endpoint`
@@ -153,14 +173,16 @@ test("zai advertises the GLM-5.3 base model and GLM-5.3 Flash (DefaultExecutor s
 });
 
 test("modelSpecs carries 1M/128K specs for all GLM-5.3 ids including flash", () => {
-  for (const id of [...GLM_5_3_IDS, "glm-5.3-flash"]) {
+  for (const id of [...GLM_5_3_IDS, ...GLM_5_3_FLASH_IDS]) {
     const spec = MODEL_SPECS[id];
     assert.ok(spec, `MODEL_SPECS should include ${id}`);
     assert.equal(spec.contextWindow, 1_000_000);
     assert.equal(spec.maxOutputTokens, 131_072);
     assert.equal(spec.supportsThinking, true);
   }
-  assert.equal(MODEL_SPECS["glm-5.3-flash"]?.supportsVision, true);
+  for (const id of GLM_5_3_FLASH_IDS) {
+    assert.equal(MODEL_SPECS[id]?.supportsVision, true, id);
+  }
 });
 
 test("GLM_PRICING covers the GLM-5.3 ids with GLM-5.2-parity rates and GLM-5.3-Flash rates", () => {
@@ -176,6 +198,9 @@ test("GLM_PRICING covers the GLM-5.3 ids with GLM-5.2-parity rates and GLM-5.3-F
   assert.equal(flashPricing.input, 0.075);
   assert.equal(flashPricing.output, 0.25);
   assert.equal(flashPricing.cached, 0.015);
+  for (const id of ["glm-5.3-flash-high", "glm-5.3-flash-low", "glm-5.3-flash-max"] as const) {
+    assert.deepEqual(GLM_PRICING[id], flashPricing, id);
+  }
 });
 
 test("GlmExecutor resolves glm-5.3-high to reasoning_effort=high on the OpenAI coding transport", () => {
