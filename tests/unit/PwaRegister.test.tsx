@@ -98,7 +98,10 @@ describe("PwaRegister", () => {
       await Promise.resolve();
     });
 
-    expect(register).toHaveBeenCalledWith("/sw.js");
+    // #11779: the worker URL carries the build id so a deploy installs a new
+    // worker generation (byte-level stamping lands in sw.js via the build
+    // pipeline; the register call must match that scheme).
+    expect(register).toHaveBeenCalledWith(expect.stringMatching(/^\/sw\.js\?v=.+$/));
     expect(getRegistrations).not.toHaveBeenCalled();
   });
 });

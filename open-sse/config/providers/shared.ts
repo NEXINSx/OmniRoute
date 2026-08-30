@@ -83,6 +83,17 @@ export interface RegistryModel {
   /** Per-model upstream header-response timeout override — precedes
    *  `RegistryEntry.timeoutMs` and the global `FETCH_TIMEOUT_MS` (#6354). */
   timeoutMs?: number;
+  /**
+   * Id whose QUALITY scores (task fitness / arena / user overrides) this id
+   * inherits (#11489). Operational fields (timeoutMs, cost, context) stay on
+   * this entry. One hop only; the target must itself be a catalog id.
+   *
+   * Only for relations suffix-stripping cannot express: forward vendor aliases
+   * (`gpt-5.6` → `gpt-5.6-sol`) and cross-provider spellings of the same model
+   * (cursor's `claude-4.6-opus-high` → `claude-opus-4-6`). Plain effort/`-free`
+   * variants are derived by `resolveScoresAs` and need no entry here.
+   */
+  scoresAs?: string;
 }
 
 // Reasoning models reject temperature, top_p, penalties, logprobs, n.

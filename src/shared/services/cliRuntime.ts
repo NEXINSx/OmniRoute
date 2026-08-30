@@ -242,7 +242,7 @@ const CLI_TOOLS: Record<string, any> = {
     requiresBinary: true,
     healthcheckTimeoutMs: 8000,
     paths: {
-      config: ".jcode/config.json",
+      config: ".jcode/config.toml",
     },
   },
   "prime-agent": {
@@ -321,7 +321,29 @@ const CLI_TOOLS: Record<string, any> = {
       config: ".config/crush/crush.json",
     },
   },
+  // 5dive keeps its credentials in root-owned auth profiles under a system
+  // state dir, not under $HOME — getCliConfigPaths() has a special case for it
+  // below, so the relative path here is documentation only.
+  "5dive": {
+    defaultCommand: "5dive",
+    envBinKey: "CLI_5DIVE_BIN",
+    requiresBinary: true,
+    // `5dive --version` shells out through its own bundle; 4s is tight on a
+    // host that is also running a fleet.
+    healthcheckTimeoutMs: 12000,
+    paths: {
+      authProfiles: "auth-profiles",
+    },
+  },
 };
+
+/**
+ * 5dive's state dir. 5dive itself reads `STATE_DIR` (default /var/lib/5dive);
+ * that name is too generic to consume from OmniRoute's environment, so we take
+ * an explicit override and otherwise use the same default.
+ */
+export const getFivediveStateDir = (): string =>
+  process.env.CLI_5DIVE_STATE_DIR || "/var/lib/5dive";
 
 /**
  * Compatibility aliases accepted by CLI/API callers.
@@ -331,6 +353,8 @@ const CLI_TOOLS: Record<string, any> = {
  * that id, so normalize them at the boundary rather than duplicating entries.
  */
 export const CLI_TOOL_ALIASES: Readonly<Record<string, string>> = {
+  fivedive: "5dive",
+  "5dive-cli": "5dive",
   kilocode: "kilo",
   "kilo-code": "kilo",
   kilo_cli: "kilo",
@@ -664,6 +688,7 @@ export const getKnownToolPaths = (toolId: string): string[] => {
       ["qodercli.exe", "qodercli"],
     ],
     qwen: [["qwen.cmd", "qwen"]],
+    "5dive": [["5dive.cmd", "5dive"]],
     devin: [
       ["devin.exe", "devin"],
       ["devin.cmd", "devin"],
@@ -1148,6 +1173,14 @@ export const getCliConfigPaths = (toolId: string) => {
   if (toolId === "hermes-agent") {
     return {
       config: path.join(getHermesHome(), "config.yaml"),
+    };
+  }
+
+  // 5dive: auth profiles are root-owned and live in a system state dir, so the
+  // $HOME-relative join every other tool uses would point at nothing.
+  if (toolId === "5dive") {
+    return {
+      authProfiles: path.join(getFivediveStateDir(), "auth-profiles"),
     };
   }
 

@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "Usado por {count, plural, one {# lote} other {# lotes}}",
     "batchFilePreview": "Vista Previa",
     "batchFilePreviewTruncated": "Mostrando las primeras {shown} líneas ({total} líneas en total)",
-    "batchFileDownloadFull": "Descargar Archivo Completo",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "Descargar Archivo Completo"
   },
   "disabled": "Disabled",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
@@ -1023,6 +1023,8 @@
     "logs": "Registros",
     "webhooks": "Ganchos web",
     "webhooksSubtitle": "Recibe notificaciones de eventos",
+    "logExport": "Exportación de registros",
+    "logExportSubtitle": "Envía los registros de llamadas fuera",
     "combosSubtitle": "Proveedores de grupo para conmutación por error",
     "batchSubtitle": "Procesar múltiples solicitudes",
     "contextCavemanSubtitle": "Compresión inmediata",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "Intercept IDE agent traffic",
     "trafficInspector": "Traffic Inspector",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Code tools pointing to OmniRoute",
     "cliAgents": "CLI Agents",
@@ -1300,8 +1303,7 @@
       "open": "abrir",
       "close": "cerrar"
     },
-    "noResults": "Sin resultados",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Sin resultados"
   },
   "webhooks": {
     "title": "Ganchos web",
@@ -1808,6 +1810,11 @@
     "updateStarted": "Actualización iniciada...",
     "reloadingPageAutomatically": "Recargando página automáticamente...",
     "providerTopology": "Topología del proveedor",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Descargar DMG (macOS)",
     "downloadDmgDescription": "Una nueva versión de la aplicación de escritorio OmniRoute está disponible. Por favor, descarga e instala el instalador DMG de macOS para actualizar (actual: v{version}).",
     "downloadExe": "Descargar EXE (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "Notas de la versión",
     "readMore": "Leer Más",
     "noAuthLabel": "Sin Autenticación",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "Bypass provider quota cutoffs",
     "bypassProviderQuotaDescription": "Allows this key to ignore upstream provider/account cutoff policy during routing. API key USD quotas still apply.",
     "quotaPill": "QUOTA",
-    "quotaModeOnly": "qtSd-only"
+    "quotaModeOnly": "qtSd-only",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Registro de auditoría",
@@ -2922,8 +2932,10 @@
       "interpreter": "Open Interpreter autonomous coding agent CLI",
       "omp": "Oh My Pi terminal coding agent",
       "letta": "Letta CLI agent with persistent memory and tool use",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Warp AI terminal with custom provider support",
       "agent-deck": "Agent Deck multi-agent orchestrator",
+      "5dive": "5dive — flota autoalojada de agentes de codificación; un perfil de autenticación los apunta todos a OmniRoute",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "Punto final API",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Puntos finales disponibles",
     "cloudProxy": "Proxy en la nube",
     "disableConfirm": "¿Está seguro de que desea desactivar el proxy en la nube?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "Crear una Integración Interna en",
     "notionIntegrationToken": "Token de Integración Interna de Notion",
     "notionNotConnected": "No conectado",
-    "notionTokenConfigured": "Token configurado. Las herramientas de Notion están disponibles a través de MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Token configurado. Las herramientas de Notion están disponibles a través de MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4644,13 @@
     "retry": "Reintentar",
     "allOperational": "Todos los sistemas operativos.",
     "issuesDetected": "Problemas del sistema detectados",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Actualizado {time}",
     "latency": "Latencia",
     "latencyP50": "p50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} issues",
     "score": "Score",
     "lastRequest": "Last request",
-    "lastError": "Último error",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Último error"
   },
   "telemetry": {
     "title": "Telemetría del sistema",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Multiproveedor",
     "usageTracking": "Seguimiento de uso",
     "securityDesc": "Establezca una contraseña para proteger su panel u omítala por ahora.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Conecte su primer proveedor de IA. Puedes agregar más más tarde.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "Clave API (obligatoria)",
     "customUrlOptional": "URL personalizada (opcional)",
     "testDesc": "Verifiquemos que la conexión de su proveedor funcione.",
@@ -5011,9 +5025,7 @@
         "skipped": "ya configurado",
         "failed": "fallido"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Proveedores",
@@ -6254,13 +6266,13 @@
       "galadriel": "Connect Galadriel with an API key.",
       "predibase": "$25 free trial credits (30-day validity)",
       "chenzk": "OpenAI-compatible gateway with a live model catalog at chenzk.top.",
-      "magnific": "Generate images with Freepik's Mystic API.",
+      "magnific": "Generate images with Magnific's Mystic API.",
       "freetheai": "Free OpenAI-compatible gateway with passthrough model support.",
-      "g4f-gemini": "Free no-key g4f.space reverse proxy to Gemini, limited to 5 requests per minute.",
-      "g4f-groq": "Free no-key g4f.space reverse proxy to Groq, limited to 5 requests per minute.",
-      "g4f-nvidia": "Free no-key g4f.space reverse proxy to NVIDIA NIM, limited to 5 requests per minute.",
-      "g4f-ollama": "Free no-key hosted Ollama gateway from g4f.space, limited to 5 requests per minute.",
-      "g4f-pollinations": "Free no-key g4f.space reverse proxy to Pollinations, limited to 5 requests per minute.",
+      "g4f-gemini": "Puerta de enlace remota de g4f.space a Gemini. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-groq": "Puerta de enlace remota de g4f.space a Groq. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-nvidia": "Puerta de enlace remota de g4f.space a NVIDIA NIM. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-ollama": "Puerta de enlace remota de g4f.space a Ollama. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-pollinations": "Puerta de enlace remota de g4f.space a Pollinations. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
       "mixedbread": "Create embeddings with the Mixedbread API.",
       "segmind": "Generate images and videos with Segmind's hosted models.",
       "amazon-q": "Uses the same AWS Builder ID or imported refresh-token flow as Kiro, but keeps Amazon Q connections separate.",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "Copie la credencial requerida del propio dominio del proveedor. Para las cookies, copie solo el valor del encabezado Cookie y omita Cookie:.",
     "webSessionGuideStep3Manual": "Ruta manual: abre las herramientas de desarrollo del navegador (F12 → Red), actualiza la página, abre una solicitud autenticada y copia el valor del encabezado Cookie de los Encabezados de Solicitud — omite el prefijo Cookie:.",
     "webSessionGuideStep4": "Pégalo aquí y comprueba la conexión. Si deja de funcionar, inicie sesión nuevamente y reemplácelo con un valor nuevo.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Trate esto como una contraseña: puede acceder a su cuenta web iniciada hasta que caduque o sea revocada.",
     "webNoAuthGuideTitle": "No se requiere credencial",
     "webNoAuthGuideBody": "{provider} no necesita una clave API ni una cookie. Guarde la conexión para utilizar su punto final web gratuito.",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "Configuración del punto final del modelo guardado",
     "searchByModelAria": "Buscar por modelo",
     "selectSupportedEndpoint": "Seleccione al menos un endpoint compatible",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Configuración",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Ocultar registros de verificación de estado",
     "hideHealthLogsDesc": "Cuando está activado, suprime los mensajes [HealthCheck] en la consola del servidor",
     "themeAccent": "Color del tema",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Tiempo máximo de espera en cola",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "Esta capa solo controla las colas y el ritmo. No almacena tiempos de reutilización ni disyuntores abiertos.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Habilita la protección de colas de forma predeterminada para conexiones de clave API activas.",
     "resilienceMaxQueueWait": "Tiempo máximo de espera en cola",
+    "resilienceMaxExecutionWait": "Tiempo de espera de ejecución (límite de respaldo)",
     "resilienceConnectionCooldownScope": "Conexión individual",
     "resilienceConnectionCooldownTrigger": "Cuando una conexión devuelve un error ascendente transitorio",
     "resilienceConnectionCooldownEffect": "Omite temporalmente esa conexión y aumenta la interrupción en caso de fallas repetidas",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "Puente de vídeo",
     "modalityBridgeVideoDesc": "Muestrea fotogramas del vídeo, descríbelos con un modelo de visión y continúa con el modelo de texto elegido.",
     "modalityBridgeVideoRuntimeReady": "Entorno de ejecución listo",
+    "modalityBridgeVideoRuntimeChecking": "Comprobando el entorno de ejecución…",
     "modalityBridgeVideoRuntimeUnavailable": "Entorno de ejecución no disponible",
     "modalityBridgeVideoRuntimeInstall": "Instala FFmpeg y ffprobe en el PATH del servidor para habilitar la extracción de vídeo.",
     "modalityBridgeVideoEnabled": "Activar Puente de vídeo",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11314,7 +11350,9 @@
       "noPayload": "No hay datos de carga útiles disponibles para esta entrada de registro.",
       "correlationId": "ID de correlación",
       "correlationIdValue": "ID de correlación: {id}",
-      "detailedPayloadInfo": "Habilita primero el registro detallado si deseas la vista de carga útil de cliente/proveedor de cuatro etapas para nuevas solicitudes."
+      "detailedPayloadInfo": "Habilita primero el registro detallado si deseas la vista de carga útil de cliente/proveedor de cuatro etapas para nuevas solicitudes.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12075,9 +12113,9 @@
       "acp": {
         "title": "ACP Agents",
         "phrase": "CLIs that OmniRoute spawns as execution backend (reverse flow)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Client → OmniRoute → spawn CLI (stdio/ACP) → response",
-        "seeOther": "See →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "See →"
       }
     },
     "comparison": {
@@ -12485,7 +12523,12 @@
     "typeApikey": "Clave API",
     "sortTypeFirst": "Más sencillos primero",
     "sortTypeFirstHelp": "Group by signup effort (No Signup → OAuth Login → API Key), keeping quality order within each group",
-    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier"
+    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provider Discovery",
@@ -12836,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Allow multiple connections for each compatibility node."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Remove internal commentary-phase output items from Responses API passthrough streams before forwarding them to clients. Disable this flag to receive raw upstream commentary."
       },
@@ -12901,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Enable network access in the skills sandbox."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13383,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "Resiliencia de Conexión",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Estado",
       "provider": "Proveedor",
@@ -13477,16 +13527,10 @@
         "modelLockouts": "Bloqueos de Modelo",
         "count": "Cantidad de Conexiones"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Rechazar solicitudes antes del despacho cuando el modelo objetivo carece de capacidades requeridas (visión, herramientas, salida estructurada, ventana de contexto). Protege las solicitudes directas de un solo proveedor que eluden el filtro de compatibilidad de la capa combinada.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Página no encontrada",
@@ -13922,7 +13966,6 @@
     "structuredOutputMismatch": "El proveedor no admite salida estructurada",
     "contextWindowMismatch": "La solicitud excede la ventana de contexto del proveedor"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",

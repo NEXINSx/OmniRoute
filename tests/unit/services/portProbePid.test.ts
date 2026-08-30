@@ -166,6 +166,6 @@ test("resolvePortPid still resolves a pid on a host without lsof", async (t) => 
   } finally {
     process.env.PATH = originalPath;
     await new Promise<void>((resolve) => server.close(() => resolve()));
-    rmSync(shim, { recursive: true, force: true });
+    rmSync(shim, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

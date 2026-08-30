@@ -1657,6 +1657,21 @@ export function createSSEStream(options: StreamOptions = {}) {
                     output = `data: ${JSON.stringify(parsed)}\n\n`;
                     injectedUsage = true;
                   }
+                  // Passthrough mode never pushes a Responses SSE event into
+                  // clientPayloadCollector on the common (non-tool-call, non-
+                  // commentary) path -- only the textual-tool-call conversion
+                  // branch above pushes its own synthesized events. Push just
+                  // the fully-processed terminal `response.completed` (after
+                  // the backfill/strip/tool-call-merge above, so it matches
+                  // exactly what the client receives): that alone is enough
+                  // for buildStreamSummaryFromEvents' reducer to recover a
+                  // real Responses `id` + `output` for previous_response_id
+                  // continuation storage (src/lib/db/responsesContinuationStore.ts).
+                  // Pushing every delta here would double-count events the
+                  // tool-call branch already pushes its own synthesized copy of.
+                  if (parsed.type === "response.completed") {
+                    clientPayloadCollector.push(parsed);
+                  }
                 } else if (isClaudeSSE) {
                   // Claude SSE: extract usage, track content, forward as-is
                   const thinkingSignatureInjected = injectThinkingSignature(parsed, provider);
@@ -2589,9 +2604,24 @@ export function createSSEStream(options: StreamOptions = {}) {
                       : { object: "chat.completion", ...responseBody },
                     { includeEvents: false }
                   ),
-                  clientPayload: clientPayloadCollector.build(responseBody, {
-                    includeEvents: false,
-                  }),
+                  // Same OPENAI_RESPONSES carve-out as providerPayload above, but keyed on
+                  // clientResponseFormat (what the client actually receives) rather than
+                  // sourceFormat (what the upstream sent) -- they're equal in passthrough
+                  // mode but conceptually distinct. Without this, `entry.responseId` in
+                  // src/lib/usage/callLogs.ts is always null for a Responses-API client
+                  // (extractResponsesId reads `clientResponse.id`, which the chat-shaped
+                  // responseBody never has), so previous_response_id continuation lookups
+                  // in src/lib/db/responsesContinuationStore.ts always miss.
+                  clientPayload: clientPayloadCollector.build(
+                    clientResponseFormat === FORMATS.OPENAI_RESPONSES
+                      ? buildStreamSummaryFromEvents(
+                          clientPayloadCollector.getEvents(),
+                          clientResponseFormat,
+                          model
+                        )
+                      : responseBody,
+                    { includeEvents: false }
+                  ),
                 });
               } catch (e) {
                 console.debug(`[STREAM] onComplete callback error (${model || "unknown"}):`, e);
@@ -2893,9 +2923,24 @@ export function createSSEStream(options: StreamOptions = {}) {
                     : { object: "chat.completion", ...responseBody },
                   { includeEvents: false }
                 ),
-                clientPayload: clientPayloadCollector.build(responseBody, {
-                  includeEvents: false,
-                }),
+                // Same OPENAI_RESPONSES carve-out as providerPayload above and the
+                // passthrough branch's onComplete, but keyed on sourceFormat (what the
+                // client requested/receives in translate mode) rather than targetFormat
+                // (what the upstream provider speaks) -- translateResponse(targetFormat,
+                // sourceFormat, ...) above confirms that direction. emitTranslatedClientItem
+                // already pushes every client-visible translated item into
+                // clientPayloadCollector unconditionally, so the events are already there;
+                // this only fixes what gets built from them.
+                clientPayload: clientPayloadCollector.build(
+                  sourceFormat === FORMATS.OPENAI_RESPONSES
+                    ? buildStreamSummaryFromEvents(
+                        clientPayloadCollector.getEvents(),
+                        sourceFormat,
+                        model
+                      )
+                    : responseBody,
+                  { includeEvents: false }
+                ),
               });
             } catch (e) {
               console.debug(

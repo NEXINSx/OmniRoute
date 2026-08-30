@@ -285,7 +285,7 @@ export async function getUsageStats() {
   const sourceSql = buildUsageSourceSql(aggregationEnabled);
   const sourceParams = aggregationEnabled && cutoffDate ? [cutoffDate, cutoffDate] : [];
 
-  const { getProviderConnections } = await import("@/lib/localDb");
+  const { getProviderConnections } = await import("@/lib/db/providers");
   let allConnections: unknown[] = [];
   try {
     const loadedConnections = await getProviderConnections();

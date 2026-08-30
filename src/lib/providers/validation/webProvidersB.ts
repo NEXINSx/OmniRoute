@@ -11,6 +11,7 @@ import {
 } from "./transport";
 import { SafeOutboundFetchError } from "@/shared/network/safeOutboundFetch";
 import { normalizeSessionCookieHeader } from "@/lib/providers/webCookieAuth";
+import { normalizeGeminiCookieInput } from "@omniroute/open-sse/utils/geminiCookies.ts";
 import { buildJulesApiUrl } from "@/lib/cloudAgent/julesApi.ts";
 import {
   META_AI_ASBD_ID,
@@ -213,11 +214,8 @@ export async function validateGeminiWebProvider({ apiKey, providerSpecificData =
       return { valid: false, error: "Paste your __Secure-1PSID cookie from gemini.google.com" };
     }
 
-    // Accept full cookie blob or bare value
-    let cookieHeader = raw;
-    if (!raw.includes("=")) {
-      cookieHeader = `__Secure-1PSID=${raw}`;
-    }
+    // Accept full cookie blob, bare value, or browser-export JSON.
+    const cookieHeader = normalizeGeminiCookieInput(raw);
 
     const response = await validationRead("https://gemini.google.com/app", {
       headers: applyCustomUserAgent(

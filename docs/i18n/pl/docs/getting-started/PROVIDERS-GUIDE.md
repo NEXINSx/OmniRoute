@@ -15,7 +15,7 @@ Traktuj providera jak **operatora komórkowego**. Tak jak potrzebujesz operatora
 | **Free**       | Bez płatności            | Kiro, OpenCode Free, Pollinations | $0                            |
 | **API Key**    | Wymagany klucz API       | OpenAI, Anthropic, Google         | Płatność za użycie            |
 | **OAuth**      | Logowanie kontem         | Claude Code, GitHub Copilot       | Subskrypcja                   |
-| **Web Cookie** | Używa sesji przeglądarki | ChatGPT Web, Gemini Web           | $0 (korzysta z Twojego konta) |
+| **Web Cookie** | Używa sesji przeglądarki | ChatGPT Web (Codex), Gemini Web   | $0 (korzysta z Twojego konta) |
 
 ### Providery Web Cookie
 
@@ -67,17 +67,16 @@ Zobacz **[WEB-COOKIE-GUIDE.md](./WEB-COOKIE-GUIDE.md)** — ogólna konfiguracja
 
 Te providery oferują **darmowy dostęp** bez karty kredytowej:
 
-| Provider          | Darmowy limit     | Modele                                   | Jak połączyć       |
-| ----------------- | ----------------- | ---------------------------------------- | ------------------ |
-| **Kiro AI**       | 50 credits/mies.  | Claude Sonnet 4.5, Haiku 4.5, Opus 4.6   | Bez auth           |
-| **OpenCode Free** | Brak opublikowanego capu; limity obowiązują | GPT-4o, Claude, Gemini | Bez auth |
-| **Pollinations**  | Bez klucza        | GPT-5, Claude, Gemini, DeepSeek, Llama 4 | Bez auth           |
-| **LongCat**       | 10M jednorazowo   | LongCat-2.0                              | Klucz API + KYC    |
-| **Cloudflare AI** | 10K neurons/dzień | 50+ modeli                               | Bez auth           |
-| **NVIDIA NIM**    | ~40 RPM           | 129 modeli                               | Wymagany klucz API |
-| **Cerebras**      | 1M tokenów/dzień  | Qwen3 235B, GPT-OSS 120B                 | Wymagany klucz API |
-| **Qwen**          | Brak opublikowanego capu; limity obowiązują | Qwen3-coder-plus/flash/next | Bez auth |
-| **Qoder**         | Brak opublikowanego capu; limity obowiązują | Kimi-K2, DeepSeek-R1, Qwen3-coder | Bez auth |
+| Provider          | Darmowy limit                               | Modele                                   | Jak połączyć       |
+| ----------------- | -------------------------------------------- | ---------------------------------------- | ------------------ |
+| **Kiro AI**       | 50 credits/mies.                            | Claude Sonnet 4.5, Haiku 4.5, Opus 4.6   | Bez auth           |
+| **OpenCode Free** | Brak opublikowanego capu; limity obowiązują | GPT-4o, Claude, Gemini                   | Bez auth           |
+| **Pollinations**  | Bez klucza                                  | GPT-5, Claude, Gemini, DeepSeek, Llama 4 | Bez auth           |
+| **LongCat**       | 10M jednorazowo                             | LongCat-2.0                              | Klucz API + KYC    |
+| **Cloudflare AI** | 10K neurons/dzień                           | 50+ modeli                               | Bez auth           |
+| **NVIDIA NIM**    | ~40 RPM                                     | 129 modeli                               | Wymagany klucz API |
+| **Cerebras**      | 1M tokenów/dzień                            | Qwen3 235B, GPT-OSS 120B                 | Wymagany klucz API |
+| **Qoder**         | Brak opublikowanego capu; limity obowiązują | Kimi-K2, DeepSeek-R1, Qwen3-coder        | Bez auth           |
 
 **Wskazówka**: Podłącz kilka darmowych providerów, aby zwiększyć pokrycie fallbacku.
 Brak opublikowanego limitu tokenów nie oznacza nieograniczonej dostępności.

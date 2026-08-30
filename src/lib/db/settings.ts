@@ -147,6 +147,8 @@ export async function getSettings() {
     tailscaleUrl: "",
     stickyRoundRobinLimit: 3,
     disableSessionStickiness: false,
+    // Global connection-aware expansion fallback for group-B combo strategies is opt-in.
+    connectionAwareExpansion: false,
     promptCacheAffinityEnabled: true,
     comboStrategy: "fallback",
     comboStickyRoundRobinLimit: null, // null = inherit stickyRoundRobinLimit (a literal default here shadows the documented batched-rotation default of 3 — #6678 regression caught by the v3.8.47 release CI)
@@ -249,6 +251,14 @@ export async function getSettings() {
     // #9418: Opt-in filter that hides no-think/* gateway variants from the /v1/models catalog.
     // Routing still works for hidden ids sent explicitly.
     hideNoThinkVariants: false,
+    // #11481: Opt-in explicit model exposure allow/deny list, mirrored into the
+    // auto/* combo candidate pool (open-sse/services/autoCombo/modelExposureFilter.ts)
+    // so a denied model can't sneak back in via combo routing — the same trap
+    // #6512 already fixed once for hidePaidModels. See
+    // src/shared/utils/modelExposureList.ts for the matching predicate. Empty
+    // arrays preserve prior behaviour; opt-in only.
+    modelVisibilityAllowlist: [],
+    modelVisibilityDenylist: [],
     // #6977: Opt-in per-connection auto-ping that warms a Codex OAuth connection's
     // quota window right after it resets, so the first real request doesn't land in
     // a cold window. `connections` maps connection id -> enabled. Default empty map

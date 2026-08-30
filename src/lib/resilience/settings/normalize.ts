@@ -21,6 +21,7 @@ import type {
   QuotaPreflightSettings,
   StreamRecoverySettings,
   ProviderQuotaOverrideSettings,
+  CredentialHealthCheckSettings,
 } from "./types";
 
 export function asRecord(value: unknown): JsonRecord {
@@ -124,10 +125,20 @@ export function normalizeRequestQueueSettings(
     min: 1,
     max: 10_000,
   });
+  const globalConcurrentRequests = toInteger(
+    record.globalConcurrentRequests,
+    fallback.globalConcurrentRequests,
+    { min: 0, max: 100_000 }
+  );
   const maxWaitMs = toInteger(record.maxWaitMs, fallback.maxWaitMs, {
     min: 1,
     max: 24 * 60 * 60 * 1000,
   });
+  const executionMaxWaitMs = toInteger(
+    record.executionMaxWaitMs,
+    fallback.executionMaxWaitMs,
+    { min: 1, max: 24 * 60 * 60 * 1000 }
+  );
   const maxQueueDepth = toInteger(record.maxQueueDepth, fallback.maxQueueDepth, {
     min: 0,
     max: 100_000,
@@ -141,7 +152,9 @@ export function normalizeRequestQueueSettings(
     requestsPerMinute,
     minTimeBetweenRequestsMs,
     concurrentRequests,
+    globalConcurrentRequests,
     maxWaitMs,
+    executionMaxWaitMs,
     maxQueueDepth,
   };
 }
@@ -431,8 +444,16 @@ function normalizeProviderQuotaOverrideEntry(raw: unknown): ProviderQuotaOverrid
   const out: ProviderQuotaOverrideSettings = {};
   const rpm = typeof record.rpm === "number" ? record.rpm : Number(record.rpm);
   if (Number.isFinite(rpm) && rpm > 0) out.rpm = Math.trunc(rpm);
-  const concurrency = typeof record.concurrency === "number" ? record.concurrency : Number(record.concurrency);
+  const concurrency =
+    typeof record.concurrency === "number" ? record.concurrency : Number(record.concurrency);
   if (Number.isFinite(concurrency) && concurrency > 0) out.concurrency = Math.trunc(concurrency);
+  const providerConcurrency =
+    typeof record.providerConcurrency === "number"
+      ? record.providerConcurrency
+      : Number(record.providerConcurrency);
+  if (Number.isFinite(providerConcurrency) && providerConcurrency >= 0) {
+    out.providerConcurrency = Math.trunc(providerConcurrency);
+  }
   return Object.keys(out).length > 0 ? out : null;
 }
 
@@ -453,4 +474,17 @@ export function normalizeProviderQuotaOverrides(
     if (normalized) out[provider] = normalized;
   }
   return out;
+}
+
+export function normalizeCredentialHealthCheckSettings(
+  next: unknown,
+  fallback: CredentialHealthCheckSettings
+): CredentialHealthCheckSettings {
+  const record = asRecord(next);
+  return {
+    intervalMinutes: toInteger(record.intervalMinutes, fallback.intervalMinutes, {
+      min: 0,
+      max: 1440,
+    }),
+  };
 }

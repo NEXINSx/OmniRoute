@@ -135,6 +135,21 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     textIcon: "PP",
     website: "https://www.perplexity.ai",
   },
+  "perplexity-agent": {
+    id: "perplexity-agent",
+    alias: "pplx-agent",
+    name: "Perplexity Agent",
+    icon: "search",
+    color: "#20808D",
+    textIcon: "PA",
+    website: "https://www.perplexity.ai",
+    authHint:
+      "Use your Perplexity API key. OmniRoute routes Agent API model IDs through Perplexity's Responses-compatible endpoint.",
+    apiHint:
+      "Use Agent API model IDs with the pplx-agent/ prefix, for example pplx-agent/openai/gpt-5.6-sol or pplx-agent/anthropic/claude-opus-4-5.",
+    passthroughModels: true,
+    serviceKinds: ["llm"],
+  },
   cohere: {
     id: "cohere",
     alias: "cohere",

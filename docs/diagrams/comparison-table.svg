@@ -23,7 +23,7 @@
   <g font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif">
     <g opacity="0"><animate attributeName="opacity" values="0;1" dur="0.4s" begin="0.15s" fill="freeze"/>
       <text x="44" y="196" font-size="14.5" fill="#c9d1d9">Providers</text>
-      <text x="440" y="196" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif" font-size="15" font-weight="800" fill="#7ee787">352</text>
+      <text x="440" y="196" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif" font-size="15" font-weight="800" fill="#7ee787">350</text>
       <text x="604" y="196" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif" font-size="13.5" font-weight="600" fill="#8b949e">40+</text>
       <text x="760" y="196" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif" font-size="13.5" font-weight="600" fill="#8b949e">400+*</text>
       <text x="916" y="196" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, Helvetica, system-ui, sans-serif" font-size="13.5" font-weight="600" fill="#8b949e">~5</text>

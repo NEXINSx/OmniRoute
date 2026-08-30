@@ -237,37 +237,6 @@ export const IMAGE_PROVIDERS: Record<string, ImageProviderConfig> = {
     supportedSizes: ["1024x1024", "1024x1536", "1536x1024"],
   },
 
-  "chatgpt-web": {
-    id: "chatgpt-web",
-    alias: "cgpt-web",
-    baseUrl: "https://chatgpt.com/backend-api/f/conversation",
-    authType: "apikey",
-    authHeader: "cookie",
-    format: "chatgpt-web",
-    models: [{ id: "gpt-5.5", name: "GPT-5.5 Instant (ChatGPT Web Image)" }],
-    supportedSizes: ["1024x1024", "1024x1536", "1536x1024"],
-  },
-
-  // #10466: Gemini Web session image generation (Nano Banana). Same
-  // web-cookie transport as the gemini-web chat provider — the handler
-  // drives the session executor in image mode and extracts the generated
-  // asset URLs from the StreamGenerate frames.
-  "gemini-web": {
-    id: "gemini-web",
-    alias: "gweb",
-    baseUrl: "https://gemini.google.com/app",
-    authType: "apikey",
-    authHeader: "cookie",
-    format: "gemini-web",
-    // `-web` suffix on purpose: the bare `nano-banana` id is owned by
-    // adobe-firefly (operator decision 2026-07-31, pinned by the
-    // cheaperinference-image-models guard). parseImageModel's bare-model scan
-    // walks providers in insertion order, so a bare `nano-banana` here would
-    // steal that resolution. Keep this id distinct.
-    models: [{ id: "nano-banana-web", name: "Nano Banana (Gemini Web Image)" }],
-    supportedSizes: ["1024x1024", "1024x1536", "1536x1024"],
-  },
-
   // Cursor plan image generation via the Agent CLI native `generateImage` tool.
   // Reuses the same OAuth/API-key connection as chat (`provider: "cursor"`).
   // Requires the `agent` binary (CURSOR_AGENT_BIN) — see cursorAgentImage handler.
@@ -285,18 +254,6 @@ export const IMAGE_PROVIDERS: Record<string, ImageProviderConfig> = {
       { id: "composer-2.5", name: "Composer 2.5 (Image)" },
     ],
     supportedSizes: ["1024x1024", "1024x1792", "1792x1024", "1024x1536", "1536x1024"],
-  },
-
-  "microsoft-designer-web": {
-    id: "microsoft-designer-web",
-    alias: "msdesigner",
-    baseUrl:
-      "https://designerapp.officeapps.live.com/designerapp/DallE.ashx?action=GetDallEImagesCogSci",
-    authType: "apikey",
-    authHeader: "bearer",
-    format: "designer-web",
-    models: [{ id: "dall-e-3", name: "DALL-E 3 (Microsoft Designer Web)" }],
-    supportedSizes: ["1024x1024", "1792x1024", "1024x1792"],
   },
 
   xai: {
@@ -925,7 +882,10 @@ export function parseImageModel(modelStr) {
 
   // No provider prefix — try to find the model in every provider, excluding cookie-auth (web) bridges
   for (const [providerId, config] of Object.entries(IMAGE_PROVIDERS)) {
-    if (config.authHeader !== "cookie" && (config.routingAliases?.includes(modelStr) || config.models.some((m) => m.id === modelStr))) {
+    if (
+      config.authHeader !== "cookie" &&
+      (config.routingAliases?.includes(modelStr) || config.models.some((m) => m.id === modelStr))
+    ) {
       return { provider: providerId, model: modelStr };
     }
   }

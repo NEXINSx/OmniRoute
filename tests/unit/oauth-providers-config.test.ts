@@ -41,7 +41,6 @@ const {
   OAUTH_TIMEOUT,
   PROVIDERS: OAUTH_PROVIDER_IDS,
   QODER_CONFIG,
-  RAYCAST_CONFIG,
   TRAE_CONFIG,
   XAI_OAUTH_CONFIG,
   OPENFERENCE_CONFIG,
@@ -65,7 +64,6 @@ const EXPECTED_PROVIDER_KEYS = [
   "amazon-q",
   "cursor",
   "trae",
-  "raycast",
   "kilocode",
   "cline",
   "clinepass",
@@ -104,7 +102,6 @@ const EXPECTED_CONFIG_BY_PROVIDER = {
   clinepass: CLINE_CONFIG, // reuses the Cline WorkOS flow (clinepass: cline in providers/index.ts)
   "devin-desktop": DEVIN_DESKTOP_CONFIG,
   "devin-cli": DEVIN_DESKTOP_CONFIG,
-  raycast: RAYCAST_CONFIG,
   trae: TRAE_CONFIG,
   "grok-cli": GROK_BUILD_OAUTH_CONFIG,
   "xai-oauth": XAI_OAUTH_CONFIG,

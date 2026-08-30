@@ -59,6 +59,12 @@ import AgentrouterConsoleFields from "./AgentrouterConsoleFields";
 import QuotaScrapingFields, { EMPTY_QUOTA_SCRAPING_FIELDS } from "./QuotaScrapingFields";
 import GlmTeamQuotaFields, { EMPTY_GLM_TEAM_QUOTA_FIELDS } from "./GlmTeamQuotaFields";
 import ProviderRegionField, { getProviderRegionConfig } from "./AlibabaProviderRegionField";
+import PeakHourProtectionEditor, {
+  EMPTY_PEAK_HOUR_PROTECTION,
+  formatPeakHourSummary,
+  normalizePeakHourProtectionForSave,
+} from "../PeakHourProtectionEditor";
+import type { PeakHourProtectionConfig } from "@/lib/providers/peakHourProtection";
 export interface EditConnectionModalConnection {
   id?: string;
   name?: string;
@@ -111,7 +117,7 @@ export default function EditConnectionModal({
     maxWaitMs: "",
     rateLimitMaxConcurrent: "",
     apiKey: "",
-    healthCheckInterval: 60,
+    healthCheckInterval: "" as number | "",
     baseUrl: "",
     targetFormat: "",
     cx: "",
@@ -154,6 +160,7 @@ export default function EditConnectionModal({
     runtimeKey: "",
     connectorName: stringField(connectionProviderSpecificData?.connectorName) || "OmniRoute Codex",
     m365Tier: normalizeM365TierValue(connectionProviderSpecificData?.tier) as M365TierValue,
+    peakHourProtection: { ...EMPTY_PEAK_HOUR_PROTECTION, windows: [] } as PeakHourProtectionConfig,
   });
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
@@ -268,10 +275,6 @@ export default function EditConnectionModal({
       const existingOpenRouterPreset = stringField(connection.providerSpecificData?.preset);
       const existingCx = stringField(connection.providerSpecificData?.cx);
       const existingAccountId = stringField(connection.providerSpecificData?.accountId);
-      const existingOpenCodeGoWorkspaceId =
-        stringField(connection.providerSpecificData?.opencodeGoWorkspaceId) ||
-        stringField(connection.providerSpecificData?.openCodeGoWorkspaceId) ||
-        stringField(connection.providerSpecificData?.workspaceId);
       const existingGlmOrganizationId =
         stringField(connection.providerSpecificData?.glmOrganizationId) ||
         stringField(connection.providerSpecificData?.bigmodelOrganization) ||
@@ -329,7 +332,9 @@ export default function EditConnectionModal({
             ? String(connection.rateLimitOverrides.maxConcurrent)
             : "",
         apiKey: "",
-        healthCheckInterval: connection.healthCheckInterval ?? 60,
+        // Unset per-connection override means "follow the global default" —
+        // surface that as an empty field (0 renders as an explicit opt-out).
+        healthCheckInterval: connection.healthCheckInterval ?? "",
         baseUrl: existingBaseUrl || defaultBaseUrl,
         targetFormat: existingTargetFormat || "",
         cx: existingCx,
@@ -362,8 +367,6 @@ export default function EditConnectionModal({
         quotaPerUnit: existingQuotaPerUnit,
         glmOrganizationId: existingGlmOrganizationId,
         glmProjectId: existingGlmProjectId,
-        opencodeGoWorkspaceId: existingOpenCodeGoWorkspaceId,
-        opencodeGoAuthCookie: "",
         ollamaCloudUsageCookie: "",
         alibabaConsoleCookie: stringField(connection.providerSpecificData?.alibabaConsoleCookie),
         qwenCloudCookie: stringField(connection.providerSpecificData?.qwenCloudCookie),
@@ -391,6 +394,22 @@ export default function EditConnectionModal({
         connectorName:
           stringField(connection.providerSpecificData?.connectorName) || "OmniRoute Codex",
         m365Tier: normalizeM365TierValue(connection.providerSpecificData?.tier) as M365TierValue,
+        peakHourProtection: {
+          ...EMPTY_PEAK_HOUR_PROTECTION,
+          ...((connection.providerSpecificData?.peakHourProtection as PeakHourProtectionConfig) ||
+            {}),
+          windows: Array.isArray(
+            (
+              connection.providerSpecificData?.peakHourProtection as
+                PeakHourProtectionConfig | undefined
+            )?.windows
+          )
+            ? [
+                ...(connection.providerSpecificData?.peakHourProtection as PeakHourProtectionConfig)
+                  .windows,
+              ]
+            : [],
+        },
       });
       const existing = connection.providerSpecificData?.extraApiKeys;
       setExtraApiKeys(Array.isArray(existing) ? existing : []);
@@ -533,7 +552,10 @@ export default function EditConnectionModal({
         name: formData.name,
         priority: formData.priority,
         maxConcurrent: parsedMaxConcurrent,
-        healthCheckInterval: formData.healthCheckInterval,
+        // Empty field = "follow the global default" → send undefined so the
+        // stored per-connection override is cleared; 0 = explicit opt-out.
+        healthCheckInterval:
+          formData.healthCheckInterval === "" ? undefined : formData.healthCheckInterval,
       };
       const overrides: Record<string, number> = {};
       if (formData.rpm.trim()) overrides.rpm = Number(formData.rpm);
@@ -699,6 +721,9 @@ export default function EditConnectionModal({
       }
       if (updates.providerSpecificData) {
         updates.providerSpecificData.disableCooling = formData.disableCooling ? true : undefined;
+        updates.providerSpecificData.peakHourProtection = normalizePeakHourProtectionForSave(
+          formData.peakHourProtection
+        );
         // Explicit `null`, not `undefined`: the PUT route merges
         // { ...existing, ...incoming }, so omitting the key would keep the previous
         // choice and switching back to the default would never take effect.
@@ -844,6 +869,16 @@ export default function EditConnectionModal({
             label={t("disableCoolingLabel")}
             description={t("disableCoolingDescription")}
           />
+          <PeakHourProtectionEditor
+            value={formData.peakHourProtection}
+            onChange={(peakHourProtection) => setFormData({ ...formData, peakHourProtection })}
+            t={t}
+          />
+          {formatPeakHourSummary(formData.peakHourProtection) && (
+            <p className="text-xs text-text-muted">
+              {formatPeakHourSummary(formData.peakHourProtection)}
+            </p>
+          )}
         </div>
         <QuotaScrapingFields
           provider={provider}
@@ -884,20 +919,19 @@ export default function EditConnectionModal({
             </p>
           </div>
         )}
-        {isOAuth && (
-          <Input
-            label={t("healthCheckMinutes")}
-            type="number"
-            value={formData.healthCheckInterval}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                healthCheckInterval: Math.max(0, Number.parseInt(e.target.value) || 0),
-              })
-            }
-            hint={t("healthCheckHint")}
-          />
-        )}
+        <Input
+          label={t("healthCheckMinutes")}
+          type="number"
+          min={0}
+          max={1440}
+          value={formData.healthCheckInterval}
+          onChange={(e) => {
+            const parsed = Number.parseInt(e.target.value, 10);
+            const next = Number.isNaN(parsed) ? 0 : Math.min(1440, Math.max(0, parsed));
+            setFormData({ ...formData, healthCheckInterval: next });
+          }}
+          hint={t("healthCheckHint")}
+        />
         <Input
           label={t("priorityLabel")}
           type="number"

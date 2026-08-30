@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
-import {
-  getCachedProviderConnectionById,
-  updateProviderConnection,
-  isCloudEnabled,
-  resolveProxyForConnection,
-} from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { updateProviderConnection } from "@/lib/db/providers";
+import { isCloudEnabled, resolveProxyForConnection } from "@/lib/db/settings";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
 import { validateProviderApiKey } from "@/lib/providers/validation";
@@ -29,16 +26,16 @@ import {
 import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
 import { shouldUseApiKeyConnectionTest } from "./webSessionTestDispatch";
 import { testCodexAppServerConnection, makeDiagnosis } from "./codexAppServerHealth";
-import { removeConnectionHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
+import { recoverKeyHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import { shouldClearErrorStateOnValidProbe } from "@/lib/usage/providerLimits";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { classifyAmbiguousOrAuthError, type ClassifyFailureArgs } from "./mistralAmbiguousAuth";
 import { buildApiKeyConnectionTestResult } from "./apiKeyTestResult";
 import { classifyOAuthProbeInconclusive, OAUTH_TEST_CONFIG } from "./oauthTestConfig";
 import { isGeoBlockedError } from "@omniroute/open-sse/services/errorClassifier.ts";
+import * as retirement from "@/lib/providers/chatgptWebRetirementResponse";
 
-// Bound the OAuth probe so a hung upstream can't block the connection-test queue
-// forever (#1449). Mirrors the 30s timeout the API-key path uses via validateProviderApiKey.
+// Match the API-key path's 30s timeout so a hung OAuth upstream cannot block the test queue.
 const OAUTH_TEST_TIMEOUT_MS = 30_000;
 
 import { CLI_RUNTIME_PROVIDER_MAP } from "./cliRuntimeProviderMap";
@@ -999,8 +996,8 @@ export async function testSingleConnection(connectionId: string, validationModel
       latencyMs: 0,
     };
   }
+  retirement.assertProviderAvailable(provider);
 
-  // Resolve proxy for this connection (key → combo → provider → global → direct)
   let proxyInfo: any = null;
   try {
     proxyInfo = await resolveProxyForConnection(connectionId);
@@ -1053,8 +1050,23 @@ export async function testSingleConnection(connectionId: string, validationModel
 
   // Unsupported validation capability is neutral: the probe established that
   // this provider cannot be verified through the generic test surface, not
-  // that its credential is invalid. Do not mutate persisted credential health.
+  // that its credential is invalid. Do not mutate persisted credential health
+  // (testStatus/lastError/etc.) — but DO activate it if it isn't already: a
+  // connection that can never be health-checked would otherwise stay hidden
+  // from /v1/models forever under the "only advertise tested connections"
+  // default (isActive starts false on creation — see POST /api/providers),
+  // silently regressing every provider without a test surface.
   if (result.skipped === true) {
+    if (connection.isActive !== true) {
+      try {
+        await updateProviderConnection(connectionId, { isActive: true });
+      } catch (activateError) {
+        console.log(
+          `[ConnectionTest] Failed to activate unverifiable connection ${connectionId}:`,
+          (activateError as any)?.message || activateError
+        );
+      }
+    }
     return {
       ...result,
       latencyMs,
@@ -1063,7 +1075,6 @@ export async function testSingleConnection(connectionId: string, validationModel
     };
   }
 
-  // Build update data
   const now = new Date().toISOString();
   const diagnosis =
     result.diagnosis ||
@@ -1096,13 +1107,22 @@ export async function testSingleConnection(connectionId: string, validationModel
     connection as { rateLimitedUntil?: string | null },
     result.valid
   );
+  const lastErrorType = result.valid ? connection.lastErrorType : diagnosis.type;
 
   const updateData: Record<string, any> = {
     testStatus: clearErrorState ? "active" : result.valid ? connection.testStatus : "error",
+    // A passing test is the sole activation signal under the "only advertise
+    // tested-working connections" default — see POST /api/providers, which
+    // now creates connections isActive:false. Only ever flips ON here: a
+    // failing test intentionally leaves isActive untouched (a transient
+    // failure on an already-active, already-working connection must not take
+    // it out of rotation — that's what the cooldown/rateLimitedUntil below is
+    // for), so this never deactivates anything.
+    ...(result.valid ? { isActive: true } : {}),
     lastError: clearErrorState ? null : result.valid ? connection.lastError : result.error,
     lastErrorAt: clearErrorState ? null : result.valid ? connection.lastErrorAt : now,
     lastTested: now,
-    lastErrorType: clearErrorState ? null : result.valid ? connection.lastErrorType : diagnosis.type,
+    lastErrorType: clearErrorState ? null : lastErrorType,
     lastErrorSource: clearErrorState
       ? null
       : result.valid
@@ -1124,19 +1144,13 @@ export async function testSingleConnection(connectionId: string, validationModel
 
   if (clearErrorState) {
     updateData.backoffLevel = 0;
-
-    const psd = connection?.providerSpecificData as Record<string, unknown> | undefined;
-    updateData.providerSpecificData = {
-      ...(psd || {}),
-      apiKeyHealth: {},
-    };
-
-    try {
-      removeConnectionHealth(connectionId);
-    } catch {}
   }
 
-  // If token was refreshed, update tokens in DB
+  if (result.valid && (connection.apiKey || connection.accessToken)) {
+    const recovered = recoverKeyHealth(connectionId, "primary", connection.providerSpecificData);
+    if (recovered) updateData.providerSpecificData = recovered;
+  }
+
   if (result.refreshed && result.newTokens) {
     updateData.accessToken = result.newTokens.accessToken;
     if (result.newTokens.refreshToken) {
@@ -1205,7 +1219,6 @@ export async function testSingleConnection(connectionId: string, validationModel
   };
 }
 
-// POST /api/providers/[id]/test - Test connection
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -1230,6 +1243,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     return NextResponse.json(data);
   } catch (error) {
+    const retired = retirement.responseForError(error);
+    if (retired) return retired;
     console.log("Error testing connection:", error);
     return NextResponse.json({ error: "Test failed" }, { status: 500 });
   }

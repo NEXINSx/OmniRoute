@@ -258,7 +258,7 @@ export default function PassthroughModelsSection({
           Boolean((model as any).free) ||
           model.id.endsWith(":free") ||
           /\bgr[aá]tis\b|\bfree\b/i.test(model.name || "") ||
-          isFreeModel(providerId, { id: model.id }),
+          isFreeModel(providerId, { id: model.id, isFree: (model as any).isFree }),
         isHidden: isModelHidden(model.id),
       });
       seenModelIds.add(model.id);
@@ -296,7 +296,7 @@ export default function PassthroughModelsSection({
           modelId.endsWith(":free") ||
           Boolean((customModel as any)?.free) ||
           /\bgr[aá]tis\b|\bfree\b/i.test(customModel?.name || alias || "") ||
-          isFreeModel(providerId, { id: modelId }),
+          isFreeModel(providerId, { id: modelId, isFree: (customModel as any)?.isFree }),
         isHidden: isModelHidden(modelId),
       });
       seenModelIds.add(modelId);

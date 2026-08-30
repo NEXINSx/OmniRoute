@@ -6,7 +6,7 @@ import {
   updatePricing,
   resetPricing,
   resetAllPricing,
-} from "@/lib/localDb";
+} from "@/lib/db/settings";
 import { updatePricingSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 

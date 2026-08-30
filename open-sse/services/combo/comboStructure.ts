@@ -46,7 +46,7 @@ import type {
  * #8488 / #5240: web-cookie (and similar) providers honestly advertise
  * registry toolCalling:false but still run the prompt-emulated tool shim.
  * Combo tools filters must keep those targets eligible so fail-closed does
- * not regress emulation-only combos (e.g. all chatgpt-web).
+ * not regress emulation-only web-provider combos.
  */
 export function providerSupportsEmulatedToolCalling(
   providerIdOrAlias: string | null | undefined

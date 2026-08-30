@@ -229,7 +229,6 @@ v1/
 ├── audio/{speech, transcriptions}/      TTS + STT
 ├── batches/[id]/{cancel}、batches/      OpenAI Batches API
 ├── chat/completions/                    聊天補全（主要端點）
-├── chatgpt-web/                         ChatGPT-Web 相容層
 ├── completions/                         舊版文字補全
 ├── embeddings/                          嵌入向量
 ├── files/[id]/、files/                  檔案 API
@@ -476,16 +475,16 @@ open-sse/
 
 ### 4.2 `open-sse/executors/`
 
-84 個提供者執行器，每個都繼承 `BaseExecutor`（`base.ts`）：
+107 個提供者執行器，每個都繼承 `BaseExecutor`（`base.ts`）：
 
-`antigravity`、`azure-openai`、`blackbox-web`、`chatgpt-web`、`cliproxyapi`、
-`cloudflare-ai`、`codex`、`commandCode`、`cursor`、`default`、`devin-cli`、
+`antigravity`、`azure-openai`、`blackbox-web`、`cliproxyapi`、
+`chatgpt-web-codex`、`cloudflare-ai`、`codex`、`commandCode`、`cursor`、`default`、`devin-cli`、
 `muse-spark-web`、`nlpcloud`、`opencode`、`perplexity-web`、`petals`、
 `pollinations`、`qoder`、`vertex`、`windsurf`，加上 `claudeIdentity.ts`
 （共用身分識別輔助程式）和 `index.ts`（註冊表）。
 
 > 注意：未列在此處的提供者由 `default.ts` 使用通用的
-> 與 OpenAI 相容的執行器處理。完整的 329 項提供者目錄位於
+> 與 OpenAI 相容的執行器處理。完整的 351 項提供者目錄位於
 > `src/shared/constants/providers.ts`。
 
 ### 4.3 `open-sse/translator/`

@@ -1,6 +1,5 @@
 import "./setupPolyfill.ts";
 import { Agent, ProxyAgent, type Dispatcher } from "undici";
-import { socksDispatcher } from "fetch-socks";
 import { getUpstreamTimeoutConfig } from "@/shared/utils/runtimeTimeouts";
 import { stripIpv6Brackets, detectIpLiteralFamily, parseProxyFamily } from "./proxyFamily.ts";
 import { createSocksDispatcherWithFamily } from "./socksConnectorWithFamily.ts";
@@ -461,16 +460,11 @@ function buildProxyDispatcher(
     };
     if (parsed.username) socksOptions.userId = decodeURIComponent(parsed.username);
     if (parsed.password) socksOptions.password = decodeURIComponent(parsed.password);
-    return family === null
-      ? (socksDispatcher(
-          socksOptions as Parameters<typeof socksDispatcher>[0],
-          options
-        ) as Dispatcher)
-      : createSocksDispatcherWithFamily(
-          socksOptions as unknown as Parameters<typeof createSocksDispatcherWithFamily>[0],
-          family,
-          options
-        );
+    return createSocksDispatcherWithFamily(
+      socksOptions as unknown as Parameters<typeof createSocksDispatcherWithFamily>[0],
+      family,
+      options
+    );
   }
 
   // ProxyAgent omits `connect`; the client->proxy socket is built from `proxyTls`.

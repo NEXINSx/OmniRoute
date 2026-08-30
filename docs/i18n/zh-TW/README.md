@@ -325,12 +325,12 @@ Result: 4 fallback layers reduce downtime; upstream availability is not guarante
     <td align="center" width="120"><img src="../../public/providers/continue.png" width="52" alt="Continue"/><br/><b>Continue</b></td>
   </tr>
   <tr>
-    <td align="center" width="120"><a href="https://github.com/anomalyco/opencode"><img src="../../public/providers/opencode.svg" width="52" alt="OpenCode"/><br/><b>OpenCode</b></a></td>
-    <td align="center" width="120"><a href="https://github.com/Kilo-Org/kilocode"><img src="../../public/providers/kilocode.svg" width="52" alt="Kilo Code"/><br/><b>Kilo Code</b></a></td>
-    <td align="center" width="120"><img src="../../public/providers/droid.svg" width="52" alt="Droid"/><br/><b>Droid</b></td>
+    <td align="center" width="120"><a href="https://github.com/anomalyco/opencode"><img src="../../../public/providers/cli-generic.svg" width="52" alt="OpenCode"/><br/><b>OpenCode</b></a></td>
+    <td align="center" width="120"><a href="https://github.com/Kilo-Org/kilocode"><img src="../../../public/providers/cli-generic.svg" width="52" alt="Kilo Code"/><br/><b>Kilo Code</b></a></td>
+    <td align="center" width="120"><img src="../../../public/providers/cli-generic.svg" width="52" alt="Droid"/><br/><b>Droid</b></td>
     <td align="center" width="120"><img src="../../public/providers/openclaw.png" width="52" alt="OpenClaw"/><br/><b>OpenClaw</b></td>
     <td align="center" width="120"><img src="../../public/providers/kiro.svg" width="52" alt="Kiro"/><br/><b>Kiro</b></td>
-    <td align="center" width="120"><img src="../../public/providers/command-code.svg" width="52" alt="Command Code"/><br/><b>Command</b></td>
+    <td align="center" width="120"><img src="../../../public/providers/cli-generic.svg" width="52" alt="Command Code"/><br/><b>Command</b></td>
   </tr>
 </table>
 </div>
@@ -719,7 +719,7 @@ podman compose --profile base up -d --build
 | 💳 **訂閱**               | Claude Code Pro / Codex / Copilot        | $10–200/月  |
 | 🔑 **API 金鑰（免費層）** | NVIDIA NIM、Cerebras、Groq               | **免費**    |
 | 💰 **廉價**               | GLM-5 $0.5/1M · MiniMax M2.5 $0.3/1M     | 幾分錢      |
-| 🆓 **有記錄的免費存取**   | Kiro、Qoder、Qwen、Pollinations、LongCat | **列為 $0** |
+| 🆓 **有記錄的免費存取**   | Kiro、Qoder、Pollinations、LongCat | **列為 $0** |
 
 **$0 免費堆疊 — 組合成一個不可中斷的 Combo：**
 
@@ -727,7 +727,6 @@ podman compose --profile base up -d --build
 | ----------------- | ----------- | ----------------------------------------------- | ---------------------------- |
 | **Kiro**          | `kr/`       | Claude Sonnet 4.5、Haiku 4.5、Opus 4.6          | 50 額度/月                   |
 | **Qoder**         | `if/`       | kimi-k2-thinking、qwen3-coder-plus、deepseek-r1 | 無公開總量；受每日／速率限制 |
-| **Qwen**          | `qw/`       | qwen3-coder-plus/flash/next                     | 無公開總量；受每日／速率限制 |
 | **Pollinations**  | `pol/`      | GPT-5、Claude、Gemini、DeepSeek、Llama 4        | 無需金鑰                     |
 | **LongCat**       | `lc/`       | LongCat-2.0                                     | 1000 萬一次性額度（需 KYC）  |
 | **Cloudflare AI** | `cf/`       | 50+ 模型                                        | 1 萬 neurons/天              |

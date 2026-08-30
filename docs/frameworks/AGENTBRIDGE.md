@@ -172,11 +172,16 @@ When set, configures `undici`'s global dispatcher with the extra CA cert, allowi
 
 ### 2.7 Secret masking (`src/mitm/maskSecrets.ts`)
 
-Applied to all request bodies and headers **before** they enter the Traffic Inspector buffer or any log:
+The independent clean-room scanner is applied to request bodies and credential headers
+**before** they enter the Traffic Inspector buffer or any log. It performs a single linear pass:
 
 - `sk-` / `ak-` / `pk-` prefixed tokens (OpenAI/Anthropic-style)
-- `Authorization: Bearer <token>` headers
-- Generic long tokens (≥40 chars)
+- RFC 6750 `Authorization: Bearer <token>` credentials, with whole-token precedence
+- Generic long opaque tokens (≥40 chars), including dotted and padded forms
+
+`sanitizeHeaders()` lowercases retained names, joins array values deterministically, drops the
+shared hop-by-hop/framing denylist (including proxy authentication), fully redacts `cookie` and
+`set-cookie`, and delegates credential values to the scanner.
 
 ---
 

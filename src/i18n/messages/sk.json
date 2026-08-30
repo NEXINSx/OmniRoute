@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "Používa sa {count, plural, one {# dávka} other {# dávok}}",
     "batchFilePreview": "Náhľad",
     "batchFilePreviewTruncated": "Zobrazenie prvých {shown} riadkov ({total} celkom riadkov)",
-    "batchFileDownloadFull": "Stiahnuť celý súbor",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "Stiahnuť celý súbor"
   },
   "disabled": "Zakázané",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Smerovať požiadavky s vyčerpaným rozpočtom na núdzového bezplatného záložného poskytovateľa/model.",
@@ -1023,6 +1023,8 @@
     "logs": "Denníky",
     "webhooks": "Webhooky",
     "webhooksSubtitle": "Získajte upozornenia na udalosti",
+    "logExport": "Export protokolov",
+    "logExportSubtitle": "Odosielanie protokolov volaní von",
     "combosSubtitle": "Zoskupiť poskytovateľov pre zlyhanie",
     "batchSubtitle": "Spracovať viacero žiadostí",
     "contextCavemanSubtitle": "Rýchla kompresia",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "Zachytávať prevádzku agentov IDE",
     "trafficInspector": "Inšpektor prevádzky",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Nástroje na kódovanie smerujúce na OmniRoute",
     "cliAgents": "CLI agenti",
@@ -1300,8 +1303,7 @@
       "open": "otvorené",
       "close": "zatvoriť"
     },
-    "noResults": "Žiadne výsledky",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Žiadne výsledky"
   },
   "webhooks": {
     "title": "Webhooky",
@@ -1808,6 +1810,11 @@
     "updateStarted": "Aktualizácia spustená...",
     "reloadingPageAutomatically": "Automaticky sa znova načítava stránka...",
     "providerTopology": "Topológia poskytovateľa",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Stiahnuť DMG (macOS)",
     "downloadDmgDescription": "Nová verzia desktopovej aplikácie OmniRoute je k dispozícii. Prosím, stiahnite a nainštalujte inštalátor DMG pre macOS na aktualizáciu (aktuálna: v{version}).",
     "downloadExe": "Stiahnuť EXE (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "Poznámky k vydaniu",
     "readMore": "Čítať viac",
     "noAuthLabel": "Žiadna autentifikácia",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "Obísť limity kvót poskytovateľa",
     "bypassProviderQuotaDescription": "Umožňuje tomuto kľúču ignorovať pravidlá limitov nadradeného poskytovateľa/účtu počas smerovania. USD kvóty kľúča API stále platia.",
     "quotaPill": "KVÓTA",
-    "quotaModeOnly": "Iba qtSd"
+    "quotaModeOnly": "Iba qtSd",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Audit Log",
@@ -2922,8 +2932,10 @@
       "interpreter": "CLI autonómneho kódovacieho agenta Open Interpreter",
       "omp": "Terminálový kódovací agent Oh My Pi",
       "letta": "CLI agent Letta s trvalou pamäťou a používaním nástrojov",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "AI terminál Warp s podporou vlastného poskytovateľa",
       "agent-deck": "Multi-agentový orchestrátor Agent Deck",
+      "5dive": "5dive — vlastná flotila kódovacích agentov; jeden auth profil nasmeruje všetkých na OmniRoute",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "Koncový bod API",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Dostupné koncové body",
     "cloudProxy": "Cloud proxy",
     "disableConfirm": "Naozaj chcete zakázať cloud proxy?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "Vytvorte internú integráciu na",
     "notionIntegrationToken": "Notion Interný Integračný Token",
     "notionNotConnected": "Nie je pripojené",
-    "notionTokenConfigured": "Token je nakonfigurovaný. Nástroje Notion sú dostupné cez MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Token je nakonfigurovaný. Nástroje Notion sú dostupné cez MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4644,13 @@
     "retry": "Skúste to znova",
     "allOperational": "Všetky systémy funkčné",
     "issuesDetected": "Zistené systémové problémy",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Aktualizované {time}",
     "latency": "Latencia",
     "latencyP50": "p50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} problémov",
     "score": "Skóre",
     "lastRequest": "Posledná požiadavka",
-    "lastError": "Posledná chyba",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Posledná chyba"
   },
   "telemetry": {
     "title": "Systémová telemetria",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Multi-poskytovateľ",
     "usageTracking": "Sledovanie používania",
     "securityDesc": "Nastavte si heslo na ochranu svojho informačného panela alebo ho zatiaľ preskočte.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Pripojte svojho prvého poskytovateľa AI. Neskôr môžete pridať ďalšie.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "API kľúč (povinné)",
     "customUrlOptional": "Vlastná adresa URL (voliteľné)",
     "testDesc": "Overte, či pripojenie k vášmu poskytovateľovi funguje.",
@@ -5011,9 +5025,7 @@
         "skipped": "už nakonfigurované",
         "failed": "zlyhalo"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Poskytovatelia",
@@ -6254,13 +6266,13 @@
       "galadriel": "Pripojte Galadriel pomocou API kľúča.",
       "predibase": "Bezplatný skúšobný kredit 25 $ (platnosť 30 dní)",
       "chenzk": "Brána kompatibilná s OpenAI so živým katalógom modelov na chenzk.top.",
-      "magnific": "Generujte obrázky pomocou Mystic API od Freepik.",
+      "magnific": "Generujte obrázky pomocou Mystic API od Magnific.",
       "freetheai": "Bezplatná brána kompatibilná s OpenAI s podporou prenosu modelov (passthrough).",
-      "g4f-gemini": "Bezplatný reverzný proxy server g4f.space bez kľúča pre Gemini, obmedzený na 5 požiadaviek za minútu.",
-      "g4f-groq": "Bezplatný reverzný proxy server g4f.space bez kľúča pre Groq, obmedzený na 5 požiadaviek za minútu.",
-      "g4f-nvidia": "Bezplatný reverzný proxy server g4f.space bez kľúča pre NVIDIA NIM, obmedzený na 5 požiadaviek za minútu.",
-      "g4f-ollama": "Bezplatná hostovaná brána Ollama bez kľúča od g4f.space, obmedzená na 5 požiadaviek za minútu.",
-      "g4f-pollinations": "Bezplatný reverzný proxy server g4f.space bez kľúča pre Pollinations, obmedzený na 5 požiadaviek za minútu.",
+      "g4f-gemini": "Vzdialená brána g4f.space k Gemini. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-groq": "Vzdialená brána g4f.space k Groq. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-nvidia": "Vzdialená brána g4f.space k NVIDIA NIM. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-ollama": "Vzdialená brána g4f.space k Ollama. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
+      "g4f-pollinations": "Vzdialená brána g4f.space k Pollinations. Anonymný prístup vyžaduje proof-of-work kredity z g4f.dev/chat alebo členský API kľúč z g4f.dev/members.html; limity sa menia.",
       "mixedbread": "Vytvárajte embeddingy pomocou Mixedbread API.",
       "segmind": "Generujte obrázky a videá pomocou hostovaných modelov od Segmind.",
       "amazon-q": "Používa rovnaké AWS Builder ID alebo importovaný tok obnovovacieho tokenu (refresh-token flow) ako Kiro, ale pripojenia Amazon Q uchováva oddelene.",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "Skopírujte požadované poverenia z vlastnej domény poskytovateľa. V prípade súborov cookie skopírujte iba hodnotu hlavičky súboru cookie a vynechajte súbor cookie:.",
     "webSessionGuideStep3Manual": "Manuálna cesta: otvorte nástroje pre vývojárov prehliadača (F12 → Sieť), obnovte stránku, otvorte autentifikovaný požiadavok a skopírujte hodnotu hlavičky Cookie z hlavičiek požiadavky — vynechajte predponu Cookie:.",
     "webSessionGuideStep4": "Vložte ho sem a skontrolujte pripojenie. Ak prestane fungovať, znova sa prihláste a nahraďte ho novou hodnotou.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Považujte to za heslo: môže pristupovať k vášmu prihlásenému webovému účtu, kým nevyprší jeho platnosť alebo kým nebude odvolané.",
     "webNoAuthGuideTitle": "Nevyžadujú sa žiadne poverenia",
     "webNoAuthGuideBody": "{provider} nepotrebuje kľúč API ani súbor cookie. Uložte pripojenie, aby ste mohli používať jeho bezplatný webový koncový bod.",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "Nastavenia koncového bodu uloženého modelu",
     "searchByModelAria": "Hľadať podľa modelu",
     "selectSupportedEndpoint": "Vyberte aspoň jeden podporovaný koncový bod",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Nastavenia",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Skryť denníky kontroly stavu",
     "hideHealthLogsDesc": "Keď je ZAPNUTÉ, potláčajte správy [HealthCheck] v konzole servera",
     "themeAccent": "Farba témy",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Maximálna doba čakania vo fronte",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "Táto vrstva riadi iba radenie a tempo. Neuchováva cooldowny ani otvorené ističe.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Predvolene povoľuje ochranu frontu pre aktívne pripojenia kľúča API.",
     "resilienceMaxQueueWait": "Maximálna doba čakania vo fronte",
+    "resilienceMaxExecutionWait": "Časový limit vykonávania (poistný limit rýchlosti)",
     "resilienceConnectionCooldownScope": "Individuálne pripojenie",
     "resilienceConnectionCooldownTrigger": "Keď spojenie vráti prechodné zlyhanie proti prúdu",
     "resilienceConnectionCooldownEffect": "Dočasne preskočí toto pripojenie a zvýši backoff pre opakované zlyhania",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "Video most",
     "modalityBridgeVideoDesc": "Odoberte snímky z videa, opíšte ich modelom pre spracovanie obrazu a pokračujte vybraným textovým modelom.",
     "modalityBridgeVideoRuntimeReady": "Prostredie je pripravené",
+    "modalityBridgeVideoRuntimeChecking": "Kontrola behového prostredia…",
     "modalityBridgeVideoRuntimeUnavailable": "Prostredie nie je dostupné",
     "modalityBridgeVideoRuntimeInstall": "Nainštalujte FFmpeg a ffprobe do PATH servera, aby ste povolili extrakciu videa.",
     "modalityBridgeVideoEnabled": "Povoliť Video most",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11314,7 +11350,9 @@
       "noPayload": "Žiadne údaje o payload neboli k dispozícii pre tento záznam.",
       "correlationId": "ID korelácie",
       "correlationIdValue": "ID korelácie: {id}",
-      "detailedPayloadInfo": "Najprv povolte podrobné protokolovanie, ak chcete zobrazenie štyroch fáz klienta/poskytovateľa pre nové požiadavky."
+      "detailedPayloadInfo": "Najprv povolte podrobné protokolovanie, ak chcete zobrazenie štyroch fáz klienta/poskytovateľa pre nové požiadavky.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12075,9 +12113,9 @@
       "acp": {
         "title": "ACP Agenti",
         "phrase": "CLI nástroje, ktoré OmniRoute spúšťa ako backend na vykonávanie (obrátený tok)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Klient → OmniRoute → spustenie CLI (stdio/ACP) → odpoveď",
-        "seeOther": "Pozrieť →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "Pozrieť →"
       }
     },
     "comparison": {
@@ -12485,7 +12523,12 @@
     "typeApikey": "API kľúč",
     "sortTypeFirst": "Najjednoduchšie ako prvé",
     "sortTypeFirstHelp": "Zoskupiť podľa náročnosti registrácie (Bez registrácie → Prihlásenie cez OAuth → API kľúč), so zachovaním poradia kvality v rámci každej skupiny",
-    "typeLegend": "Bez registrácie = nulové nastavenie · Prihlásenie cez OAuth = prihlásenie pomocou vlastného účtu · API kľúč = vlastný kľúč alebo bezplatný program daného poskytovateľa"
+    "typeLegend": "Bez registrácie = nulové nastavenie · Prihlásenie cez OAuth = prihlásenie pomocou vlastného účtu · API kľúč = vlastný kľúč alebo bezplatný program daného poskytovateľa",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Vyhľadávanie poskytovateľov",
@@ -12836,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Povoliť viacero pripojení pre každý uzol kompatibility."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Odstrániť interné výstupné položky fázy komentárov z prechodových streamov Responses API pred ich preposlaním klientom. Zakážte tento príznak, ak chcete prijímať nespracované komentáre z upstreamu."
       },
@@ -12901,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Povoliť sieťový prístup v sandboxe zručností."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13383,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "Odolnosť Pripojenia",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Stav",
       "provider": "Poskytovateľ",
@@ -13477,16 +13527,10 @@
         "modelLockouts": "Uzamknutia Modelu",
         "count": "Počet Pripojení"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Zamietnuť požiadavky pred odoslaním, keď cieľový model postráda požadované schopnosti (vízia, nástroje, štruktúrovaný výstup, kontextové okno). Chráni priamu požiadavku od jedného poskytovateľa, ktorá obchádza filter kompatibility kombinovanej vrstvy.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Stránka nenájdená",
@@ -13922,7 +13966,6 @@
     "structuredOutputMismatch": "Poskytovateľ nepodporuje štruktúrovaný výstup",
     "contextWindowMismatch": "Žiadosť presahuje kontextové okno poskytovateľa"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",

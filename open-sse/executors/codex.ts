@@ -1478,6 +1478,11 @@ export class CodexExecutor extends BaseExecutor {
       "client_metadata",
       // GPT-5 output verbosity ({ verbosity } — normalized above by normalizeCodexVerbosity).
       "text",
+      // Responses Lite (#7171/#7821/#11707): enforceCodexResponsesLiteParallelToolCalls()
+      // forces this field on the translated (non-_nativeCodexPassthrough) path too — it
+      // must survive this allowlist filter or upstream rejects with "X-OpenAI-Internal-
+      // Codex-Responses-Lite requires `parallel_tool_calls` to be false."
+      "parallel_tool_calls",
       // Internal markers used by OmniRoute pipeline
       "_omnirouteResponsesStore",
     ]);

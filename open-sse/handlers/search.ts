@@ -8,6 +8,8 @@ import { randomUUID } from "crypto";
  *   firecrawl, google-pse-search, linkup-search, searchapi-search,
  *   youcom-search, searxng-search, ollama-search, zai-search, jina-search,
  *   duckduckgo-free, x-search (Grok / SuperGrok X Search — explicit or search_type "x")
+ *   and xquik-search (direct X API search — explicit or credentialed fallback)
+ *   and anysearch-search (free public web search — fallback-only)
  *
  * Request format:
  * {
@@ -23,11 +25,14 @@ import {
   isUnconfiguredLoopbackSearchProvider,
   type SearchProviderConfig,
 } from "../config/searchRegistry.ts";
+import { NIMBLE_CLIENT_SOURCE, NIMBLE_CLIENT_SOURCE_HEADER } from "../config/nimble.ts";
 import { buildPerplexityRequest, parsePerplexitySearchOptions } from "./search/perplexitySearch.ts";
 import * as fcSearch from "./search/firecrawlSearch.ts";
 import { type FirecrawlSearchEnvelope } from "./search/firecrawlSearch.ts";
 import { buildJinaSearchRequest, extractJinaSearchItems } from "./search/jinaSearch.ts";
 import * as xSearch from "./search/xSearch.ts";
+import * as xquikSearch from "./search/xquikSearch.ts";
+import * as anysearchSearch from "./search/anysearchSearch.ts";
 import { freeWebSearch } from "../services/freeWebSearch.ts";
 import { saveCallLog } from "@/lib/usageDb";
 import { safeOutboundFetch } from "@/shared/network/safeOutboundFetch";
@@ -473,6 +478,38 @@ function buildTavilyRequest(
   };
 }
 
+function buildNimbleRequest(
+  config: SearchProviderConfig,
+  params: SearchRequestParams
+): { url: string; init: RequestInit } {
+  if (!params.token) throw new Error("Nimble Search requires an API key");
+  const { includes, excludes } = parseDomainFilter(params.domainFilter);
+  const body: Record<string, unknown> = {
+    query: params.query,
+    max_results: Math.min(params.maxResults, config.maxMaxResults),
+    search_depth: "lite",
+    output_format: "plain_text",
+    focus: params.searchType === "news" ? "news" : "general",
+  };
+  if (params.country) body.country = params.country.toUpperCase();
+  if (params.language) body.locale = params.language;
+  if (params.timeRange && params.timeRange !== "any") body.time_range = params.timeRange;
+  if (includes.length) body.include_domains = includes.slice(0, 50);
+  if (excludes.length) body.exclude_domains = excludes.slice(0, 50);
+  return {
+    url: resolveSearchBaseUrl(config, params),
+    init: {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${params.token}`,
+        [NIMBLE_CLIENT_SOURCE_HEADER]: NIMBLE_CLIENT_SOURCE,
+      },
+      body: JSON.stringify(body),
+    },
+  };
+}
+
 function buildGooglePseRequest(
   config: SearchProviderConfig,
   params: SearchRequestParams
@@ -705,6 +742,7 @@ const requestBuilders: Record<string, SearchRequestBuilder> = {
   "perplexity-search": buildPerplexityRequest,
   "exa-search": buildExaRequest,
   "tavily-search": buildTavilyRequest,
+  "nimble-search": buildNimbleRequest,
   firecrawl: fcSearch.buildFirecrawlSearchRequest,
   "google-pse-search": buildGooglePseRequest,
   "linkup-search": buildLinkupRequest,
@@ -714,6 +752,8 @@ const requestBuilders: Record<string, SearchRequestBuilder> = {
   "ollama-search": buildOllamaRequest,
   "jina-search": buildJinaSearchRequest,
   "x-search": xSearch.buildXSearchRequest,
+  "xquik-search": xquikSearch.buildXquikSearchRequest,
+  "anysearch-search": anysearchSearch.buildAnysearchSearchRequest,
 };
 
 function buildRequest(
@@ -823,6 +863,47 @@ function normalizeTavilyResponse(
     )
   );
   return { results, totalResults: results.length };
+}
+
+interface NimbleSearchItem {
+  title?: string;
+  url?: string;
+  description?: string;
+  content?: string;
+}
+
+interface NimbleSearchEnvelope {
+  results?: NimbleSearchItem[];
+  total_results?: number;
+}
+
+function normalizeNimbleResponse(
+  data: unknown,
+  _query: string,
+  _searchType: string
+): { results: SearchResult[]; totalResults: number | null } {
+  const now = new Date().toISOString();
+  const envelope = (data ?? {}) as NimbleSearchEnvelope;
+  if (!Array.isArray(envelope.results)) return { results: [], totalResults: null };
+  const results = envelope.results.map((item, idx) =>
+    makeResult(
+      "nimble-search",
+      {
+        title: item.title,
+        url: item.url,
+        snippet: item.description || item.content?.slice(0, 300) || "",
+        full_text: item.content || undefined,
+        text_format: "text",
+      },
+      idx,
+      now
+    )
+  );
+  return {
+    results,
+    totalResults:
+      typeof envelope.total_results === "number" ? envelope.total_results : results.length,
+  };
 }
 
 function normalizeGooglePseResponse(
@@ -1280,6 +1361,7 @@ const responseNormalizers: Record<string, SearchResponseNormalizer> = {
   "perplexity-search": normalizePerplexityResponse,
   "exa-search": normalizeExaResponse,
   "tavily-search": normalizeTavilyResponse,
+  "nimble-search": normalizeNimbleResponse,
   firecrawl: (data: FirecrawlSearchEnvelope, _query: string, searchType: string) =>
     fcSearch.normalizeFirecrawlSearchResponse(data, searchType, makeResult),
   "google-pse-search": normalizeGooglePseResponse,
@@ -1290,6 +1372,8 @@ const responseNormalizers: Record<string, SearchResponseNormalizer> = {
   "ollama-search": normalizeOllamaResponse,
   "jina-search": normalizeJinaSearchResponse,
   "x-search": normalizeXSearchResponse,
+  "xquik-search": (data) => xquikSearch.normalizeXquikSearchResponse(data, makeResult),
+  "anysearch-search": (data) => anysearchSearch.normalizeAnysearchSearchResponse(data, makeResult),
 };
 
 function normalizeResponse(

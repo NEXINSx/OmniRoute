@@ -46,16 +46,6 @@ export interface UserBadge {
   badgeCategory?: string | null;
   badgeRarity?: string;
 }
-
-export interface XpAuditLogEntry {
-  id: number;
-  apiKeyId: string;
-  action: string;
-  xpEarned: number;
-  metadata: string | null;
-  createdAt: string;
-}
-
 export interface TokenLedgerEntry {
   id: number;
   fromApiKeyId: string;
@@ -299,22 +289,22 @@ export function getBadgeDefinitions(category?: string): BadgeDefinition[] {
 
 /**
  * Aggregate XP across every API key (the operator-wide profile view used by the
- * dashboard profile page, which is not scoped to a single key). Sums total XP and
- * takes the highest reached level. (#3484)
+ * dashboard profile page, which is not scoped to a single key). The aggregate
+ * level must be derived from the same summed XP displayed by the profile. (#3484)
  */
 export function getAggregateXp(): UserLevelRow {
   const row = db()
     .prepare(
       `SELECT COALESCE(SUM(total_xp), 0) AS total_xp,
-              COALESCE(MAX(current_level), 1) AS current_level,
               MAX(updated_at) AS updated_at
        FROM user_levels`
     )
-    .get() as { total_xp: number; current_level: number; updated_at: string | null };
+    .get() as { total_xp: number; updated_at: string | null };
+  const totalXp = row?.total_xp ?? 0;
   return {
     apiKeyId: "*",
-    totalXp: row?.total_xp ?? 0,
-    currentLevel: row?.current_level ?? 1,
+    totalXp,
+    currentLevel: calculateLevel(totalXp),
     updatedAt: row?.updated_at ?? "",
   };
 }

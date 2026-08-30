@@ -1,10 +1,8 @@
 // Re-export from open-sse with local logger
 import * as log from "../utils/logger";
-import {
-  updateProviderConnection,
-  resolveProxyForConnection,
-  resolveProxyForProvider,
-} from "@/lib/localDb";
+import { updateProviderConnection } from "@/lib/db/providers";
+import { resolveProxyForConnection } from "@/lib/db/settings";
+import { resolveProxyForProvider } from "@/lib/db/proxies";
 import {
   TOKEN_EXPIRY_BUFFER_MS as BUFFER_MS,
   getRefreshLeadMs as _getRefreshLeadMs,
@@ -170,7 +168,7 @@ export async function updateProviderCredentials(connectionId: string, newCredent
     if (newCredentials.providerSpecificData) {
       updates.providerSpecificData = newCredentials.providerSpecificData;
     }
-    // Cookie/session providers (chatgpt-web, ...) refresh by rotating the
+    // Cookie/session providers (Perplexity Web, etc.) refresh by rotating the
     // stored apiKey blob — propagate that here too so DB credentials don't
     // go stale after Set-Cookie rotation.
     if (newCredentials.apiKey) {

@@ -16,10 +16,7 @@
  * Part of: Group B — Quota Sharing Engine (plan 22, frente F6).
  */
 
-import {
-  getPool,
-  listAllocationsForApiKey,
-} from "@/lib/localDb";
+import { getPool, listAllocationsForApiKey } from "@/lib/db/quotaPools";
 import { WINDOW_MS, dimensionKeyToString } from "./dimensions";
 import type { DimensionKey } from "./dimensions";
 import type { QuotaStore, PoolUsageSnapshot } from "./types";

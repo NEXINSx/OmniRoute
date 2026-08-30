@@ -4,12 +4,10 @@ import {
   getProviderAuditTarget,
   summarizeProviderConnectionForAudit,
 } from "@/lib/compliance/providerAudit";
-import {
-  getCachedProviderConnectionById,
-  updateProviderConnection,
-  deleteProviderConnection,
-  isCloudEnabled,
-} from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { updateProviderConnection } from "@/lib/db/providers";
+import { deleteProviderConnection } from "@/lib/db/providers/deletion";
+import { isCloudEnabled } from "@/lib/db/settings";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
 import { updateProviderConnectionSchema } from "@/shared/validation/schemas";
@@ -36,6 +34,7 @@ import {
   decodeChatGptWebCodexSecrets,
   encodeChatGptWebCodexSecrets,
 } from "@omniroute/open-sse/services/chatgptWebCodexAdmin.ts";
+import { rejectRetiredCommonChatGptWebProvider } from "@/lib/providers/chatgptWebRetirementResponse";
 
 function normalizeCodexLimitPolicy(
   incoming: unknown,
@@ -129,10 +128,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         ...validation.error.details.map((d) => d.field).filter(Boolean),
         ...validation.error.details.flatMap((d) => d.keys ?? []),
       ];
-      return NextResponse.json(
-        { error: { ...validation.error, rejected } },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: { ...validation.error, rejected } }, { status: 400 });
     }
     const body = validation.data;
     const {
@@ -166,6 +162,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!existing) {
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
+    const retirementResponse = rejectRetiredCommonChatGptWebProvider(existing.provider);
+    if (retirementResponse) return retirementResponse;
 
     const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;
@@ -213,7 +211,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (errorCode !== undefined) updateData.errorCode = errorCode;
     if (rateLimitedUntil !== undefined) updateData.rateLimitedUntil = rateLimitedUntil;
     if (lastTested !== undefined) updateData.lastTested = lastTested;
-    if (healthCheckInterval !== undefined) updateData.healthCheckInterval = healthCheckInterval;
+    // healthCheckInterval PATCH semantics: undefined = leave as-is; null = clear
+    // the override (connection follows the global default); 0-1440 = explicit
+    // per-connection minutes (0 opts this connection out of the sweep).
+    if (healthCheckInterval === null) updateData.healthCheckInterval = null;
+    else if (healthCheckInterval !== undefined) updateData.healthCheckInterval = healthCheckInterval;
     if (group !== undefined) updateData.group = group;
     if (maxConcurrent !== undefined) updateData.maxConcurrent = maxConcurrent;
     if (incomingWindowThresholds !== undefined) {

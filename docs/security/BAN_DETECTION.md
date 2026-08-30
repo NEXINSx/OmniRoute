@@ -87,7 +87,7 @@ OAuth/subscription scrapers. The resulting terminal state is per **connection**,
 not per provider.
 
 That said, the built-in _strings_ are oriented toward subscription/OAuth
-providers with real ban risk (ChatGPT Web, Claude Web, Codex, Muse Spark,
+providers with real ban risk (ChatGPT Web Codex, Claude Web, Codex, Muse Spark,
 Antigravity). An API-key provider will only trip the detector if its error body
 literally contains one of the substrings.
 

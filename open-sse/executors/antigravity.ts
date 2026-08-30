@@ -13,7 +13,11 @@ import {
   getAntigravityOAuthUserAgent,
 } from "../services/antigravityHeaders.ts";
 import { classify429, decide429, type Decision } from "../services/antigravity429Engine.ts";
-import { lockExactModel } from "../services/accountFallback.ts";
+import {
+  parseRetryFromErrorText,
+  type RetryHintProvenance,
+} from "../services/accountFallback.ts";
+import { parseDetailedRetryHintFromJsonBody } from "../services/retryAfterJson.ts";
 import {
   shouldRetryWithCredits,
   shouldUseCreditsFirst,
@@ -88,6 +92,21 @@ const ANTIGRAVITY_TRANSIENT_RETRY_MAX_MS = 15_000;
 // Bounded per-URL auto-retry count for both the Retry-After-driven short retry and
 // the no-Retry-After transient/429 backoff loop in executeOnce().
 const MAX_AUTO_RETRIES = 3;
+
+export function resolveAntigravityBodyRetryHint(
+  body: string,
+  errorMessage: string
+): { retryMs: number; source: RetryHintProvenance } | null {
+  const structured = parseDetailedRetryHintFromJsonBody(body, Number.MAX_SAFE_INTEGER);
+  if (structured) {
+    return {
+      retryMs: structured.retryAfterMs,
+      source: structured.provenance,
+    };
+  }
+  const retryMs = parseRetryFromErrorText(errorMessage);
+  return retryMs ? { retryMs, source: "body" } : null;
+}
 
 const ANTIGRAVITY_TRANSIENT_ERROR_PATTERNS: RegExp[] = [
   /high\s+traffic/i,
@@ -1544,7 +1563,6 @@ export class AntigravityExecutor extends BaseExecutor {
     const {
       response,
       url,
-      model,
       headers,
       transformedBody,
       credentials,
@@ -1562,7 +1580,8 @@ export class AntigravityExecutor extends BaseExecutor {
       const errorMessage = buildAntigravity429ErrorMessage(errorJson);
 
       // 1. Try to parse explicit retry time from message
-      const parsedRetryMs = this.parseRetryFromErrorMessage(errorMessage);
+      const bodyRetryHint = resolveAntigravityBodyRetryHint(errorBody, errorMessage);
+      const parsedRetryMs = bodyRetryHint?.retryMs ?? null;
 
       // 2. Classify 429, then decide the final retry time BEFORE the credits retry so
       //    full_quota_exhausted can skip the credits attempt entirely (avoids ~41s hold
@@ -1579,11 +1598,6 @@ export class AntigravityExecutor extends BaseExecutor {
         !creditsAlreadyInjected &&
         !creditsRetryState.attempted &&
         shouldRetryWithCredits(credentials?.accessToken || "", creditsMode);
-
-      // Retry mode gets one credits attempt before the exact-model lock is persisted.
-      if (decision.kind === "full_quota_exhausted" && retryMs && !creditsRetryEligible) {
-        lockExactModel(this.provider, accountId, model, "quota_exhausted", retryMs);
-      }
 
       if (category === "quota_exhausted" && creditsAlreadyInjected) {
         handleCreditsFailure(credentials?.accessToken || "");

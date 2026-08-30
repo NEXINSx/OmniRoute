@@ -15,7 +15,7 @@
  * Modules repaired:
  *   - better-sqlite3 (SQLite bindings)
  *   - wreq-js (TLS client for OAuth providers)
- *   - tls-client-node (TLS client for chatgpt-web/claude-web/grok-web/lmarena/perplexity-web)
+ *   - tls-client-node (TLS client for claude-web/grok-web/lmarena/perplexity-web)
  *   - sql.js (WASM SQLite fallback runtime)
  *   - node-machine-id (local CLI machine-token server runtime)
  *
@@ -199,11 +199,17 @@ async function fixBetterSqliteBinary() {
 
   console.log("  ⚠️  Attempting npm rebuild (requires build tools)...");
 
+  // Declared OUTSIDE the try: the catch below reads `isAndroid` to pick the
+  // timeout it reports. While it was `const` inside the try block, the timeout
+  // branch threw `ReferenceError: isAndroid is not defined`, which escaped the
+  // catch, rejected the top-level await in this module and failed the whole
+  // `npm install` — instead of printing the manual-fix hints a few lines down.
+  // On Android/Termux we rebuild from source with --build-from-source.
+  const isAndroid = process.platform === "android" || isTermux();
+
   try {
     const { execSync } = await import("node:child_process");
 
-    // On Android/Termux, rebuild from source with --build-from-source flag
-    const isAndroid = process.platform === "android" || isTermux();
     const rebuildCmd = isAndroid
       ? "npm install better-sqlite3 --build-from-source --force"
       : "npm rebuild better-sqlite3";

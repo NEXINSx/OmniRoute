@@ -256,18 +256,20 @@ export function detectMalformedNonStream(resp: unknown): MalformedReason | null 
     //     sentinel, or only null entries) — the model genuinely produced no
     //     usable output. That is a MALFORMED-200 empty_choices regardless of
     //     stop_reason (parity with the OpenAI content:"" path).
-    //  2) `content: []` — no block at all. Only a genuinely *terminal* response
-    //     (a final stop_reason with no output) is empty_choices. #9971: a
-    //     truncated / non-terminal body — the Claude Code OAuth upstream cutting
-    //     a long generation mid-turn, or a content-less thinking-only stream
-    //     that never emitted a terminal event — carries content:[] with no
-    //     reachable end, so flagging it would turn an upstream truncation into a
-    //     false 502. Require a terminal stop_reason before calling a block-less
-    //     response genuinely empty.
+    //  2) `content: []` — no block at all. #9971: a truncated / non-terminal
+    //     body (no stop_reason) must not become empty_choices. A terminal
+    //     stop_reason with no output usually is empty_choices — except the
+    //     same legitimate empty stops that `isEmptyContentResponse` already
+    //     accepts (`max_tokens`, `tool_use`). Claude Code's `/model` probe
+    //     sends `max_tokens: 1`; Opus can burn that budget on thinking and
+    //     return content:[] + stop_reason max_tokens. Treating that as
+    //     empty_choices turns a valid 200 into MALFORMED-200 → 502 even
+    //     though errorClassifier would have let it through.
     if (content.length === 0) {
       const stopReason = typeof body.stop_reason === "string" ? body.stop_reason : "";
-      const isTerminal = stopReason.length > 0;
-      return isTerminal ? "empty_choices" : null;
+      if (stopReason.length === 0) return null;
+      if (stopReason === "max_tokens" || stopReason === "tool_use") return null;
+      return "empty_choices";
     }
     return "empty_choices";
   }

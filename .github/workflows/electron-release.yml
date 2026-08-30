@@ -4,12 +4,21 @@ on:
   push:
     tags:
       - "v*"
+  # A dispatch builds the ref it is dispatched ON (`gh workflow run … --ref v3.8.50` rebuilds
+  # that tag; `--ref main` builds the repaired line). The ref is deliberately NOT an input:
+  # CodeQL flags an input-controlled checkout next to the npm cache on the default branch as
+  # cache poisoning (actions/cache-poisoning/poisonable-step), and `github.ref` is trusted.
   workflow_dispatch:
     inputs:
       version:
         description: "Release version (e.g., v1.6.8)"
         required: true
         type: string
+      publish_npm:
+        description: "Also run the npm publish leg (turn off when re-attaching desktop assets to a release whose npm package already shipped)"
+        required: false
+        default: true
+        type: boolean
 
 # Least-privilege default: read-only at the top level; each job grants the writes it
 # needs (build/release upload assets, publish-npm forwards npm provenance / packages
@@ -76,6 +85,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # workflow_dispatch: build the tag being (re)built, not the dispatching branch. On a
+          # tag push this resolves to the same commit.
+          ref: ${{ needs.validate.outputs.version }}
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -161,6 +173,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # workflow_dispatch: build the tag being (re)built, not the dispatching branch. On a
+          # tag push this resolves to the same commit.
+          ref: ${{ needs.validate.outputs.version }}
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -347,6 +362,8 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          # Source archives + SBOM come from the tag being released, not the dispatching branch.
+          ref: ${{ needs.validate.outputs.version }}
 
       # `merge-multiple` is deliberately OFF. It resolves same-name collisions by ARRIVAL
       # ORDER, and the two macOS jobs each emit their own `latest-mac.yml` listing only their
@@ -404,7 +421,14 @@ jobs:
           tag_name: ${{ needs.validate.outputs.version }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          # NEVER. Phase 3 of the release flow creates the GitHub Release with the curated
+          # notes seconds after pushing the tag, so by the time this step runs (1-2 h of
+          # builds later) the body already exists — and `true` APPENDS GitHub's
+          # auto-generated "What's Changed" block to it (v3.8.48 shipped that way; the
+          # v3.8.50 re-attach dispatch added +1,416 chars to a 121 KB body, run
+          # 33238093090). A curated body sits ~3 KB under the 125,000-char cap, so the
+          # append can also turn this step RED and leave the release with no assets.
+          generate_release_notes: false
           fail_on_unmatched_files: false
           files: |
             release-assets/*.dmg
@@ -462,11 +486,20 @@ jobs:
   publish-npm:
     name: Publish to npm
     needs: [validate, release]
+    # A re-dispatch that only re-attaches desktop assets must not publish the npm package again.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish_npm }}
     permissions:
       # Must be `write`, not `read`: this job calls the reusable npm-publish.yml whose
       # `publish` job needs `contents: write` (gh release upload — attach the SBOM, #3874).
       # A reusable workflow's job cannot request more permission than the caller grants,
       # so a `read` here makes GitHub reject the run at startup (startup_failure).
+      #
+      # `actions: read` for the same reason: the called `publish` job downloads the next-build
+      # artefact and requests it. v3.8.50 (run 33005490476) died at startup with "The nested
+      # job 'publish' is requesting 'actions: read', but is only allowed 'actions: none'" — and
+      # because `release` lives in this same workflow, the tag shipped with ZERO assets. Keep
+      # this block a superset of every job's permissions in npm-publish.yml.
+      actions: read
       contents: write
       id-token: write # npm provenance (forwarded to the reusable workflow)
       packages: write # publish to npm.pkg.github.com

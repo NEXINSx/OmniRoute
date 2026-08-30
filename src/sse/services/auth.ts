@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from "crypto";
+import { randomUUID } from "crypto";
 import { nodeTypeFromId } from "@/lib/db/providerNodeSelect";
 import { extractGoogApiKeyHeader } from "./googApiKeyAuth.ts";
 import { describeUpstreamFailure } from "@/shared/utils/upstreamError";
@@ -25,9 +25,16 @@ import {
   type ExclusiveConnectionLease,
 } from "@/lib/db/exclusiveConnectionLeases";
 import { getSettings } from "@/lib/db/settings";
+import {
+  describePeakHourWindow,
+  evaluatePeakHourProtection,
+} from "@/lib/providers/peakHourProtection";
 import { buildJinaEnvCredentials } from "@/lib/providers/jina";
 import { buildGeminiEnvCredentials } from "@/lib/providers/gemini";
+import { isCommonChatGptWebRetiredProviderId } from "@/shared/constants/chatgptWebRetirement";
 import { toNumber } from "@/shared/utils/numeric";
+import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
+import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
 import {
   createLazyConnectionView,
   toProviderConnection,
@@ -56,6 +63,7 @@ import {
   hasPerModelQuota,
   getRuntimeProviderProfile,
   recordModelLockoutFailure,
+  retryHintBypassesMaxCooldownMs,
   isProviderModelUnsupported400,
 } from "@omniroute/open-sse/services/accountFallback.ts";
 import { isLocalProvider } from "@omniroute/open-sse/config/providerRegistry.ts";
@@ -122,6 +130,7 @@ import { isFreeModel } from "@/shared/utils/freeModels";
 import {
   applySessionAffinityPin,
   formatSessionKeyForLog,
+  isForcedConnectionMissingFromPool,
   resolveForcedConnectionForCredentialPool,
   resolveSessionAffinityTtlMs,
   selectSessionAffinityConnection,
@@ -208,88 +217,8 @@ function asRecord(value: unknown): JsonRecord {
 function toStringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
-function toNullableNumber(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  const parsed = toNumber(value, Number.NaN);
-  return Number.isFinite(parsed) ? parsed : null;
-}
 function toBooleanOrDefault(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
-}
-function normalizeSessionKey(value: unknown, prefix: string): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) return null;
-  const trimmed = value.trim();
-  if (trimmed.length <= 180 && /^[A-Za-z0-9._:-]+$/.test(trimmed)) {
-    return `${prefix}:${trimmed}`;
-  }
-  return `${prefix}:sha256:${createHash("sha256").update(trimmed).digest("hex")}`;
-}
-function extractTextForSessionHash(value: unknown): string | null {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) {
-    const parts = value
-      .map((item) => {
-        if (typeof item === "string") return item;
-        const record = asRecord(item);
-        if (typeof record.text === "string") return record.text;
-        if (typeof record.content === "string") return record.content;
-        return null;
-      })
-      .filter(Boolean) as string[];
-    return parts.length > 0 ? parts.join("\n") : JSON.stringify(value);
-  }
-  if (value && typeof value === "object") return JSON.stringify(value);
-  return null;
-}
-function getFirstInputText(body: unknown): string | null {
-  const record = asRecord(body);
-  if (record.input !== undefined) {
-    if (typeof record.input === "string") return record.input;
-    if (Array.isArray(record.input)) {
-      for (const item of record.input) {
-        const itemRecord = asRecord(item);
-        const text = extractTextForSessionHash(itemRecord.content ?? item);
-        if (text && text.trim().length > 0) return text;
-      }
-    }
-    const text = extractTextForSessionHash(record.input);
-    if (text && text.trim().length > 0) return text;
-  }
-
-  if (Array.isArray(record.messages)) {
-    const userMessage = record.messages.find((message) => asRecord(message).role === "user");
-    const firstMessage = userMessage ?? record.messages[0];
-    const text = extractTextForSessionHash(asRecord(firstMessage).content ?? firstMessage);
-    if (text && text.trim().length > 0) return text;
-  }
-
-  return null;
-}
-export function extractSessionAffinityKey(
-  body: unknown,
-  headers?: Headers | { get?: (name: string) => string | null } | null
-): string | null {
-  const headerKey = normalizeSessionKey(
-    readHeaderValue(headers, "x-codex-session-id") ??
-      readHeaderValue(headers, "x-session-id") ??
-      readHeaderValue(headers, "x-omniroute-session"),
-    "header"
-  );
-  if (headerKey) return headerKey;
-
-  const record = asRecord(body);
-  const metadata = asRecord(record.metadata);
-  const explicitKey =
-    normalizeSessionKey(metadata.session_id, "metadata") ??
-    normalizeSessionKey(metadata.sessionId, "metadata") ??
-    normalizeSessionKey(record.conversation_id, "conversation") ??
-    normalizeSessionKey(record.session_id, "session") ??
-    normalizeSessionKey(record.prompt_cache_key, "prompt-cache");
-  if (explicitKey) return explicitKey;
-
-  const inputText = getFirstInputText(body);
-  if (!inputText || inputText.trim().length === 0) return null;
-  return `input:sha256:${createHash("sha256").update(inputText.slice(0, 4096)).digest("hex")}`;
 }
 function getCodexLimitPolicy(providerSpecificData: JsonRecord): {
   use5h: boolean;
@@ -844,7 +773,7 @@ async function maybeSyntheticNoAuthFallback(
   // #9057: a key pinned to specific connections via allowedConnections must
   // NOT receive the synthetic "noauth" connection — the synthetic id is
   // never in an explicit allowlist, so returning it would let a restricted
-  // key reach free providers (felo-chat, etc.) that it should not access.
+  // key reach free providers (OpenCode Free, etc.) that it should not access.
   if (Array.isArray(allowedConnections) && allowedConnections.length > 0) return null;
   if (excludedConnectionIds.has(SYNTHETIC_NOAUTH_CONNECTION_ID)) return null;
   if (
@@ -886,6 +815,32 @@ function formatConnectionPrefixesForLog(ids: Iterable<string>, max = 6): string 
     .map((id) => `${id.slice(0, 8)}...`);
   return prefixes.length > 0 ? prefixes.join(",") : "none";
 }
+function buildPeakHourProtectionRateLimitedResult(
+  provider: string,
+  blockedByPeakHour: Array<{
+    id: string;
+    retryAfter: string;
+    windowSummary: string;
+  }>
+) {
+  const retryAfter =
+    getEarliestFutureDate(blockedByPeakHour.map((entry) => entry.retryAfter)) ||
+    new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const blockedSummary = blockedByPeakHour
+    .map((entry) => `${entry.id.slice(0, 8)}(${entry.windowSummary})`)
+    .join("; ");
+
+  log.info("AUTH", `${provider} | peak-hour protection filtered account(s): ${blockedSummary}`);
+
+  return {
+    allRateLimited: true,
+    retryAfter,
+    retryAfterHuman: formatRetryAfter(retryAfter),
+    lastError: `All ${provider} accounts blocked by peak-hour protection`,
+    lastErrorCode: 429,
+  };
+}
+
 function buildQuotaPreflightRateLimitedResult(
   provider: string,
   blockedByPreflight: Array<{
@@ -995,6 +950,7 @@ export { fisherYatesShuffle, getNextFromDeckSync as getNextFromDeck };
 // Re-export readHeaderValue and AuthRequestHeaders from headerReader.ts for
 // backwards compat with existing imports (e.g. googApiKeyAuth.ts).
 export { readHeaderValue, type AuthRequestHeaders } from "./headerReader.ts";
+export { extractSessionAffinityKey } from "./sessionAffinityPin";
 const PROVIDER_SEARCH_PAIRS: string[][] = [
   ["nvidia", "nvidia_nim"],
   ["kimi-coding", "kimi-coding-apikey"],
@@ -1010,13 +966,11 @@ const PROVIDER_SEARCH_PAIRS: string[][] = [
   // before falling through to JINA_AI_API_KEY.
   ["jina-ai", "jina-reader", "jina-search"],
 ];
-/**
- * Resolve provider aliases (e.g., nvidia -> nvidia_nim) for DB lookup
- */
+/** Resolve provider aliases (e.g., nvidia -> nvidia_nim) for DB lookup. */
 async function getProviderSearchPool(provider: string): Promise<string[]> {
   const canonicalProvider = resolveProviderId(provider);
   const canonicalAlias = getProviderAlias(canonicalProvider);
-
+  if (isCommonChatGptWebRetiredProviderId(provider)) return [];
   const group = PROVIDER_SEARCH_PAIRS.find((aliases) => aliases.includes(provider));
   if (group) return [provider, ...group.filter((id) => id !== provider)];
 
@@ -1128,13 +1082,40 @@ function planLastUsedCommit(
   };
 }
 
-function materializeConnection(
+/**
+ * Resolve Proxy Pool references on a real connection row at the same boundary
+ * where credentials become request-ready. The synthetic no-auth fallback above
+ * already performs this hydration, but a persisted connection (for example the
+ * OpenCode card's `opencode` row selected through the `opencode-zen` alias)
+ * bypasses that fallback. Keep inline/legacy entries untouched and only incur a
+ * registry lookup when at least one by-id reference is present.
+ */
+async function hydrateAccountProxyReferences(
+  providerSpecificData: JsonRecord
+): Promise<JsonRecord> {
+  const entries = providerSpecificData.accountProxies;
+  if (!Array.isArray(entries)) return providerSpecificData;
+
+  const containsProxyReference = entries.some((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    const proxyId = (entry as Record<string, unknown>).proxyId;
+    return typeof proxyId === "string" && proxyId.trim().length > 0;
+  });
+  if (!containsProxyReference) return providerSpecificData;
+
+  return {
+    ...providerSpecificData,
+    accountProxies: await resolveAccountProxiesFromRegistry(entries),
+  };
+}
+
+async function materializeConnection(
   connection: ProviderConnectionView,
   options: CredentialSelectionOptions,
   extra: DeferredLeaseSelection & { exclusiveLease?: ExclusiveConnectionLease } = {}
 ) {
-  const apiKeyHealth = connection.providerSpecificData?.apiKeyHealth as
-    Record<string, KeyHealth> | undefined;
+  const providerSpecificData = await hydrateAccountProxyReferences(connection.providerSpecificData);
+  const apiKeyHealth = providerSpecificData.apiKeyHealth as Record<string, KeyHealth> | undefined;
   if (apiKeyHealth) syncHealthFromDB(connection.id, apiKeyHealth);
   const releaseOAuthSession =
     options.reserveOAuthSession === true && connection.authType === "oauth" && options.sessionKey
@@ -1148,10 +1129,10 @@ function materializeConnection(
     projectId: connection.projectId,
     defaultModel: connection.defaultModel || null,
     copilotToken:
-      typeof connection.providerSpecificData.copilotToken === "string"
-        ? connection.providerSpecificData.copilotToken
+      typeof providerSpecificData.copilotToken === "string"
+        ? providerSpecificData.copilotToken
         : null,
-    providerSpecificData: connection.providerSpecificData,
+    providerSpecificData,
     id: connection.id,
     provider: connection.provider,
     authType: connection.authType,
@@ -1231,6 +1212,18 @@ export async function getProviderCredentials(
   requestedModel: string | null = null,
   options: CredentialSelectionOptions = {}
 ) {
+  if (isMicrosoftDesignerWebRetiredProviderId(provider)) {
+    invalidateManagedLease(options, "AUTHORIZATION_CHANGED");
+    log.warn("AUTH", "Retired provider credential selection denied");
+    return null;
+  }
+
+  if (isRuntimeRetiredProviderId(provider)) {
+    invalidateManagedLease(options, "CONNECTION_INELIGIBLE");
+    log.warn("AUTH", "Retired provider rejected before credential selection");
+    return null;
+  }
+
   const selectionLock = options._leaseRetryWithLockHeld
     ? null
     : createSelectionLock(getSelectionMutexKey(provider, options));
@@ -1350,21 +1343,39 @@ export async function getProviderCredentials(
         }) ?? forcedConnectionId;
     }
 
-    forcedConnectionId = resolveForcedConnectionForCredentialPool({
-      forcedConnectionId,
-      excludedConnectionIds,
-      connections,
-      allowRateLimitedConnections,
-      bypassQuotaPolicy,
-      isQuotaExhausted: (connectionId) =>
-        isQuotaExhaustedForRequest(connectionId, provider, requestedModel),
-      isQuotaPolicyBlocked: (connection) =>
-        evaluateQuotaLimitPolicy(provider, connection as ProviderConnectionView, requestedModel)
-          .blocked,
-    });
+    // A forced connection (combo step `connectionId` / `x-omniroute-connection`) is an
+    // operator instruction, not a suggestion. resolveForcedConnectionForCredentialPool()
+    // legitimately returns null for several *intentional* pin-release cases (forced ID
+    // already in excludedConnectionIds after a failed attempt, cooldown, quota exhaustion,
+    // quota-policy block) — those must keep degrading to normal sibling fallback, unchanged.
+    // The bug is narrower: the forced connection was requested, was NOT intentionally
+    // excluded, and simply is not present in the current active/allowed pool at all (e.g.
+    // an operator deactivated it). Detect exactly that case *before* calling the resolver,
+    // so it never gets folded in with the intentional-release cases above.
+    if (isForcedConnectionMissingFromPool(forcedConnectionId, excludedConnectionIds, connections)) {
+      // Route through the existing "target has no eligible credentials" recoverable path
+      // (the connections.length === 0 branch just below) instead of falling through to the
+      // full active pool. That path already returns null/CONNECTION_INELIGIBLE, which the
+      // chat handler turns into a 404 for combo requests so the combo loop advances to its
+      // next target — the same mechanism a whole disabled provider already relies on.
+      connections = [];
+    } else {
+      forcedConnectionId = resolveForcedConnectionForCredentialPool({
+        forcedConnectionId,
+        excludedConnectionIds,
+        connections,
+        allowRateLimitedConnections,
+        bypassQuotaPolicy,
+        isQuotaExhausted: (connectionId) =>
+          isQuotaExhaustedForRequest(connectionId, provider, requestedModel),
+        isQuotaPolicyBlocked: (connection) =>
+          evaluateQuotaLimitPolicy(provider, connection as ProviderConnectionView, requestedModel)
+            .blocked,
+      });
 
-    if (forcedConnectionId) {
-      connections = connections.filter((conn) => conn.id === forcedConnectionId);
+      if (forcedConnectionId) {
+        connections = connections.filter((conn) => conn.id === forcedConnectionId);
+      }
     }
     const activeConnectionsCount = connections.length;
     const rawConnectionsCount = connectionsRaw.length;
@@ -1420,7 +1431,7 @@ export async function getProviderCredentials(
             retryAfterHuman: formatRetryAfter(earliest),
           };
         }
-        log.warn("AUTH", `${provider} | ${allConnections.length} accounts found but none active`);
+        log.debug("AUTH", `${provider} | ${allConnections.length} accounts found but none active`);
         allConnections.forEach((c) => {
           log.debug(
             "AUTH",
@@ -1471,7 +1482,7 @@ export async function getProviderCredentials(
         return geminiEnvCredentials;
       }
       invalidateManagedLease(options, "CONNECTION_INELIGIBLE");
-      log.warn("AUTH", `No credentials for ${provider}`);
+      log.debug("AUTH", `No credentials for ${provider}`);
       return null;
     }
 
@@ -1716,7 +1727,38 @@ export async function getProviderCredentials(
       return null;
     }
 
-    let policyEligibleConnections = availableConnections;
+    let peakHourEligibleConnections = availableConnections;
+    const blockedByPeakHour: Array<{ id: string; retryAfter: string; windowSummary: string }> = [];
+
+    if (!allowSuppressedConnections) {
+      peakHourEligibleConnections = availableConnections.filter((connection) => {
+        const peakHour = evaluatePeakHourProtection(connection.providerSpecificData);
+        if (!peakHour.active) return true;
+        blockedByPeakHour.push({
+          id: connection.id,
+          retryAfter: peakHour.retryAfter,
+          windowSummary: describePeakHourWindow(peakHour.window),
+        });
+        connectionFilterStatus.set(connection.id, "peakHourProtected");
+        return false;
+      });
+    }
+
+    if (blockedByPeakHour.length > 0) {
+      log.info(
+        "AUTH",
+        `${provider} | peak-hour protection filtered ${blockedByPeakHour.length} account(s): ${blockedByPeakHour
+          .map((entry) => `${entry.id.slice(0, 8)}(${entry.windowSummary})`)
+          .join("; ")}`
+      );
+    }
+
+    if (peakHourEligibleConnections.length === 0 && availableConnections.length > 0) {
+      invalidateManagedLease(options, "QUOTA_UNAVAILABLE");
+      return buildPeakHourProtectionRateLimitedResult(provider, blockedByPeakHour);
+    }
+
+    let policyEligibleConnections = peakHourEligibleConnections;
     const blockedByPolicy: Array<{
       id: string;
       reasons: string[];
@@ -1725,13 +1767,13 @@ export async function getProviderCredentials(
     const quotaResults = new Map<string, { blocked: boolean; exhausted: boolean }>();
 
     if (provider === "codex") {
-      for (const connection of availableConnections) {
+      for (const connection of peakHourEligibleConnections) {
         hydrateCodexQuotaCacheForRequest(connection, requestedModel);
       }
     }
 
     if (!bypassQuotaPolicy) {
-      policyEligibleConnections = availableConnections.filter((connection) => {
+      policyEligibleConnections = peakHourEligibleConnections.filter((connection) => {
         const evaluation = evaluateQuotaLimitPolicy(provider, connection, requestedModel);
         quotaResults.set(connection.id, { blocked: evaluation.blocked, exhausted: false });
         if (!evaluation.blocked) return true;
@@ -2526,6 +2568,7 @@ export async function markAccountUnavailable(
     persistUnavailableState?: boolean;
     /** Caller is the combo engine — it records its own model-level lockouts. */
     isCombo?: boolean;
+    headers?: Headers | Record<string, string> | null;
   } = {}
 ) {
   const currentMutex = markMutexes.get(connectionId) || Promise.resolve();
@@ -2641,7 +2684,7 @@ export async function markAccountUnavailable(
       backoffLevel,
       model,
       provider,
-      null,
+      options.headers ?? null,
       effectiveProviderProfile
     );
 
@@ -2879,13 +2922,11 @@ export async function markAccountUnavailable(
               : (fallbackResult.quotaResetHintMs ?? null),
           maxCooldownMs: mlSettings.maxCooldownMs,
           scope: usesExactAntigravityLock ? "exact" : undefined,
-          // #6863 vs #7940: exactCooldownMs above is only ever set from a genuine
-          // upstream signal (Retry-After/reset header or a parsed quotaResetHintMs) —
-          // never a synthetic estimate — so it must bypass maxCooldownMs instead of
-          // being clamped down to a window the upstream already told us is wrong.
-          exactCooldownIsUpstreamReset:
-            fallbackResult.usedUpstreamRetryHint === true ||
-            typeof fallbackResult.quotaResetHintMs === "number",
+          // Only a transport header or google.rpc.RetryInfo can bypass maxCooldownMs.
+          // Prose and generic JSON hints remain exact but operator-capped.
+          exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(
+            fallbackResult.retryHintSource
+          ),
         }
       );
       // Update last error for observability (without changing terminal status)

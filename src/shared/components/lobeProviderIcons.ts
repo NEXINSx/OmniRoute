@@ -328,7 +328,6 @@ const LOBE_PROVIDER_ALIASES = {
   bfl: "Bfl",
   "black-forest-labs": "Bfl",
   cerebras: "Cerebras",
-  "chatgpt-web": "OpenAI",
   "chatgpt-web-codex": "OpenAI",
   claude: "ClaudeCode",
   "claude-web": "Claude",
@@ -430,7 +429,6 @@ const LOBE_PROVIDER_ALIASES = {
   pollinations: "Pollinations",
   qoder: "Qoder",
   qwen: "Qwen",
-  "qwen-web": "Qwen",
   recraft: "Recraft",
   replicate: "Replicate",
   roo: "RooCode",
@@ -486,9 +484,17 @@ export function getLobeProviderIcon(
   providerId: string,
   type: "mono" | "color" = "color"
 ): LobeIconComponent | null {
-  const iconKey = LOBE_PROVIDER_ALIASES[providerId.toLowerCase()];
-  if (!iconKey) return null;
+  if (typeof providerId !== "string") return null;
+  const aliasKey = providerId.toLowerCase();
+  // Own-property guards: a providerId such as "constructor" or "__proto__"
+  // otherwise resolves through Object.prototype, yielding a truthy iconKey
+  // whose LOBE_ICON_COMPONENTS lookup is undefined -> `entry.color` throws and
+  // takes down the whole providers dashboard via the error boundary.
+  if (!Object.hasOwn(LOBE_PROVIDER_ALIASES, aliasKey)) return null;
+  const iconKey = LOBE_PROVIDER_ALIASES[aliasKey];
+  if (!iconKey || !Object.hasOwn(LOBE_ICON_COMPONENTS, iconKey)) return null;
 
   const entry = LOBE_ICON_COMPONENTS[iconKey];
+  if (!entry) return null;
   return type === "color" && entry.color ? entry.color : entry.mono;
 }

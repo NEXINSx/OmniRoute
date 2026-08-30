@@ -807,7 +807,8 @@ export default function ApiManagerPageClient() {
     weeklyUsageLimitUsd: number | null,
     blockedModels: string[],
     chaosModeEnabled: boolean,
-    modelAccessMode: "all" | "restricted"
+    modelAccessMode: "all" | "restricted",
+    connectionAccessMode?: "all" | "restricted"
   ) => {
     if (!editingKey || !editingKey.id) return;
 
@@ -858,6 +859,7 @@ export default function ApiManagerPageClient() {
         body: JSON.stringify({
           name: sanitizedName,
           modelAccessMode,
+          connectionAccessMode,
           allowedModels: validModels,
           blockedModels: validBlockedModels,
           allowedCombos: validCombos,
@@ -1099,6 +1101,8 @@ export default function ApiManagerPageClient() {
                 !key.allowedCombos.includes(ALL_COMBOS_ACCESS_RULE);
               const hasConnectionRestrictions =
                 Array.isArray(key.allowedConnections) && key.allowedConnections.length > 0;
+              const hasExclusiveLeaseScope =
+                Array.isArray(key.scopes) && key.scopes.includes("lease:exclusive");
               const noLogEnabled = key.noLog === true;
               const keyIsActive = key.isActive !== false; // default true
               const throttleDelayMs =
@@ -1218,6 +1222,17 @@ export default function ApiManagerPageClient() {
                         >
                           <span className="material-symbols-outlined text-[14px]">cable</span>
                           {key.allowedConnections!.length} conn
+                        </button>
+                      )}
+                      {hasExclusiveLeaseScope && (
+                        <button
+                          onClick={() => handleOpenPermissions(key)}
+                          className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">
+                            key_vertical
+                          </span>
+                          {t("exclusiveLease")}
                         </button>
                       )}
                       {hasComboRestrictions && (
@@ -1714,7 +1729,8 @@ const PermissionsModal = memo(function PermissionsModal({
     weeklyUsageLimitUsd: number | null,
     blockedModels: string[],
     chaosModeEnabled: boolean,
-    modelAccessMode: "all" | "restricted"
+    modelAccessMode: "all" | "restricted",
+    connectionAccessMode?: "all" | "restricted"
   ) => void;
 }) {
   const t = useTranslations("apiManager");
@@ -1732,7 +1748,9 @@ const PermissionsModal = memo(function PermissionsModal({
   const initialConnections = Array.isArray(apiKey?.allowedConnections)
     ? apiKey.allowedConnections
     : [];
-  const [keyName, setKeyName] = useState(apiKey?.name ?? "");
+  const hasExclusiveLeaseScope =
+    Array.isArray(apiKey?.scopes) && apiKey.scopes.includes("lease:exclusive");
+  const [keyName, setKeyName] = useState(apiKey?.name || "");
   const [selectedModels, setSelectedModels] = useState<string[]>(initialModels);
   const [blockedClaudeCodeFamilies, setBlockedClaudeCodeFamilies] = useState<
     ClaudeCodeBlockableFamilyId[]
@@ -1959,6 +1977,11 @@ const PermissionsModal = memo(function PermissionsModal({
       return;
     }
 
+    // Validate connections selection when restricted
+    if (!allowAllConnections && selectedConnections.length === 0) {
+      setSaveError(t("selectAtLeastOneConnection"));
+      return;
+    }
     const schedule: AccessSchedule | null = scheduleEnabled
       ? {
           enabled: true,
@@ -2009,7 +2032,8 @@ const PermissionsModal = memo(function PermissionsModal({
       parseUsdLimitInput(weeklyUsageLimitUsd),
       blockedModels,
       chaosModeEnabled,
-      modelAccess.modelAccessMode
+      modelAccess.modelAccessMode,
+      allowAllConnections ? "all" : "restricted"
     );
   }, [
     onSave,
@@ -2866,6 +2890,19 @@ const PermissionsModal = memo(function PermissionsModal({
           />
         )}
 
+        {/* Exclusive Lease Notice */}
+        {hasExclusiveLeaseScope && (
+          <div className="flex flex-col gap-1 p-3 rounded-lg border border-purple-500/30 bg-purple-500/10">
+            <div className="flex items-center gap-1.5 text-purple-700 dark:text-purple-300 font-medium text-sm">
+              <span className="material-symbols-outlined text-[16px]">key_vertical</span>
+              {t("exclusiveLeaseNoticeTitle")}
+            </div>
+            <p className="text-xs text-purple-600/80 dark:text-purple-400/80">
+              {t("exclusiveLeaseNoticeDesc")}
+            </p>
+          </div>
+        )}
+
         {/* Allowed Connections Section */}
         {allConnections.length > 0 && (
           <div className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-surface/40">
@@ -2873,6 +2910,7 @@ const PermissionsModal = memo(function PermissionsModal({
               <p className="text-sm font-medium text-text-main">{t("allowedConnections")}</p>
               <div className="flex gap-1 p-0.5 bg-surface rounded-md">
                 <button
+                  type="button"
                   onClick={() => {
                     setAllowAllConnections(true);
                     setSelectedConnections([]);
@@ -2883,9 +2921,10 @@ const PermissionsModal = memo(function PermissionsModal({
                       : "text-text-muted hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
                 >
-                  All
+                  {t("allConnections")}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setAllowAllConnections(false)}
                   className={`px-2 py-1 rounded text-xs font-medium transition-all ${
                     !allowAllConnections
@@ -2893,14 +2932,16 @@ const PermissionsModal = memo(function PermissionsModal({
                       : "text-text-muted hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
                 >
-                  Restrict
+                  {t("onlySelectedConnections")}
                 </button>
               </div>
             </div>
             <p className="text-xs text-text-muted">
               {allowAllConnections
-                ? "This key can use any active connection."
-                : `Restricted to ${selectedConnections.length} connection${selectedConnections.length !== 1 ? "s" : ""}.`}
+                ? t("allConnectionsDesc")
+                : selectedConnections.length === 0
+                  ? t("selectAtLeastOneConnection")
+                  : t("restrictedToConnections", { count: selectedConnections.length })}
             </p>
             {!allowAllConnections && (
               <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">

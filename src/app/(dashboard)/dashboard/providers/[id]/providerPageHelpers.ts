@@ -92,6 +92,7 @@ export type CompatModelRow = {
   /** #1904: manual vision-capability override for custom models whose upstream
    * discovery metadata doesn't self-report an image input modality. */
   supportsVision?: boolean;
+  isFree?: boolean;
 };
 
 export type CompatModelMap = Map<string, CompatModelRow>;

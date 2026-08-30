@@ -61,14 +61,14 @@
 
 <div align="center">
 
-|                               | v3.8.49 | **v3.8.50** | `v3.8.51+`  |
-| ----------------------------- | :-----: | :---------: | :---------: |
-| 🌐 Sağlayıcılar               |   290   |   **342**   | kuyrukta dahası var |
-| 🧠 Belgelenmiş modeller       |  1185   |  **1202**   |      —      |
-| 🖼️ Modalite Köprüsü (Modality Bridge) |    —    |  🆕 vision  |    video    |
-| 📡 Radar ücretsiz kataloğu    |    —    | 🆕 isteğe bağlı |      —      |
-| ⚖️ Kota duyarlı zamanlama     |    —    |      —      |  🔭 sırada  |
-| 📊 Kota telemetrisi           |    —    |      —      |  🔭 sırada  |
+|                                       | v3.8.49 |   **v3.8.50**   |     `v3.8.51+`      |
+| ------------------------------------- | :-----: | :-------------: | :-----------------: |
+| 🌐 Sağlayıcılar                       |   290   |     **342**     | kuyrukta dahası var |
+| 🧠 Belgelenmiş modeller               |  1185   |    **1202**     |          —          |
+| 🖼️ Modalite Köprüsü (Modality Bridge) |    —    |    🆕 vision    |        video        |
+| 📡 Radar ücretsiz kataloğu            |    —    | 🆕 isteğe bağlı |          —          |
+| ⚖️ Kota duyarlı zamanlama             |    —    |        —        |      🔭 sırada      |
+| 📊 Kota telemetrisi                   |    —    |        —        |      🔭 sırada      |
 
 **→ [Yol Haritası](ROADMAP.md) — `v3.9.0 LTS` hedefine doğru ilerliyor**
 
@@ -189,7 +189,7 @@
 
 </div>
 
-<img src="./docs/diagrams/works-zero-config.svg" width="100%" alt="Works the second you install it — zero config. Three steps: 1. Install — npm i -g omniroute, server boots on localhost:20128. 2. Point your tool at http://localhost:20128/v1 — any OpenAI-compatible tool (Claude Code, Cursor, Cline). 3. It answers — call model auto for an instant reply, with no API key, no signup, no configuration. Keyless free providers OpenCode Free and Felo are pre-wired into the auto combo, so a fresh install responds out of the box."/>
+<img src="./docs/diagrams/works-zero-config.svg" width="100%" alt="Works the second you install it — zero config. Three steps: 1. Install — npm i -g omniroute, server boots on localhost:20128. 2. Point your tool at http://localhost:20128/v1 — any OpenAI-compatible tool (Claude Code, Cursor, Cline). 3. It answers — call model auto for an instant reply, with no API key, no signup, no configuration. OpenCode Free is pre-wired into the auto combo, so a fresh install responds out of the box."/>
 
 ```bash
 # Fresh install, zero credentials — `auto` already works:
@@ -198,7 +198,7 @@ curl http://localhost:20128/v1/chat/completions \
   -d '{"model":"auto","messages":[{"role":"user","content":"Hello!"}]}'
 ```
 
-<sub>Belirli bir ücretsiz arka uç mu tercih ediyorsunuz? Doğrudan çağırın, örn. `oc/…` (OpenCode Free) veya `felo/…` (Felo). Ardından `auto` modeline geçin ve seçimi OmniRoute'a bırakın.</sub>
+<sub>Belirli bir ücretsiz arka uç mu tercih ediyorsunuz? Doğrudan `oc/…` (OpenCode Free) çağırın. Ardından `auto` modeline geçin ve seçimi OmniRoute'a bırakın.</sub>
 
 <sub>📦 **Python, Node.js, PHP ve cURL** için kopyala-yapıştır hızlı başlangıç betikleri → [`examples/quickstart/`](examples/quickstart/)</sub>
 
@@ -266,7 +266,7 @@ curl http://localhost:20128/v1/chat/completions \
   <tr>
     <td align="center" width="150">
       <a href="https://cheaperinference.com/?utm_source=omniroute">
-        <img src="public/providers/cheaperinference.svg" width="64" alt="Cheaper Inference"/>
+        <img src="../../../public/providers/cli-generic.svg" width="64" alt="Cheaper Inference"/>
       </a>
       <br/><b>Cheaper Inference</b><br/><sub>cheaperinference.com</sub><br/><br/>
       <img src="https://img.shields.io/badge/Open_Source_Friend-31f889?style=flat-square&labelColor=04170d" alt="Open Source Friend"/>
@@ -292,7 +292,7 @@ curl http://localhost:20128/v1/chat/completions \
   <tr>
     <td align="center" width="120">
       <a href="https://agentrouter.org/register?aff=70LM">
-        <img src="public/providers/agentrouter.png" width="32" alt="AgentRouter"/>
+        <img src="../../../public/providers/cli-generic.svg" width="32" alt="AgentRouter"/>
       </a>
       <br/><sub><b>AgentRouter</b></sub><br/><sub>agentrouter.org</sub>
     </td>
@@ -548,7 +548,7 @@ Radar isteğe bağlıdır (opt-in) ve yalnızca GET istekleri yapar. OmniRoute i
 - **🧠 Kontrol ettiğiniz bellek** — Varsayılan olarak kapalı, isteğe bağlı int8 vektör niceleme + tipli sönümleme, istek başına `x-omniroute-no-memory`. → [Bellek](docs/frameworks/MEMORY.md)
 - **🛡️ Güvenlik** — Her LLM rotasında istem enjeksiyonu koruması (red-team paketi), isteğe bağlı kimlik bilgisi maskeleme koruması (her iki yönde de sızan API anahtarlarını/gizli bilgileri sansürler), ücretsiz DuckDuckGo son çare web araması ve pano için isteğe bağlı OIDC giriş kapısı (şifreyle giriş her zaman kullanılabilir kalır). → [Güvenlik Önlemleri (Guardrails)](docs/security/GUARDRAILS.md)
 - **🖼️ Yeni uç noktalar** — `/v1/ocr` (Mistral OCR) ve `/v1/audio/translations` (Whisper tarzı) medya yüzeyini tamamlar. → [API Referansı](docs/reference/API_REFERENCE.md)
-- **🎨 Görsel / video / ses üretimi** — Medya için tek bir API: xAI Grok Imagine ve Novita AI video, ComfyUI, Freepik, Adobe Firefly, Microsoft Designer, Segmind, EdgeTTS. → [API Referansı](docs/reference/API_REFERENCE.md)
+- **🎨 Görsel / video / ses üretimi** — Medya için tek bir API: xAI Grok Imagine ve Novita AI video, ComfyUI, Magnific, Adobe Firefly, Segmind ve ElevenLabs gibi konuşma sağlayıcıları. → [API Referansı](docs/reference/API_REFERENCE.md)
 - **🌍 Dağıtım ve operasyonlar** — Ters proxy `basePath`, tarayıcı dili otomatik algılama, anahtar başına cihaz takibi, root gerektirmeyen MITM güveni, zh-TW yerelleştirmesi. → [Ortam Değişkenleri](docs/reference/ENVIRONMENT.md)
 - **🤝 Daha fazla sağlayıcı ve ajan** — Cursor Cloud Agent, tarayıcı + OAuth girişiyle Grok Build (xAI), Ollama birinci sınıf kartı, Claude Opus 5 ve Sonnet 5, Kimi resmi ortaklığı (Code/Web/Moonshot), Zed, Requesty, SenseNova, Yuanbao, Agnes AI… ve yenilenen **350 sağlayıcılı katalog**. → [Sağlayıcılar](docs/reference/PROVIDER_REFERENCE.md)
 - **📡 Yönlendirme şeffaflığı** — Her yanıt, isteğe hizmet veren stratejiyi/sağlayıcıyı/gecikmeyi belirten bir `X-OmniRoute-Decision` başlığı taşır, yeni bir `cache-optimized` kombo stratejisi + Auto-Combo `cacheAffinity` faktörü yinelenen istekleri önbelleğe alınmış öneki tutan bağlantıya geri yönlendirir ve salt okunur bir `/v1/auto-combo/{channel}/candidates` uç noktası bir `auto/*` kanalının canlı aday havuzunu gösterir. → [Auto-Combo](docs/routing/AUTO-COMBO.md)
@@ -568,8 +568,8 @@ Radar isteğe bağlıdır (opt-in) ve yalnızca GET istekleri yapar. OmniRoute i
     <td align="center" width="76"><a href="https://github.com/anthropics/claude-code"><img src="./public/providers/claude.svg" width="40" alt="Claude Code"/><br/><sub><b>Claude Code</b></sub><br/><sub>                           </sub></a></td>
     <td align="center" width="76"><a href="https://github.com/openai/codex"><img src="./public/providers/codex.svg" width="40" alt="Codex CLI"/><br/><sub><b>Codex CLI</b></sub><br/><sub>                           </sub></a></td>
     <td align="center" width="76"><picture><source media="(prefers-color-scheme:dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.91.0/dark/cline.png"/><img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-svg@1.91.0/icons/cline.svg" width="40" alt="Cline"/></picture><br/><sub><b>Cline</b></sub><br/><sub>                           </sub></td>
-    <td align="center" width="76"><a href="https://github.com/Kilo-Org/kilocode"><img src="./public/providers/kilocode.svg" width="40" alt="Kilo Code"/><br/><sub><b>Kilo Code</b></sub><br/><sub>                           </sub></a></td>
-    <td align="center" width="76"><a href="https://github.com/Zoo-Code-Org/Zoo-Code"><img src="./public/providers/zoocode.png" width="40" alt="Zoo Code"/><br/><sub><b>Zoo Code</b></sub><br/><sub>                           </sub></a></td>
+    <td align="center" width="76"><a href="https://github.com/Kilo-Org/kilocode"><img src="./public/providers/cli-generic.svg" width="40" alt="Kilo Code"/><br/><sub><b>Kilo Code</b></sub><br/><sub>                           </sub></a></td>
+    <td align="center" width="76"><a href="https://github.com/Zoo-Code-Org/Zoo-Code"><img src="./public/providers/cli-generic.svg" width="40" alt="Zoo Code"/><br/><sub><b>Zoo Code</b></sub><br/><sub>                           </sub></a></td>
     <td align="center" width="76"><img src="./public/providers/continue.svg" width="40" alt="Continue"/><br/><sub><b>Continue</b></sub><br/><sub>                           </sub></td>
   </tr>
   <tr>
@@ -578,10 +578,10 @@ Radar isteğe bağlıdır (opt-in) ve yalnızca GET istekleri yapar. OmniRoute i
     <td align="center" width="76"><img src="./public/providers/cli-generic.svg" width="40" alt="jcode"/><br/><sub><b>jcode</b></sub><br/><sub>                           </sub></td>
     <td align="center" width="76"><img src="./public/providers/deepseek.svg" width="40" alt="DeepSeek TUI"/><br/><sub><b>DeepSeek TUI</b></sub><br/><sub>                           </sub></td>
     <td align="center" width="76"><img src="./public/providers/cli-generic.svg" width="40" alt="CodeWhale"/><br/><sub><b>CodeWhale</b></sub><br/><sub>                           </sub></td>
-    <td align="center" width="76"><a href="https://github.com/anomalyco/opencode"><picture><source media="(prefers-color-scheme:dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.91.0/dark/opencode.png"/><img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-svg@1.91.0/icons/opencode.svg" width="40" alt="OpenCode"/></picture><br/><sub><b>OpenCode</b></sub><br/><sub>                           </sub></a></td>
+    <td align="center" width="76"><a href="https://github.com/anomalyco/opencode"><img src="../../../public/providers/cli-generic.svg" width="40" alt="OpenCode"/><br/><sub><b>OpenCode</b></sub><br/><sub>                           </sub></a></td>
   </tr>
   <tr>
-    <td align="center" width="76"><img src="./public/providers/droid.svg" width="40" alt="Factory Droid"/><br/><sub><b>Factory Droid</b></sub><br/><sub>                           </sub></td>
+    <td align="center" width="76"><img src="../../../public/providers/cli-generic.svg" width="40" alt="Factory Droid"/><br/><sub><b>Factory Droid</b></sub><br/><sub>                           </sub></td>
     <td align="center" width="76"><img src="./public/providers/copilot.svg" width="40" alt="GitHub Copilot CLI"/><br/><sub><b>Copilot CLI</b></sub><br/><sub>                           </sub></td>
     <td align="center" width="76"><img src="./public/providers/cursor.svg" width="40" alt="Cursor CLI"/><br/><sub><b>Cursor CLI</b></sub><br/><sub>                           </sub></td>
     <td align="center" width="76"><img src="./public/providers/cli-generic.svg" width="40" alt="Smelt"/><br/><sub><b>Smelt</b></sub><br/><sub>                           </sub></td>
@@ -678,8 +678,8 @@ kabuk geçmişinizin dışında tutar. → [CLI Entegrasyonları](docs/guides/CL
 
 <table>
   <tr>
-    <td align="center" width="150"><img src="./public/providers/opencode.svg" width="42" alt="OpenCode Zen"/><br/><b>OpenCode Zen</b><br/><sub>DeepSeek V4, Nemotron 3<br/>Token sınırı yok</sub></td>
-    <td align="center" width="150"><img src="./public/providers/kilocode.svg" width="42" alt="Kilo Code"/><br/><b>Kilo Code</b><br/><sub>Otomatik yönlendirici, Tencent Hy3<br/>Sonsuza kadar ücretsiz</sub></td>
+    <td align="center" width="150"><img src="../../../public/providers/cli-generic.svg" width="42" alt="OpenCode Zen"/><br/><b>OpenCode Zen</b><br/><sub>DeepSeek V4, Nemotron 3<br/>Token sınırı yok</sub></td>
+    <td align="center" width="150"><img src="../../../public/providers/cli-generic.svg" width="42" alt="Kilo Code"/><br/><b>Kilo Code</b><br/><sub>Otomatik yönlendirici, Tencent Hy3<br/>Sonsuza kadar ücretsiz</sub></td>
     <td align="center" width="150"><img src="./public/providers/requesty.svg" width="42" alt="Requesty"/><br/><b>Requesty</b><br/><sub>GPT-OSS 120B, Nemotron<br/>Sonsuza kadar ücretsiz</sub></td>
     <td align="center" width="150"><img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-svg@1.91.0/icons/siliconcloud-color.svg" width="42" alt="SiliconFlow"/><br/><b>SiliconFlow</b><br/><sub>DeepSeek V3.2 / R1<br/>Ücretsiz katman</sub></td>
     <td align="center" width="150"><img src="./public/providers/zhipu.svg" width="42" alt="Z.AI GLM"/><br/><b>Z.AI GLM</b><br/><sub>GLM-4.7 / 4.5-Flash<br/>Sonsuza kadar ücretsiz</sub></td>
@@ -973,11 +973,11 @@ docker run -d --name omniroute --restart unless-stopped --stop-timeout 40 \
 
 `:latest` etiketi **yayımlanmış** en yüksek kararlı SemVer sürümünü takip eder. Git `main` dalını takip etmez. GitOps için `:X.Y.Z` sürümünü sabitleyin. Bkz. [Docker Sürüm Kanalları](docs/guides/DOCKER_GUIDE.md#release-channels). İmaj **`OMNIROUTE_MEMORY_MB=1024`** değerini sabitler. Bu, pano ve hafif bir sohbet için yeterlidir. **Kodlama ajanları** (Claude Code, Codex, Grok, vb.'den gelen `POST /v1/responses`), çok daha büyük bir V8 heap alanına ihtiyaç duyar; aksi takdirde iki örtüşen uzun bağlam altında süreç ~12 GiB seviyesinde `FATAL ERROR` verir. Konteyneri heap boyutunun üzerinde boyutlandırın (yerel arabellekler V8'in dışında yer alır):
 
-| İş Yükü                             | Heap (`-e OMNIROUTE_MEMORY_MB`) | Konteyner (`--memory`) |
-| ----------------------------------- | ------------------------------- | ---------------------- |
-| Pano / hafif sohbet                 | `1024` (imaj varsayılanı)       | ≥2 g                   |
-| Tek bir kodlama ajanı               | `8192`                          | ≥10 g                  |
-| İki eşzamanlı uzun `/v1/responses`  | `10240`–`12288`                 | ≥12–16 g               |
+| İş Yükü                            | Heap (`-e OMNIROUTE_MEMORY_MB`) | Konteyner (`--memory`) |
+| ---------------------------------- | ------------------------------- | ---------------------- |
+| Pano / hafif sohbet                | `1024` (imaj varsayılanı)       | ≥2 g                   |
+| Tek bir kodlama ajanı              | `8192`                          | ≥10 g                  |
+| İki eşzamanlı uzun `/v1/responses` | `10240`–`12288`                 | ≥12–16 g               |
 
 ```bash
 docker run -d --name omniroute --restart unless-stopped --stop-timeout 40 \
@@ -996,6 +996,7 @@ Tam tablo: [Docker Kılavuzu — çalışma zamanı RAM](docs/guides/DOCKER_GUID
 **🥟 Bun**
 
 Standart `bun install` ve genel kurulum (`bun install -g omniroute`), Bun çalışma zamanı algılamasıyla desteklenir:
+
 - **Yerleşik `bun:sqlite`**: OmniRoute, Bun altında çalışırken Bun'ın yerleşik `bun:sqlite` sürücüsünü kullanır; Node.js altında `better-sqlite3` veya `sql.js`'e geri döner.
 - **Otomatik Webpack paketleyici seçimi**: Geliştirme (`bun run dev`) ve üretim derlemeleri (`bun run build`), Bun'ı otomatik olarak algılar ve yerel V8 bağlama uyumsuzluklarını önlemek için Turbopack yerine Webpack'i seçer.
 - **Özel Bun Dockerfile**: Yerel Bun üretim dağıtımları için çok aşamalı `Dockerfile.bun` (`docker build -f Dockerfile.bun -t omniroute:bun .`).
@@ -1153,19 +1154,19 @@ Doğrulama metrikleri: 1002 takip edilen video · 7.069.190 bilinen görüntüle
 
 > Her şey tek bir yerde — geliştiriciyi takip edin, toplulukla sohbet edin veya bir issue açın.
 
-| Kanal                                       | Nerede / Nasıl                                                                                                            |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 💼 **LinkedIn** — geliştiriciyi takip edin  | [linkedin.com/in/diegosouzapw](https://www.linkedin.com/in/diegosouzapw/)                                                 |
-| 🐙 **GitHub** — sürümler ve ipuçları için   | [@diegosouzapw](https://github.com/diegosouzapw)                                                                          |
-| 💬 **Discord**                              | [discord.gg/U47eFqAXCn](https://discord.gg/U47eFqAXCn)                                                                    |
-| ✈️ **Telegram**                             | [t.me/omnirouteOficial](https://t.me/omnirouteOficial)                                                                    |
-| 🟢 **WhatsApp — 🌍 Global**                 | [gruba katılın](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)                                              |
-| 🟢 **WhatsApp — 🇧🇷 Brezilya**               | [gruba katılın](https://chat.whatsapp.com/LTSpdFhXTxjH4R6CCNiKWz)                                                        |
-| 🌍 **Web Sitesi**                           | [omniroute.online](https://omniroute.online)                                                                              |
-| 📦 **Kaynak Kod**                           | [github.com/diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute)                                            |
-| 🐛 **Hata Bildirimi**                       | [issue açın](https://github.com/diegosouzapw/OmniRoute/issues) — `npm run system-info` çıktısını ekleyin                  |
-| 🤝 **Katkıda Bulunun**                      | [CONTRIBUTING.md](CONTRIBUTING.md) · [Dallanma ve Sürüm Modeli](docs/ops/BRANCHING_MODEL.md) · bir `good first issue` seçin |
-| 💚 **Projeyi Destekleyin**                  | [Destekleme yolları ↑](#-omnirouteu-destekleyin) · [GitHub Sponsors](https://github.com/sponsors/diegosouzapw)           |
+| Kanal                                      | Nerede / Nasıl                                                                                                              |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| 💼 **LinkedIn** — geliştiriciyi takip edin | [linkedin.com/in/diegosouzapw](https://www.linkedin.com/in/diegosouzapw/)                                                   |
+| 🐙 **GitHub** — sürümler ve ipuçları için  | [@diegosouzapw](https://github.com/diegosouzapw)                                                                            |
+| 💬 **Discord**                             | [discord.gg/U47eFqAXCn](https://discord.gg/U47eFqAXCn)                                                                      |
+| ✈️ **Telegram**                            | [t.me/omnirouteOficial](https://t.me/omnirouteOficial)                                                                      |
+| 🟢 **WhatsApp — 🌍 Global**                | [gruba katılın](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)                                                 |
+| 🟢 **WhatsApp — 🇧🇷 Brezilya**              | [gruba katılın](https://chat.whatsapp.com/LTSpdFhXTxjH4R6CCNiKWz)                                                           |
+| 🌍 **Web Sitesi**                          | [omniroute.online](https://omniroute.online)                                                                                |
+| 📦 **Kaynak Kod**                          | [github.com/diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute)                                              |
+| 🐛 **Hata Bildirimi**                      | [issue açın](https://github.com/diegosouzapw/OmniRoute/issues) — `npm run system-info` çıktısını ekleyin                    |
+| 🤝 **Katkıda Bulunun**                     | [CONTRIBUTING.md](CONTRIBUTING.md) · [Dallanma ve Sürüm Modeli](docs/ops/BRANCHING_MODEL.md) · bir `good first issue` seçin |
+| 💚 **Projeyi Destekleyin**                 | [Destekleme yolları ↑](#-omnirouteu-destekleyin) · [GitHub Sponsors](https://github.com/sponsors/diegosouzapw)              |
 
 </div>
 

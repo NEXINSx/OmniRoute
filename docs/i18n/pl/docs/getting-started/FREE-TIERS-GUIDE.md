@@ -1,6 +1,6 @@
 # Przewodnik po darmowych planach: darmowe AI bez karty kredytowej
 
-> **TL;DR**: OmniRoute ma 155 wpisy katalogu oznaczone free/no-auth. Ściśle kwantyfikowany budżet obejmuje 43 pule / 522 wpisy modeli. Podłącz wielu providerów, aby rozszerzyć pokrycie fallbacku; dostępność, limity i warunki zależą od upstreamu.
+> **TL;DR**: OmniRoute ma 153 wpisy katalogu oznaczone free/no-auth. Ściśle kwantyfikowany budżet obejmuje 39 pul / 452 wpisy modeli. Podłącz wielu providerów, aby rozszerzyć pokrycie fallbacku; dostępność, limity i warunki zależą od upstreamu.
 
 ---
 
@@ -25,7 +25,6 @@ Ci providerzy nie publikują stałego limitu tokenów w katalogu, lecz nadal mog
 | **Pollinations**  | GPT-5, Claude, Gemini, DeepSeek, Llama 4 | Bez klucza                | Bez autoryzacji |
 | **LongCat**       | LongCat-2.0                              | 10M tokenów (jednorazowo) | Klucz API + KYC |
 | **Cloudflare AI** | 50+ modeli                               | 10K neuronów/dzień        | Bez autoryzacji |
-| **Qwen**          | Qwen3-coder-plus/flash/next              | Brak opublikowanego capu; limity obowiązują | Bez autoryzacji |
 | **Qoder**         | Kimi-K2, DeepSeek-R1, Qwen3-coder        | Brak opublikowanego capu; limity obowiązują | Bez autoryzacji |
 
 ### Poziom 2: darmowi po rejestracji (hojni)
@@ -167,14 +166,6 @@ Podłącz 3–4 darmowych providerów, aby uzyskać najlepsze doświadczenie.
 - **Limit**: 1M tokenów/dzień
 - **Auth**: rejestracja na cerebras.ai
 - **Najlepsze do**: szybkiej inferencji
-
-### Qwen
-
-- **Modele**: Qwen3-coder-plus/flash/next
-- **Limit**: brak opublikowanego limitu tokenów; limity szybkości, współbieżności, konta,
-  regionu, modeli, KYC i ToS mogą nadal obowiązywać
-- **Auth**: bez autoryzacji
-- **Najlepsze do**: zadań kodowania
 
 ### Qoder
 

@@ -23,7 +23,7 @@ import {
   statSync,
   chmodSync,
 } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assembleStandalone } from "./assembleStandalone.mjs";
@@ -35,6 +35,12 @@ import {
   APP_STAGING_REMOVAL_PATHS,
   findUnexpectedArtifactPaths,
 } from "./pack-artifact-policy.ts";
+import {
+  collectWorkspaceVersions,
+  findPackageJsonFiles,
+  hasWorkspaceProtocol,
+  resolvePackageJsonWorkspaceProtocols,
+} from "./resolveWorkspaceProtocols.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -322,10 +328,10 @@ const chatGptWebCodexMcpDestFile = join(
 if (existsSync(chatGptWebCodexMcpSrcFile)) {
   console.log("  🔨 Bundling ChatGPT Web (Codex) MCP bridge...");
   mkdirSync(dirname(chatGptWebCodexMcpDestFile), { recursive: true });
-  execFileSync(
-    NPX_BIN,
+  runBuildTool(
+    "esbuild",
+    "esbuild",
     [
-      "esbuild",
       "open-sse/vendor/codex-chatgpt-web/adapters/chatgpt-web/mcp-server.ts",
       "--bundle",
       "--platform=node",
@@ -477,9 +483,11 @@ if (existsSync(cliSrcFile)) {
 // flow for every downstream user.
 const opencodePluginSrc = join(ROOT, "@omniroute", "opencode-plugin");
 const opencodePluginDist = join(opencodePluginSrc, "dist", "index.js");
-const opencodePluginCjs = join(opencodePluginSrc, "dist", "index.cjs");
 if (existsSync(opencodePluginSrc) && existsSync(join(opencodePluginSrc, "package.json"))) {
-  const pluginAlreadyBuilt = existsSync(opencodePluginDist) && existsSync(opencodePluginCjs);
+  // The plugin's tsup config is ESM-only (format: ["esm"]), so a successful
+  // build only ever produces dist/index.js (+ dist/index.d.ts) — never
+  // dist/index.cjs. Gate the skip solely on dist/index.js.
+  const pluginAlreadyBuilt = existsSync(opencodePluginDist);
   if (!pluginAlreadyBuilt) {
     console.log("\n  🔨 Building @omniroute/opencode-plugin (tsup)...");
     try {
@@ -705,6 +713,33 @@ if (remainingUnexpectedFiles.length > 0) {
     console.error(`     - dist/${violation}`)
   );
   process.exit(1);
+}
+
+// -- Step 11: Resolve workspace: protocol dependencies -----------------
+// npm/pnpm workspace protocol specifiers (workspace:*, workspace:^, ...)
+// are meaningless to the npm registry and make `npm install -g omniroute`
+// fail with EUNSUPPORTEDPROTOCOL. Rewrite any that leaked into published
+// package.json files to the concrete workspace package version.
+// Only touch files inside the staged dist/ tree; workspace member source
+// package.json files must never be mutated by the publish step.
+const workspaceVersions = collectWorkspaceVersions(ROOT);
+const publishablePackageJsonDirs = [DIST_DIR];
+const publishablePackageJsonPaths = publishablePackageJsonDirs
+  .flatMap((dir) => (existsSync(dir) ? findPackageJsonFiles(dir) : []))
+  .filter((filePath) => existsSync(filePath));
+
+for (const pkgJsonPath of publishablePackageJsonPaths) {
+  let pkg: Record<string, unknown>;
+  try {
+    pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as Record<string, unknown>;
+  } catch {
+    continue;
+  }
+  if (!hasWorkspaceProtocol(pkg)) continue;
+
+  const resolved = resolvePackageJsonWorkspaceProtocols(pkg, workspaceVersions);
+  writeFileSync(pkgJsonPath, JSON.stringify(resolved, null, 2) + "\n");
+  console.log(`  [resolved] Resolved workspace: protocols in ${relative(ROOT, pkgJsonPath)}`);
 }
 
 // ── Done ───────────────────────────────────────────────────

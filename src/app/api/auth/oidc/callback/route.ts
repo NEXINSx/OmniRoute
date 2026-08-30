@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCachedSettings, updateSettings } from "@/lib/localDb";
+import { getCachedSettings } from "@/lib/db/readCache";
+import { updateSettings } from "@/lib/db/settings";
 import { SignJWT, jwtVerify, createRemoteJWKSet } from "jose";
 import { cookies } from "next/headers";
+import { timingSafeCompare } from "@/shared/utils/timingSafeCompare";
 // Test seam (static) — allows tests to inject a cookie store and capture the minted auth_token.
 // Mirrors the pattern in src/app/api/auth/login/route.ts
 export const oidcCallbackInternals = {
@@ -54,7 +56,10 @@ export async function GET(request: Request) {
   // Validate state from cookie (via seam so tests can capture)
   const cookieStore = await oidcCallbackInternals.getCookieStore();
   const storedState = cookieStore.get("oidc_state")?.value;
-  if (!storedState || storedState !== returnedState) {
+  // Constant-time: `!==` short-circuits on the first differing byte, so
+  // rejection time correlates with matching-prefix length (GHSA-7434-6q4c-33fh).
+  // The sibling OAuth callback already compares `state` this way.
+  if (!storedState || !timingSafeCompare(storedState, returnedState)) {
     return NextResponse.redirect(new URL("/login?oidc_error=invalid_state", originEarly));
   }
 

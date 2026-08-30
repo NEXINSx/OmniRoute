@@ -525,6 +525,58 @@ export async function validateNlpCloudProvider({ apiKey, providerSpecificData = 
   return { valid: false, error: "Connection failed while testing NLP Cloud" };
 }
 
+export async function validateOneMinAiProvider({ apiKey, providerSpecificData = {} }: any) {
+  const modelId =
+    typeof providerSpecificData.validationModelId === "string" &&
+    providerSpecificData.validationModelId.trim()
+      ? providerSpecificData.validationModelId.trim()
+      : "gpt-4o-mini";
+
+  try {
+    const response = await validationWrite("https://api.1min.ai/api/chat-with-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "API-KEY": apiKey },
+      body: JSON.stringify({
+        type: "UNIFY_CHAT_WITH_AI",
+        model: modelId,
+        promptObject: { prompt: "test" },
+      }),
+    });
+
+    if (response.ok) {
+      return { valid: true, error: null, method: "oneminai_chat_with_ai" };
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      return { valid: false, error: "Invalid API key" };
+    }
+
+    if (response.status === 429) {
+      return {
+        valid: true,
+        error: null,
+        method: "oneminai_chat_with_ai",
+        warning: "Rate limited, but credentials are valid",
+      };
+    }
+
+    // 400/422 with a valid key still means the key authenticated — 1min.ai
+    // rejects an unrecognized/unauthorized model this same way as a bad
+    // request body, so a validation-shaped 4xx is treated as "key is valid".
+    if (response.status === 400 || response.status === 422) {
+      return { valid: true, error: null, method: "oneminai_chat_with_ai" };
+    }
+
+    if (response.status >= 500) {
+      return { valid: false, error: `Provider unavailable (${response.status})` };
+    }
+  } catch (error: any) {
+    return toValidationErrorResult(error);
+  }
+
+  return { valid: false, error: "Connection failed while testing 1min.ai" };
+}
+
 export async function validateRunwayProvider({ apiKey, providerSpecificData = {} }: any) {
   const baseUrl = normalizeRunwayBaseUrl(providerSpecificData.baseUrl);
 
@@ -579,6 +631,7 @@ export async function validateNousResearchProvider({ apiKey, providerSpecificDat
         model: modelId,
         messages: [{ role: "user", content: "test" }],
         max_tokens: 1,
+        tags: ["user=omniroute"],
       }),
     });
 

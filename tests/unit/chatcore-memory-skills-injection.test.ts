@@ -16,7 +16,7 @@ const core = await import("../../src/lib/db/core.ts");
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // ─── getSkillsProviderForFormat (pure switch) ────────────────────────────────
@@ -193,7 +193,8 @@ test("injectMemoryAndSkills does not inject server memory tools for stream reque
   });
 
   assert.equal(result.memorySettings?.enabled, true);
-  const tools = (result.body.tools as { function?: { name?: string }; name?: string }[] | undefined) ?? [];
+  const tools =
+    (result.body.tools as { function?: { name?: string }; name?: string }[] | undefined) ?? [];
   const toolNames = tools.map((tool) => tool.function?.name ?? tool.name);
   for (const memoryTool of MEMORY_BUILTIN_TOOL_NAMES) {
     assert.equal(
@@ -230,7 +231,8 @@ test("injectMemoryAndSkills does not inject memory tools when memory is disabled
     log: { debug: () => {} },
   });
 
-  const tools = (result.body.tools as { function?: { name?: string }; name?: string }[] | undefined) ?? [];
+  const tools =
+    (result.body.tools as { function?: { name?: string }; name?: string }[] | undefined) ?? [];
   const toolNames = tools.map((tool) => tool.function?.name ?? tool.name);
   for (const memoryTool of MEMORY_BUILTIN_TOOL_NAMES) {
     assert.equal(

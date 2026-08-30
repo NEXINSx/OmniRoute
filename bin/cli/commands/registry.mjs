@@ -66,6 +66,7 @@ import { registerSetupClaude } from "./setup-claude.mjs";
 import { registerSetupOpencode } from "./setup-opencode.mjs";
 import { registerSetupCline } from "./setup-cline.mjs";
 import { registerSetupKilo } from "./setup-kilo.mjs";
+import { registerSetup5dive } from "./setup-5dive.mjs";
 import { registerSetupContinue } from "./setup-continue.mjs";
 import { registerSetupCursor } from "./setup-cursor.mjs";
 import { registerSetupRoo } from "./setup-roo.mjs";
@@ -152,6 +153,7 @@ export function registerCommands(program) {
   registerSetupOpencode(program);
   registerSetupCline(program);
   registerSetupKilo(program);
+  registerSetup5dive(program);
   registerSetupContinue(program);
   registerSetupCursor(program);
   registerSetupRoo(program);

@@ -5,14 +5,13 @@
 
 import { NextResponse } from "next/server";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
-import { getWebhook } from "@/lib/localDb";
+import { getWebhook, recordWebhookDelivery } from "@/lib/db/webhooks";
 import { decryptMetadata } from "@/lib/webhookDispatcher";
 import { buildSlackPayload } from "@/lib/webhooks/integrations/slack";
 import { buildTelegramUrl, buildTelegramPayload } from "@/lib/webhooks/integrations/telegram";
 import { buildDiscordPayload } from "@/lib/webhooks/integrations/discord";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { insertDelivery } from "@/lib/db/webhookDeliveries";
-import { recordWebhookDelivery } from "@/lib/localDb";
 import { isPrivateHost, OutboundUrlGuardError } from "@/shared/network/outboundUrlGuard";
 import { parseAndValidateWebhookUrl } from "@/shared/network/outboundUrlGuardPolicy";
 import crypto from "crypto";

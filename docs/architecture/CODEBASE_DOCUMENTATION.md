@@ -233,7 +233,6 @@ v1/
 ├── audio/{speech, transcriptions}/      TTS + STT
 ├── batches/[id]/{cancel}, batches/      OpenAI Batches API
 ├── chat/completions/                    Chat Completions (the main endpoint)
-├── chatgpt-web/                         ChatGPT-Web compat
 ├── completions/                         Legacy text completions
 ├── embeddings/                          Embeddings
 ├── files/[id]/, files/                  Files API
@@ -292,7 +291,7 @@ table groups the actual directories and notable top-level files.
 | `jobs/`           | Background jobs (`autoUpdate.ts`, …)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `memory/`         | Persistent memory: `store.ts`, `cache.ts`, `retrieval.ts`, `summarization.ts`, `extraction.ts`, `injection.ts`, `qdrant.ts`, `settings.ts`, `verify.ts`, `schemas.ts`, `types.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `monitoring/`     | `observability.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `oauth/` | OAuth/import provider modules (22): `agy`, `antigravity`, `claude`, `cline`, `codebuddy-cn`, `codex`, `cursor`, `devin-desktop`, `ghe-copilot`, `github`, `gitlab-duo`, `grok-cli-oauth`, `grok-cli`, `kilocode`, `kimi-coding`, `kiro`, `qoder`, `raycast`, `trae`, `xai-oauth`, `zed-hosted`, `zed`, plus `services/`, `utils/`, and `constants/oauth.ts` |
+| `oauth/`          | OAuth/import provider modules (22): `agy`, `antigravity`, `claude`, `cline`, `codebuddy-cn`, `codex`, `cursor`, `devin-desktop`, `ghe-copilot`, `github`, `gitlab-duo`, `grok-cli-oauth`, `grok-cli`, `kilocode`, `kimi-coding`, `kiro`, `openference`, `qoder`, `trae`, `xai-oauth`, `zed-hosted`, `zed`, plus `services/`, `utils/`, and `constants/oauth.ts`                                                                                                                                                                                                                                                                                                                  |
 | `plugins/`        | Plugin loader (`index.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `promptCache/`    | `prefixAnalyzer.ts`, `index.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `providerModels/` | Managed model lifecycle: `modelDiscovery.ts`, `managedModelImport.ts`, `managedAvailableModels.ts`, `cursorAgent.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -314,7 +313,7 @@ table groups the actual directories and notable top-level files.
 
 Top-level files in `src/lib/`:
 
-- `localDb.ts` — re-export layer only. **Never** add logic here.
+- The old `localDb.ts` barrel was removed — consumers import specific `src/lib/db/*` modules directly.
 - `proxyHealth.ts`, `proxyLogger.ts`, `tokenHealthCheck.ts`, `localHealthCheck.ts`
 - `oneproxyRotator.ts`, `oneproxySync.ts`
 - `apiBridgeServer.ts`, `cacheLayer.ts`, `semanticCache.ts`, `settingsCache.ts`
@@ -451,7 +450,7 @@ open-sse/
 ├── types.d.ts
 ├── config/                 Provider registries, header profiles, identity, …
 ├── handlers/               Request handlers (chat, embeddings, audio, image, …)
-├── executors/              107 provider-specific HTTP executors
+├── executors/              108 provider-specific HTTP executors
 ├── translator/             Format conversion (OpenAI ↔ Claude ↔ Gemini ↔ Cursor ↔ Kiro)
 ├── transformer/            Responses API ↔ Chat Completions stream transformer
 ├── services/               80+ service modules (combos, fallback, quotas, identity, …)
@@ -481,16 +480,16 @@ open-sse/
 
 ### 4.2 `open-sse/executors/`
 
-101 provider executors, each extending `BaseExecutor` (`base.ts`):
+104 provider executors, each extending `BaseExecutor` (`base.ts`):
 
-`antigravity`, `azure-openai`, `blackbox-web`, `chatgpt-web`, `cliproxyapi`,
-`cloudflare-ai`, `codex`, `commandCode`, `cursor`, `default`, `devin-cli`,
+`antigravity`, `azure-openai`, `blackbox-web`, `cliproxyapi`,
+`chatgpt-web-codex`, `cloudflare-ai`, `codex`, `commandCode`, `cursor`, `default`, `devin-cli`,
 `muse-spark-web`, `nlpcloud`, `opencode`, `perplexity-web`, `petals`,
 `pollinations`, `qoder`, `vertex`, `devin-desktop`, plus `claudeIdentity.ts`
 (shared identity helper) and `index.ts` (registry).
 
 > Note: providers not listed here are served by `default.ts` using the generic
-> OpenAI-compatible executor. The full provider catalog (338 providers) lives in
+> OpenAI-compatible executor. The full provider catalog (351 providers) lives in
 > `src/shared/constants/providers.ts`.
 
 ### 4.3 `open-sse/translator/`
@@ -760,7 +759,7 @@ See [RESILIENCE_GUIDE.md](./RESILIENCE_GUIDE.md) and the dedicated section in
 2. Export CRUD functions for your domain.
 3. If new tables: add a migration under `src/lib/db/migrations/`, numbered
    sequentially, idempotent, transactional.
-4. Re-export from `src/lib/localDb.ts` (re-export only — **no logic**).
+4. Importers use direct imports from `@/lib/db/yourModule` (no barrel — the old `localDb.ts` re-export layer was removed).
 5. Add tests under `tests/unit/`.
 
 ### Add a new MCP tool
@@ -791,7 +790,7 @@ See [A2A-SERVER.md § Adding a New Skill](../frameworks/A2A-SERVER.md). Skills l
 - **TypeScript**: `strict: false` (legacy posture). Prefer explicit types over
   inference for cross-module boundaries.
 - **Database**: never write raw SQL in routes or handlers — always go through
-  `src/lib/db/` modules. Never add logic to `src/lib/localDb.ts`.
+  `src/lib/db/` modules. Never barrel-import — use specific `src/lib/db/*` modules directly.
 - **DB-entity typing (#3512)**: a function that writes or reads a DB table's
   row shape should take/return a named TS interface mirroring that table's
   columns 1:1, not `any` or an inline anonymous type at the call site. Land
@@ -825,7 +824,7 @@ See [A2A-SERVER.md § Adding a New Skill](../frameworks/A2A-SERVER.md). Skills l
 ## 12. Hard Rules (from CLAUDE.md)
 
 1. Never commit secrets or credentials.
-2. Never add logic to `src/lib/localDb.ts`.
+2. Never barrel-import — use specific `src/lib/db/*` modules directly.
 3. Never use `eval()` / `new Function()` / implied eval.
 4. Never commit directly to `main`.
 5. Never write raw SQL in routes — always go through `src/lib/db/` modules.

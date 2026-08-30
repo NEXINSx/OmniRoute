@@ -656,8 +656,8 @@ export class GitlabExecutor extends BaseExecutor {
     // Emulate OpenAI tool calling for GitLab Duo (which has no native function
     // calling). When `tools` are present we serialize the tool contract into the
     // prompt and parse `<tool>{...}</tool>` blocks back out of the completion text
-    // into OpenAI `tool_calls` — the same web-tool-emulation idiom used by the
-    // qwen-web / duckduckgo-web executors (#6051).
+    // into OpenAI `tool_calls` — the same web-tool-emulation idiom used by other
+    // pure-API web executors such as duckduckgo-web (#6051).
     const { hasTools, requestedTools, effectiveMessages } = prepareToolMessages(
       bodyObj,
       rawMessages as Array<{ role: string; content: unknown }>

@@ -73,7 +73,7 @@
         <circle cx="6.6" cy="6.6" r="1.4" fill="#fdcb6e" stroke="none"/>
       </g>
       <text x="862" y="170" font-size="18" font-weight="800" fill="#fdcb6e">$0 to start</text>
-      <text x="826" y="204" font-size="13.5" fill="#a1a1aa">90+ providers with a free tier, 56 free</text>
+      <text x="826" y="204" font-size="13.5" fill="#a1a1aa">90+ providers with a free tier, 55 free</text>
       <text x="826" y="226" font-size="13.5" fill="#a1a1aa">forever — Qoder, Pollinations, Cloudflare,</text>
       <text x="826" y="248" font-size="13.5" fill="#a1a1aa">SiliconFlow… No card needed.</text>
     </g>

@@ -36,7 +36,7 @@ export interface FreeModelSpec {
 // resolution path). getActiveProviders() only sees configured *connections*,
 // so these have to be unioned in separately or every no-auth model gets
 // filtered out as "not active" even though they work with zero setup.
-export const NO_AUTH_PROVIDER_IDS = new Set(["felo-web", "aihorde", "opencode", "duckduckgo-web"]);
+export const NO_AUTH_PROVIDER_IDS = new Set(["aihorde", "opencode", "duckduckgo-web"]);
 
 // Curated from open-sse/config/freeModelCatalog.data.ts: the original 5
 // providers configured+active on this deployment (checked via GET
@@ -82,7 +82,6 @@ export const FREE_MODELS: FreeModelSpec[] = [
     model: "openrouter/auto",
     displayName: "Auto — Best Available (OpenRouter free pool)",
   },
-  { provider: "felo-web", model: "felo-web/felo-chat", displayName: "Felo Chat (no-auth)" },
   {
     provider: "aihorde",
     model: "aihorde/google/gemma-4-31b",

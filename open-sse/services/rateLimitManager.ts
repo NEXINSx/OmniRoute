@@ -176,6 +176,16 @@ export function resolveRequestQueueMaxWaitMs(
   return resolveOverride(override, legacyDefault);
 }
 
+/**
+ * Limiter-managed execution backstop (Bottleneck `expiration`). Starts only
+ * after a job leaves QUEUED; bounds execution, never queue wait. Kept strictly
+ * separate from the queue-wait budget (`maxWaitMs`) so the backstop cannot
+ * undercut upstream fetch-start timeouts on non-incremental gateways.
+ */
+export function resolveExecutionMaxWaitMs(): number {
+  return currentRequestQueueSettings.executionMaxWaitMs;
+}
+
 function buildLimiterDefaults() {
   // 0 or missing values mean "infinite" / no rate limit applies. This treats
   // the global request-queue settings the same way per-connection overrides
@@ -338,7 +348,8 @@ export async function initializeRateLimits() {
   applyBottleneckHeartbeatPatch();
 
   try {
-    const { getCachedProviderConnections, getSettings } = await import("@/lib/localDb");
+    const { getCachedProviderConnections } = await import("@/lib/db/readCache");
+    const { getSettings } = await import("@/lib/db/settings");
     const [connections, settings] = await Promise.all([
       getCachedProviderConnections(),
       getSettings(),
@@ -385,7 +396,7 @@ export async function applyRequestQueueSettings(nextSettings: RequestQueueSettin
   currentRequestQueueSettings = { ...nextSettings };
   // Global policy changes invalidate snapshots from the previous generation.
   preservedReplacementSettings.clear();
-  const { getCachedProviderConnections } = await import("@/lib/localDb");
+  const { getCachedProviderConnections } = await import("@/lib/db/readCache");
   const connections = await getCachedProviderConnections();
   // Also discard any snapshot created while the asynchronous DB read yielded.
   preservedReplacementSettings.clear();
@@ -562,10 +573,13 @@ export async function withRateLimit(provider, connectionId, model, fn, signal = 
   await awaitProviderDefaultSlot(provider, connectionId, signal, maxWaitMs);
 
   const limiter = getLimiter(provider, connectionId, model);
-  // Bottleneck's `expiration` starts only after a job leaves QUEUED. The
-  // legacy maxWaitMs setting therefore bounds limiter-managed execution; it
-  // is not a queue-wait deadline.
-  const executionExpirationMs = maxWaitMs;
+  // Bottleneck's `expiration` starts only after a job leaves QUEUED, so it
+  // bounds limiter-managed execution — not queue wait. It is therefore fed by
+  // the dedicated execution backstop (`requestQueue.executionMaxWaitMs`),
+  // never by the queue-wait budget: non-incremental gateways legitimately run
+  // for minutes before first bytes, and an expiration at the queue budget
+  // killed them mid-flight (false 504s on opencode-go/glm-5.3-flash).
+  const executionExpirationMs = resolveExecutionMaxWaitMs();
   const scheduleOpts =
     executionExpirationMs && executionExpirationMs > 0 ? { expiration: executionExpirationMs } : {};
 
@@ -641,7 +655,7 @@ export async function withRateLimit(provider, connectionId, model, fn, signal = 
       throw markLocalRateLimitError(
         new Error(
           `Request exceeded OmniRoute's local rate-limit execution expiration ` +
-            `(legacy resilienceSettings.requestQueue.maxWaitMs=${executionExpirationMs}ms) for ` +
+            `(resilienceSettings.requestQueue.executionMaxWaitMs=${executionExpirationMs}ms) for ` +
             `${model ? `${provider}/${model}` : provider}. Bottleneck applies this deadline only ` +
             `after dispatch; it does not bound queue wait and is not an upstream-generated timeout.`,
           { cause: err }

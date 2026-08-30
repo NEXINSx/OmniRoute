@@ -55,7 +55,6 @@ lastUpdated: 2026-06-28
 |                 | MiniMax M2.1      | $0.2/百萬  | 5 小時滾動     | 最便宜的選擇       |
 |                 | Kimi K2           | $9/月固定  | 每月 1,000 萬  | 可預測成本         |
 | **🆓 免費方案** | Qoder             | $0         | 未公布 Token 上限；仍有提供者限制 | 8 個模型免費 |
-|                 | Qwen              | $0         | 未公布 Token 上限；仍有提供者限制 | 3 個模型免費 |
 |                 | Kiro              | $0         | 約 50 點/月    | Claude 免費使用    |
 
 ---
@@ -973,7 +972,6 @@ curl -X POST http://localhost:20128/v1/audio/transcriptions \
 - `kie/`
 - `aws-polly/`
 - `xiaomi-mimo/`
-- `edgetts/`（Microsoft Edge「朗讀功能」— 免費，無需 API 金鑰；非官方/逆向工程端點）
 - `coqui/`, `tortoise/`
 - `qwen/`
 

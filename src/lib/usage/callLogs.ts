@@ -140,7 +140,7 @@ async function resolveAccountName(connectionId: string | null | undefined) {
   }
 
   try {
-    const { getProviderConnections } = await import("@/lib/localDb");
+    const { getProviderConnections } = await import("@/lib/db/providers");
     const connections = await getProviderConnections();
     const conn = connections.find((item) => item.id === connectionId);
     if (conn) {
@@ -160,7 +160,7 @@ async function resolveAccountName(connectionId: string | null | undefined) {
 async function resolveProviderPrefix(providerId: string): Promise<string | null> {
   if (!providerId) return null;
   try {
-    const { getProviderNodeById } = await import("@/lib/localDb");
+    const { getProviderNodeById } = await import("@/lib/db/providers");
     const node = await getProviderNodeById(providerId);
     if (node && typeof node.prefix === "string" && node.prefix.trim().length > 0) {
       return node.prefix.trim();
@@ -178,7 +178,7 @@ function isCompatibleProviderId(providerId: string | null): boolean {
   );
 }
 
-function applyNodePrefix(
+export function applyNodePrefix(
   requestedModel: string | null,
   provider: string | null,
   nodePrefix: string | null
@@ -341,7 +341,7 @@ function readLegacyLogFromDisk(entry: {
   return null;
 }
 
-function resolveProviderDisplay(
+export function resolveProviderDisplay(
   provider: string | null,
   nodeName: string | null,
   nodePrefix: string | null

@@ -119,21 +119,18 @@ contractual reasons, or left in when this guard is off even with `freeAccessPoli
 ## What passes today
 
 Run `npx tsx scripts/ad-hoc/dry-run-strict-zero-cost.ts` against a live instance's
-`GET /v1/auto-combo/{channel}/candidates` output for a real before/after — the script now reads
-each candidate's real `connectionId`, so it also proves the connection-safety fix live, not just
-in unit tests. As of 2026-08-20, only `freeType: "keyless"` candidates pass in practice (7 of 29
-live candidates on this instance: `opencode/big-pickle`, `opencode/deepseek-v4-flash-free`, and
-5 `felo-web` models — all confirmed arriving with the genuine no-auth `connectionId`, never a
-real connection) — no currently-catalogued `recurring-*` provider both has a usage adapter
-registered in `USAGE_FETCHER_PROVIDERS` **and** `hardStopGuaranteed: true` declared (e.g. `groq`
-has neither the adapter registered here nor is fetched offline in this dry run; `kiro` lacks
-`hardStopGuaranteed`). This is not a bug: it's the honest state of two independently-curated
-metadata sets that happen not to overlap yet, not a limitation of the filter itself.
+`GET /v1/auto-combo/{channel}/candidates` output for a real before/after — the script reads each
+candidate's real `connectionId`, so it also proves the connection-safety fix live, not just in
+unit tests. Keyless candidates must arrive with the synthetic no-auth `connectionId`, never a
+real connection. The current built-in keyless auto path is OpenCode Free; exact candidate counts
+still depend on live model discovery and should be measured on the target deployment instead of
+copied from an older run. A `recurring-*` candidate passes only when it has both a registered
+usage adapter and `hardStopGuaranteed: true`; incomplete metadata remains fail-closed.
 
-With `excludeTosAvoid: true` added on top of the same live pool, the count drops from 7 to 0 —
-every one of the 7 surviving candidates is curated `tos: "avoid"` today (`felo-web`, `opencode`).
-This is a real, expected trade-off of turning the ToS guard on, not a bug: the guard is
-`false` by default for exactly this reason (see "ToS guard" above).
+With `excludeTosAvoid: true`, every candidate curated as `tos: "avoid"` is removed. OpenCode Free
+currently carries that verdict, so enabling the guard can empty a deployment's remaining keyless
+pool. This is an expected trade-off of turning the ToS guard on, not a bug: the guard is `false`
+by default for exactly this reason (see "ToS guard" above).
 
 ## Enabling
 

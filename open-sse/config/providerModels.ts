@@ -145,6 +145,48 @@ function getGlobalModel(modelId: string): RegistryModel | undefined {
   return bestMatch;
 }
 
+/**
+ * Exact-id catalog lookup: the registry entry for `modelId` across every
+ * provider, or for its basename once a `vendor/` prefix is stripped.
+ *
+ * This is `getGlobalModel`'s steps 1–2 only. Step 3 (a `startsWith` substring
+ * scan) deliberately guesses at a base model, which is exactly what a
+ * catalog-anchor check must not do — `resolveScoresAs` (#11489) uses this to
+ * verify that a suffix-stripped base is a REAL routable id before inheriting
+ * its quality scores.
+ */
+export function findRegistryModelById(modelId: string): RegistryModel | undefined {
+  if (typeof modelId !== "string" || modelId.length === 0) return undefined;
+  for (const models of Object.values(PROVIDER_MODELS)) {
+    const found = models.find((m) => m.id === modelId);
+    if (found) return found;
+  }
+  const basename = modelId.split("/").pop() || modelId;
+  if (basename === modelId) return undefined;
+  for (const models of Object.values(PROVIDER_MODELS)) {
+    const found = models.find((m) => m.id === basename);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * The `scoresAs` target declared for `modelId`, if any (#11489). Scans every
+ * provider that ships the id rather than stopping at the first hit, so an
+ * unannotated duplicate of the same id in another provider's catalog cannot
+ * shadow the entry that actually declares the relation.
+ */
+export function findRegistryScoresAs(modelId: string): string | undefined {
+  if (typeof modelId !== "string" || modelId.length === 0) return undefined;
+  const basename = modelId.split("/").pop() || modelId;
+  for (const models of Object.values(PROVIDER_MODELS)) {
+    for (const m of models) {
+      if ((m.id === modelId || m.id === basename) && m.scoresAs) return m.scoresAs;
+    }
+  }
+  return undefined;
+}
+
 export function getProviderModel(aliasOrId: string, modelId: string): RegistryModel | undefined {
   const models = PROVIDER_MODELS[aliasOrId];
   if (!models) return getGlobalModel(modelId);

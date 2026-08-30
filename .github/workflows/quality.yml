@@ -61,13 +61,25 @@ jobs:
     name: Build (advisory)
     needs: changes
     # FORK PRs ONLY. build.yml's `Fast Production Build` triggers on `push: branches: ["**"]`
+    # (#11946, 2026-08-29: build.yml is now workflow_dispatch-only — the hosted runner cannot
+    # build this tree in any profile, 8/8 recent fork PRs included — so own-origin PRs rely on
+    # ci.yml `Build` after merge to main and on nightly-release-green for release/**.)
     # and runs `build:release` — a superset of this job — so for an own-origin branch this job
     # was building the same tree twice. A fork contributor pushes to THEIR repo, so that push
     # never fires here, and this is the only pre-merge build signal they get. Measured
     # 2026-08-14: 72 of the last 100 PRs into release/** came from forks, so the fork case is
     # the majority of the traffic, not the exception — this job earns its place, it just should
     # not duplicate build.yml for the own-origin 28%.
-    if: ${{ github.event_name != 'pull_request' || ((github.event.pull_request.draft == false || startsWith(github.head_ref, 'mergify/merge-queue/')) && needs.changes.outputs.code == 'true' && github.event.pull_request.head.repo.full_name != github.repository) }}
+    # Disabled 2026-08-29 (#11976 follow-up). `continue-on-error: true` still
+    # reports a GitHub check FAILURE, so every fork PR into release/** was born
+    # with a red "Build (advisory)" even when every required gate was green
+    # (sweep-reds, 41 PRs). Hosted ubuntu-latest cannot finish `npm run build`
+    # on this tree — VM shutdown ~6 min in, same class as build.yml going
+    # workflow_dispatch-only in #11962. Pre-merge build signal for release/**
+    # is nightly-release-green (omni-build); for main it is ci.yml `Build`.
+    # Restore this job when a runner that actually fits the tree is wired here.
+    # Bare `false` (not `${{ false }}`) — zizmor obfuscation flags the expression form.
+    if: false
     # PINNED to hosted — this was the last job in THIS workflow still on the USE_VPS_RUNNER
     # switch (ci.yml's Build, nightly-release-green and npm-publish keep it, so the variable
     # stays meaningful), and with USE_VPS_RUNNER=true it produced NO signal at all here.
@@ -189,8 +201,11 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       # Security scanners — same hardened install as ci.yml quality-extended
       # (gh release download = authenticated, 5000 req/hr; curl to api.github.com
       # is rate-limited to 60/hr and silently no-ops when throttled). The blocking
@@ -269,11 +284,11 @@ jobs:
         run: |
           set -uo pipefail
           gates=(
-            provider-consistency fetch-targets deps file-size error-helper
+            provider-consistency provider-asset-provenance fetch-targets deps file-size error-helper
             migration-numbering public-creds db-rules known-symbols
             route-guard-membership test-discovery test-runner-api
             mutation-test-coverage any-budget:t11 build-scope pack-policy
-            complexity-ratchets
+            complexity-ratchets model-lifecycle
             cycles lockfile duplication dead-code type-coverage compression-budget
             # #8781: open-sse workspace typecheck gate — the workspace imports @/ which
             # escapes to src/ via undeclared path aliases. See check-open-sse-typecheck.mjs.
@@ -460,6 +475,12 @@ jobs:
     # cache restore saturating the link), while the tests themselves tied, 2m54 vs 2m31. So
     # self-hosted is strictly worse here and there is nothing to configure.
     runs-on: ubuntu-latest
+    # A shard finishes in ~10 min. Without a ceiling a hung test process holds the PR for
+    # GitHub's 6 h default: on 2026-08-28 shard 1/4 sat 64 min without a line of output
+    # (twice, same spot — a timing race, gone on the third run) while the other three
+    # shards were long green. 30 min = 3x the normal wall-clock; a shard that needs more
+    # is a hang, not a slow run, and a fast red with a re-run beats a silent 6 h hold.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -500,7 +521,10 @@ jobs:
     name: No new ESLint warnings
     needs: changes
     if: ${{ github.event_name != 'pull_request' || ((github.event.pull_request.draft == false || startsWith(github.head_ref, 'mergify/merge-queue/')) && needs.changes.outputs.code == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-light"]')) || 'ubuntu-latest' }}
+    # 2026-08-30: a cold full lint with the eslint-plugin-react-hooks 7 compiler rules is
+    # killed on the 7 GB hosted runner without a message (status null → exit 1, the
+    # JSON never written); the box lints it in ~12 min with the heap below.
     continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true }}
     # G0 (trilho .50): security-events:read lets the CodeQL ratchet below read open
     # code-scanning alerts via `gh api .../code-scanning/alerts` (same as ci.yml's
@@ -524,11 +548,16 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       - name: ESLint (baseline congelado — warning novo = vermelho)
         # lint:json writes the report; --max-warnings 0 keeps no-new-warnings policy.
         run: npm run lint:json -- --max-warnings 0
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
       # ── G0 (trilho .50): motor de ratchet também no trilho B ─────────────────────
       # This job just wrote .artifacts/eslint-results.json — collect-metrics prefers
       # that file, so the ratchet engine lands here at ZERO extra ESLint cost (one

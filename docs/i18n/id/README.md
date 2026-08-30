@@ -93,28 +93,28 @@ _Hubungkan IDE atau alat CLI berbasis AI apa pun melalui OmniRoute — gateway A
       </td>
       <td align="center" width="110">
         <a href="https://github.com/HKUDS/nanobot">
-          <img src="./public/providers/nanobot.png" alt="NanoBot" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="NanoBot" width="48"/><br/>
           <b>NanoBot</b>
         </a><br/>
         <sub>⭐ 20.9K</sub>
       </td>
       <td align="center" width="110">
         <a href="https://github.com/sipeed/picoclaw">
-          <img src="./public/providers/picoclaw.jpg" alt="PicoClaw" width="48"/><br/>
+          <img src="./public/providers/picoclaw.svg" alt="PicoClaw" width="48"/><br/>
           <b>PicoClaw</b>
         </a><br/>
         <sub>⭐ 14.6K</sub>
       </td>
       <td align="center" width="110">
         <a href="https://github.com/zeroclaw-labs/zeroclaw">
-          <img src="./public/providers/zeroclaw.png" alt="ZeroClaw" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="ZeroClaw" width="48"/><br/>
           <b>ZeroClaw</b>
         </a><br/>
         <sub>⭐ 9.9K</sub>
       </td>
       <td align="center" width="110">
         <a href="https://github.com/nearai/ironclaw">
-          <img src="./public/providers/ironclaw.png" alt="IronClaw" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="IronClaw" width="48"/><br/>
           <b>IronClaw</b>
         </a><br/>
         <sub>⭐ 2.1K</sub>
@@ -123,7 +123,7 @@ _Hubungkan IDE atau alat CLI berbasis AI apa pun melalui OmniRoute — gateway A
     <tr>
       <td align="center" width="110">
         <a href="https://github.com/anomalyco/opencode">
-          <img src="./public/providers/opencode.svg" alt="OpenCode" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="OpenCode" width="48"/><br/>
           <b>OpenCode</b>
         </a><br/>
         <sub>⭐ 106K</sub>
@@ -144,7 +144,7 @@ _Hubungkan IDE atau alat CLI berbasis AI apa pun melalui OmniRoute — gateway A
       </td>
       <td align="center" width="110">
         <a href="https://github.com/Kilo-Org/kilocode">
-          <img src="./public/providers/kilocode.svg" alt="Kilo Code" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="Kilo Code" width="48"/><br/>
           <b>Kilo Code</b>
         </a><br/>
         <sub>⭐ 15.5K</sub>
@@ -217,7 +217,7 @@ Perintah ini menghasilkan `system-info.txt` berisi versi Node.js, versi OmniRout
        │   ↓ batas anggaran
        ├─→ [Tier 3: MURAH] GLM ($0.6/1M), MiniMax ($0.2/1M)
        │   ↓ batas anggaran
-       └─→ [Tier 4: GRATIS] Qoder, Qwen, Kiro (tidak terbatas)
+       └─→ [Tier 4: GRATIS] Qoder, Kiro (tidak terbatas)
 
 Hasil: Tidak pernah berhenti coding, biaya minimal
 ```
@@ -287,7 +287,7 @@ Tidak semua orang bisa membayar $20–200/bulan untuk langganan AI. Pelajar, dev
 **Cara OmniRoute menyelesaikannya:**
 
 - **Ollama Cloud** — Model Ollama yang di-host di cloud pada `api.ollama.com` dengan tier "Light usage" gratis; gunakan prefix `ollamacloud/<model>`
-- **Combo Hanya Gratis** — Rantai `if/kimi-k2-thinking → qw/qwen3-coder-plus` = $0/bulan tanpa downtime
+- **Combo Hanya Gratis** — Rantai `if/kimi-k2-thinking → kr/qwen3-coder-next` = $0/bulan tanpa downtime
 - **Akses Gratis NVIDIA NIM** — akses gratis yang saat ini tercantum sekitar ~40 RPM untuk 70+ model di build.nvidia.com; model, kuota, dan ketentuan dapat berubah
 - **Strategi Optimasi Biaya** — Strategi routing yang secara otomatis memilih penyedia termurah yang tersedia
 
@@ -698,7 +698,7 @@ Outcome: higher quality, near-zero interruption
 ```txt
 Combo: "free-tier-fallback"
   1. if/kimi-k2-thinking       (no published token cap; limits apply)
-  2. qw/qwen3-coder-plus       (no published token cap; limits apply)
+  2. kr/qwen3-coder-next
 
 Monthly cost: $0
 Outcome: stable free coding workflow
@@ -736,7 +736,6 @@ Outcome: deep fallback depth for deadline-critical workloads
 | ---- | ------------------------------------------------------ | ------------------------------------------------------------------ |
 | 1    | Connect **Kiro** (AWS Builder ID OAuth)                | Claude Sonnet 4.5, Haiku 4.5 — batas akun/penyedia berlaku         |
 | 2    | Connect **Qoder** (Google OAuth)                       | kimi-k2-thinking, qwen3-coder-plus, deepseek-r1... — batas berlaku |
-| 3    | Connect **Qwen** (Device Code)                         | qwen3-coder-plus, qwen3-coder-flash... — batas berlaku             |
 | 4    | `/dashboard/combos` → **Templat Tumpukan Gratis ($0)** | Round-robin semua penyedia gratis secara otomatis                  |
 
 **Arahkan IDE/CLI apa pun ke:** `http://localhost:20128/v1` · Kunci API: `any-string` · Selesai.
@@ -1150,7 +1149,6 @@ Saat diminimalkan, OmniRoute ada di baki sistem Anda dengan tindakan cepat:
 |                     | Kimi K2.5 (Moonshot API) 🆕 | Bayar per penggunaan            | None                  | Direct Moonshot API access         |
 |                     | Kimi K2                     | $9/mo flat                      | 10M tokens/mo         | Predictable cost                   |
 | **🆓 FREE**         | Qoder                       | **$0**                          | Provider limits apply | 5 model; batas akun berlaku        |
-|                     | Qwen                        | **$0**                          | Provider limits apply | 4 model; batas akun berlaku        |
 |                     | Kiro                        | **$0**                          | Provider limits apply | Claude Sonnet/Haiku (AWS Builder)  |
 |                     | LongCat-2.0                 | **$0** (10M sekali, KYC)        | Ketentuan berlaku     | Kredit pendaftaran, tidak berulang |
 |                     | Pollinations AI 🆕          | **$0** (tidak perlu kunci)      | 1 req/15s             | GPT-5, Claude, DeepSeek, Llama 4   |
@@ -1167,7 +1165,6 @@ Kiro (kr/)             → Claude access — account/credit limits apply
 Qoder (if/)            → selected models — no published token cap; rate/account limits apply
 LongCat (lc/)          → LongCat-2.0 — 10M one-time signup credit; KYC required
 Pollinations (pol/)    → GPT-5, Claude, DeepSeek, Llama 4 — no key needed
-Qwen (qw/)             → selected models — no published token cap; rate/account limits apply
 Gemini (gemini/)       → selected free-tier models — current API quotas apply
 Cloudflare AI (cf/)    → Llama 70B, Gemma 3, Mistral — 10K Neurons/day
 Scaleway (scw/)        → Qwen3 235B, Llama 70B — 1M free tokens (EU)
@@ -1207,14 +1204,6 @@ Cerebras (cerebras/)   → Llama/Qwen world-fastest — 1M tok/day
 > Metode koneksi yang disarankan: **Token Akses Pribadi + `qodercli`**. Peramban OAuth adalah
 > eksperimental dan dinonaktifkan secara default kecuali variabel lingkungan `QODER_OAUTH_*` dikonfigurasi.
 
-### 🟡 MODEL QWEN (Otentikasi Kode Perangkat)
-
-| Model               | Prefix | Limit                                     | Rate Limit                        |
-| ------------------- | ------ | ----------------------------------------- | --------------------------------- |
-| `qwen3-coder-plus`  | `qw/`  | Tidak ada batas token yang dipublikasikan | Batas akun/penyedia dapat berlaku |
-| `qwen3-coder-flash` | `qw/`  | Tidak ada batas token yang dipublikasikan | Batas akun/penyedia dapat berlaku |
-| `qwen3-coder-next`  | `qw/`  | Tidak ada batas token yang dipublikasikan | Batas akun/penyedia dapat berlaku |
-| `vision-model`      | `qw/`  | Tidak ada batas token yang dipublikasikan | Batas akun/penyedia dapat berlaku |
 
 ### ⚫ NVIDIA NIM (Kunci API Gratis — build.nvidia.com)
 
@@ -1288,7 +1277,6 @@ Tersedia gratis: `qwen3-235b-a22b-instruct-2507` (Qwen3 235B!), `llama-3.1-70b-i
 > Qoder (if/)            → model terpilih — tidak ada batas token yang dipublikasikan; batas berlaku
 > LongCat (lc/)          → LongCat-2.0 — kredit pendaftaran 10M satu kali; KYC diperlukan
 > Pollinations (pol/)    → GPT-5, Claude, DeepSeek, Llama 4 — tidak perlu kunci
-> Qwen (qw/)             → model terpilih — tidak ada batas token yang dipublikasikan; batas berlaku
 > Gemini (gemini/)       → Gemini 2.5 Flash — 1.500 req/hari gratis
 > Cloudflare AI (cf/)    → 50+ model — 10 ribu Neurons/hari
 > Scaleway (scw/)        → Qwen3 235B, Llama 70B — 1 juta token gratis (EU)
@@ -1784,17 +1772,6 @@ Models:
   if/deepseek-r1
 ```
 
-### Qwen (4 model GRATIS melalui Kode Perangkat)
-
-```bash
-Dashboard → Connect Qwen
-→ Device code authorization
-→ Access is subject to current provider limits
-
-Models:
-  qw/qwen3-coder-plus
-  qw/qwen3-coder-flash
-```
 
 ### Kiro (Claude GRATIS)
 
@@ -1833,7 +1810,7 @@ Use in CLI: premium-coding
 Name: free-combo
 Models:
   1. if/kimi-k2-thinking (no published token cap; provider limits may apply)
-  2. qw/qwen3-coder-plus (no published token cap; provider limits may apply)
+  2. kr/qwen3-coder-next
 
 Cost: currently listed as $0; terms and availability may change
 ```

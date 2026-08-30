@@ -78,7 +78,7 @@ function fieldMatch(incoming: string | null, existing: string | null): boolean |
  * and `incomingProfileArn` (#10815).
  *
  * Two independent disambiguators, either of which can prove "different
- * account": `providerSpecificData.username` (Raycast-style IdP dedup) and
+ * account": `providerSpecificData.username` (generic username/IdP fallback) and
  * `providerSpecificData.profileArn` (Kiro/AWS profile dedup — Kiro never
  * sets `username`). A field only rules a match IN/OUT when both the
  * incoming and existing record carry it; when neither carries either field

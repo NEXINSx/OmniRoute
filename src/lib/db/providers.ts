@@ -3,6 +3,8 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
+
+import { isCommonChatGptWebRetiredProviderId } from "@/shared/constants/chatgptWebRetirement";
 import { getDbInstance, rowToCamel, cleanNulls } from "./core";
 import { backupDbFile } from "./backup";
 import {
@@ -19,6 +21,8 @@ import {
 } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import { invalidateReasoningRoutingRuleCache } from "./reasoningRoutingRules";
 import { normalizeProviderSpecificData } from "@/lib/providers/requestDefaults";
+import { withDerivedCookieExpiry } from "@/shared/utils/webCookieExpiry";
+import { WEB_COOKIE_PROVIDERS } from "@/shared/constants/providers";
 import { ensureCodexFingerprintSeed } from "@omniroute/open-sse/config/codexIdentity.ts";
 import { bumpProxyConfigGeneration, getSettings } from "./settings";
 import {
@@ -32,7 +36,9 @@ import {
   isMatchingOauthIdentity,
 } from "./webSessionDedup";
 import { pickCodexConnectionForUser } from "@/lib/oauth/utils/codexConnectionSelection";
+import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
 import { reconcileCodexUsageHistory } from "./providers/usageIdentityReconciliation";
+import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
 
 /**
  * normalizeProviderSpecificData + the Codex fingerprint-seed invariant: Codex
@@ -52,12 +58,34 @@ function normalizeConnectionProviderSpecificData(
   existingProviderSpecificData?: unknown
 ) {
   const normalized = normalizeProviderSpecificData(provider, providerSpecificData);
-  if (provider !== "codex") return normalized;
+  const withExpiry = withDerivedCookieExpiryForProvider(provider, normalized, credentials);
+  if (provider !== "codex") return withExpiry;
   return ensureCodexFingerprintSeed(
-    normalized,
+    withExpiry,
     credentials,
     (existingProviderSpecificData as Record<string, unknown> | null) ?? null
   );
+}
+
+function withDerivedCookieExpiryForProvider(
+  provider: string | null,
+  providerSpecificData: unknown,
+  credentials: { accessToken?: unknown; refreshToken?: unknown } | unknown
+): Record<string, unknown> {
+  const key = String(provider || "").toLowerCase();
+  if (!(WEB_COOKIE_PROVIDERS as Record<string, unknown>)[key]) {
+    // Both branches must satisfy the Codex seed signature below; the
+    // passthrough keeps whatever shape normalization already returned.
+    return (providerSpecificData ?? {}) as Record<string, unknown>;
+  }
+  const source = credentials as Record<string, unknown> | null;
+  const credential =
+    source && typeof source === "object"
+      ? (typeof source.apiKey === "string" && source.apiKey) ||
+        (typeof source.cookie === "string" && source.cookie) ||
+        null
+      : null;
+  return withDerivedCookieExpiry(providerSpecificData, credential);
 }
 import {
   withNullableMaxConcurrent,
@@ -344,6 +372,43 @@ export async function getProviderConnectionById(id: string) {
   );
 }
 
+export interface ProviderConnectionDisplayMetadata {
+  id: string;
+  name: string | null;
+  displayName: string | null;
+  email: string | null;
+}
+
+/**
+ * Reads only the non-credential fields needed by account display-name resolvers.
+ *
+ * This avoids decrypting provider credentials when a dashboard only needs labels.
+ */
+export function getProviderConnectionDisplayMetadata(
+  connectionIds: readonly string[]
+): ProviderConnectionDisplayMetadata[] {
+  const ids = [...new Set(connectionIds.filter((id) => id.length > 0))];
+  if (ids.length === 0) return [];
+
+  const db = getDbInstance() as unknown as DbLike;
+  const rows = db
+    .prepare(
+      `SELECT id, name, display_name, email FROM provider_connections
+       WHERE id IN (${ids.map(() => "?").join(", ")})`
+    )
+    .all(...ids);
+
+  return rows.map((row) => {
+    const view = rowToCamel(row) as JsonRecord;
+    return {
+      id: toStringOrNull(view.id) || "",
+      name: toStringOrNull(view.name),
+      displayName: toStringOrNull(view.displayName),
+      email: toStringOrNull(view.email),
+    };
+  });
+}
+
 // #3368 PR6 — dedup web-session cookie/token credentials on connection create.
 // Re-importing the same session (e.g. via bulk web-session import) under a
 // different or blank name must update the existing connection instead of
@@ -534,13 +599,25 @@ export async function createProviderConnection(data: JsonRecord) {
       _updateConnectionRow(db, existingId, encryptConnectionFields(persistence));
     })();
     backupDbFile("pre-write");
-    return withNullableRateLimitOverrides(
+    invalidateDbCache("connections");
+    const returnedConnection = withNullableRateLimitOverrides(
       withNullableQuotaWindowThresholds(
         withNullableMaxConcurrent(cleanNulls(merged), merged),
         merged
       ),
       merged
     );
+
+    if (
+      isMicrosoftDesignerWebRetiredProviderId(merged.provider) ||
+      isRuntimeRetiredProviderId(merged.provider) ||
+      isCommonChatGptWebRetiredProviderId(merged.provider)
+    ) {
+      invalidateDbCache("connections");
+      return (await getProviderConnectionById(existingId)) ?? returnedConnection;
+    }
+
+    return returnedConnection;
   }
 
   // Generate name: prefer explicit name, then email, then a stable short-ID label.
@@ -588,6 +665,10 @@ export async function createProviderConnection(data: JsonRecord) {
     "accessToken",
     "refreshToken",
     "expiresAt",
+    // #5326's payload sets this and _insertConnectionRow binds it, but it was
+    // missing from this allowlist — so every created row stored NULL however good
+    // the payload was. The update path already carries it (`data.tokenExpiresAt`).
+    "tokenExpiresAt",
     "tokenType",
     "scope",
     "idToken",
@@ -657,13 +738,23 @@ export async function createProviderConnection(data: JsonRecord) {
   backupDbFile("pre-write");
   invalidateDbCache("connections"); // Bust connections read cache
 
-  return withNullableRateLimitOverrides(
+  const returnedConnection = withNullableRateLimitOverrides(
     withNullableQuotaWindowThresholds(
       withNullableMaxConcurrent(cleanNulls(connection), connection),
       connection
     ),
     connection
   );
+
+  if (
+    isMicrosoftDesignerWebRetiredProviderId(data.provider) ||
+    isRuntimeRetiredProviderId(providerId) ||
+    isCommonChatGptWebRetiredProviderId(providerId)
+  ) {
+    return (await getProviderConnectionById(String(connection.id))) ?? returnedConnection;
+  }
+
+  return returnedConnection;
 }
 
 function _insertConnectionRow(db: DbLike, conn: JsonRecord) {
@@ -902,13 +993,23 @@ export async function updateProviderConnection(id: string, data: JsonRecord) {
     reorderConnections(db, providerId);
   }
 
-  return withNullableRateLimitOverrides(
+  const returnedConnection = withNullableRateLimitOverrides(
     withNullableQuotaWindowThresholds(
       withNullableMaxConcurrent(cleanNulls(merged), merged),
       merged
     ),
     merged
   );
+
+  if (
+    isMicrosoftDesignerWebRetiredProviderId(merged.provider) ||
+    isRuntimeRetiredProviderId(merged.provider) ||
+    isCommonChatGptWebRetiredProviderId(merged.provider)
+  ) {
+    return (await getProviderConnectionById(id)) ?? returnedConnection;
+  }
+
+  return returnedConnection;
 }
 
 export {

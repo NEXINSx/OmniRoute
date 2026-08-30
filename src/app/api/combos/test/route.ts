@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { buildComboTestRequestBody, extractComboTestResponseText } from "@/lib/combos/testHealth";
-import { getComboByName, getCombos, pickApiKeyForInternalUse } from "@/lib/localDb";
+import { getComboByName, getCombos } from "@/lib/db/combos";
+import { pickApiKeyForInternalUse } from "@/lib/db/apiKeys";
 import { getRuntimePorts } from "@/lib/runtime/ports";
 import { resolveNestedComboTargets } from "@omniroute/open-sse/services/combo.ts";
 import { testComboSchema } from "@/shared/validation/schemas";

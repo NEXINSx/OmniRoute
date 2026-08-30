@@ -29,7 +29,7 @@ function withFixtureCli(files: Record<string, string>): { cleanup: () => void } 
   return {
     cleanup() {
       process.chdir(originalCwd);
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     },
   };
 }
@@ -315,7 +315,7 @@ test("parseCliRegistry() throws if commands directory is missing", () => {
     );
   } finally {
     process.chdir(originalCwd);
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

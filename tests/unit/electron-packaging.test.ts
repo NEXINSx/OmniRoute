@@ -115,7 +115,7 @@ test("electron docs manifest prunes authoring payloads without removing runtime 
       removedPaths: [],
     });
   } finally {
-    rmSync(bundleRoot, { recursive: true, force: true });
+    rmSync(bundleRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

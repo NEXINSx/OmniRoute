@@ -5,6 +5,7 @@ import { normalizeExcludedModelPatterns } from "@/domain/connectionModelRules";
 import { normalizeRoutingTags } from "@/domain/tagRouter";
 import { normalizeOpenRouterPreset } from "@/shared/constants/openRouterPreset";
 import { isForbiddenCustomHeaderName } from "@/shared/constants/upstreamHeaders";
+import { normalizePeakHourProtection } from "@/lib/providers/peakHourProtection";
 
 export const CODEX_REASONING_EFFORT_VALUES = [
   "none",
@@ -212,6 +213,15 @@ export function normalizeProviderSpecificData(
   // #2997: per-connection transient-cooldown opt-out — only persist a real boolean.
   if ("disableCooling" in normalized && typeof normalized.disableCooling !== "boolean") {
     delete normalized.disableCooling;
+  }
+
+  if ("peakHourProtection" in normalized) {
+    const peakHourProtection = normalizePeakHourProtection(normalized.peakHourProtection);
+    if (peakHourProtection) {
+      normalized.peakHourProtection = peakHourProtection;
+    } else {
+      delete normalized.peakHourProtection;
+    }
   }
 
   if ("autoFetchModels" in normalized && typeof normalized.autoFetchModels !== "boolean") {

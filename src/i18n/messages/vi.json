@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Xóa tất cả các lô đã hoàn thành",
     "batchListBatchesTable": "Lô",
     "changelogViewerLoading": "Đang tải nhật ký thay đổi từ GitHub...",
+    "profile": "Hồ sơ",
     "profileLoading": "Đang tải hồ sơ...",
     "profileHowToEarn": "Cách kiếm điểm",
     "bootstrapBannerDismiss": "Bỏ qua",
@@ -805,6 +806,13 @@
     "batchConceptBenefit50pct": "Giảm 50% cho token đầu vào và đầu ra",
     "batchConceptAsync24h": "Bất đồng bộ với khung thời gian hoàn thành 24 giờ",
     "batchConceptUseCases": "Phù hợp nhất cho phân loại số lượng lớn, đánh giá và embedding",
+    "batchHeaderSubtitle": "Chạy nhiều yêu cầu như một job duy nhất",
+    "batchStep1": "1 · Tải lên JSONL",
+    "batchStep1Desc": "Thêm yêu cầu",
+    "batchStep2": "2 · Tạo batch",
+    "batchStep2Desc": "Chạy job",
+    "batchStep3": "3 · Nhận kết quả",
+    "batchStep3Desc": "Tải xuống đầu ra",
     "filesConceptTitle": "Tập tin lô",
     "filesConceptSubtitle": "Các tập tin JSONL được sử dụng bởi các lô: yêu cầu đầu vào, kết quả và lỗi.",
     "filesConceptInput": "Đầu vào — tập tin JSONL của bạn với một yêu cầu trên mỗi dòng",
@@ -974,14 +982,7 @@
     "batchFileUsedByCount": "{count, plural, one {# batch} other {# batch}}",
     "batchFilePreview": "Bản xem trước",
     "batchFilePreviewTruncated": "Hiển thị {shown} dòng đầu tiên (tổng cộng {total} dòng)",
-    "batchFileDownloadFull": "Tải xuống toàn bộ tệp",
-    "batchHeaderSubtitle": "Chạy nhiều yêu cầu như một job duy nhất",
-    "batchStep1": "1 · Tải lên JSONL",
-    "batchStep1Desc": "Thêm yêu cầu",
-    "batchStep2": "2 · Tạo batch",
-    "batchStep2Desc": "Chạy job",
-    "batchStep3": "3 · Nhận kết quả",
-    "batchStep3Desc": "Tải xuống đầu ra"
+    "batchFileDownloadFull": "Tải xuống toàn bộ tệp"
   },
   "disabled": "Đã tắt",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Định tuyến các yêu cầu đã hết ngân sách đến nhà cung cấp/mô hình dự phòng khẩn cấp miễn phí.",
@@ -1023,6 +1024,8 @@
     "logs": "Nhật ký",
     "webhooks": "Webhook",
     "webhooksSubtitle": "Nhận thông báo về các sự kiện",
+    "logExport": "Xuất nhật ký",
+    "logExportSubtitle": "Gửi nhật ký lệnh gọi ra ngoài",
     "combosSubtitle": "Nhóm các nhà cung cấp để chuyển đổi dự phòng",
     "batchSubtitle": "Xử lý nhiều yêu cầu",
     "contextCavemanSubtitle": "Nén prompt",
@@ -1266,7 +1269,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Chặn lưu lượng agent IDE",
     "trafficInspector": "Traffic Inspector",
-    "trafficInspectorSubtitle": "Kiểm tra lưu lượng yêu cầu và phản hồi từ ứng dụng của bạn",
+    "trafficInspectorSubtitle": "Kiểm tra lưu lượng yêu cầu và phản hồi từ các ứng dụng của bạn",
     "trafficInspectorPurpose": "Xem chính xác những gì ứng dụng của bạn gửi đến và nhận từ các nhà cung cấp AI. Hoạt động với bất kỳ ứng dụng khách nào tương thích với OpenAI.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Các công cụ lập trình trỏ đến OmniRoute",
@@ -2399,7 +2402,15 @@
     "bypassProviderQuota": "Bỏ qua ngưỡng hạn ngạch nhà cung cấp",
     "bypassProviderQuotaDescription": "Cho phép khóa này bỏ qua chính sách ngưỡng của nhà cung cấp/tài khoản thượng nguồn khi định tuyến. Hạn ngạch USD của khóa API vẫn được áp dụng.",
     "quotaPill": "HẠN MỨC",
-    "quotaModeOnly": "qtSd-only"
+    "quotaModeOnly": "qtSd-only",
+    "exclusiveLease": "Thuê độc quyền",
+    "exclusiveLeaseNoticeTitle": "Thuê độc quyền",
+    "exclusiveLeaseNoticeDesc": "Khóa API này có quyền thuê độc quyền để định tuyến kết nối chuyên dụng.",
+    "allConnections": "Tất cả kết nối",
+    "onlySelectedConnections": "Chỉ các kết nối đã chọn",
+    "selectAtLeastOneConnection": "Chọn ít nhất một kết nối hoặc chọn Tất cả kết nối.",
+    "allConnectionsDesc": "Khóa này có thể dùng bất kỳ kết nối đang hoạt động nào.",
+    "restrictedToConnections": "Giới hạn ở {count, plural, one {# kết nối} other {# kết nối}}."
   },
   "auditLog": {
     "title": "Nhật ký kiểm tra",
@@ -2924,7 +2935,8 @@
       "letta": "Tác nhân Letta CLI có bộ nhớ lâu dài và khả năng dùng công cụ",
       "prime-agent": "Prime Agent — bộ khung lập trình RLM tự cải tiến hỗ trợ API tương thích OpenAI",
       "warp": "Terminal Warp AI hỗ trợ nhà cung cấp tùy chỉnh",
-      "agent-deck": "Trình điều phối đa tác nhân Agent Deck"
+      "agent-deck": "Trình điều phối đa tác nhân Agent Deck",
+      "5dive": "5dive — hạm đội tác nhân lập trình tự lưu trữ; một hồ sơ xác thực trỏ tất cả về OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "Endpoint API",
+    "subtitle": "Dùng endpoint tương thích OpenAI với hầu hết SDK và công cụ.",
+    "testEndpoint": "Kiểm tra endpoint →",
+    "advancedProtocols": "Giao thức nâng cao",
     "available": "Các endpoint có sẵn",
     "cloudProxy": "Proxy đám mây",
     "disableConfirm": "Bạn có chắc chắn muốn tắt proxy đám mây không?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "Tạo một Tích hợp nội bộ tại",
     "notionIntegrationToken": "Token tích hợp nội bộ Notion",
     "notionNotConnected": "Chưa kết nối",
-    "notionTokenConfigured": "Đã cấu hình token. Các công cụ Notion khả dụng qua MCP.",
-    "subtitle": "Dùng endpoint tương thích OpenAI với hầu hết SDK và công cụ.",
-    "testEndpoint": "Kiểm tra endpoint →",
-    "advancedProtocols": "Giao thức nâng cao"
+    "notionTokenConfigured": "Đã cấu hình token. Các công cụ Notion khả dụng qua MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Đa nhà cung cấp",
     "usageTracking": "Theo dõi mức sử dụng",
     "securityDesc": "Đặt mật khẩu để bảo vệ bảng điều khiển của bạn, hoặc bỏ qua lúc này.",
+    "securityDescSkipWarning": "⚠️ Không có mật khẩu, bạn sẽ không thể thêm nhà cung cấp trong quá trình thiết lập. Bạn có thể thêm sau từ bảng điều khiển sau khi đặt mật khẩu.",
     "providerDesc": "Kết nối nhà cung cấp AI đầu tiên của bạn. Bạn có thể thêm nhiều nhà cung cấp khác sau.",
+    "providerRequiresPassword": "Bạn cần đặt mật khẩu trước khi thêm nhà cung cấp. Hãy quay lại bước bảo mật và đặt mật khẩu, hoặc thêm nhà cung cấp sau từ bảng điều khiển.",
     "apiKeyRequired": "Khóa API (bắt buộc)",
     "customUrlOptional": "URL tùy chỉnh (tùy chọn)",
     "testDesc": "Hãy xác minh xem kết nối với nhà cung cấp của bạn có hoạt động không.",
@@ -5011,9 +5025,7 @@
         "skipped": "đã được cấu hình",
         "failed": "thất bại"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Không có mật khẩu, bạn sẽ không thể thêm nhà cung cấp trong quá trình thiết lập. Bạn có thể thêm sau từ bảng điều khiển sau khi đặt mật khẩu.",
-    "providerRequiresPassword": "Bạn cần đặt mật khẩu trước khi thêm nhà cung cấp. Hãy quay lại bước bảo mật và đặt mật khẩu, hoặc thêm nhà cung cấp sau từ bảng điều khiển."
+    }
   },
   "providers": {
     "title": "Nhà cung cấp",
@@ -6254,13 +6266,13 @@
       "galadriel": "Kết nối Galadriel bằng khóa API.",
       "predibase": "25 USD tín dụng dùng thử miễn phí (có hiệu lực 30 ngày)",
       "chenzk": "Gateway tương thích OpenAI với danh mục mô hình trực tiếp tại chenzk.top.",
-      "magnific": "Tạo hình ảnh bằng API Mystic của Freepik.",
+      "magnific": "Tạo hình ảnh bằng API Mystic của Magnific.",
       "freetheai": "Gateway miễn phí tương thích OpenAI, hỗ trợ chuyển tiếp mô hình.",
-      "g4f-gemini": "Proxy ngược g4f.space miễn phí, không cần khóa cho Gemini, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-groq": "Proxy ngược g4f.space miễn phí, không cần khóa cho Groq, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-nvidia": "Proxy ngược g4f.space miễn phí, không cần khóa cho NVIDIA NIM, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-ollama": "Gateway Ollama được lưu trữ miễn phí, không cần khóa của g4f.space, giới hạn 5 yêu cầu mỗi phút.",
-      "g4f-pollinations": "Proxy ngược g4f.space miễn phí, không cần khóa cho Pollinations, giới hạn 5 yêu cầu mỗi phút.",
+      "g4f-gemini": "Cổng g4f.space từ xa tới Gemini. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-groq": "Cổng g4f.space từ xa tới Groq. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-nvidia": "Cổng g4f.space từ xa tới NVIDIA NIM. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-ollama": "Cổng g4f.space từ xa tới Ollama. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
+      "g4f-pollinations": "Cổng g4f.space từ xa tới Pollinations. Truy cập ẩn danh cần tín dụng proof-of-work từ g4f.dev/chat hoặc khóa API thành viên từ g4f.dev/members.html; các giới hạn có thể thay đổi.",
       "mixedbread": "Tạo embedding bằng API Mixedbread.",
       "segmind": "Tạo hình ảnh và video bằng các mô hình được lưu trữ trên Segmind.",
       "amazon-q": "Dùng cùng AWS Builder ID hoặc luồng refresh-token đã nhập như Kiro, nhưng giữ các kết nối Amazon Q riêng biệt.",
@@ -7550,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Số yêu cầu mỗi phút",
     "resilienceMinTimeBetweenRequests": "Thời gian tối thiểu giữa các yêu cầu",
     "resilienceConcurrentRequests": "Số yêu cầu đồng thời",
+    "resilienceConnectionScopeConcurrentRequests": "Số yêu cầu đồng thời trên mỗi kết nối/phạm vi hạn ngạch",
+    "resilienceGlobalConcurrentRequests": "Số yêu cầu thượng nguồn đồng thời toàn cục (0 = tắt)",
     "resilienceMaxQueueWaitTime": "Thời gian chờ hàng đợi tối đa",
     "resilienceBaseCooldown": "Thời gian giãn cách cơ bản",
     "resilienceUseUpstreamRetryHints": "Sử dụng gợi ý thử lại từ máy chủ thượng nguồn",
@@ -8016,6 +8030,7 @@
     "resilienceRequestQueueDesc": "Lớp này chỉ kiểm soát việc xếp hàng và nhịp độ. Nó không lưu trữ thời gian hồi hoặc mở bộ ngắt mạch.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Bật tính năng bảo vệ hàng đợi theo mặc định cho các kết nối bằng khóa API đang hoạt động.",
     "resilienceMaxQueueWait": "Thời gian chờ xếp hàng tối đa",
+    "resilienceMaxExecutionWait": "Thời gian chờ thực thi (giới hạn dự phòng của tốc độ)",
     "resilienceConnectionCooldownScope": "Kết nối riêng lẻ",
     "resilienceConnectionCooldownTrigger": "Khi một kết nối trả về lỗi upstream tạm thời",
     "resilienceConnectionCooldownEffect": "Tạm thời bỏ qua kết nối đó và tăng thời gian chờ tăng dần đối với các lỗi lặp lại.",
@@ -8055,6 +8070,14 @@
     "resilienceProviderCooldownEnabledDesc": "Khi được bật, các nhà cung cấp bị lỗi sẽ được theo dõi toàn cục và bị bỏ qua trong một khoảng thời gian chờ.",
     "resilienceProviderCooldownMin": "Thời gian chờ tối thiểu",
     "resilienceProviderCooldownMax": "Thời gian chờ tối đa",
+    "resilienceCredentialHealthTitle": "Kiểm tra sức khỏe thông tin xác thực",
+    "resilienceCredentialHealthScope": "Tất cả kết nối API-key và OAuth đang hoạt động",
+    "resilienceCredentialHealthTrigger": "Định kỳ, theo nhịp cố định",
+    "resilienceCredentialHealthEffect": "Kiểm tra thông tin xác thực của từng kết nối và đánh dấu hoạt động/lỗi; kết nối lỗi được thử lại với thời gian chờ tăng dần",
+    "resilienceCredentialHealthDesc": "Quét nền định kỳ xác thực thông tin xác thực của từng kết nối đang hoạt động bằng cách gọi nhà cung cấp. Đặt 0 để tắt hoàn toàn. Giá trị Kiểm tra sức khỏe theo từng kết nối (trong hộp thoại chỉnh sửa kết nối) luôn ghi đè mặc định toàn cục này.",
+    "resilienceCredentialHealthInterval": "Khoảng kiểm tra toàn cục",
+    "resilienceCredentialHealthEveryMinutes": "Mỗi {minutes} phút",
+    "resilienceCredentialHealthHint": "0 tắt quét nền (tối đa 1440 phút = 24 giờ). Kết nối có giá trị Kiểm tra sức khỏe riêng bỏ qua mặc định toàn cục này; giá trị 0 ở một kết nối sẽ loại kết nối đó ngay cả khi quét toàn cục đang bật.",
     "forcedFingerprintTitle": "Luôn được bật cho {provider} — bắt buộc để đảm bảo an toàn tài khoản OAuth; không thể tắt.",
     "forcedFingerprintBadge": "Bắt buộc",
     "sessionAffinityTitle": "Liên kết phiên",
@@ -8198,6 +8221,7 @@
     "modalityBridgeVideoTitle": "Cầu nối video",
     "modalityBridgeVideoDesc": "Lấy mẫu các khung hình video, mô tả chúng bằng mô hình thị giác rồi tiếp tục bằng mô hình văn bản đã chọn.",
     "modalityBridgeVideoRuntimeReady": "Môi trường chạy đã sẵn sàng",
+    "modalityBridgeVideoRuntimeChecking": "Đang kiểm tra runtime…",
     "modalityBridgeVideoRuntimeUnavailable": "Môi trường chạy không khả dụng",
     "modalityBridgeVideoRuntimeInstall": "Cài đặt FFmpeg và ffprobe trong PATH của máy chủ để bật tính năng trích xuất video.",
     "modalityBridgeVideoEnabled": "Bật Cầu nối video",
@@ -8289,7 +8313,15 @@
     "cliproxyapiHealth": "Sức Khỏe",
     "cliproxyapiPort": "Cổng",
     "qdrantHost": "Máy chủ",
-    "qdrantCollection": "Bộ Sưu Tập"
+    "qdrantCollection": "Bộ Sưu Tập",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -11249,6 +11281,11 @@
     "detail": {
       "collapse": "Thu gọn {title}",
       "expand": "Mở rộng {title}",
+      "collapseAllLevels": "Thu gọn tất cả",
+      "collapseOneLevel": "Thu gọn một cấp",
+      "currentExpandLevel": "Cấp mở rộng hiện tại",
+      "expandOneLevel": "Mở rộng một cấp",
+      "expandAllLevels": "Mở rộng tất cả",
       "copyTitle": "Sao chép {title}",
       "copied": "Đã sao chép!",
       "copy": "Sao chép",
@@ -11314,7 +11351,9 @@
       "noPayload": "Không có dữ liệu payload cho mục nhật ký này.",
       "correlationId": "ID tương quan",
       "correlationIdValue": "ID tương quan: {id}",
-      "detailedPayloadInfo": "Hãy bật ghi nhật ký chi tiết trước nếu bạn muốn xem giao diện payload client/nhà cung cấp gồm 4 giai đoạn cho các yêu cầu mới."
+      "detailedPayloadInfo": "Hãy bật ghi nhật ký chi tiết trước nếu bạn muốn xem giao diện payload client/nhà cung cấp gồm 4 giai đoạn cho các yêu cầu mới.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12075,9 +12114,9 @@
       "acp": {
         "title": "Các tác nhân ACP",
         "phrase": "Các CLI mà OmniRoute khởi chạy làm phần phụ trợ thực thi (luồng ngược)",
+        "warning": "Hầu hết người dùng có thể bỏ qua — chỉ dùng khi một tích hợp yêu cầu.",
         "flow": "Ứng dụng khách → OmniRoute → khởi chạy CLI (stdio/ACP) → phản hồi",
-        "seeOther": "See →",
-        "warning": "Hầu hết người dùng có thể bỏ qua — chỉ dùng khi một tích hợp yêu cầu."
+        "seeOther": "See →"
       }
     },
     "comparison": {
@@ -12485,7 +12524,12 @@
     "typeApikey": "Khóa API",
     "sortTypeFirst": "Dễ thiết lập trước",
     "sortTypeFirstHelp": "Nhóm theo mức độ thiết lập (Không cần đăng ký → Đăng nhập OAuth → Khóa API), đồng thời giữ thứ tự chất lượng trong từng nhóm",
-    "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp"
+    "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp",
+    "colReliability": "Độ tin cậy",
+    "colReliabilityHelp": "Tỷ lệ lệnh gọi mà nhà cung cấp này thực sự trả lời trong 24 giờ qua. Dấu gạch ngang nghĩa là lưu lượng quá ít để đưa ra tỷ lệ.",
+    "reliabilitySample": "{successes} trong {requests} lệnh gọi thành công trong {hours}h qua",
+    "reliabilityTooFew": "Chỉ có {requests} lệnh gọi trong {hours}h qua — quá ít để đưa ra tỷ lệ",
+    "reliabilityNoTraffic": "Không ghi nhận lệnh gọi nào trong 24h qua"
   },
   "discovery": {
     "title": "Khám phá nhà cung cấp",
@@ -13383,6 +13427,13 @@
   },
   "resilienceConnections": {
     "title": "Khả Năng Phục Hồi Kết Nối",
+    "reassuranceTitle": "Kết nối của bạn tự khôi phục",
+    "reassuranceDetail": "Thường không cần hành động. OmniRoute tạm cho kết nối nghỉ sau lỗi, rồi thử lại an toàn.",
+    "plainStates": {
+      "healthy": "Có thể gửi yêu cầu",
+      "coolingDown": "Sắp thử lại",
+      "lockedOut": "Cần bạn xử lý"
+    },
     "table": {
       "status": "Trạng Thái",
       "provider": "Nhà Cung Cấp",
@@ -13477,13 +13528,6 @@
         "modelLockouts": "Khóa Mô Hình",
         "count": "Số Lượng Kết Nối"
       }
-    },
-    "reassuranceTitle": "Kết nối của bạn tự khôi phục",
-    "reassuranceDetail": "Thường không cần hành động. OmniRoute tạm cho kết nối nghỉ sau lỗi, rồi thử lại an toàn.",
-    "plainStates": {
-      "healthy": "Có thể gửi yêu cầu",
-      "coolingDown": "Sắp thử lại",
-      "lockedOut": "Cần bạn xử lý"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Từ chối yêu cầu trước khi gửi đi khi mô hình đích thiếu các khả năng bắt buộc (thị giác, công cụ, đầu ra có cấu trúc, cửa sổ ngữ cảnh). Bảo vệ các yêu cầu trực tiếp đến một nhà cung cấp khi chúng bỏ qua bộ lọc tương thích của combo.",
@@ -13929,5 +13973,17 @@
     "cta": "Lấy khóa API",
     "partnerLinkNote": "Liên kết đối tác",
     "dismissAriaLabel": "Đóng"
+  },
+  "combo": {
+    "sort": {
+      "label": "Sắp xếp theo",
+      "method": {
+        "manual": "Thủ công",
+        "provider": "Nhà cung cấp",
+        "score": "Điểm (mô hình miễn phí)",
+        "name": "Tên"
+      },
+      "scoreHint": "Xếp hạng theo điểm chỉ áp dụng cho nhà cung cấp miễn phí; các nhà cung cấp khác giữ nguyên vị trí."
+    }
   }
 }

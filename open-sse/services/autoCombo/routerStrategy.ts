@@ -3,7 +3,7 @@
  *
  * Inspired by ClawRouter commit 14c83c258 "refactor: extract routing into pluggable RouterStrategy system".
  * Provides a RouterStrategy interface and built-in implementations:
- *   - RulesStrategy (default): wraps the existing 6-factor scoring engine
+ *   - RulesStrategy (default): wraps the existing 15-factor scoring engine
  *   - CostStrategy: always picks cheapest available model
  *   - LatencyStrategy: prioritizes low p95 latency with reliability weighting
  *   - SLAStrategy: prefers candidates that satisfy latency/error/cost SLOs
@@ -50,7 +50,7 @@ export interface RouterStrategy {
   select(pool: ProviderCandidate[], context: RoutingContext): RoutingDecision;
 }
 
-// ── RulesStrategy: wraps 6-factor scoring engine ────────────────────────────
+// ── RulesStrategy: wraps 15-factor scoring engine ───────────────────────────
 
 function toSpeedCandidate(c: ProviderCandidate): SpeedCandidate {
   return {
@@ -84,8 +84,7 @@ function toSpeedCandidate(c: ProviderCandidate): SpeedCandidate {
 
 class RulesStrategyImpl implements RouterStrategy {
   readonly name = "rules";
-  readonly description =
-    "6-factor weighted scoring: quota, health, cost, latency, taskFit, stability";
+  readonly description = "15-factor weighted scoring (see DEFAULT_WEIGHTS)";
 
   select(pool: ProviderCandidate[], context: RoutingContext): RoutingDecision {
     const eligible = pool.filter((c) => c.circuitBreakerState !== "OPEN");
@@ -115,7 +114,7 @@ class CostStrategyImpl implements RouterStrategy {
   readonly name = "cost";
   readonly description = "Always selects cheapest available provider (by costPer1MTokens)";
 
-  select(pool: ProviderCandidate[], context: RoutingContext): RoutingDecision {
+  select(pool: ProviderCandidate[], _context: RoutingContext): RoutingDecision {
     const healthy = pool.filter((c) => c.circuitBreakerState !== "OPEN");
     const candidates = healthy.length > 0 ? healthy : pool;
     const sorted = [...candidates].sort((a, b) => a.costPer1MTokens - b.costPer1MTokens);
@@ -128,6 +127,7 @@ class CostStrategyImpl implements RouterStrategy {
       reason: `CostStrategy: cheapest at $${best.costPer1MTokens.toFixed(3)}/1M tokens`,
       candidatesConsidered: candidates.length,
       finalScore: best.costPer1MTokens === 0 ? 1.0 : 1 / best.costPer1MTokens,
+      connectionId: best.connectionId,
     };
   }
 }
@@ -139,7 +139,7 @@ class LatencyStrategyImpl implements RouterStrategy {
   readonly description =
     "Prioritizes the fastest reliable provider-model pair using TTFT, TPS, E2E latency, health, fail rate, and stability";
 
-  select(pool: ProviderCandidate[], context: RoutingContext): RoutingDecision {
+  select(pool: ProviderCandidate[], _context: RoutingContext): RoutingDecision {
     const ranked = rankBySpeed(pool.map(toSpeedCandidate));
     const winner = ranked[0];
     if (!winner) {
@@ -153,6 +153,7 @@ class LatencyStrategyImpl implements RouterStrategy {
       reason: latencyDecisionReason(winner),
       candidatesConsidered: ranked.length,
       finalScore: winner.score,
+      connectionId: winner.connectionId,
     };
   }
 }
@@ -292,6 +293,7 @@ class SLAStrategyImpl implements RouterStrategy {
       reason: `SLAStrategy: p95=${best.candidate.p95LatencyMs}ms/${policy.targetP95Ms}ms, errorRate=${(best.candidate.errorRate * 100).toFixed(2)}%/${(policy.maxErrorRate * 100).toFixed(2)}%, cost=$${best.candidate.costPer1MTokens.toFixed(3)}/1M${fallbackNote}`,
       candidatesConsidered: candidates.length,
       finalScore: best.score,
+      connectionId: best.candidate.connectionId,
     };
   }
 }
@@ -320,6 +322,7 @@ class LKGPStrategyImpl implements RouterStrategy {
           reason: `LKGP: using last known good provider ${best.provider}`,
           candidatesConsidered: 1,
           finalScore: 1.0,
+          connectionId: best.connectionId,
         };
       }
     }

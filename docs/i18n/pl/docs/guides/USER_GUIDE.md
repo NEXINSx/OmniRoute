@@ -55,7 +55,6 @@ Kompletny przewodnik po konfiguracji providerów, tworzeniu combo, integracji na
 |                    | MiniMax M2.1      | $0.2/1M            | Okno 5-godzinne    | Najtańsza opcja          |
 |                    | Kimi K2           | $9/mies. ryczałt   | 10M tokenów/mies.  | Przewidywalny koszt      |
 | **🆓 ZA DARMO**    | Qoder             | $0                 | Brak opublikowanego capu; limity obowiązują | 8 modeli za darmo |
-|                    | Qwen              | $0                 | Brak opublikowanego capu; limity obowiązują | 3 modele za darmo |
 |                    | Kiro              | $0                 | ~50 kredytów/mies. | Claude za darmo          |
 
 ---
@@ -973,7 +972,6 @@ curl -X POST http://localhost:20128/v1/audio/transcriptions \
 - `kie/`
 - `aws-polly/`
 - `xiaomi-mimo/`
-- `edgetts/` (Microsoft Edge „Read Aloud” — darmowe, bez klucza API; nieoficjalny/reverse-engineered endpoint)
 - `coqui/`, `tortoise/`
 - `qwen/`
 

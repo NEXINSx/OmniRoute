@@ -13,13 +13,7 @@ import {
 } from "@/lib/db/providerLimits";
 import { syncToCloud } from "@/lib/cloudSync";
 import { setQuotaCache } from "@/domain/quotaCache";
-import {
-  buildClaudeExtraUsageConnectionUpdate,
-  CLAUDE_EXTRA_USAGE_ERROR_SOURCE,
-  isClaudeExtraUsageBlockEnabled,
-  isClaudeExtraUsageQueued,
-} from "@/lib/providers/claudeExtraUsage";
-import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
+import { buildClaudeExtraUsageConnectionUpdate } from "@/lib/providers/claudeExtraUsage";
 import { clearRecoveredProviderState } from "@/sse/services/auth";
 import { getMachineId } from "@/shared/utils/machine";
 import { USAGE_SUPPORTED_PROVIDERS } from "@/shared/constants/providers";
@@ -443,60 +437,34 @@ export function hasUsableQuota(usage: JsonRecord): boolean {
   return false;
 }
 
-// A window "still blocks" recovery when it governs quota and is either still
-// exhausted with a real reset that hasn't passed yet, or exhausted with no
-// parseable real reset at all (unknown-reset windows stay locked, matching
-// the pre-existing kimi-coding partial-refresh semantics).
-function windowStillExhaustedAfterRealReset(value: unknown, nowMs: number): boolean {
-  if (!isRecord(value)) return false;
-  if (value.unlimited === true) return false;
-  const remaining =
-    typeof value.remaining === "number"
-      ? value.remaining
-      : typeof value.remainingPercentage === "number"
-        ? value.remainingPercentage
-        : null;
-  if (remaining !== null && remaining > 0) return false;
-  if (value.resetAt == null) return true;
-  const resetMs = Date.parse(String(value.resetAt));
-  if (Number.isNaN(resetMs)) return true;
-  return resetMs > nowMs;
-}
-
-/**
- * May an active cooldown be released because the REAL quota windows recovered?
- *
- * Only the synthetic-cooldown case (#10534) qualifies: lastErrorType
- * "quota_exhausted" plus every governing window past its real reset with quota
- * left. A window that is still exhausted — or whose reset is unknown/unparseable
- * — keeps the connection locked, matching the kimi-coding partial-refresh
- * semantics.
- */
-function isQuotaExhaustedCooldownReleasable(
-  connection: Pick<
-    ProviderConnectionLike,
-    "lastErrorType" | "lastErrorSource" | "provider" | "providerSpecificData"
-  >,
-  usage: JsonRecord
+// A SYNTHETIC cooldown (persisted by a poller without a parseable upstream
+// reset — e.g. the Claude-subscription SUBSCRIPTION_QUOTA_COOLDOWN_MS lock) may
+// be overruled only by POSITIVE live-window evidence: EVERY reported quota
+// window is replenished (remaining > 0) AND carries a documented reset
+// timestamp that has already elapsed. Unknown-reset windows never authorize an
+// override (matching the kimi-coding partial-refresh semantics);
+// `unlimited` windows carry no reset evidence and are rejected.
+export function syntheticCooldownOutlivedByRealWindows(
+  usage: JsonRecord,
+  nowMs: number = Date.now()
 ): boolean {
-  if (connection.lastErrorType !== "quota_exhausted") return false;
-  // An extra-usage block is a POLICY lock, not a quota window: the session and
-  // weekly windows genuinely look recovered in the very same fetch, so the
-  // window scan below would happily release it. It stays locked while the
-  // policy is on and upstream still reports extra usage queued.
-  if (
-    connection.lastErrorSource === CLAUDE_EXTRA_USAGE_ERROR_SOURCE &&
-    isClaudeExtraUsageBlockEnabled(connection.provider, connection.providerSpecificData) &&
-    isClaudeExtraUsageQueued(usage)
-  ) {
-    return false;
+  if (!isRecord(usage) || !isRecord(usage.quotas)) return false;
+  const windows = Object.values(usage.quotas);
+  if (windows.length === 0) return false;
+  for (const value of windows) {
+    if (!isRecord(value) || value.unlimited === true) return false;
+    const remaining =
+      typeof value.remaining === "number"
+        ? value.remaining
+        : typeof value.remainingPercentage === "number"
+          ? value.remainingPercentage
+          : null;
+    if (remaining === null || remaining <= 0) return false;
+    if (value.resetAt == null) return false;
+    const resetMs = Date.parse(String(value.resetAt));
+    if (Number.isNaN(resetMs) || resetMs > nowMs) return false;
   }
-  const quotas = usage?.quotas;
-  if (!isRecord(quotas)) return false;
-  const values = Object.values(quotas);
-  if (values.length === 0) return false;
-  const nowMs = Date.now();
-  return !values.some((value) => windowStillExhaustedAfterRealReset(value, nowMs));
+  return true;
 }
 
 /**
@@ -543,6 +511,41 @@ export function shouldClearErrorStateOnValidProbe(
   return probeValid && !hasActiveCooldown(connection, now);
 }
 
+/**
+ * May an active cooldown be released because the REAL quota windows recovered?
+ *
+ * Only the synthetic-cooldown case (#10534) qualifies: lastErrorType
+ * "quota_exhausted" plus every governing window past its real reset with quota
+ * left. A window that is still exhausted — or whose reset is unknown/unparseable
+ * — keeps the connection locked, matching the kimi-coding partial-refresh
+ * semantics.
+ */
+
+
+/**
+ * Is an explicit cooldown still in the future?
+ *
+ * A rateLimitedUntil set by the upstream 429 handler is a hard statement and
+ * must never be overruled by a quota poll.
+ *
+ * Gate on the timestamp alone; lastErrorType stays irrelevant here.
+ */
+
+/**
+ * Whether a connection test may wipe the persisted error/cooldown state.
+ *
+ * A successful probe proves the CREDENTIAL is valid; it does not prove an
+ * exhausted quota window reopened — the probe is a cheap auth/models call that
+ * never touches the chat quota a weekly cap applies to. The credential-health
+ * scheduler runs that probe against every connection every 300s, so without this
+ * gate a weekly-capped connection was reset to `active` / `rateLimitedUntil=null`
+ * within 30s of every restart and dispatched straight back into the same 429.
+ *
+ * Same rule as `maybeClearRecoveredQuotaState`: a future `rateLimitedUntil` is
+ * the 429 handler's hard statement and no poller may overrule it. Once the
+ * window elapses, the next probe clears the state normally.
+ */
+
 export async function maybeClearRecoveredQuotaState(
   connection: ProviderConnectionLike,
   usage: JsonRecord
@@ -550,17 +553,17 @@ export async function maybeClearRecoveredQuotaState(
   if (!hasUsableQuota(usage)) return connection;
   if (isTerminalStatusForQuotaRecovery(connection.testStatus)) return connection;
   if (hasActiveCooldown(connection)) {
-    // #11355 made an active rateLimitedUntil an unconditional stop, which is right
-    // for an upstream-derived cooldown but over-broad for the one case #10534 was
-    // built for: a Claude-subscription 429 persists a SYNTHETIC 1h cooldown because
-    // the upstream sent no parseable reset. When the later poll shows every window
-    // that governs this connection has really reset WITH quota available, holding
-    // that synthetic cooldown just deadlocks the connection for an hour.
-    //
-    // Narrow by design: only lastErrorType "quota_exhausted" (the synthetic-cooldown
-    // writer) is eligible, and a single still-exhausted or unknown-reset window keeps
-    // the lock. Every other reason keeps #11355/#11277 semantics untouched.
-    if (!isQuotaExhaustedCooldownReleasable(connection, usage)) return connection;
+    // A future rateLimitedUntil written from a real upstream signal is a hard
+    // statement no poller may overrule (#11277) — executor-sourced rate limits
+    // and extra-usage policy blocks included. Only a SYNTHETIC cooldown (a
+    // quota_exhausted lock persisted without an upstream reset, e.g. the
+    // Claude-subscription poller's 1h lockout) yields to positive live-window
+    // evidence that the real quota has already replenished past its reset.
+    const syntheticRecoveryOverride =
+      connection.lastErrorType === "quota_exhausted" &&
+      connection.lastErrorSource !== "extra_usage" &&
+      syntheticCooldownOutlivedByRealWindows(usage);
+    if (!syntheticRecoveryOverride) return connection;
   }
 
   const hasTransientState =
@@ -856,9 +859,6 @@ async function fetchLiveProviderLimitsWithOptions(
   connection: ProviderConnectionLike;
   usage: JsonRecord;
 }> {
-  if (await isConnectionUnavailableToAuxiliaryActivity(connectionId)) {
-    throw withStatus(new Error("Usage refresh deferred while an exclusive lease is active"), 409);
-  }
   let connection = (await getProviderConnectionById(
     connectionId
   )) as unknown as ProviderConnectionLike | null;
@@ -1069,16 +1069,7 @@ export async function syncAllProviderLimits(
   const connectionRows = (await getProviderConnections({
     isActive: true,
   })) as unknown as ProviderConnectionLike[];
-  const connections = (
-    await Promise.all(
-      connectionRows.map(async (connection) => ({
-        connection,
-        blocked: await isConnectionUnavailableToAuxiliaryActivity(connection.id),
-      }))
-    )
-  )
-    .filter(({ connection, blocked }) => isSupportedUsageConnection(connection) && !blocked)
-    .map(({ connection }) => connection);
+  const connections = connectionRows.filter(isSupportedUsageConnection);
   const cacheEntries: Array<{ connectionId: string; entry: ProviderLimitsCacheEntry }> = [];
   const caches: Record<string, ProviderLimitsCacheEntry> = {};
   const errors: Record<string, string> = {};

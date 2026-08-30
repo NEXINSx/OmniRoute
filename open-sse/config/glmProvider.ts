@@ -19,6 +19,20 @@ export const GLM_ANTHROPIC_DEFAULT_BASE_URLS = Object.freeze({
 
 export const GLM_SHARED_MODELS = Object.freeze([
   {
+    // GLM-5.3-Flash shares GLM-5.3's OpenAI-compatible Coding Plan surface,
+    // including 1M context, 128K max output, native vision input, and
+    // low|high|max reasoning_effort with max as the documented default.
+    // https://docs.z.ai/guides/llm/glm-5.3-flash
+    id: "glm-5.3-flash",
+    name: "GLM 5.3 Flash",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["low", "high", "max"],
+    supportsVision: true,
+  },
+  {
     // GLM-5.3 exposes low|high|max reasoning_effort (default max); -high/-low
     // are OmniRoute aliases resolved by GlmExecutor::parseGlmEffortTier.
     // https://docs.z.ai/guides/llm/glm-5.3
@@ -58,6 +72,36 @@ export const GLM_SHARED_MODELS = Object.freeze([
     toolCalling: true,
     supportsReasoning: true,
     supportedThinkingEfforts: ["max"],
+  },
+  {
+    id: "glm-5.3-flash-high",
+    name: "GLM 5.3 Flash High",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["high"],
+    supportsVision: true,
+  },
+  {
+    id: "glm-5.3-flash-low",
+    name: "GLM 5.3 Flash Low",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["low"],
+    supportsVision: true,
+  },
+  {
+    id: "glm-5.3-flash-max",
+    name: "GLM 5.3 Flash Max",
+    contextLength: 1000000,
+    maxOutputTokens: 131072,
+    toolCalling: true,
+    supportsReasoning: true,
+    supportedThinkingEfforts: ["max"],
+    supportsVision: true,
   },
   {
     // GLM-5.2 has two positive effective tiers: low/medium map to high and xhigh

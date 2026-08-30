@@ -9,13 +9,11 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 
 const core = await import("../../src/lib/db/core.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
-const { createConnectionFromAgyToken } = await import(
-  "../../src/lib/oauth/utils/agyAuthImport.ts"
-);
+const { createConnectionFromAgyToken } = await import("../../src/lib/oauth/utils/agyAuthImport.ts");
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("#9204: reimporting an inactive Antigravity CLI account reactivates it", async () => {
@@ -49,5 +47,8 @@ test("#9204: reimporting an inactive Antigravity CLI account reactivates it", as
   assert.equal(stored?.isActive, true, "a successful reimport must reactivate the account");
 
   const active = await providersDb.getProviderConnections({ provider: "agy", isActive: true });
-  assert.deepEqual(active.map((connection) => connection.id), [existing.id]);
+  assert.deepEqual(
+    active.map((connection) => connection.id),
+    [existing.id]
+  );
 });

@@ -84,11 +84,17 @@ test("SPAWN_CAPABLE_PREFIXES is defined in the server-free constants leaf with t
     "/api/modality-bridge/video/",
     "/api/settings/mitm",
     "/api/cli-tools/antigravity-mitm",
+    "/api/tunnels/cloudflared",
+    "/api/tunnels/tailscale/disable",
+    "/api/tunnels/tailscale/enable",
+    "/api/tunnels/tailscale/install",
+    "/api/tunnels/tailscale/login",
+    "/api/tunnels/tailscale/start-daemon",
   ]) {
     assert.ok(
       SPAWN_CAPABLE_PREFIXES.includes(prefix),
       `SPAWN_CAPABLE_PREFIXES lost the spawn-capable prefix "${prefix}" during extraction`
     );
   }
-  assert.equal(SPAWN_CAPABLE_PREFIXES.length, 14);
+  assert.equal(SPAWN_CAPABLE_PREFIXES.length, 20);
 });

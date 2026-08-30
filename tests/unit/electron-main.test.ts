@@ -492,7 +492,7 @@ describe("Electron SQLite credential inspection", () => {
       fn(dbPath, db);
     } finally {
       db.close();
-      rmSync(dir, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   }
 

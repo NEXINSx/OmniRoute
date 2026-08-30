@@ -21,6 +21,7 @@ export type RuntimeReloadSection =
   | "corsOrigins"
   | "ccBridgeTransforms"
   | "systemTransforms"
+  | "systemPrompt"
   | "authzBypass"
   | "bannedSignals";
 
@@ -48,6 +49,7 @@ interface RuntimeSettingsSnapshot {
   corsOrigins: string;
   ccBridgeTransforms: unknown;
   systemTransforms: unknown;
+  systemPrompt: unknown;
   authzBypass: AuthzBypassSnapshot;
   customBannedSignals: string[];
   providerErrorRules: Record<string, OperatorProviderErrorRule[]> | null;
@@ -75,6 +77,7 @@ const DEFAULT_RUNTIME_SETTINGS_SNAPSHOT: RuntimeSettingsSnapshot = {
   corsOrigins: "",
   ccBridgeTransforms: null,
   systemTransforms: null,
+  systemPrompt: null,
   authzBypass: DEFAULT_AUTHZ_BYPASS_SNAPSHOT,
   customBannedSignals: [],
   providerErrorRules: null,
@@ -92,7 +95,6 @@ function isTruthyEnvFlag(value: string | undefined): boolean {
   if (typeof value !== "string") return false;
   return new Set(["1", "true", "yes", "on"]).has(value.trim().toLowerCase());
 }
-
 
 function toRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
@@ -276,6 +278,9 @@ export function buildRuntimeSettingsSnapshot(
     corsOrigins: typeof settings.corsOrigins === "string" ? settings.corsOrigins : "",
     ccBridgeTransforms: parseStoredJson(settings.ccBridgeTransforms, "ccBridgeTransforms"),
     systemTransforms: parseStoredJson(settings.systemTransforms, "systemTransforms"),
+    systemPrompt: settings.systemPrompt
+      ? parseStoredJson(settings.systemPrompt, "systemPrompt")
+      : null,
     authzBypass: normalizeAuthzBypass(settings),
     customBannedSignals: normalizeStringArray(settings.customBannedSignals),
     providerErrorRules: normalizeOperatorProviderErrorRules(settings.providerErrorRules),
@@ -402,6 +407,21 @@ async function applySystemTransformsSection(systemTransforms: unknown) {
   }
 
   setSystemTransformsConfig(systemTransforms);
+}
+
+async function applySystemPromptSection(systemPrompt: unknown) {
+  const { setSystemPromptConfig } = await import("@omniroute/open-sse/services/systemPrompt.ts");
+
+  if (systemPrompt && typeof systemPrompt === "object") {
+    setSystemPromptConfig(systemPrompt as Record<string, unknown>);
+  } else {
+    setSystemPromptConfig({
+      enabled: false,
+      prefixPrompt: "",
+      suffixPrompt: "",
+      prompt: "",
+    });
+  }
 }
 
 async function applyModelsDevSyncSection(
@@ -560,6 +580,11 @@ export async function applyRuntimeSettings(
   if (force || hasChanged(currentSnapshot.systemTransforms, previousSnapshot.systemTransforms)) {
     await applySystemTransformsSection(currentSnapshot.systemTransforms);
     markChanged("systemTransforms");
+  }
+
+  if (force || hasChanged(currentSnapshot.systemPrompt, previousSnapshot.systemPrompt)) {
+    await applySystemPromptSection(currentSnapshot.systemPrompt);
+    markChanged("systemPrompt");
   }
 
   if (force || hasChanged(currentSnapshot.authzBypass, previousSnapshot.authzBypass)) {

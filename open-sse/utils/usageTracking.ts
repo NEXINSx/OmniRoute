@@ -11,10 +11,15 @@ import {
   getPromptCacheReadTokens,
 } from "@/lib/usage/tokenAccounting";
 import { FORMATS } from "../translator/formats.ts";
+import { pickCacheCreationTokens } from "./pickCacheCreationTokens.ts";
+
+export { pickCacheCreationTokens };
 
 /** Nested `*_tokens_details` containers ({ cached_tokens, reasoning_tokens, … }). */
 interface UsageTokenDetail {
   cached_tokens?: number;
+  cache_creation_tokens?: number;
+  cache_write_tokens?: number;
   reasoning_tokens?: number;
   thinking_tokens?: number;
   [field: string]: unknown;
@@ -38,6 +43,8 @@ export interface UsageLike {
   cost_in_usd_ticks?: number;
   cache_read_input_tokens?: number;
   cache_creation_input_tokens?: number;
+  /** OpenRouter / Devin Desktop / codex-chatgpt-web alias for cache creation. */
+  cache_write_tokens?: number;
   prompt_cache_hit_tokens?: number;
   prompt_cache_miss_tokens?: number;
   promptTokenCount?: number;
@@ -612,7 +619,7 @@ export function normalizeUsage(usage: UsageLike | null | undefined) {
   assignNumber("input_tokens", usage?.input_tokens);
   assignNumber("output_tokens", usage?.output_tokens);
   assignNumber("cache_read_input_tokens", usage?.cache_read_input_tokens);
-  assignNumber("cache_creation_input_tokens", usage?.cache_creation_input_tokens);
+  assignNumber("cache_creation_input_tokens", pickCacheCreationTokens(usage));
   assignNumber("cached_tokens", usage?.cached_tokens);
   assignNumber("no_cache_tokens", usage?.no_cache_tokens);
   assignNumber("reasoning_tokens", usage?.reasoning_tokens);
@@ -719,7 +726,7 @@ export function extractUsage(chunk: UsagePayloadLike | null | undefined) {
         usage.input_tokens_details?.cached_tokens ??
         usage.prompt_tokens_details?.cached_tokens ??
         usage.cache_read_input_tokens,
-      cache_creation_input_tokens: usage.cache_creation_input_tokens,
+      cache_creation_input_tokens: pickCacheCreationTokens(usage),
       reasoning_tokens:
         usage.output_tokens_details?.reasoning_tokens ??
         usage.completion_tokens_details?.reasoning_tokens ??
@@ -742,7 +749,7 @@ export function extractUsage(chunk: UsagePayloadLike | null | undefined) {
         chunk.usage.prompt_cache_hit_tokens ??
         chunk.usage.cached_tokens,
       cache_read_input_tokens: chunk.usage.cache_read_input_tokens,
-      cache_creation_input_tokens: chunk.usage.cache_creation_input_tokens,
+      cache_creation_input_tokens: pickCacheCreationTokens(chunk.usage),
       no_cache_tokens: chunk.usage.no_cache_tokens,
       reasoning_tokens:
         chunk.usage.completion_tokens_details?.reasoning_tokens ??

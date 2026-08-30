@@ -272,7 +272,7 @@ test("DevinCliAgenticExecutor returns Anthropic tool_use JSON and sends ACP fram
   } finally {
     if (oldBin === undefined) delete process.env.CLI_DEVIN_AGENTIC_BIN;
     else process.env.CLI_DEVIN_AGENTIC_BIN = oldBin;
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -303,7 +303,7 @@ test("no-tools summarizer does not depend on mutable ACP permission modes", asyn
     const body = JSON.parse(await result.response.text());
     assert.equal(body.content[0].text, "unsafe");
   } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -323,7 +323,7 @@ test("ACP client fails closed when session/new omits the session id", async () =
     const body = JSON.parse(await result.response.text());
     assert.equal(body.error.code, "missing_session_id");
   } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -351,7 +351,7 @@ test("DevinCliAgenticExecutor returns Anthropic SSE for streaming Claude clients
   } finally {
     if (oldBin === undefined) delete process.env.CLI_DEVIN_AGENTIC_BIN;
     else process.env.CLI_DEVIN_AGENTIC_BIN = oldBin;
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -382,7 +382,7 @@ test("ACP client handles fragmented frames, multiple chunks, and stderr", async 
     const body = JSON.parse(await result.response.text());
     assert.equal(body.content[0].text, "Hello");
   } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -408,7 +408,7 @@ test("ACP client fails closed when Devin attempts an internal tool call", async 
     const body = JSON.parse(await result.response.text());
     assert.equal(body.error.code, "devin_internal_tool_execution");
   } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -439,7 +439,7 @@ test("ACP client fails closed on protocol errors and early exit", async () => {
       const body = JSON.parse(await result.response.text());
       assert.equal(body.error.code, scenario.code, scenario.name);
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   }
 });
@@ -463,7 +463,7 @@ test("ACP client times out, cancels, and terminates a stuck process", async () =
   } finally {
     if (oldTimeout === undefined) delete process.env.DEVIN_AGENTIC_ACP_TIMEOUT_MS;
     else process.env.DEVIN_AGENTIC_ACP_TIMEOUT_MS = oldTimeout;
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -517,7 +517,7 @@ rl.on("line", (line) => {
   } finally {
     if (oldBin === undefined) delete process.env.CLI_DEVIN_AGENTIC_BIN;
     else process.env.CLI_DEVIN_AGENTIC_BIN = oldBin;
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -572,6 +572,6 @@ rl.on("line", (line) => {
   } finally {
     if (oldBin === undefined) delete process.env.CLI_DEVIN_AGENTIC_BIN;
     else process.env.CLI_DEVIN_AGENTIC_BIN = oldBin;
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

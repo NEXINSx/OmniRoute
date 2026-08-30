@@ -1,7 +1,6 @@
 const CACHE_NAME = "omniroute-pwa-v2";
 const APP_SHELL = [
   "/",
-  "/offline",
   "/manifest.webmanifest",
   "/icon-512.png",
   "/apple-touch-icon.png",
@@ -24,29 +23,12 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
       )
-      .then(() => caches.open(CACHE_NAME))
-      .then((cache) =>
-        cache.keys().then((entries) => {
-          const currentBuildId = extractBuildId(self.location.href);
-          const deletions = entries
-            .map((req) => {
-              const entryBuildId = extractBuildId(req.url);
-              return entryBuildId && currentBuildId && entryBuildId !== currentBuildId
-                ? cache.delete(req)
-                : null;
-            })
-            .filter(Boolean);
-          return Promise.all(deletions);
-        })
-      )
+      // Build identity lives in CACHE_NAME itself (stamped at build time),
+      // so deleting every other cache name above already drops all stale
+      // generations. No per-entry build-id comparison is needed.
       .then(() => self.clients.claim())
   );
 });
-
-function extractBuildId(url) {
-  const match = String(url).match(/\/_next\/static\/([^/]+)\//);
-  return match ? match[1] : null;
-}
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
@@ -115,8 +97,17 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-async function navigationFallback(request) {
-  return (await caches.match(request)) || (await caches.match("/")) || (await caches.match("/offline"));
+// Navigations are network-first on purpose: the dashboard is an online
+// tool. When the network fails, serving a cached navigation response is
+// worse than surfacing the failure -- the cached shell references
+// /_next/static/<old-build-id>/ chunks that no longer exist after a
+// deploy, so the page loads and then breaks on chunk 404s, and the
+// broken state sticks until the cache happens to clear. An honest
+// network error lets the browser show its own offline state and
+// recover on the next reload. (The /offline page is still precached
+// for the APP_SHELL list; it just is no longer used as a decoy.)
+async function navigationFallback() {
+  return Response.error();
 }
 
 // ── Push Notifications ───────────────────────────────────────────────────────

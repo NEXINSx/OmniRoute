@@ -107,9 +107,9 @@ X-OmniRoute-Lease-Owner: vlo_<43-base64url-characters>
 {"action":"acquire","model":"glm/glm-4.6"}
 ```
 
-Successful lifecycle responses expose timestamps, `state`, and the exact positive `generation`,
-but never the selected connection or credentials. Renew and release supply the generation in the
-JSON body:
+Successful acquire, renew, and release responses expose timestamps, `state`, and the exact positive
+`generation`, but never the selected connection or credentials. Renew and release supply the
+generation in the JSON body:
 
 ```json
 { "action": "renew", "generation": 1 }
@@ -118,6 +118,44 @@ JSON body:
 ```json
 { "action": "release", "generation": 1, "reason": "OWNER_EXIT" }
 ```
+
+An active lease owner can explicitly request privacy-safe display metadata for its current binding:
+
+```json
+{ "action": "status", "generation": 1 }
+```
+
+```json
+{
+  "state": "ACTIVE",
+  "generation": 1,
+  "acquiredAt": "2026-08-28T12:00:00.000Z",
+  "renewedAt": "2026-08-28T12:00:30.000Z",
+  "expiresAt": "2026-08-28T12:02:30.000Z",
+  "connection": {
+    "displayName": "Primary Codex",
+    "provider": "codex"
+  }
+}
+```
+
+This opt-in status action is fenced by the opaque owner, authenticated managed API key, and exact
+active generation in one database transaction. `displayName` is only the trimmed configured
+connection name; it is `null` when no safe configured name exists. OmniRoute never substitutes an
+email or generated account identity. The provider value is a non-sensitive display label and never
+a generated compatible-provider identifier. Credentials, tokens, cookies, raw connection or API
+key ids, owner hashes, fencing secrets, and internal routing data are excluded.
+
+Wrong-key, wrong-owner, stale-generation, missing, expired, released, and invalidated lookups all
+return the same `409 LEASE_FENCE_STALE` error without connection metadata. A client that received the capacity-wait response has no active binding to inspect. When routing transitions an active lease,
+the same generation remains valid and status atomically returns the new binding, never the old one.
+Existing clients remain unchanged because acquire, renew, release, and waiting responses retain
+their previous shapes.
+
+This server contract does not change stock OpenAI Codex `/status`. Stock Codex currently reports its
+model provider and built-in authentication/account state but does not render arbitrary custom
+provider account metadata; a later client integration must call this action and decide how to
+display `connection.displayName`.
 
 Every managed inference request then supplies both control headers:
 
@@ -529,7 +567,7 @@ Web/search provider abstraction (Tavily, Brave, Exa, Serper, etc.).
 ## Web Fetch API
 
 Extract content from a URL via a configured web-fetch provider (Firecrawl, Jina
-Reader, Tavily Extract, TinyFish Fetch).
+Reader, Tavily Extract, TinyFish Fetch, Nimble Extract).
 
 | Method | Path            | Description                                               |
 | ------ | --------------- | --------------------------------------------------------- |
@@ -538,7 +576,8 @@ Reader, Tavily Extract, TinyFish Fetch).
 **Auth:** Bearer API key (`extractApiKey` + `isValidApiKey`). Policy enforced via `enforceApiKeyPolicy`.
 
 **Quota-aware fallback (#8297):** when no explicit `provider` is given, the pool
-(`firecrawl` → `jina-reader` → `tavily-search` → `tinyfish`) is walked in fixed
+(`firecrawl` → `jina-reader` → `tavily-search` → `tinyfish` → `nimble-search`) is
+walked in fixed
 priority order (fill-first) — a rate-limited-but-configured provider is skipped
 instead of short-circuiting the request, and a retryable/quota upstream failure
 (HTTP 429 always; 402/403 for Firecrawl/Tavily/TinyFish quota-style free tiers —
@@ -661,11 +700,21 @@ refusal. On success:
 {
   "allowed": true,
   // present only when the key opted into per-key usage limits (daily/weekly USD):
-  "personal": { "dailySpentUsd": 1.25, "dailyLimitUsd": 5, "dailyResetAtIso": "…", "weeklySpentUsd": 8, "weeklyLimitUsd": 20, "weeklyResetAtIso": "…" /* … */ },
+  "personal": {
+    "dailySpentUsd": 1.25,
+    "dailyLimitUsd": 5,
+    "dailyResetAtIso": "…",
+    "weeklySpentUsd": 8,
+    "weeklyLimitUsd": 20,
+    "weeklyResetAtIso": "…" /* … */,
+  },
   // the selected provider quota snapshot, or null when nothing is cached yet:
-  "provider": { "connectionId": "…", "provider": "claude", "plan": "…", "quotas": { /* … */ } },
+  "provider": { "connectionId": "…", "provider": "claude", "plan": "…", "quotas": {/* … */} },
   // every connection's snapshot, so a UI can render several providers side by side:
-  "providers": [ { "connectionId": "…", "provider": "claude", /* … */ }, { "provider": "codex", /* … */ } ]
+  "providers": [
+    { "connectionId": "…", "provider": "claude" /* … */ },
+    { "provider": "codex" /* … */ },
+  ],
 }
 ```
 
@@ -674,7 +723,7 @@ On refusal (`401` bad key / `403` not allowed) the same route returns
 (key allowed, nothing learned yet) is a different state from a refusal, and only the JSON form
 distinguishes them.
 
-**Auth:** the caller's own Bearer API key, validated with `isValidApiKey` — this is *not* the
+**Auth:** the caller's own Bearer API key, validated with `isValidApiKey` — this is _not_ the
 management surface (`/api/keys/…`), which stays behind `requireManagementAuth`.
 
 ---

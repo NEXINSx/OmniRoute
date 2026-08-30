@@ -91,7 +91,7 @@ export function resolveDataDir({ isCloud = false }: { isCloud?: boolean } = {}):
  * plus the AGENTS.md single-file command, which does NOT load
  * `tests/_setup/isolateDataDir.ts`.
  */
-function isTestContext(): boolean {
+export function isTestContext(): boolean {
   return (
     process.env.NODE_ENV === "test" ||
     !!process.env.VITEST ||

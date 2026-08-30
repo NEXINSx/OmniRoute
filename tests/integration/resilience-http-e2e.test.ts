@@ -547,7 +547,7 @@ test.after(async () => {
   }
   await relay.stop();
   core.closeDbInstance();
-  await fsp.rm(TEST_DATA_DIR, { recursive: true, force: true });
+  await fsp.rm(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("resilience API only exposes configuration, not runtime breaker state", async () => {
@@ -556,7 +556,8 @@ test("resilience API only exposes configuration, not runtime breaker state", asy
 
   assert.equal(response.status, 200);
   // Exact key set — this is the whole point of the test: configuration only.
-  // `providerQuotaOverrides` joined the projection in #9871.
+  // `providerQuotaOverrides` joined the projection in #9871;
+  // `quotaPreflight` joined in #12014 (Settings → Routing Quota Preflight card).
   assert.deepEqual(Object.keys(json).sort(), [
     "comboCooldownWait",
     "connectionCooldown",
@@ -564,6 +565,7 @@ test("resilience API only exposes configuration, not runtime breaker state", asy
     "providerBreaker",
     "providerCooldown",
     "providerQuotaOverrides",
+    "quotaPreflight",
     "quotaShareConcurrencyLimit",
     "requestQueue",
     "waitForCooldown",

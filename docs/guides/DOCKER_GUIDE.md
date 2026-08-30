@@ -226,16 +226,21 @@ Three build args control what the `builder` stage costs. They are build-time onl
 | --------------------------- | ------- | ----------------------------------------------------------------------------------- |
 | `OMNIROUTE_USE_TURBOPACK`   | `1`     | `0` builds with webpack instead. Lower peak memory, slower.                         |
 | `OMNIROUTE_BUILD_MEMORY_MB` | `6144`  | V8 heap ceiling (`--max-old-space-size`) for the spawned `next build`.              |
-| `OMNIROUTE_BUILD_WORKERS`   | `3`     | Feeds `CIRCLE_NODE_TOTAL`; Next derives `workers = N - 1` for page-data collection. |
+| `OMNIROUTE_BUILD_WORKERS`   | `2`     | Feeds `CIRCLE_NODE_TOTAL`; Next derives `workers = N - 1` for page-data collection. |
 
 `OMNIROUTE_BUILD_WORKERS` is the one to raise on a big builder and the one to
 suspect when a constrained build dies **after** `✓ Compiled successfully`. Each
-page-data worker is its own process and inherits `NODE_OPTIONS`, so the heap
-ceiling is per process, not per build: the default of `3` (→ 2 workers) is sized
-for the 16 GB / 4 vCPU GitHub-hosted runners the publish pipeline uses. At `8`
-(→ 7 workers) that runner ran out of memory and buildkit failed the step with
-`ResourceExhausted: ... cannot allocate memory`. `tests/unit/docker-build-memory-budget.test.ts`
-does the arithmetic and fails if either knob outgrows the runner.
+page-data worker is its own process, and so is the parent `next build` itself;
+a live VPS reproduction (issue #7518) measured each process's peak RSS at
+~4.5 GB independent of the `NODE_OPTIONS` heap flag (Turbopack compiles in
+native/Rust memory outside the V8 heap). The default of `2` (→ 1 worker, 2
+processes total) is sized for the 16 GB / 4 vCPU GitHub-hosted runners the
+publish pipeline uses. At `8` (→ 7 workers) that runner ran out of memory and
+buildkit failed the step with `ResourceExhausted: ... cannot allocate memory`;
+`3` (→ 2 workers) still didn't fit once the per-process RSS was measured
+directly instead of inferred. `tests/unit/docker-build-memory-budget.test.ts`
+does the arithmetic against the measured figure and fails if either knob
+outgrows the runner.
 
 Turbopack compiles in native Rust memory that lives **outside** the V8 heap, so
 `OMNIROUTE_BUILD_MEMORY_MB` does not bound it. On a host with a memory ceiling the
@@ -306,6 +311,7 @@ Beyond the defaults documented in [ENVIRONMENT.md](../reference/ENVIRONMENT.md),
 | `AUTO_UPDATE_HOST_REPO_DIR`   | Host path mounted into `cli` profile at `/workspace/omniroute` for self-update workflows                                                                                   | `.` (current directory)  |
 | `OMNIROUTE_MEMORY_MB`         | Runtime Node heap ceiling for the Docker standalone server; overrides the image default above. Coding agents: `8192`+ (see [runtime RAM](#runtime-ram-for-coding-agents)). | `1024`                   |
 | `DASHBOARD_PORT` / `API_PORT` | Override exposed ports for dashboard (20128) and API (20129)                                                                                                               | `20128` / `20129`        |
+| `OMNIROUTE_PLUGINS_DIR`       | Directory the runtime plugin scanner reads and installs into. Set it when plugins are bind-mounted: the default follows `HOME`, which an image need not export.            | `~/.omniroute/plugins`   |
 | `OMNIROUTE_BASE_PATH`         | URL subpath when the app is published behind a reverse proxy (e.g. `/omniroute`)                                                                                           | _(empty = root)_         |
 | `NEXT_PUBLIC_BASE_URL`        | Public browser origin including the subpath (e.g. `https://host/omniroute`)                                                                                                | unset                    |
 | `PROD_DASHBOARD_PORT`         | Host-side dashboard port for `docker-compose.prod.yml`                                                                                                                     | `20130`                  |
@@ -561,7 +567,7 @@ External Postgres / multi-writer HA is **not** a documented stock path. If you n
 
 ## Scale-out: N independent processes
 
-One Node process is **one V8 heap**. Two overlapping ~3 MiB / ~750k-token coding-agent `POST /v1/responses` (RTK + Caveman) abort that heap at ~12 Gi (`FATAL ERROR: Reached heap limit`) and can OOM a 16 Gi cgroup. See [#7849](https://github.com/diegosouzapw/OmniRoute/issues/7849). Raising `OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT` on that process reintroduces the abort. Small chats, `/healthz`, `/v1/models`, and MCP are **not** in that cap.
+One Node process is **one V8 heap**. Two overlapping ~3 MiB / ~750k-token coding-agent `POST /v1/responses` (RTK + Caveman) abort that heap at ~12 Gi (`FATAL ERROR: Reached heap limit`) and can OOM a 16 Gi cgroup. See [#7849](https://github.com/diegosouzapw/OmniRoute/issues/7849). Heavyweight chat admission is gated by an auto-derived ingest byte budget (`OMNIROUTE_CHAT_MAX_INFLIGHT_BYTES`, `src/shared/middleware/admissionBudget.ts`) sized from that same V8/cgroup ceiling -- it already scales itself to the process's real memory, so overriding it upward (or setting the legacy `OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT` request-count cap) on an already-sized process reintroduces the abort. Small chats, `/healthz`, `/v1/models`, and MCP are **not** in that cap.
 
 To go beyond two concurrent **large** jobs **today**:
 

@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { getProviderConnections, updateProviderConnection } from "@/lib/localDb";
+import { getProviderConnections, updateProviderConnection } from "@/lib/db/providers";
 import { buildConfigSyncEnvelope, toLegacyCloudSyncPayload } from "@/lib/sync/bundle";
 
 const CLOUD_URL = process.env.CLOUD_URL || process.env.NEXT_PUBLIC_CLOUD_URL;

@@ -10,7 +10,8 @@
 
 import { fetch as undiciFetch } from "undici";
 import { createProxyDispatcher, normalizeProxyUrl } from "./proxyDispatcher.ts";
-import { resolveProxyForScopeFromRegistry, listProxies, listOneproxyProxies } from "@/lib/localDb";
+import { resolveProxyForScopeFromRegistry, listProxies } from "@/lib/db/proxies";
+import { listOneproxyProxies } from "@/lib/db/oneproxy";
 import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
 
 // ---------------------------------------------------------------------------

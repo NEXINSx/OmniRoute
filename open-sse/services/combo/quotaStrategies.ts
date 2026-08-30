@@ -163,7 +163,13 @@ function getTargetConnectionIds(
   return connectionIds;
 }
 
-async function expandTargetsByQuotaAwareConnections(
+/**
+ * Exported for the connection-aware expansion pipeline stage
+ * (connectionAwareExpansion.ts) so all 20 combo strategies can share the
+ * A-group per-connection expander without duplicating its logic. The
+ * function body is unchanged; only the visibility is widened.
+ */
+export async function expandTargetsByQuotaAwareConnections(
   targets: ResolvedComboTarget[],
   comboName: string,
   log: { warn?: (...args: unknown[]) => void },

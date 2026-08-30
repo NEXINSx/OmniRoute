@@ -404,7 +404,12 @@ test("createResponsesLogger returns null for invalid base paths and swallows flu
   logger.logOutput("output");
 
   const sessionDir = readdirSync(join(logsDir, "logs"))[0];
-  rmSync(join(logsDir, "logs", sessionDir), { recursive: true, force: true });
+  rmSync(join(logsDir, "logs", sessionDir), {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  });
   console.log = (...args) => capturedLogs.push(args.join(" "));
 
   try {

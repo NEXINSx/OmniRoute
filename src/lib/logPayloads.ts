@@ -17,7 +17,7 @@ const SENSITIVE_KEYS = new Set([
   "secret",
   "token",
   // secret-leak hardening: session cookies + browser-storage credentials that
-  // some web-impersonation providers (Meta AI ecto_1_sess, chatgpt-web
+  // some web-impersonation providers (Meta AI ecto_1_sess, Perplexity Web
   // storageState / runtimeKey) can surface into a request/response BODY field
   // rather than a header. Header-borne values are already masked by
   // maskSensitiveHeaders; this covers the body path into the on-disk call-log

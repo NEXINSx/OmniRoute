@@ -133,6 +133,8 @@ export default function CustomModelsSection({
   // the model as vision-capable by hand (read back by getCustomVisionCapabilityFields()).
   const [newSupportsVision, setNewSupportsVision] = useState(false);
   const [editingSupportsVision, setEditingSupportsVision] = useState(false);
+  const [newIsFree, setNewIsFree] = useState(false);
+  const [editingIsFree, setEditingIsFree] = useState(false);
 
   const customMap = useMemo(() => buildCompatMap(customModels), [customModels]);
   const overrideMap = useMemo(() => buildCompatMap(modelCompatOverrides), [modelCompatOverrides]);
@@ -172,6 +174,7 @@ export default function CustomModelsSection({
           supportedEndpoints: newEndpoints,
           ...(newTargetFormat ? { targetFormat: newTargetFormat } : {}),
           ...(newSupportsVision ? { supportsVision: true } : {}),
+          ...(newIsFree ? { isFree: true } : {}),
         }),
       });
       if (res.ok) {
@@ -181,6 +184,7 @@ export default function CustomModelsSection({
         setNewEndpoints(["chat"]);
         setNewTargetFormat("");
         setNewSupportsVision(false);
+        setNewIsFree(false);
         await fetchCustomModels();
         onModelsChanged?.();
       }
@@ -267,6 +271,7 @@ export default function CustomModelsSection({
       typeof model.contextWindowOverride === "number" ? String(model.contextWindowOverride) : ""
     );
     setEditingSupportsVision(model.supportsVision === true);
+    setEditingIsFree(model.isFree === true);
   };
 
   const cancelEdit = () => {
@@ -276,6 +281,7 @@ export default function CustomModelsSection({
     setEditingTargetFormat("");
     setEditingContextWindowOverride("");
     setEditingSupportsVision(false);
+    setEditingIsFree(false);
     setSavingModelId(null);
   };
 
@@ -334,9 +340,8 @@ export default function CustomModelsSection({
           ...(editingTargetFormat ? { targetFormat: editingTargetFormat } : {}),
           // #4125: manual context-window override — number to set, null to clear.
           contextWindowOverride,
-          // #1904: manual vision-capability override — true/false to set, null to
-          // clear back to the id-based heuristic.
           supportsVision: editingSupportsVision ? true : null,
+          isFree: editingIsFree ? true : null,
         }),
       });
 
@@ -520,9 +525,23 @@ export default function CustomModelsSection({
               />
               {`👁️ ${t("visionCapableLabel")}`}
             </label>
+            <label
+              htmlFor="custom-model-is-free"
+              className="flex items-center gap-1.5 text-xs text-text-main cursor-pointer whitespace-nowrap"
+              title="Mark as free-tier (shown even when hide paid models is on)"
+            >
+              <input
+                id="custom-model-is-free"
+                type="checkbox"
+                checked={newIsFree}
+                onChange={(e) => setNewIsFree(e.target.checked)}
+                className="rounded border-border"
+              />
+              FREE
+            </label>
+          </div>
           </div>
         </div>
-      </div>
 
       {/* List */}
       {loading ? (
@@ -597,6 +616,11 @@ export default function CustomModelsSection({
                         title={t("visionCapableHint")}
                       >
                         {`👁️ ${t("visionCapableLabel")}`}
+                      </span>
+                    )}
+                    {model.isFree === true && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 font-medium">
+                        FREE
                       </span>
                     )}
                     {model.supportedEndpoints?.includes("embeddings") && (
@@ -727,6 +751,20 @@ export default function CustomModelsSection({
                               className="rounded border-border"
                             />
                             {`👁️ ${t("visionCapableLabel")}`}
+                          </label>
+                          <label
+                            htmlFor={`custom-model-edit-free-${model.id}`}
+                            className="flex items-center gap-1.5 text-xs text-text-main cursor-pointer whitespace-nowrap px-2.5 py-2"
+                            title="Mark as free-tier"
+                          >
+                            <input
+                              id={`custom-model-edit-free-${model.id}`}
+                              type="checkbox"
+                              checked={editingIsFree}
+                              onChange={(e) => setEditingIsFree(e.target.checked)}
+                              className="rounded border-border"
+                            />
+                            FREE
                           </label>
                         </div>
                         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 overflow-x-auto overflow-y-visible [scrollbar-width:thin]">

@@ -770,6 +770,7 @@
     "batchListDeleteAllCompletedTitle": "Delete all completed batches",
     "batchListBatchesTable": "Batches",
     "changelogViewerLoading": "Loading changelog from GitHub...",
+    "profile": "Profile",
     "profileLoading": "Loading profile...",
     "profileHowToEarn": "How to earn",
     "bootstrapBannerDismiss": "Dismiss",
@@ -1023,6 +1024,8 @@
     "logs": "Logs",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Get notified of events",
+    "logExport": "Log export",
+    "logExportSubtitle": "Ship call logs out",
     "combosSubtitle": "Group providers for failover",
     "batchSubtitle": "Process multiple requests",
     "contextCavemanSubtitle": "Prompt compression",
@@ -2399,7 +2402,15 @@
     "bypassProviderQuota": "Bypass provider quota cutoffs",
     "bypassProviderQuotaDescription": "Allows this key to ignore upstream provider/account cutoff policy during routing. API key USD quotas still apply.",
     "quotaPill": "QUOTA",
-    "quotaModeOnly": "qtSd-only"
+    "quotaModeOnly": "qtSd-only",
+    "exclusiveLease": "Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "All connections",
+    "onlySelectedConnections": "Only selected connections",
+    "selectAtLeastOneConnection": "Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "This key can use any active connection.",
+    "restrictedToConnections": "Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Audit Log",
@@ -2924,7 +2935,8 @@
       "letta": "Letta CLI agent with persistent memory and tool use",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Warp AI terminal with custom provider support",
-      "agent-deck": "Agent Deck multi-agent orchestrator"
+      "agent-deck": "Agent Deck multi-agent orchestrator",
+      "5dive": "5dive — self-hosted fleet of coding agents; one auth profile points them all at OmniRoute"
     },
     "guides": {
       "cursor": {
@@ -5554,7 +5566,7 @@
     "accountName": "Account name",
     "email": "Email",
     "healthCheckMinutes": "Health Check (min)",
-    "healthCheckHint": "Proactive token refresh interval. 0 = disabled.",
+    "healthCheckHint": "Override for this connection. Empty = follow the global default (Settings › Resilience). 0 = never check this connection. Max 1440 (24 h).",
     "deselectAllModels": "Deselect all",
     "modelsActiveCount": "{active}/{total} active",
     "noModelsMatch": "No models match \"{filter}\"",
@@ -6256,11 +6268,11 @@
       "chenzk": "OpenAI-compatible gateway with a live model catalog at chenzk.top.",
       "magnific": "Generate images with Magnific Mystic.",
       "freetheai": "Free OpenAI-compatible gateway with passthrough model support.",
-      "g4f-gemini": "Free no-key g4f.space reverse proxy to Gemini, limited to 5 requests per minute.",
-      "g4f-groq": "Free no-key g4f.space reverse proxy to Groq, limited to 5 requests per minute.",
-      "g4f-nvidia": "Free no-key g4f.space reverse proxy to NVIDIA NIM, limited to 5 requests per minute.",
-      "g4f-ollama": "Free no-key hosted Ollama gateway from g4f.space, limited to 5 requests per minute.",
-      "g4f-pollinations": "Free no-key g4f.space reverse proxy to Pollinations, limited to 5 requests per minute.",
+      "g4f-gemini": "Remote g4f.space gateway to Gemini. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-groq": "Remote g4f.space gateway to Groq. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-nvidia": "Remote g4f.space gateway to NVIDIA NIM. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-ollama": "Remote g4f.space gateway to Ollama. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
+      "g4f-pollinations": "Remote g4f.space gateway to Pollinations. Anonymous access requires proof-of-work credits from g4f.dev/chat or a member API key from g4f.dev/members.html; limits vary.",
       "mixedbread": "Create embeddings with the Mixedbread API.",
       "segmind": "Generate images and videos with Segmind's hosted models.",
       "amazon-q": "Uses the same AWS Builder ID or imported refresh-token flow as Kiro, but keeps Amazon Q connections separate.",
@@ -7042,6 +7054,14 @@
     "providerAccountRoutingDesc": "Override global account strategy for this provider (9router parity).",
     "providerRoutingStrategy": "Account strategy",
     "providerRoutingInheritGlobal": "Inherit global default",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings.",
     "modelAliases": "Model Aliases",
     "modelAliasesTitle": "Model Aliases",
     "modelAliasesDesc": "Remap model names using exact matches or wildcard patterns.",
@@ -7550,6 +7570,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Maximum queue wait time",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8016,6 +8038,7 @@
     "resilienceRequestQueueDesc": "This layer only controls queueing and pacing. It does not store cooldowns or open circuit breakers.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Enables queue protection by default for active API key connections.",
     "resilienceMaxQueueWait": "Maximum queue wait time",
+    "resilienceMaxExecutionWait": "Execution timeout (rate-limit backstop)",
     "resilienceConnectionCooldownScope": "Individual connection",
     "resilienceConnectionCooldownTrigger": "When a connection returns a transient upstream failure",
     "resilienceConnectionCooldownEffect": "Temporarily skips that connection and increases backoff for repeated failures",
@@ -8055,6 +8078,14 @@
     "resilienceProviderCooldownEnabledDesc": "When enabled, failed providers are tracked globally and skipped for a cooldown period.",
     "resilienceProviderCooldownMin": "Minimum cooldown",
     "resilienceProviderCooldownMax": "Maximum cooldown",
+    "resilienceCredentialHealthTitle": "Credential Health Check",
+    "resilienceCredentialHealthScope": "All active API-key and OAuth connections",
+    "resilienceCredentialHealthTrigger": "Periodically, on a fixed cadence",
+    "resilienceCredentialHealthEffect": "Probes each connection's credential and marks it active/error; failed connections back off exponentially",
+    "resilienceCredentialHealthDesc": "Background sweep that validates every active connection's credential by calling its provider. Set 0 to disable the sweep entirely. Per-connection Health Check values (on each connection's edit dialog) always override this global default.",
+    "resilienceCredentialHealthInterval": "Global check interval",
+    "resilienceCredentialHealthEveryMinutes": "Every {minutes} min",
+    "resilienceCredentialHealthHint": "0 disables the background sweep (max 1440 min = 24 h). Connections with their own Health Check value ignore this global default; a per-connection 0 opts that connection out even when the global sweep is on.",
     "forcedFingerprintTitle": "Always enabled for {provider} — required for OAuth account safety; cannot be turned off.",
     "forcedFingerprintBadge": "Required",
     "sessionAffinityTitle": "Session affinity",
@@ -8198,6 +8229,7 @@
     "modalityBridgeVideoTitle": "Video Bridge",
     "modalityBridgeVideoDesc": "Sample video frames, describe them with a vision model, and continue with the chosen text model.",
     "modalityBridgeVideoRuntimeReady": "Runtime ready",
+    "modalityBridgeVideoRuntimeChecking": "Checking runtime…",
     "modalityBridgeVideoRuntimeUnavailable": "Runtime unavailable",
     "modalityBridgeVideoRuntimeInstall": "Install FFmpeg and ffprobe on the server PATH to enable video extraction.",
     "modalityBridgeVideoEnabled": "Enable Video Bridge",
@@ -11254,6 +11286,11 @@
       "copy": "Copy",
       "autoscrollOn": "Autoscroll: on",
       "autoscrollOff": "Autoscroll: off",
+      "collapseAllLevels": "Collapse all",
+      "collapseOneLevel": "Collapse one level",
+      "currentExpandLevel": "Current expand level",
+      "expandOneLevel": "Expand one level",
+      "expandAllLevels": "Expand all",
       "payload": {
         "clientRawRequest": "Client Raw Request",
         "clientRequest": "Client Request",
@@ -11314,7 +11351,9 @@
       "noPayload": "No payload data available for this log entry.",
       "correlationId": "Correlation ID",
       "correlationIdValue": "Correlation ID: {id}",
-      "detailedPayloadInfo": "Enable detailed logging first if you want the four-stage client/provider payload view for new requests."
+      "detailedPayloadInfo": "Enable detailed logging first if you want the four-stage client/provider payload view for new requests.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12524,12 @@
     "typeApikey": "API Key",
     "sortTypeFirst": "Easiest first",
     "sortTypeFirstHelp": "Group by signup effort (No Signup → OAuth Login → API Key), keeping quality order within each group",
-    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier"
+    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier",
+    "colReliability": "Reliability",
+    "colReliabilityHelp": "Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provider Discovery",
@@ -12906,6 +12950,18 @@
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Enable network access in the skills sandbox."
       }
+    }
+  },
+  "combo": {
+    "sort": {
+      "label": "Sort by",
+      "method": {
+        "manual": "Manual",
+        "provider": "Provider",
+        "score": "Score (free models)",
+        "name": "Name"
+      },
+      "scoreHint": "Score ranking applies to free providers only; others stay in place."
     }
   },
   "comboControl": {

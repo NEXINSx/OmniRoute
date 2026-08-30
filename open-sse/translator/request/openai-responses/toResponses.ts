@@ -29,11 +29,15 @@ import {
 const DEFAULT_RESPONSES_REASONING_SUMMARY = "auto";
 const RESPONSES_REASONING_ENCRYPTED_CONTENT_INCLUDE = "reasoning.encrypted_content";
 
-// Chat Completions `response_format: { type: "json_schema" }` → Responses API `text.format`.
+// Chat Completions JSON `response_format` → Responses API `text.format`.
 // Merges into any existing `result.text` (e.g. verbosity) so structured-output schemas from
 // Chat clients survive the translation to the Responses/Codex upstream (#5933).
 function mapChatResponseFormatToResponsesText(body: JsonRecord, result: JsonRecord): void {
   const responseFormat = toRecord(body.response_format);
+  if (responseFormat.type === "json_object") {
+    result.text = { ...toRecord(result.text), format: { type: "json_object" } };
+    return;
+  }
   if (responseFormat.type !== "json_schema") return;
 
   const jsonSchema = toRecord(responseFormat.json_schema);
@@ -387,7 +391,9 @@ export function openaiToOpenAIResponsesRequest(
   // Translate max_tokens / max_completion_tokens → max_output_tokens for Responses API.
   // The Responses API does not accept max_tokens or max_completion_tokens; it requires
   // max_output_tokens. max_completion_tokens takes priority as the newer Chat Completions field.
-  if (root.max_completion_tokens !== undefined) {
+  if (root.max_output_tokens !== undefined) {
+    result.max_output_tokens = root.max_output_tokens;
+  } else if (root.max_completion_tokens !== undefined) {
     result.max_output_tokens = root.max_completion_tokens;
   } else if (root.max_tokens !== undefined) {
     result.max_output_tokens = root.max_tokens;

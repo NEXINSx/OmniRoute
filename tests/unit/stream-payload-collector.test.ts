@@ -444,3 +444,69 @@ test("splitConcatenatedToolCallArguments — top-level array is single value", (
   const out = splitConcatenatedToolCallArguments(arr);
   assert.equal(out, null); // one value boundary (array) -> not split
 });
+
+// Continuation gap (2026-08-21): emitTranslatedClientItem in stream.ts pushes
+// every translate-mode client-visible item wrapped as `{event, data}` (needed
+// so formatSSE can emit both the SSE `event:` line and the `data:` payload
+// separately) -- but every reducer's ingest() read `payload.type` directly,
+// one level too shallow for that shape, so a client-facing summary built
+// from translate-mode events (e.g. clientPayload when the client speaks
+// Responses API) never found a real response id/output. Only affected
+// clientPayloadCollector in translate mode; providerPayloadCollector and
+// passthrough mode always pushed the bare payload directly.
+test("buildStreamSummaryFromEvents unwraps a translate-mode {event, data} envelope", () => {
+  const events = [
+    {
+      data: {
+        event: "response.completed",
+        data: {
+          type: "response.completed",
+          response: {
+            id: "resp_wrapped_1",
+            output: [{ type: "message", role: "assistant", content: "hi" }],
+          },
+        },
+      },
+      event: "response.completed",
+    },
+  ];
+  const result = collector.buildStreamSummaryFromEvents(events, "openai-responses") as {
+    id?: unknown;
+    output?: unknown;
+  };
+  assert.equal(result?.id, "resp_wrapped_1", "must read the id from one level deeper, not undefined");
+  assert.ok(Array.isArray(result?.output) && result.output.length === 1);
+});
+
+test("buildStreamSummaryFromEvents still reads a bare (unwrapped) event correctly", () => {
+  const events = [
+    {
+      data: {
+        type: "response.completed",
+        response: {
+          id: "resp_bare_1",
+          output: [{ type: "message", role: "assistant", content: "hi" }],
+        },
+      },
+    },
+  ];
+  const result = collector.buildStreamSummaryFromEvents(events, "openai-responses") as {
+    id?: unknown;
+    output?: unknown;
+  };
+  assert.equal(result?.id, "resp_bare_1");
+  assert.ok(Array.isArray(result?.output) && result.output.length === 1);
+});
+
+test("createStructuredSSECollector's live getSummary() also unwraps a pushed {event, data} envelope", () => {
+  const c = collector.createStructuredSSECollector({ format: "openai-responses" });
+  c.push({
+    event: "response.completed",
+    data: {
+      type: "response.completed",
+      response: { id: "resp_wrapped_live", output: [] },
+    },
+  });
+  const summary = c.getSummary() as { id?: unknown };
+  assert.equal(summary?.id, "resp_wrapped_live");
+});

@@ -79,9 +79,11 @@ test("T28: github registry exposes Gemini 3.1 Pro Preview and keeps legacy alias
   assert.equal(legacy.model, "gemini-3.1-pro-preview");
 });
 
-test("T28: qwen OAuth registry entry is retired; qwen-web keeps the native chat.qwen.ai URL", () => {
+test("T28: retired Qwen ids stay absent while official Qwen Cloud providers remain", () => {
   assert.equal(REGISTRY.qwen, undefined);
-  assert.equal(REGISTRY["qwen-web"].baseUrl, "https://chat.qwen.ai/api/v2/chat/completions");
+  assert.equal(REGISTRY["qwen-web"], undefined);
+  assert.ok(REGISTRY["qwen-cloud"]);
+  assert.ok(REGISTRY["qwen-cloud-token-plan"]);
 });
 
 test("T28: lmarena registry seeds Direct-chat Text/search; image models in IMAGE_PROVIDERS", async () => {

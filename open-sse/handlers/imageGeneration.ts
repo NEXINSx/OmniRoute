@@ -1,6 +1,12 @@
 import { randomUUID } from "crypto";
 /** Image generation handler for POST /v1/images/generations (OpenAI-compatible). */
 
+import {
+  CHATGPT_WEB_RETIRED_ERROR_CODE,
+  CHATGPT_WEB_RETIRED_MESSAGE,
+  isCommonChatGptWebRetiredProviderId,
+} from "@/shared/constants/chatgptWebRetirement";
+
 import { getImageProvider, parseImageModel } from "../config/imageRegistry.ts";
 import { HTTP_STATUS } from "../config/constants.ts";
 import { applyAntigravityClientProfileHeaders } from "../services/antigravityClientProfile.ts";
@@ -8,10 +14,7 @@ import { getAntigravityEnvelopeUserAgent } from "../services/antigravityIdentity
 import { kieExecutor } from "../executors/kie.ts";
 import { mapImageSize } from "../translator/image/sizeMapper.ts";
 import { getCodexClientVersion, getCodexUserAgent } from "../config/codexClient.ts";
-import { ChatGptWebExecutor } from "../executors/chatgpt-web.ts";
-import type { ExecutorLog, ProviderCredentials } from "../executors/base.ts";
-import { getChatGptImage, findChatGptImageBySha256 } from "../services/chatgptImageCache.ts";
-import { createHash } from "node:crypto";
+import { isCodexFreePlan } from "../executors/codex/tools.ts";
 import { saveCallLog } from "@/lib/usageDb";
 import { sleep } from "../utils/sleep.ts";
 import {
@@ -35,6 +38,10 @@ import {
   getConfiguredTimeout,
 } from "@/shared/utils/fetchTimeout";
 import { sanitizeErrorMessage, sanitizeUpstreamDetails } from "../utils/error.ts";
+import {
+  isMicrosoftDesignerWebRetiredProviderId,
+  MICROSOFT_DESIGNER_WEB_RETIRED_MESSAGE,
+} from "@/shared/constants/designerWebRetirement";
 
 import { handleSDWebUIImageGeneration } from "./imageGeneration/providers/sdWebUI.ts";
 import { handleHyperbolicImageGeneration } from "./imageGeneration/providers/hyperbolic.ts";
@@ -45,15 +52,8 @@ import { handleIdeogramImageGeneration } from "./imageGeneration/providers/ideog
 import { handleHaiperImageGeneration } from "./imageGeneration/providers/haiper.ts";
 import { handleLeonardoImageGeneration } from "./imageGeneration/providers/leonardo.ts";
 import { handleMagnificImageGeneration } from "./imageGeneration/providers/magnific.ts";
-import {
-  handleChatGptWebImageGeneration,
-  extractMarkdownImageUrls,
-  CHATGPT_WEB_IMAGE_ID_RE,
-} from "./imageGeneration/providers/chatgptWeb.ts";
-import { handleGeminiWebImageGeneration } from "./imageGeneration/providers/geminiWeb.ts";
 import { handleNvidiaNimImageGeneration } from "./imageGeneration/providers/nvidiaNim.ts";
 import { handleSegmindImageGeneration } from "./imageGeneration/providers/segmind.ts";
-import { handleDesignerWebImageGeneration } from "./imageGeneration/providers/designerWeb.ts";
 import { handleCursorAgentImageGeneration } from "./imageGeneration/providers/cursorAgentImage.ts";
 import { handleMinimaxImageGeneration } from "./imageGeneration/providers/minimax.ts";
 import { handleAdobeFireflyImageGeneration } from "./imageGeneration/providers/adobeFirefly.ts";
@@ -92,19 +92,66 @@ interface KieImageOptions {
 }
 
 // KIE Market catalog ids are namespaced for OmniRoute's catalog
-// (`google-imagen/<model>`), but the KIE Market createTask API expects
+// (`<vendor>/<model>`), but the KIE Market createTask API expects
 // vendor-specific upstream ids that do not follow a single consistent
-// pattern (confirmed against docs.kie.ai/market/google/* — see #11225,
-// #11296): nano-banana-2 and nano-banana-pro drop the vendor namespace
-// entirely, while nano-banana and nano-banana-edit use a `google/` prefix
-// instead of `google-imagen/`. Every other KIE Market namespace (seedream,
-// flux, ideogram, qwen, wan, grok-imagine, gpt) already matches its real
-// upstream id byte-for-byte, so this map stays scoped to google-imagen.
+// pattern. Every entry below was confirmed individually against the literal
+// example request JSON published on docs.kie.ai (never inferred by pattern —
+// see #11326's false "everything else already matches" claim and #11296's
+// follow-up correction):
+//   - google-imagen: nano-banana-2 and nano-banana-pro drop the vendor
+//     namespace entirely; nano-banana and nano-banana-edit use a `google/`
+//     prefix instead of `google-imagen/` (docs.kie.ai/market/google/*).
+//   - gpt: gpt-image-2-* drops the `gpt/` namespace entirely
+//     (docs.kie.ai/market/gpt/gpt-image-2-*); gpt-image-1.5-* uses a
+//     `gpt-image/` namespace instead of `gpt/gpt-image-1.5-`, and keeps the
+//     dot in "1.5" (docs.kie.ai/market/gpt-image/1-5-*).
+//   - seedream: 5.0-lite-* drops the ".0" — real id is `5-lite-*`
+//     (docs.kie.ai/market/seedream/5-lite-text-to-image); seedream 4.5 (T2I
+//     and edit) already matches byte-for-byte.
+//   - flux: `flux/2-*` uses a `flux-2/` namespace (dash, not slash); the
+//     generic (non-"pro") variant is named `flex` upstream, not `2`
+//     (docs.kie.ai/market/flux2/pro-*, .../flex-*).
+//   - wan: `wan/2.7-*` keeps the dot in our catalog, but KIE's documented
+//     enum uses a dash — real id is `wan/2-7-*`
+//     (docs.kie.ai/market/wan/2-7-image[-pro]).
+//   - ideogram (v3-text-to-image, v3-edit, v3-remix), qwen, qwen2, and
+//     grok-imagine already match byte-for-byte
+//     (docs.kie.ai/market/{ideogram,qwen,qwen2,grok-imagine}/*).
+//     ideogram/v3-reframe has no dedicated docs.kie.ai page as of this sweep
+//     (its 3 siblings above are all direct id matches, so it is assumed
+//     correct by pattern, not independently confirmed).
+// One catalog entry remains UNRESOLVED after this sweep and is deliberately
+// left untouched pending a follow-up (see #11296 discussion):
+//   - z-image/4.0-text-to-image and z-image/4.5-text-to-image: the only
+//     documented Z-Image Market page (docs.kie.ai/market/z-image/z-image)
+//     shows a single fixed `model` enum value `"z-image"` with no
+//     version-specific id or "version" input field found — unclear whether
+//     both catalog ids should collapse to the same upstream call.
+// flux/kontext is RESOLVED (#11296): it is catalogued with `isMarket: true`
+// but has no `docs.kie.ai/market/flux2/kontext` (or similar) Market page —
+// Flux Kontext is documented under the separate `/flux-kontext-api/*` docs
+// tree with its own endpoint (`POST /api/v1/flux/kontext/generate`, poll
+// `GET /api/v1/flux/kontext/record-info`, models `flux-kontext-pro`/
+// `flux-kontext-max`), not the Market `createTask` flow this map feeds. It is
+// NOT in KIE_MARKET_UPSTREAM_MODEL_IDS below on purpose — handleKieImageGeneration
+// reroutes it to the dedicated endpoint instead of rewriting its id.
 export const KIE_MARKET_UPSTREAM_MODEL_IDS: ReadonlyMap<string, string> = new Map([
   ["google-imagen/nano-banana", "google/nano-banana"],
   ["google-imagen/nano-banana-2", "nano-banana-2"],
   ["google-imagen/nano-banana-pro", "nano-banana-pro"],
   ["google-imagen/nano-banana-edit", "google/nano-banana-edit"],
+  ["gpt/gpt-image-2-text-to-image", "gpt-image-2-text-to-image"],
+  ["gpt/gpt-image-2-image-to-image", "gpt-image-2-image-to-image"],
+  ["gpt/gpt-image-1.5-text-to-image", "gpt-image/1.5-text-to-image"],
+  ["gpt/gpt-image-1.5-image-to-image", "gpt-image/1.5-image-to-image"],
+  ["seedream/5.0-lite-text-to-image", "seedream/5-lite-text-to-image"],
+  ["seedream/5.0-lite-image-to-image", "seedream/5-lite-image-to-image"],
+  ["flux/2-pro-text-to-image", "flux-2/pro-text-to-image"],
+  ["flux/2-pro-image-to-image", "flux-2/pro-image-to-image"],
+  ["flux/2-text-to-image", "flux-2/flex-text-to-image"],
+  ["flux/2-image-to-image", "flux-2/flex-image-to-image"],
+  ["wan/2.7-image", "wan/2-7-image"],
+  ["wan/2.7-image-pro", "wan/2-7-image-pro"],
 ]);
 
 export function resolveKieMarketUpstreamModelId(publicModelId: string): string {
@@ -129,6 +176,7 @@ const OPENAI_IMAGE_TO_IMAGE_MODELS = new Set([
 ]);
 
 const IMAGE_ASPECT_RATIO_PATTERN = /^\d+:\d+$/;
+const IMAGE_SIZE_PATTERN = /^(?:1K|2K|4K)$/;
 
 /**
  * Resolve the upstream images endpoint for a custom (OpenAI-compatible) image
@@ -187,6 +235,13 @@ function normalizeImageAspectRatio(value: unknown, fallbackSize: unknown): strin
     if (IMAGE_ASPECT_RATIO_PATTERN.test(trimmedValue)) return trimmedValue;
   }
   return mapImageSize(typeof fallbackSize === "string" ? fallbackSize : null);
+}
+
+function normalizeImageGenerationSize(snakeCaseValue: unknown, camelCaseValue: unknown): string {
+  const value = snakeCaseValue ?? camelCaseValue;
+  if (typeof value !== "string") return "1K";
+  const normalized = value.trim().toUpperCase();
+  return IMAGE_SIZE_PATTERN.test(normalized) ? normalized : "1K";
 }
 
 function parseJsonOrNull(value: string): unknown | null {
@@ -337,6 +392,34 @@ export async function handleImageGeneration({
   clientHeaders = null,
   peerLocality = null,
 }) {
+  const requestedModel = typeof body?.model === "string" ? body.model : "";
+  const slash = requestedModel.indexOf("/");
+  const requestedPrefix = slash > 0 ? requestedModel.slice(0, slash) : requestedModel;
+  if (
+    isMicrosoftDesignerWebRetiredProviderId(resolvedProvider) ||
+    isMicrosoftDesignerWebRetiredProviderId(requestedPrefix)
+  ) {
+    return {
+      success: false,
+      status: HTTP_STATUS.GONE,
+      error: MICROSOFT_DESIGNER_WEB_RETIRED_MESSAGE,
+    };
+  }
+
+  const requestedProvider = slash > 0 ? requestedModel.slice(0, slash) : null;
+  if (
+    isCommonChatGptWebRetiredProviderId(resolvedProvider) ||
+    isCommonChatGptWebRetiredProviderId(requestedProvider) ||
+    isCommonChatGptWebRetiredProviderId(requestedModel)
+  ) {
+    return {
+      success: false,
+      status: 410,
+      error: CHATGPT_WEB_RETIRED_MESSAGE,
+      code: CHATGPT_WEB_RETIRED_ERROR_CODE,
+    };
+  }
+
   let provider, model;
 
   if (resolvedProvider) {
@@ -521,31 +604,6 @@ export async function handleImageGeneration({
     });
   }
 
-  if (providerConfig.format === "chatgpt-web") {
-    return handleChatGptWebImageGeneration({
-      model,
-      provider,
-      body,
-      credentials,
-      log,
-      signal,
-      clientHeaders,
-    });
-  }
-
-  // #10466: Gemini Web session image generation (Nano Banana)
-  if (providerConfig.format === "gemini-web") {
-    return handleGeminiWebImageGeneration({
-      model,
-      provider,
-      body,
-      credentials,
-      log,
-      signal,
-      clientHeaders,
-    });
-  }
-
   if (providerConfig.format === "cursor-agent-image") {
     return handleCursorAgentImageGeneration({
       model,
@@ -555,17 +613,6 @@ export async function handleImageGeneration({
       credentials,
       log,
       peerLocality,
-    });
-  }
-
-  if (providerConfig.format === "designer-web") {
-    return handleDesignerWebImageGeneration({
-      model,
-      provider,
-      providerConfig,
-      body,
-      credentials,
-      log,
     });
   }
 
@@ -778,13 +825,29 @@ async function handleKieImageGeneration({
   // Check if model is a Market model (unified API)
   const fullRegistry = getImageProvider(provider);
   const modelEntry = fullRegistry?.models?.find((m) => m.id === model);
-  const isMarket = modelEntry?.isMarket || model.includes("/");
+  // #11296 — flux/kontext is catalogued with `isMarket: true`, but KIE does not
+  // expose it through the Market catalog at all: it lives under a dedicated API
+  // tree (POST /api/v1/flux/kontext/generate, poll .../flux/kontext/record-info)
+  // that rejects the Market createTask flow with "model name not supported". Route
+  // it there instead of treating it as a Market entry (see KIE_MARKET_UPSTREAM_MODEL_IDS
+  // comment above for the same finding).
+  const isFluxKontext = model === "flux/kontext";
+  const isMarket = !isFluxKontext && (modelEntry?.isMarket || model.includes("/"));
 
   const { imageUrl } = extractImageInputs(body);
   let baseUrl = "";
   let payload: Record<string, unknown> = {};
 
-  if (isMarket) {
+  if (isFluxKontext) {
+    // Dedicated Flux Kontext API endpoint (not part of the Market catalog).
+    baseUrl = `${providerConfig.baseUrl.replace(/\/$/, "")}/api/v1/flux/kontext/generate`;
+    payload = {
+      prompt,
+      aspectRatio: mapImageSize(size),
+      model: "flux-kontext-pro",
+      ...(imageUrl ? { inputImage: imageUrl } : {}),
+    };
+  } else if (isMarket) {
     // Unified Market API endpoint
     baseUrl = `${providerConfig.baseUrl.replace(/\/$/, "")}/api/v1/jobs/createTask`;
     const input: Record<string, unknown> = {
@@ -816,13 +879,18 @@ async function handleKieImageGeneration({
     const promptPreview = String(body.prompt ?? "").slice(0, 60);
     log.info(
       "IMAGE",
-      `${provider}/${model} (${isMarket ? "market" : "direct"}) | prompt: "${promptPreview}..."`
+      `${provider}/${model} (${isFluxKontext ? "flux-kontext" : isMarket ? "market" : "direct"}) | prompt: "${promptPreview}..."`
     );
   }
 
   try {
-    const endpoint = isMarket ? "/api/v1/jobs/createTask" : new URL(baseUrl).pathname;
-    const createBaseUrl = isMarket ? providerConfig.baseUrl : baseUrl.replace(endpoint, "");
+    const endpoint = isFluxKontext
+      ? "/api/v1/flux/kontext/generate"
+      : isMarket
+        ? "/api/v1/jobs/createTask"
+        : new URL(baseUrl).pathname;
+    const createBaseUrl =
+      isFluxKontext || isMarket ? providerConfig.baseUrl : baseUrl.replace(endpoint, "");
     const createData = await kieExecutor.createTask({
       baseUrl: createBaseUrl,
       token,
@@ -851,11 +919,13 @@ async function handleKieImageGeneration({
     }
 
     // Use statusUrl from providerConfig if available, fallback to dynamic derivation
-    const statusUrl = isMarket
-      ? `${providerConfig.baseUrl.replace(/\/$/, "")}/api/v1/jobs/recordInfo`
-      : providerConfig.statusUrl && !providerConfig.statusUrl.includes("jobs/recordInfo")
-        ? providerConfig.statusUrl
-        : baseUrl.replace(/\/generate$/, "/record-info");
+    const statusUrl = isFluxKontext
+      ? `${providerConfig.baseUrl.replace(/\/$/, "")}/api/v1/flux/kontext/record-info`
+      : isMarket
+        ? `${providerConfig.baseUrl.replace(/\/$/, "")}/api/v1/jobs/recordInfo`
+        : providerConfig.statusUrl && !providerConfig.statusUrl.includes("jobs/recordInfo")
+          ? providerConfig.statusUrl
+          : baseUrl.replace(/\/generate$/, "/record-info");
 
     const { data: recordData, state } = await kieExecutor.pollTask({
       statusUrl,
@@ -935,12 +1005,16 @@ async function handleGeminiImageGeneration({ model, providerConfig, body, creden
   const candidateCount =
     typeof body.n === "number" && Number.isFinite(body.n) && body.n > 0 ? Math.floor(body.n) : 1;
   const promptText = typeof body.prompt === "string" ? body.prompt : String(body.prompt ?? "");
+  const aspectRatio = normalizeImageAspectRatio(body.aspect_ratio, body.size);
+  const imageSize = normalizeImageGenerationSize(body.image_size, body.imageSize);
 
   // Summarized request for call log
   const logRequestBody = {
     model: body.model,
     prompt: promptText.slice(0, 200),
     size: body.size || "default",
+    aspect_ratio: aspectRatio,
+    image_size: imageSize,
     n: candidateCount,
   };
 
@@ -969,7 +1043,8 @@ async function handleGeminiImageGeneration({ model, providerConfig, body, creden
       generationConfig: {
         candidateCount,
         imageConfig: {
-          aspectRatio: normalizeImageAspectRatio(body.aspect_ratio, body.size),
+          aspectRatio,
+          imageSize,
         },
       },
     },
@@ -989,7 +1064,7 @@ async function handleGeminiImageGeneration({ model, providerConfig, body, creden
     const promptPreview = promptText.slice(0, 60);
     log.info(
       "IMAGE",
-      `antigravity/${model} (gemini) | prompt: "${promptPreview}..." | format: gemini-image`
+      `antigravity/${model} (gemini) | prompt: "${promptPreview}..." | ${aspectRatio} ${imageSize}`
     );
   }
 
@@ -1254,8 +1329,7 @@ async function handleOpenAIImageGeneration({
  *
  * Mirrors `handleOpenAIImageGeneration` but posts multipart/form-data to the node's
  * `/images/edits` endpoint and returns the upstream OpenAI-compatible response. Kept
- * separate from the chatgpt-web edit flow, which continues a saved conversation node
- * rather than forwarding a stateless edit. The fetch helper leaves Content-Type unset so
+ * separate from provider-specific hosted-tool flows. The fetch helper leaves Content-Type unset so
  * `fetch` derives the multipart boundary from the FormData body.
  */
 export async function handleOpenAIImageEdit({
@@ -1467,185 +1541,6 @@ export async function handleOpenRouterImageEdit({
   }).catch(() => {});
 
   return result;
-}
-
-export async function handleImageEdit({
-  provider,
-  model,
-  body,
-  imageBytes,
-  credentials,
-  log,
-  signal = null,
-  clientHeaders = null,
-}: {
-  provider: string;
-  model: string;
-  body: Record<string, unknown>;
-  imageBytes: Buffer;
-  imageMime?: string; // accepted for symmetry with route layer; not used
-  credentials: ProviderCredentials | null | undefined;
-  log: ExecutorLog | null | undefined;
-  signal?: AbortSignal | null;
-  clientHeaders?: Record<string, string> | null;
-}) {
-  const startTime = Date.now();
-  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-  if (!prompt) {
-    return saveImageErrorResult({
-      provider,
-      model,
-      status: 400,
-      startTime,
-      error: "Prompt is required for image edit",
-    });
-  }
-
-  if (!credentials?.apiKey) {
-    return saveImageErrorResult({
-      provider,
-      model,
-      status: 401,
-      startTime,
-      error: "ChatGPT Web credentials missing session cookie",
-    });
-  }
-
-  const imageHash = createHash("sha256").update(imageBytes).digest("hex");
-  const cached = findChatGptImageBySha256(imageHash);
-
-  const wantsBase64 = body.response_format === "b64_json";
-  const requestBody = {
-    model,
-    prompt: prompt.slice(0, 500),
-    size: body.size || undefined,
-    image_hash: imageHash.slice(0, 16),
-    image_bytes: imageBytes.length,
-    cached_match: Boolean(cached?.entry.context),
-  };
-
-  if (!cached?.entry.context) {
-    // chatgpt-web's image_gen tool can only edit an image when we continue
-    // the original conversation node. If we never generated this image (or
-    // its 30-minute TTL elapsed), there's no node to continue. Return a
-    // clear, actionable error — much better than silently spawning an
-    // unrelated image and confusing the user.
-    log?.warn?.(
-      "IMAGE",
-      `chatgpt-web edit: no cached match for sha256=${imageHash.slice(0, 16)} (bytes=${imageBytes.length}); returning 400`
-    );
-    return saveImageErrorResult({
-      provider,
-      model,
-      status: 400,
-      startTime,
-      error:
-        "chatgpt-web image edit only works for images recently generated through this OmniRoute instance " +
-        "(cache window: 30 minutes). Re-generate the image and try the edit immediately, or disable image-edit " +
-        "in your client to use plain chat-completion edit prompts instead.",
-      requestBody,
-    });
-  }
-
-  // Build a synthetic chat thread that surfaces the cached image URL on
-  // the assistant turn. The executor's parseOpenAIMessages picks up the
-  // URL, findCachedImageContext resolves it to {conversationId,
-  // parentMessageId}, and looksLikeImageEditRequest fires on the user
-  // prompt — together producing a continuation request that actually
-  // edits the saved image.
-  //
-  // The synthetic user prompt is anchored with both an edit verb AND an
-  // image-gen verb so the executor's heuristics fire regardless of what
-  // wording the caller used ("now make it brighter", "tweak this", ...):
-  //   - looksLikeImageEditRequest: matches "edit" + "image" within 120 chars
-  //   - looksLikeImageGenRequest:  matches "generate" + "image" within 40 chars
-  // Either match alone would set forImageGen, but covering both is cheap
-  // insurance for prompts that don't fit common phrasings.
-  const messages: Array<{ role: string; content: string }> = [
-    {
-      role: "assistant",
-      // The base URL is irrelevant — only the path is parsed by
-      // CACHED_IMAGE_URL_RE in the executor's findCachedImageContext.
-      content: `![image](http://internal/v1/chatgpt-web/image/${cached.id})`,
-    },
-    {
-      role: "user",
-      content: `Edit the image and generate the new image: ${prompt}`,
-    },
-  ];
-
-  const executor = new ChatGptWebExecutor();
-  const result = await executor.execute({
-    model,
-    body: { messages },
-    stream: false,
-    credentials,
-    signal,
-    log,
-    clientHeaders,
-  });
-
-  const responseText = await result.response.text();
-  if (result.response.status >= 400) {
-    return saveImageErrorResult({
-      provider,
-      model,
-      status: result.response.status,
-      startTime,
-      error: responseText,
-      requestBody,
-    });
-  }
-
-  let content = "";
-  try {
-    const json = JSON.parse(responseText);
-    content = String(json?.choices?.[0]?.message?.content || "");
-  } catch {
-    content = responseText;
-  }
-
-  const urls = extractMarkdownImageUrls(content);
-  if (urls.length === 0) {
-    return saveImageErrorResult({
-      provider,
-      model,
-      status: 502,
-      startTime,
-      error: `ChatGPT Web edit completed without returning image markdown: ${content.slice(0, 300)}`,
-      requestBody,
-    });
-  }
-
-  const images: Array<{ url?: string; b64_json?: string }> = [];
-  for (const url of urls) {
-    if (!wantsBase64) {
-      images.push({ url });
-      continue;
-    }
-    const id = url.match(CHATGPT_WEB_IMAGE_ID_RE)?.[1];
-    const cachedNew = id ? getChatGptImage(id) : null;
-    if (!cachedNew) {
-      return saveImageErrorResult({
-        provider,
-        model,
-        status: 502,
-        startTime,
-        error: "ChatGPT Web image bytes expired before b64_json conversion",
-        requestBody,
-      });
-    }
-    images.push({ b64_json: cachedNew.bytes.toString("base64") });
-  }
-
-  return saveImageSuccessResult({
-    provider,
-    model,
-    startTime,
-    requestBody,
-    responseBody: { images_count: images.length, edit_match: Boolean(cached?.entry.context) },
-    images,
-  });
 }
 
 async function handleFalAIImageGeneration({
@@ -2586,6 +2481,18 @@ async function handleCodexImageGeneration({
     });
   }
 
+  if (isCodexFreePlan(credentials?.providerSpecificData)) {
+    return saveImageErrorResult({
+      provider,
+      model,
+      status: 403,
+      startTime,
+      error: "Codex image_generation is unavailable on free-plan accounts",
+      path: logPath,
+      retryable: true,
+    });
+  }
+
   const workspaceId =
     credentials?.providerSpecificData &&
     typeof credentials.providerSpecificData === "object" &&
@@ -2851,7 +2758,7 @@ export function saveImageErrorResult({
   error,
   requestBody = null,
   path = "/v1/images/generations",
-  // #10494: opt-in signal for executeImageWithCredentialFallback — set by a
+  // #8307: opt-in signal for executeImageWithCredentialFallback — set by a
   // provider handler when the failure is account/session-specific (expired
   // or blocked credentials) rather than a generic request/provider error, so
   // the retry loop tries the next eligible account even when the upstream

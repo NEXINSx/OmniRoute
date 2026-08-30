@@ -313,7 +313,7 @@ export async function diagnoseAllEgressIps(deps?: {
   const getConnections =
     deps?.getConnections ??
     (async () => {
-      const { getProviderConnections } = await import("./localDb");
+      const { getProviderConnections } = await import("@/lib/db/providers");
       return (await getProviderConnections({ authType: "oauth" })) as Array<{
         id: string;
         provider: string;

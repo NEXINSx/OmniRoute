@@ -68,7 +68,7 @@ jobs:
     # this runs on the dedicated VPS runner — clean env (no operator OMNIROUTE_API_KEY,
     # no local noauth CLIs => zero machine-specific false positives) and no contention.
     # Nightly cron normally finds the var false (VM off) and falls back to hosted.
-    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-release"]')) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-build"]')) || 'ubuntu-latest' }}
     env:
       JWT_SECRET: ci-nightly-secret-with-sufficient-length-for-validation
       API_KEY_SECRET: ci-nightly-api-key-secret-long
@@ -196,6 +196,26 @@ jobs:
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label base-red --body-file issue-body.md
           fi
 
+      - name: Close tracking issue when the branch is green again
+        if: steps.validate.outputs.exit == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ steps.branch.outputs.target }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # The open/update step above is the UPWARD half of the loop; without this
+          # step a stale "not green" issue outlives the fix and every base-green check
+          # (`AGENTS.md` → "Base-green check") keeps stamping new PRs as base-red inherited.
+          TITLE="🔴 Release branch not green: ${TARGET}"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "in:title $TITLE" --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY" --reason completed \
+              --comment "✅ \`${TARGET}\` is release-green again at \`${GITHUB_SHA:0:9}\` — ${RUN_URL}. Auto-closed by Release-Green (continuous)."
+            echo "Closed issue #$EXISTING"
+          fi
+
       - name: Upload report artifact
         if: always()
         uses: actions/upload-artifact@v7
@@ -217,7 +237,7 @@ jobs:
     # On a push, only run for a push to main — a push to release/* is handled by
     # release-green above. Schedule/dispatch always run (they also sweep main).
     if: ${{ github.event_name != 'push' || github.ref_name == 'main' }}
-    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-release"]')) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-build"]')) || 'ubuntu-latest' }}
     env:
       JWT_SECRET: ci-nightly-secret-with-sufficient-length-for-validation
       API_KEY_SECRET: ci-nightly-api-key-secret-long
@@ -292,6 +312,25 @@ jobs:
             echo "Updated existing issue #$EXISTING"
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label base-red --body-file issue-body.md
+          fi
+
+      - name: Close tracking issue when the branch is green again
+        if: steps.validate.outputs.exit == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # The open/update step above is the UPWARD half of the loop; without this
+          # step a stale "not green" issue outlives the fix and every base-green check
+          # (`AGENTS.md` → "Base-green check") keeps stamping new PRs as base-red inherited.
+          TITLE="🔴 main branch not green"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "in:title $TITLE" --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY" --reason completed \
+              --comment "✅ \`main\` is main-green again at \`${GITHUB_SHA:0:9}\` — ${RUN_URL}. Auto-closed by Release-Green (continuous)."
+            echo "Closed issue #$EXISTING"
           fi
 
       - name: Upload report artifact
@@ -384,6 +423,13 @@ jobs:
           # on `improvements`, complexity-ratchets only when `.improved`), and both exit
           # non-zero while the branch is over baseline — which is exactly when there is
           # nothing to bank. Their exit code is not the signal; the verifier below is.
+          # Velocity phase (quality-baseline.json `_policy`, relax-baselines.mjs): the caps
+          # were raised on purpose, so banking the measured shrink would silently undo the
+          # 20% headroom every night. Pause the downward ratchet until the phase closes.
+          if node -e 'process.exit(require("./config/quality/quality-baseline.json")._policy?.phase === "velocity" ? 0 : 1)'; then
+            echo "Velocity phase active — ratchet banking paused (see docs/architecture/QUALITY_GATES.md → Velocity phase)."
+            exit 0
+          fi
           set +e
           node scripts/check/check-file-size.mjs --update
           node scripts/check/check-complexity-ratchets.mjs --update
@@ -444,4 +490,73 @@ jobs:
           else
             gh pr create --repo "$GITHUB_REPOSITORY" --base "$TARGET" --head "$BANK_BRANCH" \
               --title "chore(quality): bank ratchet shrinks (${TARGET})" --body-file pr-body.md
+          fi
+
+  # ── Baseline headroom (velocity phase, 2026-08-30 → v4.0) ──────────────────────
+  # The ratchets only speak when a baseline is crossed. With every baseline loosened by
+  # 20% (scripts/quality/relax-baselines.mjs) the question is how fast the budget is
+  # being consumed — this job measures each gate the way CI does and posts the headroom
+  # table to one living issue, so a budget that fills in a week is visible before the
+  # first red PR. Advisory: never fails the workflow.
+  baseline-headroom:
+    name: Baseline headroom
+    if: ${{ github.event_name != 'push' }}
+    timeout-minutes: 60
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-light"]')) || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - uses: ./.github/actions/npm-ci-retry
+
+      - name: Measure headroom on ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          node scripts/quality/baseline-headroom.mjs \
+            --json reports/quality/headroom.json --md reports/quality/headroom.md
+          cat reports/quality/headroom.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload headroom report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: baseline-headroom-${{ github.run_id }}
+          path: reports/quality/headroom.*
+          retention-days: 90
+
+      - name: Post to the living issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="📈 Baseline headroom (velocity phase)"
+          BAD=$(node -e 'const r=require("./reports/quality/headroom.json").rows;console.log(r.filter(x=>x.status==="critical"||x.status==="warn").length)')
+          {
+            echo "Branch: \`${GITHUB_REF_NAME}\` · run: ${RUN_URL}"
+            echo ""
+            cat reports/quality/headroom.md
+          } > headroom-comment.md
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "in:title $TITLE" --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -z "$EXISTING" ]; then
+            EXISTING=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label quality-gate-finding \
+              --body "Living tracker for the velocity-phase baseline budget (docs/architecture/QUALITY_GATES.md → Velocity phase). One comment per nightly run; the newest comment is the current state." \
+              | grep -oE '[0-9]+$')
+          fi
+          gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body-file headroom-comment.md
+          if [ "$BAD" != "0" ]; then
+            gh issue edit "$EXISTING" --repo "$GITHUB_REPOSITORY" --add-label "headroom-alert" 2>/dev/null || true
+          else
+            gh issue edit "$EXISTING" --repo "$GITHUB_REPOSITORY" --remove-label "headroom-alert" 2>/dev/null || true
           fi

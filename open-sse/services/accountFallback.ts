@@ -59,9 +59,19 @@ import {
 import { setConnectionRateLimitUntil } from "@/lib/db/providers";
 import {
   parseRetryHintFromJsonBody,
+  parseDetailedRetryHintFromJsonBody,
   parseDelayString,
   MAX_SHORT_RETRY_HINT_MS,
 } from "./retryAfterJson.ts";
+
+export type RetryHintProvenance = "header" | "google_rpc_retry_info" | "body";
+
+export function retryHintBypassesMaxCooldownMs(
+  provenance: RetryHintProvenance | undefined
+): boolean {
+  return provenance === "header" || provenance === "google_rpc_retry_info";
+}
+
 import {
   isSubscriptionQuotaText,
   buildSubscriptionQuotaFallback,
@@ -239,6 +249,59 @@ export const OAUTH_INVALID_TOKEN_SIGNALS = [
   "invalid credentials",
 ];
 
+// A model that upstream has permanently retired — Gemini's deprecated-model 404
+// ("This model models/gemini-2.5-flash is no longer available to new users...")
+// and Fireworks/OpenAI-compatible "end of life" 410s ("has reached its end of
+// life ... and is no longer available") — will 404/410 on EVERY future request;
+// no cooldown short enough to retry soon is ever correct. Without this check
+// these fall through to the generic "all other errors" branch at the bottom of
+// checkFallbackError, which only applies a short (seconds-to-minutes) transient
+// cooldown, so combo/auto-routing keeps re-selecting the dead model roughly
+// every cooldown window, forever — wasted upstream calls that, at volume, look
+// like abusive traffic to the provider (observed: a Gemini free-tier key
+// retried `gemini-2.5-flash`/`gemini-2.5-flash-lite` every ~15-45 minutes for a
+// full day). Matched independent of MODEL_ACCESS_DENIED_PATTERNS below because
+// those only fire for status 400; this needs to catch the far more common
+// 404/410 status a retired model actually returns.
+export const MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS = [
+  /\bno longer available\b/i,
+  /\bno longer supported\b/i,
+  /\bhas reached (?:its |the )?end.?of.?life\b/i,
+  /\bmodel[\s\S]{0,40}?\b(?:deprecated|retired|discontinued|decommissioned)\b/i,
+  /\b(?:deprecated|retired|discontinued|decommissioned)[\s\S]{0,40}?\bmodel\b/i,
+];
+
+// A provider that has permanently retired its API base_url — the old endpoint
+// keeps returning 410/404 on EVERY future request until the connection's
+// base_url is updated by an operator; no cooldown short enough to retry soon
+// is ever correct. Without this check these fall through to the generic
+// "all other errors" branch, which only applies a short (seconds-to-minutes)
+// transient cooldown, so combo/auto-routing keeps re-selecting the dead
+// endpoint roughly every cooldown window, forever — wasted upstream calls
+// that, at volume, look like abusive traffic (observed: freeaiapikey's moved
+// endpoint retried every ~1 minute for a full day: "This API endpoint has
+// moved. Please update your base_url to https://api.freeaiapikey.com/v1 —
+// the old endpoint on freeaiapikey.com no longer works.").
+export const ENDPOINT_PERMANENTLY_MOVED_PATTERNS = [
+  /\bendpoint has moved\b/i,
+  /\bno longer works\b/i,
+  /\bupdate your base.?url\b/i,
+];
+
+// A billing/account suspension that requires manual operator action (unpaid
+// invoice, spending limit) — text varies per provider/account name, e.g.
+// Fireworks: "Account hummern is suspended, possibly due to reaching the
+// monthly spending limit or failure to pay past invoices." This does not
+// match ACCOUNT_DEACTIVATED_SIGNALS' fixed "your account has been suspended"
+// substring, and several providers surface it on a status (412) that
+// checkFallbackError does not otherwise classify — so it fell through to the
+// generic transient-error branch and got retried every few minutes, all day,
+// against an account that cannot succeed until billing is fixed.
+export const ACCOUNT_SUSPENDED_BILLING_PATTERNS = [
+  /\bsuspended\b[\s\S]{0,120}?\b(?:spending limit|billing|invoice|payment)\b/i,
+  /\b(?:spending limit|billing|invoice|payment)\b[\s\S]{0,120}?\bsuspended\b/i,
+];
+
 // Context overflow patterns — the prompt exceeds the model's maximum context length.
 // Different providers phrase this differently. Used to decide whether a 400 error
 // should trigger combo fallback (a different model may have a larger context window).
@@ -412,6 +475,34 @@ export function isCreditsExhausted(errorText: string): boolean {
 }
 
 /**
+ * Returns true if the response body indicates the requested model has been
+ * permanently retired by the provider (see MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS).
+ */
+export function isModelPermanentlyUnavailable(errorText: string): boolean {
+  const text = String(errorText || "");
+  return MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Returns true if response body indicates the provider's API endpoint/base_url
+ * has permanently moved (see ENDPOINT_PERMANENTLY_MOVED_PATTERNS).
+ */
+export function isEndpointPermanentlyMoved(errorText: string): boolean {
+  const text = String(errorText || "");
+  return ENDPOINT_PERMANENTLY_MOVED_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Returns true if response body indicates the account is suspended for a
+ * billing reason (unpaid invoice, spending limit) — see
+ * ACCOUNT_SUSPENDED_BILLING_PATTERNS.
+ */
+export function isAccountSuspendedForBilling(errorText: string): boolean {
+  const text = String(errorText || "");
+  return ACCOUNT_SUSPENDED_BILLING_PATTERNS.some((p) => p.test(text));
+}
+
+/**
  * T11: Returns true if response body indicates OAuth token is invalid/expired.
  * This is different from permanent account deactivation - token refresh can recover.
  */
@@ -501,6 +592,66 @@ function getCanonicalLockProvider(provider: string): string {
     canonicalProviderCache.set(provider, canonical);
   }
   return canonical;
+}
+
+export function shouldDeferAntigravityQuotaStateToCaller(
+  provider: string,
+  hasCallerOwner: boolean
+): boolean {
+  const canonicalProvider = getCanonicalLockProvider(provider);
+  return (
+    hasCallerOwner && (canonicalProvider === "antigravity" || canonicalProvider === "agy")
+  );
+}
+
+export async function recordCoreOwnedAntigravityQuotaState({
+  provider,
+  connectionId,
+  model,
+  status,
+  errorText,
+  headers,
+  profileOverride = null,
+}: {
+  provider: string;
+  connectionId: string;
+  model: string;
+  status: number;
+  errorText: string;
+  headers: Headers | Record<string, string> | null;
+  profileOverride?: ProviderProfile | null;
+}) {
+  const profile = profileOverride ?? (await getRuntimeProviderProfile(provider));
+  const fallback = checkFallbackError(
+    status,
+    errorText,
+    0,
+    model,
+    provider,
+    headers,
+    profile
+  );
+  const lockout = recordModelLockoutFailure(
+    provider,
+    connectionId,
+    model,
+    "quota_exhausted",
+    status,
+    fallback.baseCooldownMs ?? profile.baseCooldownMs ?? COOLDOWN_MS.rateLimit,
+    profile,
+    {
+      exactCooldownMs:
+        fallback.usedUpstreamRetryHint === true
+          ? fallback.cooldownMs
+          : (fallback.quotaResetHintMs ?? null),
+      maxCooldownMs: profile.maxCooldownMs,
+      scope: "exact",
+      exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(
+        fallback.retryHintSource
+      ),
+    }
+  );
+  return { cooldownMs: lockout.cooldownMs, failureCount: lockout.failureCount };
 }
 
 function getModelLockKey(
@@ -654,13 +805,9 @@ export const lockExactModel = exactModelLock.createLockExactModel(
 /**
  * Pick the `exactCooldownMs` to apply to a model lockout (#1308).
  *
- * When the upstream response carried an explicit reset longer than the base
- * cooldown — e.g. Antigravity "Resets in 160h", a `Retry-After` header, or a
- * parseable reset text already extracted by `checkFallbackError`/`parseRetryFromErrorText`
- * into `parsedCooldownMs` — honor it exactly so an exhausted model is not retried
- * again within minutes. Otherwise preserve the previous behavior: return `0` to let
- * `recordModelLockoutFailure` apply its exponential backoff, or the base cooldown when
- * backoff is disabled.
+ * Prefer a parsed reset longer than the base cooldown so a precise body hint
+ * still beats exponential backoff. Whether it may bypass maxCooldownMs is a
+ * separate provenance decision made by retryHintBypassesMaxCooldownMs.
  */
 export function selectLockoutCooldownMs(
   parsedCooldownMs: number,
@@ -686,14 +833,11 @@ export function recordModelLockoutFailure(
     scope?: "exact" | "quota_family";
     /**
      * #6863 vs #7940: set true only when `exactCooldownMs` came from an actual
-     * upstream signal (Retry-After header, X-RateLimit-Reset, or a reset parsed
-     * from the error body — i.e. `usedUpstreamRetryHint`/`quotaResetHintMs` from
-     * `checkFallbackError`). Such a reset is honored exactly, even past
-     * `maxCooldownMs` — a real "Resets in 92h" must not be clamped down to
-     * minutes, or the router hammers 429 against quota that is known not to be
-     * back yet. Leave false/omitted for SYNTHETIC estimates (the quota_exhausted
-     * until-midnight default below, plain exponential backoff) — those stay
-     * capped, per #7940.
+     * authoritative upstream signal: Retry-After/X-RateLimit-Reset headers or
+     * google.rpc.RetryInfo. Generic JSON and prose-derived reset text are useful
+     * exact hints but remain bounded by maxCooldownMs. Leave false/omitted for
+     * those body hints and for synthetic estimates (the quota_exhausted
+     * until-midnight default below, plain exponential backoff).
      */
     exactCooldownIsUpstreamReset?: boolean;
   } = {}
@@ -1289,7 +1433,7 @@ export function parseRetryFromErrorText(errorText: unknown): number | null {
     }
   }
 
-  const match = /reset after (\d+h)?(\d+m)?(\d+s)?/i.exec(msg);
+  const match = /resets? after (\d+h)?(\d+m)?(\d+s)?/i.exec(msg);
   if (match?.[1] || match?.[2] || match?.[3]) return computeDurationMs(match);
 
   // Variant without "reset after": "will reset after XhYmZs"
@@ -1514,6 +1658,7 @@ export function checkFallbackError(
   baseCooldownMs?: number;
   newBackoffLevel?: number;
   usedUpstreamRetryHint?: boolean;
+  retryHintSource?: RetryHintProvenance;
   reason?: string;
   permanent?: boolean;
   creditsExhausted?: boolean;
@@ -1597,20 +1742,37 @@ export function checkFallbackError(
     return null;
   }
 
-  function getUpstreamRetryHintMs() {
-    if (!profile?.useUpstreamRetryHints) return null;
+  function detectRetryHint(): {
+    retryAfterMs: number;
+    provenance: RetryHintProvenance;
+  } | null {
     const resetTime = parseResetFromHeaders(headers);
     if (resetTime) {
       const waitMs = Math.max(resetTime - Date.now(), 0);
-      if (waitMs > 0) return waitMs;
+      if (waitMs > 0) return { retryAfterMs: waitMs, provenance: "header" };
+    }
+
+    const detailedJsonHint = parseDetailedRetryHintFromJsonBody(
+      errorStr,
+      MAX_PROVIDER_COOLDOWN_MS
+    );
+    if (detailedJsonHint) {
+      return {
+        retryAfterMs: detailedJsonHint.retryAfterMs,
+        provenance: detailedJsonHint.provenance,
+      };
     }
 
     const retryFromErrorText = parseRetryFromErrorText(errorStr);
     if (retryFromErrorText && retryFromErrorText > 0) {
-      return retryFromErrorText;
+      return { retryAfterMs: retryFromErrorText, provenance: "body" };
     }
 
     return null;
+  }
+
+  function getUpstreamRetryHint() {
+    return profile?.useUpstreamRetryHints ? detectRetryHint() : null;
   }
 
   function getScaledBaseCooldown(reason: RateLimitReasonValue, level = backoffLevel) {
@@ -1632,14 +1794,15 @@ export function checkFallbackError(
   }
 
   function buildRetryableFallback(reason: RateLimitReasonValue) {
-    const upstreamRetryHintMs = getUpstreamRetryHintMs();
-    if (typeof upstreamRetryHintMs === "number" && upstreamRetryHintMs > 0) {
+    const upstreamRetryHint = getUpstreamRetryHint();
+    if (upstreamRetryHint && upstreamRetryHint.retryAfterMs > 0) {
       return {
         shouldFallback: true,
-        cooldownMs: upstreamRetryHintMs,
-        baseCooldownMs: upstreamRetryHintMs,
+        cooldownMs: upstreamRetryHint.retryAfterMs,
+        baseCooldownMs: upstreamRetryHint.retryAfterMs,
         newBackoffLevel: 0,
         usedUpstreamRetryHint: true,
+        retryHintSource: upstreamRetryHint.provenance,
         reason,
       };
     }
@@ -1670,6 +1833,56 @@ export function checkFallbackError(
         cooldownMs: 365 * 24 * 60 * 60 * 1000, // 1 year = effectively permanent
         reason: RateLimitReason.AUTH_ERROR,
         permanent: true,
+      };
+    }
+
+    // A retired model (Gemini deprecated-model 404, Fireworks/etc. end-of-life 410)
+    // will fail identically on every future request — lock it for a long, fixed
+    // window instead of falling through to the generic transient-error branch's
+    // short backoff, which would otherwise keep re-selecting a permanently dead
+    // model roughly every cooldown window, all day, hammering the provider with
+    // guaranteed-to-fail requests (see MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS).
+    // `quotaResetHintMs` flows into combo.ts's per-request model-lockout as an
+    // upstream-verified reset, so it is honored in full and not clamped to the
+    // normal ~20min model-lockout ceiling.
+    if (
+      (status === HTTP_STATUS.NOT_FOUND || status === HTTP_STATUS.GONE) &&
+      isModelPermanentlyUnavailable(errorStr)
+    ) {
+      const cooldownMs = 24 * 60 * 60 * 1000; // 24h
+      return {
+        shouldFallback: true,
+        cooldownMs,
+        reason: "not_found",
+        quotaResetHintMs: cooldownMs,
+      };
+    }
+
+    // The provider's API endpoint/base_url has permanently moved — every future
+    // request against the stale base_url fails identically, so lock it for a
+    // long, fixed window instead of the generic transient-error branch's short
+    // backoff (see ENDPOINT_PERMANENTLY_MOVED_PATTERNS).
+    if (isEndpointPermanentlyMoved(errorStr)) {
+      const cooldownMs = 24 * 60 * 60 * 1000; // 24h
+      return {
+        shouldFallback: true,
+        cooldownMs,
+        reason: "not_found",
+        quotaResetHintMs: cooldownMs,
+      };
+    }
+
+    // The account is suspended for a billing reason (unpaid invoice, spending
+    // limit) that varies per provider/account name and can arrive on a status
+    // checkFallbackError does not otherwise classify (e.g. Fireworks 412) —
+    // treat it like a credits-exhausted account so it stops being retried
+    // every few minutes until billing is fixed (see ACCOUNT_SUSPENDED_BILLING_PATTERNS).
+    if (isAccountSuspendedForBilling(errorStr)) {
+      return {
+        shouldFallback: true,
+        cooldownMs: COOLDOWN_MS.paymentRequired ?? 3600 * 1000, // 1h cooldown
+        reason: RateLimitReason.QUOTA_EXHAUSTED,
+        creditsExhausted: true,
       };
     }
 
@@ -1745,7 +1958,7 @@ export function checkFallbackError(
     if (shouldUseQuotaSignal && !isCreditsExhausted(errorStr) && !isDailyQuotaExhausted(errorStr)) {
       const subResult = buildSubscriptionQuotaFallback(
         errorStr,
-        getUpstreamRetryHintMs,
+        () => getUpstreamRetryHint()?.retryAfterMs ?? null,
         parseRetryFromErrorText,
         provider
       );
@@ -1760,7 +1973,13 @@ export function checkFallbackError(
     const sessionResult = buildSessionQuotaFallback(errorStr);
     if (sessionResult) return sessionResult;
 
-    const quotaResetHintMs = parseRetryFromErrorText(errorStr);
+    const detectedRetryHint = detectRetryHint();
+    const quotaResetHintMs = detectedRetryHint?.retryAfterMs ?? parseRetryFromErrorText(errorStr);
+    const quotaResetHintSource: RetryHintProvenance | undefined = detectedRetryHint
+      ? detectedRetryHint.provenance
+      : quotaResetHintMs
+        ? "body"
+        : undefined;
     if (
       shouldUseQuotaSignal &&
       quotaResetHintMs &&
@@ -1770,6 +1989,7 @@ export function checkFallbackError(
       return {
         ...fallbackResult,
         quotaResetHintMs,
+        retryHintSource: fallbackResult.retryHintSource ?? quotaResetHintSource,
       };
     }
 

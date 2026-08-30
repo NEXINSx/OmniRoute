@@ -93,6 +93,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
@@ -108,8 +109,11 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       # Single ESLint inventory (JSON) — quality-gate reuses the artifact instead of
       # a second cold full-tree pass for eslintWarnings ratchet counts.
       - name: ESLint (JSON report)
@@ -126,6 +130,8 @@ jobs:
       - run: npm run check:route-validation:t06
       - run: npm run check:any-budget:t11
       - run: npm run check:provider-consistency
+      - run: npm run check:model-lifecycle
+      - run: npm run check:provider-asset-provenance
       - run: npm run check:fetch-targets
       - run: npm run check:deps
       - run: npm run check:file-size
@@ -206,8 +212,11 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       # Coverage mergeada (coverage-summary.json) p/ o ratchet de cobertura.
       # continue-on-error: o artifact pode não existir se a job test-coverage foi
       # SKIPPED (shard flaky). Nesse caso collect-metrics pula coverage.* (ausente sem
@@ -606,13 +615,24 @@ jobs:
     # Dynamic runner: when the release captain flips the USE_VPS_RUNNER repo var to
     # 'true' (scripts/vps/release-runner-up.sh does it after the self-hosted VM is
     # online), the heavy jobs run on the dedicated 32-core VPS runners (label
-    # omni-release) instead of queueing on the 20-concurrent-job hosted pool.
+    # omni-build) instead of queueing on the 20-concurrent-job hosted pool.
     # Safety: fork PRs NEVER reach the self-hosted runner — the expression falls
     # back to ubuntu-latest unless the PR head repo is this repository (push /
     # dispatch events are own-origin by definition). Any failure path (VM down,
     # var unset/false) also falls back to ubuntu-latest.
-    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && fromJSON('["self-hosted","omni-release"]') || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && fromJSON('["self-hosted","omni-build"]') || 'ubuntu-latest' }}
     needs: changes
+    # The .113 pool runs ONE next-build with room to spare and two at the edge: the
+    # box has 31 GB and a single next-build peaks at 14–16 GB RSS. On 2026-08-28
+    # 13:50Z the kernel OOM-killed main's build while a PR build ran beside it
+    # (five Build jobs had been queued by a burst of PRs). Two lanes: main keeps
+    # its own so a release is never queued behind PR traffic; PR builds serialize
+    # among themselves. docker-publish.yml's amd64 leg joins `heavy-build-main`
+    # so a :next image build waits beside this artefact instead of becoming the
+    # third heavy (#11976). GitHub keeps one running + one pending per group.
+    concurrency:
+      group: heavy-build-${{ github.ref == 'refs/heads/main' && 'main' || 'pr' }}
+      cancel-in-progress: false
     if: ${{ github.event_name != 'pull_request' || (needs.changes.outputs.code == 'true' && github.event.pull_request.draft == false) }}
     steps:
       - uses: actions/checkout@v7
@@ -646,14 +666,14 @@ jobs:
         # Keep standalone/node_modules intact: package/electron jobs consume the
         # Next-traced standalone tree and must not replace it with root node_modules.
         run: |
-          tar -czf /tmp/e2e-build.tar.gz \
+          tar -czf "$RUNNER_TEMP/e2e-build.tar.gz" \
             --exclude='.build/next/cache' \
             .build/next
       - name: Upload Next.js build for downstream jobs
         uses: actions/upload-artifact@v7
         with:
           name: next-build
-          path: /tmp/e2e-build.tar.gz
+          path: ${{ runner.temp }}/e2e-build.tar.gz
           retention-days: 1
 
   package-artifact:
@@ -676,10 +696,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: next-build
-          path: /tmp/
+          # Workspace-relative on purpose: the matrix below includes windows-latest, whose
+          # default shell is pwsh, where $RUNNER_TEMP is empty (it is $env:RUNNER_TEMP) —
+          # #11896's first cut broke the Electron smoke on exactly that. A relative path
+          # works in bash and pwsh alike; hosted workspaces are ephemeral.
+          path: next-build-artifact
       - name: Extract Next.js build artifact
         run: |
-          tar -xzf /tmp/e2e-build.tar.gz
+          tar -xzf next-build-artifact/e2e-build.tar.gz
       # build:cli consumes the downloaded .build/next standalone artifact and assembles dist/;
       # it only rebuilds if the downloaded standalone artifact is missing.
       - run: npm run build:cli
@@ -767,10 +791,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: next-build
-          path: /tmp/
+          # Workspace-relative on purpose: the matrix below includes windows-latest, whose
+          # default shell is pwsh, where $RUNNER_TEMP is empty (it is $env:RUNNER_TEMP) —
+          # #11896's first cut broke the Electron smoke on exactly that. A relative path
+          # works in bash and pwsh alike; hosted workspaces are ephemeral.
+          path: next-build-artifact
       - name: Extract Next.js build artifact
         run: |
-          tar -xzf /tmp/e2e-build.tar.gz
+          tar -xzf next-build-artifact/e2e-build.tar.gz
       - name: Install Electron dependencies
         working-directory: electron
         run: npm install --no-audit --no-fund
@@ -957,7 +985,11 @@ jobs:
     # 10min was sized before #7114 added the lcov reporter (Codecov/Sonar need it);
     # merging 8 shard JSONs + text+json+lcov now takes ~10-12min — three consecutive
     # release-tip runs died at exactly 10m as job-timeout "cancelled" (2026-07-15/16).
-    timeout-minutes: 20
+    # 30, not 20 (2026-08-29): the informational Codecov upload below hung for the rest of
+    # the budget on two consecutive main runs (33207760653, 33215115341); the job ended
+    # `cancelled` and dragged the whole run's conclusion to `cancelled` although every
+    # blocking job was green. The upload step now has its own ceiling; this is headroom.
+    timeout-minutes: 30
     needs: test-unit
     if: ${{ !cancelled() && needs.test-unit.result == 'success' && !contains(github.event.pull_request.labels.*.name, 'hotfix') }}
     env:
@@ -1036,6 +1068,10 @@ jobs:
       # (if-no-files-found: warn) — Sonar consumes the same file.
       - name: Upload coverage to Codecov (informational)
         if: always()
+        # Informational means informational: its own ceiling and continue-on-error, so a
+        # stalled upload can neither eat the job's budget nor turn a green job cancelled.
+        timeout-minutes: 5
+        continue-on-error: true
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: coverage/lcov.info
@@ -1230,10 +1266,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: next-build
-          path: /tmp/
+          # Workspace-relative on purpose: the matrix below includes windows-latest, whose
+          # default shell is pwsh, where $RUNNER_TEMP is empty (it is $env:RUNNER_TEMP) —
+          # #11896's first cut broke the Electron smoke on exactly that. A relative path
+          # works in bash and pwsh alike; hosted workspaces are ephemeral.
+          path: next-build-artifact
       - name: Extract Next.js build artifact
         run: |
-          tar -xzf /tmp/e2e-build.tar.gz
+          tar -xzf next-build-artifact/e2e-build.tar.gz
       # WS4.1: duration-balanced shards (LPT over config/quality/e2e-timings.json).
       # Measured skew of plain --shard was 14× (24m47s vs 1m47s) — E2E was the CI
       # critical path. The balancer self-verifies completeness and exits non-zero on

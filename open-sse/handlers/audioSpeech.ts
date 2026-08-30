@@ -23,7 +23,6 @@ import { kieExecutor } from "../executors/kie.ts";
 import { vertexGenerateSpeech } from "../executors/vertexMedia.ts";
 import { handleGeminiTtsSpeech } from "../executors/geminiTts.ts";
 import { handleAwsPollySpeech } from "../executors/awsPollyTts.ts";
-import { handleEdgeTtsSpeech } from "../executors/edgeTts.ts";
 import { GttsUpstreamError, normalizeGttsLang, synthesizeGtts } from "../executors/gtts.ts";
 import { errorResponse } from "../utils/error.ts";
 import { resolveElevenLabsVoiceId } from "./elevenLabsVoiceMap.ts";
@@ -844,7 +843,6 @@ export async function handleAudioSpeech({
   credentials,
   resolvedProvider = null,
   resolvedModel = null,
-  clientIp = null,
 }) {
   if (!body.model) {
     return errorResponse(400, "model is required");
@@ -866,7 +864,7 @@ export async function handleAudioSpeech({
   if (!providerConfig) {
     return errorResponse(
       400,
-      `No speech provider found for model "${body.model}". Use format provider/model. Available: openai, hyperbolic, deepgram, nvidia, elevenlabs, huggingface, inworld, cartesia, fishaudio, playht, kie, aws-polly, xiaomi-mimo, edgetts, gtts, coqui, tortoise, qwen`
+      `No speech provider found for model "${body.model}". Use format provider/model. Available: openai, hyperbolic, deepgram, nvidia, elevenlabs, huggingface, inworld, cartesia, fishaudio, playht, kie, aws-polly, xiaomi-mimo, gtts, coqui, tortoise, qwen`
     );
   }
 
@@ -944,10 +942,6 @@ export async function handleAudioSpeech({
 
     if (providerConfig.format === "aws-polly") {
       return handleAwsPollySpeech(providerConfig, body, modelId, token, credentials);
-    }
-
-    if (providerConfig.format === "edgetts") {
-      return handleEdgeTtsSpeech(body, clientIp);
     }
 
     if (providerConfig.format === "gtts") {

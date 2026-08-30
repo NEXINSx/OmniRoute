@@ -4,7 +4,9 @@
  */
 
 import { getResolvedModelCapabilities } from "@/lib/modelCapabilities";
-import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS } from "@omniroute/open-sse/config/providerModels";
+import { getActiveSyncedCatalog } from "@/lib/db/models/activeSyncedCatalog";
+import { PROVIDER_MODELS } from "@omniroute/open-sse/config/providerModels";
+import { getRegisteredProviderEffortBaseModelId } from "@omniroute/open-sse/utils/registeredEffortVariants.ts";
 import { hasUsableCredentialsForModel } from "./visionBridgeCredentials";
 import { isVisionBridgeForcedModel } from "@/shared/constants/visionBridgeDefaults";
 
@@ -106,6 +108,62 @@ function calculateSuccessRate(modelId: string): number {
  */
 export interface VisionBridgeRouterDeps {
   hasUsableCredentials?: (model: string) => Promise<boolean | null>;
+  getActiveSyncedCatalog?: (provider: string) => Promise<VisionModelCatalog>;
+}
+
+export interface VisionModelCatalog {
+  authoritative: boolean;
+  models: Array<{ id: string }>;
+}
+
+type CatalogAwareRegistryModel = {
+  id: string;
+  liveCatalogIds?: readonly string[];
+};
+
+async function readActiveCatalog(
+  providerAlias: string,
+  deps: VisionBridgeRouterDeps
+): Promise<VisionModelCatalog> {
+  const readCatalog = deps.getActiveSyncedCatalog ?? getActiveSyncedCatalog;
+  try {
+    return await readCatalog(providerAlias);
+  } catch {
+    return { authoritative: false, models: [] };
+  }
+}
+
+function createCatalogModelPredicate(
+  providerAlias: string,
+  catalog: VisionModelCatalog
+): (model: CatalogAwareRegistryModel) => boolean {
+  if (!catalog.authoritative) return () => true;
+
+  const liveIds = new Set(catalog.models.map((entry) => entry.id));
+  return (model) => {
+    if (liveIds.has(model.id) || model.liveCatalogIds?.some((id) => liveIds.has(id))) {
+      return true;
+    }
+
+    const effortBaseModelId = getRegisteredProviderEffortBaseModelId(providerAlias, model.id);
+    return effortBaseModelId !== null && liveIds.has(effortBaseModelId);
+  };
+}
+
+async function cachedModelRemainsAvailable(
+  fullModelId: string,
+  deps: VisionBridgeRouterDeps
+): Promise<boolean> {
+  const separator = fullModelId.indexOf("/");
+  if (separator < 1) return false;
+
+  const providerAlias = fullModelId.slice(0, separator);
+  const modelId = fullModelId.slice(separator + 1);
+  const registryModel = PROVIDER_MODELS[providerAlias]?.find((model) => model.id === modelId);
+  if (!registryModel) return false;
+
+  const catalog = await readActiveCatalog(providerAlias, deps);
+  return createCatalogModelPredicate(providerAlias, catalog)(registryModel);
 }
 
 /**
@@ -122,57 +180,62 @@ async function getVisionCapableModels(
   deps: VisionBridgeRouterDeps = {}
 ): Promise<VisionModelCandidate[]> {
   const checkCreds = deps.hasUsableCredentials ?? hasUsableCredentialsForModel;
-  const candidates: VisionModelCandidate[] = [];
-  const checks: Array<Promise<void>> = [];
-
-  for (const [providerAlias, models] of Object.entries(PROVIDER_MODELS)) {
-    if (!Array.isArray(models)) continue;
-
-    for (const model of models) {
-      if (!model?.id) continue;
-
-      const fullModelId = `${providerAlias}/${model.id}`;
-      const caps = getResolvedModelCapabilities(fullModelId);
-
-      if (caps.supportsVision === true && !isVisionBridgeForcedModel(fullModelId)) {
-        checks.push(
-          checkCreds(fullModelId).then((usable) => {
-            // Only a confirmed `false` excludes a candidate — `null` (indeterminate,
-            // e.g. unit tests / early boot) fails open so existing behavior is preserved
-            // when the credential store can't be checked.
-            if (usable === false) return;
-
-            // Determine priority based on provider type (lower = better).
-            // Do NOT prefer opencode-* first: those catalog entries often resolve to a
-            // noauth connection and 401 "Missing API key", hijacking working providers
-            // (e.g. zai/glm-5.2 combo targets) when Vision Bridge auto-reroutes.
-            let priority = 100;
-            if (providerAlias === "openai" || providerAlias === "anthropic") {
-              priority = 50; // Major providers with real API keys
-            } else if (providerAlias === "vertex" || providerAlias === "gemini") {
-              priority = 55;
-            } else if (providerAlias.startsWith("opencode-")) {
-              priority = 95; // Free/catalog — only if nothing credentialed is available
-            } else {
-              priority = 75; // Other providers
-            }
-
-            candidates.push({
-              modelId: model.id,
-              fullName: fullModelId,
-              priority,
-              averageLatencyMs: calculateAverageLatency(fullModelId),
-              lastUsedAt: 0,
-              successRate: calculateSuccessRate(fullModelId),
-            });
-          })
+  const candidatesByProvider = await Promise.all(
+    Object.entries(PROVIDER_MODELS).map(async ([providerAlias, models]) => {
+      if (!Array.isArray(models)) return [];
+      const visionModels = models.filter((model) => {
+        if (!model?.id) return false;
+        const fullModelId = `${providerAlias}/${model.id}`;
+        return (
+          getResolvedModelCapabilities(fullModelId).supportsVision === true &&
+          !isVisionBridgeForcedModel(fullModelId)
         );
-      }
-    }
-  }
+      });
+      if (visionModels.length === 0) return [];
 
-  await Promise.all(checks);
-  return candidates;
+      const usableModels = (
+        await Promise.all(
+          visionModels.map(async (model) =>
+            (await checkCreds(`${providerAlias}/${model.id}`)) === false ? null : model
+          )
+        )
+      ).filter((model): model is (typeof visionModels)[number] => model !== null);
+      if (usableModels.length === 0) return [];
+
+      const catalog = await readActiveCatalog(providerAlias, deps);
+      const modelExistsInCatalog = createCatalogModelPredicate(providerAlias, catalog);
+
+      const candidates = usableModels.map((model): VisionModelCandidate | null => {
+        if (!modelExistsInCatalog(model)) return null;
+
+        const fullModelId = `${providerAlias}/${model.id}`;
+
+        let priority = 100;
+        if (providerAlias === "openai" || providerAlias === "anthropic") {
+          priority = 50;
+        } else if (providerAlias === "vertex" || providerAlias === "gemini") {
+          priority = 55;
+        } else if (providerAlias.startsWith("opencode-")) {
+          priority = 95;
+        } else {
+          priority = 75;
+        }
+
+        return {
+          modelId: model.id,
+          fullName: fullModelId,
+          priority,
+          averageLatencyMs: calculateAverageLatency(fullModelId),
+          lastUsedAt: 0,
+          successRate: calculateSuccessRate(fullModelId),
+        };
+      });
+
+      return candidates.filter((candidate): candidate is VisionModelCandidate => candidate !== null);
+    })
+  );
+
+  return candidatesByProvider.flat();
 }
 
 /**
@@ -243,7 +306,10 @@ export async function getBestVisionModel(
       : "default";
   const cached = selectionCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.modelId;
+    if (await cachedModelRemainsAvailable(cached.modelId, deps)) {
+      return cached.modelId;
+    }
+    selectionCache.delete(cacheKey);
   }
 
   // Get all vision-capable candidates

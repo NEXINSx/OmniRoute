@@ -13,6 +13,7 @@ import {
   deleteAllFromTable,
   deleteCallLogArtifacts,
   deleteFromTableBefore,
+  tableExists,
   type DeleteByPeriodTarget,
 } from "./cleanup/usagePurge";
 
@@ -196,7 +197,9 @@ export async function cleanupMcpAudit(): Promise<CleanupResult> {
 /**
  * Clean up old config_audit_log based on retention settings.
  */
-export async function cleanupConfigAudit(retentionDays = getRetentionSettings().configAudit): Promise<CleanupResult> {
+export async function cleanupConfigAudit(
+  retentionDays = getRetentionSettings().configAudit
+): Promise<CleanupResult> {
   const db = getDbInstance();
   const result: CleanupResult = { deleted: 0, errors: 0 };
 
@@ -237,7 +240,9 @@ export async function cleanupA2aEvents(): Promise<CleanupResult> {
     const runResult = stmt.run(cutoffISO);
     result.deleted = runResult.changes;
 
-    console.log(`[Cleanup] Deleted ${result.deleted} a2a_task_events older than ${retentionDays} days`);
+    console.log(
+      `[Cleanup] Deleted ${result.deleted} a2a_task_events older than ${retentionDays} days`
+    );
   } catch (err: unknown) {
     console.error("[Cleanup] Error cleaning a2a_task_events:", err);
     result.errors++;
@@ -383,6 +388,8 @@ export async function cleanupCompressionRunTelemetry(): Promise<CleanupResult> {
   const result: CleanupResult = { deleted: 0, errors: 0 };
 
   try {
+    if (!tableExists("compression_run_telemetry")) return result;
+
     const stmt = db.prepare("DELETE FROM compression_run_telemetry WHERE timestamp < ?");
     const runResult = stmt.run(cutoffEpoch);
     result.deleted = runResult.changes;
@@ -600,16 +607,56 @@ function isResetUsageHistoryPeriod(period: string): period is ResetUsageHistoryP
  */
 const RESET_TARGETS: Array<DeleteByPeriodTarget & { resultKey: keyof ResetUsageHistoryResult }> = [
   { table: "usage_history", column: "timestamp", cutoff: "iso", resultKey: "deletedUsageHistory" },
-  { table: "daily_usage_summary", column: "date", cutoff: "date", resultKey: "deletedDailySummary" },
-  { table: "hourly_usage_summary", column: "date_hour", cutoff: "dateHour", resultKey: "deletedHourlySummary" },
+  {
+    table: "daily_usage_summary",
+    column: "date",
+    cutoff: "date",
+    resultKey: "deletedDailySummary",
+  },
+  {
+    table: "hourly_usage_summary",
+    column: "date_hour",
+    cutoff: "dateHour",
+    resultKey: "deletedHourlySummary",
+  },
   { table: "call_logs", column: "timestamp", cutoff: "iso", resultKey: "deletedCallLogs" },
-  { table: "request_detail_logs", column: "timestamp", cutoff: "iso", resultKey: "deletedRequestDetailLogs" },
+  {
+    table: "request_detail_logs",
+    column: "timestamp",
+    cutoff: "iso",
+    resultKey: "deletedRequestDetailLogs",
+  },
   { table: "proxy_logs", column: "timestamp", cutoff: "iso", resultKey: "deletedProxyLogs" },
-  { table: "relay_logs", column: "created_at", cutoff: "epochSeconds", resultKey: "deletedRelayLogs" },
-  { table: "compression_analytics", column: "timestamp", cutoff: "iso", resultKey: "deletedCompressionAnalytics" },
-  { table: "compression_run_telemetry", column: "timestamp", cutoff: "epochMs", resultKey: "deletedCompressionRunTelemetry" },
-  { table: "routing_decisions", column: "created_at", cutoff: "iso", resultKey: "deletedRoutingDecisions" },
-  { table: "quota_consumption", column: "updated_at", cutoff: "epochMs", resultKey: "deletedQuotaConsumption" },
+  {
+    table: "relay_logs",
+    column: "created_at",
+    cutoff: "epochSeconds",
+    resultKey: "deletedRelayLogs",
+  },
+  {
+    table: "compression_analytics",
+    column: "timestamp",
+    cutoff: "iso",
+    resultKey: "deletedCompressionAnalytics",
+  },
+  {
+    table: "compression_run_telemetry",
+    column: "timestamp",
+    cutoff: "epochMs",
+    resultKey: "deletedCompressionRunTelemetry",
+  },
+  {
+    table: "routing_decisions",
+    column: "created_at",
+    cutoff: "iso",
+    resultKey: "deletedRoutingDecisions",
+  },
+  {
+    table: "quota_consumption",
+    column: "updated_at",
+    cutoff: "epochMs",
+    resultKey: "deletedQuotaConsumption",
+  },
   { table: "token_ledger", column: "created_at", cutoff: "iso", resultKey: "deletedTokenLedger" },
 ];
 

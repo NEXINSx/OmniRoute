@@ -16,17 +16,43 @@ All requests require a valid Bearer token or session cookie. Obtain a token via 
 
 ### POST /api/v1/session-leases
 
-Acquire, renew, or release an exclusive managed connection lease
+Acquire, inspect, renew, or release an exclusive managed connection lease
 
 Requires an API key with `lease:exclusive` and an explicit non-empty
 `allowedConnections` policy. The opaque owner is bound to the authenticated API key;
 the lease owns an eligible connection, not a provider or model. Managed inference
 requests present the owner and exact generation headers. Temporary foreign occupancy
-returns 429 `WAITING_FOR_CAPACITY` with `Retry-After`.
+returns 429 `WAITING_FOR_CAPACITY` with `Retry-After`. Acquire, renew, and release retain
+their connection-free response shapes. The explicit status action is owner-, key-, and
+generation-fenced and returns only privacy-safe display metadata for an active binding.
 
 
 ```bash
 curl -X POST https://localhost:20128/api/v1/session-leases \
+  -H "Authorization: Bearer $OMNIROUTE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### GET /api/v1/search
+
+List search providers
+
+Lists configured search providers and their supported search types.
+
+```bash
+curl https://localhost:20128/api/v1/search \
+  -H "Authorization: Bearer $OMNIROUTE_TOKEN"
+```
+
+### POST /api/v1/search
+
+Run a unified search
+
+Searches the web, news, or X through a configured provider. Set `provider` to `xquik-search` to use Xquik for X search. The aliases `xquik` and `xquik_search` resolve to the same provider. AnySearch (`anysearch-search`, aliases `anysearch` / `anysearch_search`) provides free fallback-only web search.
+
+```bash
+curl -X POST https://localhost:20128/api/v1/search \
   -H "Authorization: Bearer $OMNIROUTE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}'

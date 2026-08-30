@@ -26,6 +26,14 @@ on:
         type: boolean
         default: false
 
+# One publish per ref. A merge storm used to fan out 8 concurrent hosted builds,
+# every one OOM-killing `npm run build` inside BuildKit (#11976). The :next
+# channel only needs the newest SHA; cancel-in-progress is the same pattern as
+# quality.yml / nightly-release-green.
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
 # Least-privilege default: read-only at the top level; the build and merge jobs that
 # push to GHCR grant packages: write themselves (Scorecard TokenPermissions).
 permissions:
@@ -68,6 +76,16 @@ jobs:
             "$EVENT_NAME" "$REF_TYPE" "$REF_NAME" "$INPUT_VERSION" "$DEFAULT_BRANCH")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+          # Frozen release branches keep receiving coordination commits after the
+          # next cycle becomes the default branch. They must not overwrite :next,
+          # but that expected no-op is not a workflow failure.
+          if [ "$VERSION" = "skip" ]; then
+            echo "promote_latest=false" >> "$GITHUB_OUTPUT"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping Docker publish from non-default release branch: $REF_NAME"
+            exit 0
+          fi
+
           # 2) Decide whether to promote :latest. Floating channels are never
           # eligible, and the helper independently fails closed for non-semver.
           PROMOTE="false"
@@ -108,7 +126,23 @@ jobs:
     name: Build Docker (${{ matrix.platform }})
     needs: prepare
     if: needs.prepare.outputs.skip != 'true'
-    runs-on: ${{ matrix.runner }}
+    # amd64: the .113 omni-build pool (31 GB / 32 cores, ONE listener since
+    # #12048). Hosted ubuntu-24.04 is ~7 GB and dies ResourceExhausted (#11976).
+    # Falls back to hosted when USE_VPS_RUNNER is off. arm64: no ARM box — stay
+    # on GitHub's ubuntu-24.04-arm.
+    # Webpack on BOTH arches: Turbopack on omniroute-113-6 hit
+    # TurbopackInternalError "there must be a path to a root" after 26 min
+    # (run 33253576569). The same tree's arm64 webpack build on hosted ARM
+    # succeeded (run 33264823398). Dockerfile already documents webpack as the
+    # Docker escape hatch (OMNIROUTE_USE_TURBOPACK=0).
+    runs-on: ${{ matrix.arch == 'amd64' && (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-build"]') || 'ubuntu-24.04') || 'ubuntu-24.04-arm' }}
+    # Share the 1-slot omni-build ceiling (#12048) with ci.yml `Build` /
+    # npm-publish. Same group as main's Build so a :next publish waits beside
+    # the artefact instead of sitting next to it. arm64 is hosted — its own
+    # group, cancelled by the workflow-level concurrency.
+    concurrency:
+      group: ${{ matrix.arch == 'amd64' && 'heavy-build-main' || format('docker-publish-arm-{0}', github.ref) }}
+      cancel-in-progress: ${{ matrix.arch != 'amd64' }}
     permissions:
       contents: read
       packages: write
@@ -117,10 +151,8 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
-            runner: ubuntu-24.04
             arch: amd64
           - platform: linux/arm64
-            runner: ubuntu-24.04-arm
             arch: arm64
     env:
       IMAGE_NAME: diegosouzapw/omniroute
@@ -132,6 +164,9 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/v{0}', inputs.version) || '' }}
           fetch-depth: 0
+
+      - name: Assert Docker Engine
+        run: docker info
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -156,12 +191,14 @@ jobs:
           context: .
           target: runner-base
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
             ${{ env.GHCR_IMAGE_NAME }}
           cache-from: type=gha,scope=docker-${{ matrix.arch }}
-          cache-to: type=gha,scope=docker-${{ matrix.arch }},mode=max
+          cache-to: type=gha,scope=docker-${{ matrix.arch }},mode=max,ignore-error=true
           no-cache: false
         env:
           DOCKER_BUILDKIT_INLINE_CACHE: 1
@@ -173,12 +210,14 @@ jobs:
           context: .
           target: runner-web
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
             ${{ env.GHCR_IMAGE_NAME }}
           cache-from: type=gha,scope=docker-web-${{ matrix.arch }}
-          cache-to: type=gha,scope=docker-web-${{ matrix.arch }},mode=max
+          cache-to: type=gha,scope=docker-web-${{ matrix.arch }},mode=max,ignore-error=true
           no-cache: false
         env:
           DOCKER_BUILDKIT_INLINE_CACHE: 1
@@ -198,12 +237,14 @@ jobs:
           file: Dockerfile.bun
           target: runner-base
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
             ${{ env.GHCR_IMAGE_NAME }}
           cache-from: type=gha,scope=docker-bun-base-${{ matrix.arch }}
-          cache-to: type=gha,scope=docker-bun-base-${{ matrix.arch }},mode=max
+          cache-to: type=gha,scope=docker-bun-base-${{ matrix.arch }},mode=max,ignore-error=true
           no-cache: false
         env:
           DOCKER_BUILDKIT_INLINE_CACHE: 1
@@ -223,12 +264,14 @@ jobs:
           file: Dockerfile.bun
           target: runner-web
           platforms: ${{ matrix.platform }}
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           tags: |
             ${{ env.IMAGE_NAME }}
             ${{ env.GHCR_IMAGE_NAME }}
           cache-from: type=gha,scope=docker-bun-web-${{ matrix.arch }}
-          cache-to: type=gha,scope=docker-bun-web-${{ matrix.arch }},mode=max
+          cache-to: type=gha,scope=docker-bun-web-${{ matrix.arch }},mode=max,ignore-error=true
           no-cache: false
         env:
           DOCKER_BUILDKIT_INLINE_CACHE: 1
@@ -485,11 +528,14 @@ jobs:
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+          # Explicit: the advisory scan above already points at it, and the blocking
+          # gate must honour the same accepted-risk list (#12084).
+          trivyignores: .trivyignore
 
       - name: Upload Trivy SARIF to Security tab
         if: needs.prepare.outputs.version != 'main'
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4.37.7
+        uses: github/codeql-action/upload-sarif@v4.37.8
         with:
           sarif_file: trivy-results.sarif
           category: trivy-image

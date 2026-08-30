@@ -15,6 +15,7 @@ interface ErrorResponseBody {
     message: string;
     type?: string;
     code?: string;
+    reason?: string;
   };
   upstream_details?: Record<string, unknown> | null; // sanitized upstream provider body
 }
@@ -108,6 +109,7 @@ export function sanitizeUpstreamDetails(value: unknown, depth = 0): unknown {
 export type ErrorBodyClassification = {
   type?: string;
   code?: string;
+  reason?: string;
 };
 
 /**
@@ -132,6 +134,7 @@ export function buildErrorBody(
       message: safeMessage,
       type: classification?.type ?? errorInfo.type,
       code: classification?.code ?? errorInfo.code,
+      reason: classification?.reason,
     },
   };
 
@@ -340,13 +343,22 @@ export function errorResponseWithComboDiagnostics(
  * @param {string} message - Error message
  * @returns {Response} HTTP Response object
  */
-export function errorResponse(statusCode: number, message: string): Response {
-  return new Response(JSON.stringify(buildErrorBody(statusCode, sanitizeErrorMessage(message))), {
-    status: statusCode,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+export function errorResponse(
+  statusCode: number,
+  message: string,
+  classification?: ErrorBodyClassification
+): Response {
+  return new Response(
+    JSON.stringify(
+      buildErrorBody(statusCode, sanitizeErrorMessage(message), undefined, classification)
+    ),
+    {
+      status: statusCode,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
 }
 
 /**

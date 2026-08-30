@@ -16,11 +16,9 @@ import type { FreeModelBudget } from "./freeModelCatalog.ts";
  * rewrites file timestamps on every deploy, which would report a months-old
  * catalog as "updated today". Bump this whenever the entries below change.
  */
-export const FREE_CATALOG_CURATED_AT = "2026-08-20";
+export const FREE_CATALOG_CURATED_AT = "2026-08-30";
 
 export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
-  { provider: "chatgpt-web", modelId: "gpt-5.6-luna-free", displayName: "GPT-5.6 Luna (Free)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "chatgpt-web-free", tos: "caution" },
-  { provider: "chatgpt-web", modelId: "gpt-5.6-luna-free-thinking", displayName: "GPT-5.6 Luna (Free, Think)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "chatgpt-web-free", tos: "caution" },
   { provider: "agentrouter", modelId: "claude-opus-4-8", displayName: "Claude Opus 4.8", monthlyTokens: 0, creditTokens: 200000000, freeType: "one-time-initial", poolKey: "agentrouter", tos: "caution" },
   { provider: "agentrouter", modelId: "claude-opus-5", displayName: "Claude Opus 5", monthlyTokens: 0, creditTokens: 200000000, freeType: "one-time-initial", poolKey: "agentrouter", tos: "caution" },
   { provider: "agentrouter", modelId: "gpt-5.6-sol", displayName: "GPT-5.6 Sol", monthlyTokens: 0, creditTokens: 200000000, freeType: "one-time-initial", poolKey: "agentrouter", tos: "caution" },
@@ -154,16 +152,11 @@ export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
   { provider: "deepseek", modelId: "deepseek-v4-flash", displayName: "DeepSeek V4 Flash", monthlyTokens: 0, creditTokens: 5000000, freeType: "one-time-initial", poolKey: "deepseek", tos: "ok" },
   { provider: "doubao", modelId: "doubao-pro-32k", displayName: "Doubao Pro 32K", monthlyTokens: 0, creditTokens: 15000000, freeType: "one-time-initial", poolKey: "doubao", tos: "ambiguous" },
   { provider: "duckduckgo-web", modelId: "gpt-5.4-mini", displayName: "GPT-5.4 Mini", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "duckduckgo-web", tos: "avoid" },
-  { provider: "duckduckgo-web", modelId: "gpt-5.4-nano", displayName: "GPT-5.4 Nano", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "duckduckgo-web", tos: "avoid" },
+  { provider: "duckduckgo-web", modelId: "gpt-5.6-luna", displayName: "GPT-5.6 Luna", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "duckduckgo-web", tos: "avoid" },
   { provider: "duckduckgo-web", modelId: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "duckduckgo-web", tos: "avoid" },
   { provider: "duckduckgo-web", modelId: "mistral-small-2603", displayName: "Mistral Small 4", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "duckduckgo-web", tos: "avoid" },
   { provider: "duckduckgo-web", modelId: "tinfoil/gpt-oss-120b", displayName: "gpt-oss 120B", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "duckduckgo-web", tos: "avoid" },
   { provider: "duckduckgo-web", modelId: "tinfoil/gemma4-31b", displayName: "Gemma 4 31B", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "duckduckgo-web", tos: "avoid" },
-  { provider: "felo-web", modelId: "felo-chat", displayName: "Felo Chat", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "felo-web", tos: "avoid" },
-  { provider: "felo-web", modelId: "felo-search", displayName: "Felo Search", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "felo-web", tos: "avoid" },
-  { provider: "felo-web", modelId: "felo-scholar", displayName: "Felo Scholar", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "felo-web", tos: "avoid" },
-  { provider: "felo-web", modelId: "felo-social", displayName: "Felo Social", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "felo-web", tos: "avoid" },
-  { provider: "felo-web", modelId: "felo-document", displayName: "Felo Document", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "felo-web", tos: "avoid" },
   { provider: "fireworks", modelId: "deepseek-v4-flash", displayName: "DeepSeek V4 Flash", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "fireworks", tos: "avoid" },
   { provider: "fireworks", modelId: "deepseek-v4-pro", displayName: "DeepSeek V4 Pro", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "fireworks", tos: "avoid" },
   { provider: "fireworks", modelId: "glm-5p1", displayName: "GLM 5.1", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "fireworks", tos: "avoid" },
@@ -275,7 +268,7 @@ export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
   { provider: "muse-spark-web", modelId: "muse-spark-contemplating", displayName: "Muse Spark Contemplating", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "muse-spark-web", tos: "avoid" },
   { provider: "nebius", modelId: "meta-llama/Llama-3.3-70B-Instruct", displayName: "Llama 3.3 70B Instruct", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "nebius", tos: "caution" },
   { provider: "nlpcloud", modelId: "llama-3-8b-instruct", displayName: "Llama 3 8B", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-monthly", poolKey: "nlpcloud", tos: "avoid" },
-  { provider: "nous-research", modelId: "Hermes-4-405B", displayName: "Hermes 4 7B (Nous Research)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-credit", poolKey: "nous-research", tos: "ambiguous" },
+  { provider: "nous-research", modelId: "Hermes-4-405B", displayName: "Hermes 4 405B (Nous Research)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-credit", poolKey: "nous-research", tos: "ambiguous" },
   { provider: "nous-research", modelId: "Hermes-4-70B", displayName: "Hermes 4 70B (Nous Research)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-credit", poolKey: "nous-research", tos: "ambiguous" },
   { provider: "novita", modelId: "ai-ai/llama-3.1-8b-instruct", displayName: "Llama 3.1 8B", monthlyTokens: 0, creditTokens: 500000, freeType: "one-time-initial", poolKey: "novita", tos: "caution" },
   { provider: "nscale", modelId: "moonshotai/Kimi-K2.5", displayName: "moonshotai/Kimi-K2.5", monthlyTokens: 0, creditTokens: 5000000, freeType: "one-time-initial", poolKey: "nscale", tos: "caution" },
@@ -319,6 +312,7 @@ export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
   { provider: "opencode-zen", modelId: "opencode/nemotron-3-ultra-free", displayName: "Nemotron 3 Ultra (free)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-uncapped", poolKey: "opencode-zen-free", tos: "caution" },
   { provider: "openrouter", modelId: "auto", displayName: "Auto (Best Available)", monthlyTokens: 1200000, creditTokens: 0, freeType: "recurring-daily", poolKey: "openrouter-free", tos: "caution" },
   { provider: "openrouter", modelId: "stealth/ox-alpha", displayName: "Stealth Ox Alpha (free)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-daily", poolKey: "openrouter-free", tos: "caution" },
+  { provider: "openrouter", modelId: "liquid/lfm-2.5-2.6b:free", displayName: "LiquidAI: LFM2.5-2.6B (free)", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-daily", poolKey: "openrouter-free", tos: "caution" },
   { provider: "pollinations", modelId: "openai", displayName: "OpenAI (Pollinations)", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "pollinations", tos: "caution" },
   { provider: "pollinations", modelId: "openai-fast", displayName: "OpenAI Fast (Pollinations)", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "pollinations", tos: "caution" },
   { provider: "pollinations", modelId: "openai-large", displayName: "OpenAI Large (Pollinations)", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "pollinations", tos: "caution" },
@@ -363,10 +357,6 @@ export const FREE_MODEL_BUDGETS: FreeModelBudget[] = [
   { provider: "qoder", modelId: "deepseek-v4-pro", displayName: "DeepSeek-V4-Pro", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "qoder", tos: "caution" },
   { provider: "qoder", modelId: "deepseek-v4-flash", displayName: "DeepSeek-V4-Flash", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "qoder", tos: "caution" },
   { provider: "qoder", modelId: "minimax-m3", displayName: "MiniMax-M3", monthlyTokens: 0, creditTokens: 1000000, freeType: "one-time-initial", poolKey: "qoder", tos: "caution" },
-  { provider: "qwen-web", modelId: "qwen3.8-max", displayName: "Qwen3.8 Max", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "qwen-web", tos: "avoid" },
-  { provider: "qwen-web", modelId: "qwen3.7-max", displayName: "Qwen3.7 Max", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "qwen-web", tos: "avoid" },
-  { provider: "qwen-web", modelId: "qwen3.7-plus", displayName: "Qwen3.7 Plus", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "qwen-web", tos: "avoid" },
-  { provider: "qwen-web", modelId: "qwen3.6-plus", displayName: "Qwen3.6 Plus", monthlyTokens: 0, creditTokens: 0, freeType: "keyless", poolKey: "qwen-web", tos: "avoid" },
   { provider: "reka", modelId: "reka-flash-3", displayName: "Reka Flash 3", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-monthly", poolKey: "reka", tos: "caution" },
   { provider: "reka", modelId: "reka-edge-2603", displayName: "Reka Edge 2603", monthlyTokens: 0, creditTokens: 0, freeType: "recurring-monthly", poolKey: "reka", tos: "caution" },
   { provider: "sambanova", modelId: "MiniMax-M2.7", displayName: "MiniMax-M2.7", monthlyTokens: 6000000, creditTokens: 0, freeType: "recurring-daily", poolKey: "sambanova", tos: "caution" },

@@ -45,6 +45,17 @@ test("cost — selects the cheapest healthy candidate", () => {
   assert.equal(d.strategy, "cost");
 });
 
+test("cost — preserves the selected connection when provider and model are shared", () => {
+  const pool = [
+    cand({ provider: "shared", model: "shared/m", connectionId: "conn-a", costPer1MTokens: 5 }),
+    cand({ provider: "shared", model: "shared/m", connectionId: "conn-b", costPer1MTokens: 1 }),
+  ];
+
+  const decision = getStrategy("cost").select(pool, ctx);
+
+  assert.equal(decision.connectionId, "conn-b");
+});
+
 test("cost — excludes OPEN-breaker candidates even if cheaper", () => {
   const pool = [
     cand({ provider: "cheap-open", costPer1MTokens: 0.1, circuitBreakerState: "OPEN" }),
@@ -107,6 +118,31 @@ test("latency — uses TTFT, TPS, and E2E metrics to pick the fastest provider-m
   assert.match(decision.reason, /tps=120/);
 });
 
+test("latency — preserves the selected connection through speed ranking", () => {
+  const pool = [
+    cand({
+      provider: "shared",
+      model: "shared/m",
+      connectionId: "conn-a",
+      p95LatencyMs: 900,
+      avgTtftMs: 400,
+      avgE2ELatencyMs: 1_200,
+    }),
+    cand({
+      provider: "shared",
+      model: "shared/m",
+      connectionId: "conn-b",
+      p95LatencyMs: 100,
+      avgTtftMs: 30,
+      avgE2ELatencyMs: 300,
+    }),
+  ];
+
+  const decision = getStrategy("latency").select(pool, ctx);
+
+  assert.equal(decision.connectionId, "conn-b");
+});
+
 test("latency — failure rate can outweigh excellent raw speed", () => {
   const pool = [
     cand({
@@ -148,6 +184,25 @@ test("sla-aware — prefers a candidate meeting the p95/error SLOs", () => {
   assert.equal(d.strategy, "sla-aware");
 });
 
+test("sla-aware — preserves the selected connection for dispatch", () => {
+  const pool = [
+    cand({
+      provider: "shared",
+      model: "shared/m",
+      connectionId: "conn-a",
+      p95LatencyMs: 5_000,
+    }),
+    cand({ provider: "shared", model: "shared/m", connectionId: "conn-b", p95LatencyMs: 300 }),
+  ];
+
+  const decision = getStrategy("sla-aware").select(pool, {
+    taskType: "default",
+    sla: { targetP95Ms: 2_000 },
+  });
+
+  assert.equal(decision.connectionId, "conn-b");
+});
+
 test("sla-aware — 'sla' alias resolves to sla-aware", () => {
   assert.equal(getStrategy("sla").name, "sla-aware");
 });
@@ -175,6 +230,19 @@ test("lkgp — returns the last known good provider when healthy", () => {
   assert.equal(d.strategy, "lkgp");
 });
 
+test("lkgp — preserves the connection of the selected last-known-good candidate", () => {
+  const pool = [
+    cand({ provider: "shared", connectionId: "conn-b" }),
+    cand({ provider: "other", connectionId: "conn-a" }),
+  ];
+  const decision = getStrategy("lkgp").select(pool, {
+    taskType: "default",
+    lastKnownGoodProvider: "shared",
+  });
+
+  assert.equal(decision.connectionId, "conn-b");
+});
+
 test("lkgp — falls back to rules when the LKGP is OPEN", () => {
   const pool = [cand({ provider: "x" }), cand({ provider: "y", circuitBreakerState: "OPEN" })];
   const d = getStrategy("lkgp").select(pool, {
@@ -192,6 +260,34 @@ test("lkgp — lkgpEnabled:false delegates to rules", () => {
     lastKnownGoodProvider: "x",
   });
   assert.equal(d.strategy, "rules");
+});
+
+test("lkgp — falls back to rules when the pool lacks the last known good provider", () => {
+  const pool = [cand({ provider: "x" })];
+  const context: RoutingContext = {
+    taskType: "default",
+    lastKnownGoodProvider: "y",
+  };
+  const d = getStrategy("lkgp").select(pool, context);
+  const expected = getStrategy("rules").select(pool, context);
+  assert.equal(d.strategy, expected.strategy);
+  assert.equal(d.provider, expected.provider);
+  assert.equal(d.model, expected.model);
+});
+
+test("lkgp — keeps the first candidate among several targets of the pinned provider", () => {
+  const pool = [
+    cand({ provider: "shared", model: "shared/m1", connectionId: "conn-1" }),
+    cand({ provider: "shared", model: "shared/m2", connectionId: "conn-2" }),
+  ];
+  const d = getStrategy("lkgp").select(pool, {
+    taskType: "default",
+    lastKnownGoodProvider: "shared",
+  });
+  assert.equal(d.provider, "shared");
+  assert.equal(d.model, "shared/m1");
+  assert.equal(d.connectionId, "conn-1");
+  assert.equal(d.candidatesConsidered, 1);
 });
 
 // ── selectWithStrategy + registry ─────────────────────────────────────────────

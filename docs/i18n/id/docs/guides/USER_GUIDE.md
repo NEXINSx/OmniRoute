@@ -41,7 +41,6 @@ Panduan lengkap untuk mengonfigurasi penyedia, membuat combo, mengintegrasikan a
 |                  | MiniMax M2.1      | $0.2/1M     | Bergulir 5 jam  | Pilihan termurah            |
 |                  | Kimi K2           | $9/bln flat | 10M token/bln   | Biaya yang dapat diprediksi |
 | **🆓 GRATIS**    | Qoder             | $0          | Tidak terbatas  | 8 model gratis              |
-|                  | Qwen              | $0          | Tidak terbatas  | 3 model gratis              |
 |                  | Kiro              | $0          | Tidak terbatas  | Claude gratis               |
 
 ---
@@ -69,7 +68,7 @@ vs. $20 + terkena batas = frustrasi
 ```
 Combo: "free-tier-fallback"
   1. if/kimi-k2-thinking       (no published token cap; limits apply)
-  2. qw/qwen3-coder-plus       (no published token cap; limits apply)
+  2. kr/qwen3-coder-next
 
 Biaya bulanan: $0 pada jatah yang saat ini tercantum
 Kualitas: verifikasi model, batas, privasi, dan SLA untuk beban kerja Anda
@@ -185,13 +184,6 @@ Dashboard → Connect Qoder → OAuth login → Access is subject to current pro
 Models: if/kimi-k2-thinking, if/qwen3-coder-plus, if/glm-4.7, if/minimax-m2, if/deepseek-r1
 ```
 
-#### Qwen (3 model GRATIS)
-
-```bash
-Dashboard → Connect Qwen → Device code auth → Access is subject to current provider limits
-
-Models: qw/qwen3-coder-plus, qw/qwen3-coder-flash
-```
 
 #### Kiro (Claude GRATIS)
 
@@ -227,7 +219,7 @@ Use in CLI: premium-coding
 Name: free-combo
 Models:
   1. if/kimi-k2-thinking (no published token cap; provider limits may apply)
-  2. qw/qwen3-coder-plus (no published token cap; provider limits may apply)
+  2. kr/qwen3-coder-next
 
 Cost: saat ini $0 dalam batas penyedia; ketentuan dan ketersediaan dapat berubah
 ```
@@ -547,7 +539,6 @@ Untuk referensi variabel lingkungan lengkap, lihat [README](../README.md).
 
 **Qoder (`if/`)** — GRATIS: `if/kimi-k2-thinking`, `if/qwen3-coder-plus`, `if/deepseek-r1`
 
-**Qwen (`qw/`)** — GRATIS: `qw/qwen3-coder-plus`, `qw/qwen3-coder-flash`
 
 **Kiro (`kr/`)** — GRATIS: `kr/claude-sonnet-4.5`, `kr/claude-haiku-4.5`
 

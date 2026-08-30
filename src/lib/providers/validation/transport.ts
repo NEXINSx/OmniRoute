@@ -75,10 +75,10 @@ export async function validationWrite(url: string, init: RequestInit, isLocal: b
 // surfaces as a `provider.validation.ssrf_blocked` audit event + a security warning in
 // the UI) when it is a GENUINE SSRF/guard block — not for every outbound-guard 503.
 // A blocked redirect (REDIRECT_BLOCKED) to a PUBLIC host is benign: the redirect was
-// never followed, so no SSRF occurred. Web-cookie providers like qwen-web answer their
-// probe with a 307 to a public host, which used to be mislabeled as an SSRF block
-// (#3288 / #3758). Only treat a blocked redirect as a security event when its target is
-// a private/internal host.
+// never followed, so no SSRF occurred. Some web-cookie providers answer their probe
+// with a 307 to a public host, which used to be mislabeled as an SSRF block (#3288 /
+// #3758). Only treat a blocked redirect as a security event when its target is a
+// private/internal host.
 export function isSecurityBlockError(error: unknown): boolean {
   if (!(error instanceof SafeOutboundFetchError)) return false;
   if (error.code === "URL_GUARD_BLOCKED" || error.code === "INVALID_URL") return true;
@@ -120,7 +120,6 @@ const WEB_COOKIE_PROVIDERS_WITH_UNRELIABLE_MODELS_PROBE = new Set(["lmarena"]);
 // WEB_COOKIE_PROVIDERS_WITH_UNRELIABLE_MODELS_PROBE/REDIRECT_BLOCKED path above (#7542).
 export const WEB_COOKIE_PROVIDERS_WITHOUT_MODELS_API = new Set([
   "huggingchat",
-  "chatgpt-web",
   "grok-web",
   "notion-web",
   "t3-web",

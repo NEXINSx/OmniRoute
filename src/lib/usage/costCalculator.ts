@@ -187,7 +187,7 @@ export async function calculateCost(
   if (exactCostUsd !== null) return exactCostUsd;
 
   try {
-    const { getPricingForModel } = await import("@/lib/localDb");
+    const { getPricingForModel } = await import("@/lib/db/settings");
 
     // Try exact match first, then normalized model name
     let pricing = await getPricingForModel(provider, model);
@@ -303,7 +303,7 @@ export async function calculateModalCost(
 ): Promise<number> {
   if (!provider || !model) return 0;
   try {
-    const { getPricingForModel } = await import("@/lib/localDb");
+    const { getPricingForModel } = await import("@/lib/db/settings");
     let pricing = await getPricingForModel(provider, model);
     if (!pricing) {
       const normalized = normalizeModelName(model);

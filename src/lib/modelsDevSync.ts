@@ -770,7 +770,7 @@ export async function initModelsDevSync(): Promise<void> {
     return;
   }
 
-  const { getSettings } = await import("./localDb");
+  const { getSettings } = await import("@/lib/db/settings");
   const settings = await getSettings();
 
   if (!isModelsDevSyncEnvForcedOn() && settings.modelsDevSyncEnabled !== true) {

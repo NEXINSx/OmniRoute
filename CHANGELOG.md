@@ -89,6 +89,18 @@
 - **feat(cli):** run `omniroute serve --tray` as a detached desktop process after server and tray readiness, with graphical login auto-start support.
 - **feat(routing):** add client-, provider-, and model-neutral exclusive managed session connection leases with API-key-bound generation fencing, durable SQLite ownership, explicit allowlist policy, and bounded 429 capacity retry semantics.
 
+## [3.8.51] — TBD
+
+_Living section — cycle opened at the v3.8.50 freeze (parallel-cycle model). Bullets are aggregated from `changelog.d/` fragments at each `/generate-release` phase._
+
+### ✨ New Features
+
+### 🐛 Bug Fixes
+
+### 📝 Maintenance
+
+---
+
 ## [3.8.50] — 2026-08-25
 
 _Living section — regenerated 2026-08-12 from all cycle commits (cycle open `ed2db6cb19` → tip). Bullets carry the merged PR and its author; direct pushes listed separately._
@@ -3102,10 +3114,6 @@ _Living section — regenerated 2026-07-19 from all 306 cycle commits (bump 2c62
 - **Release tooling**: new `scripts/release/verify-published.mjs <version>` — post-publish net that installs the published version from the public registry inside a clean `node:24-slim` container and boots it until `/api/monitoring/health` reports the expected version (validates the exact bytes users install, on a machine with no repo/devbox state); wired into the release Phase 4 monitoring playbook
 - **CI**: promote `test:vitest:ui` to a blocking gate — the suite is 870/870 green again after the WS6.1 triage (#7127), so `continue-on-error` is removed from the vitest job
 - chore(tests): fix all 70 failing `test:vitest:ui` tests across 30 files (was advisory/parked) — root causes were 15 node:test-authored `.tsx` files never collected by vitest, a missing `window.matchMedia` jsdom polyfill, stale assertions against a redesigned BuildTab wizard / CompressionHub Phase-2 UI, and one obsolete test for a retired Plans screen; suite is now 158/158 files, 870/870 tests green (promotion to blocking is a follow-up)
-
-
-
-
 
 
 ### 🙌 Contributors

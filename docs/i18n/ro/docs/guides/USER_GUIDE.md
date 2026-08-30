@@ -41,7 +41,6 @@ Complete guide for configuring providers, creating combos, integrating CLI tools
 |                     | MiniMax M2.1      | $0.2/1M     | 5-hour rolling | Cheapest option      |
 |                     | Kimi K2           | $9/mo flat  | 10M tokens/mo  | Predictable cost     |
 | **🆓 FREE**         | Qoder             | $0          | Provider limits apply | Verify current catalog        |
-|                     | Qwen              | $0          | Provider limits apply | Verify current catalog        |
 |                     | Kiro              | $0          | Provider limits apply | Claude free          |
 
 ---
@@ -69,7 +68,7 @@ vs. $20 + hitting limits = frustration
 ```
 Combo: "free-tier-fallback"
   1. if/kimi-k2-thinking       (no published token cap; limits apply)
-  2. qw/qwen3-coder-plus       (no published token cap; limits apply)
+  2. kr/qwen3-coder-next
 
 Monthly cost: $0
 Quality: verify the model, limits, privacy, and SLA for your workload
@@ -185,13 +184,6 @@ Dashboard → Connect Qoder → OAuth login → Access is subject to current pro
 Models: if/kimi-k2-thinking, if/qwen3-coder-plus, if/glm-4.7, if/minimax-m2, if/deepseek-r1
 ```
 
-#### Qwen (3 FREE models)
-
-```bash
-Dashboard → Connect Qwen → Device code auth → Access is subject to current provider limits
-
-Models: qw/qwen3-coder-plus, qw/qwen3-coder-flash
-```
 
 #### Kiro (Claude FREE)
 
@@ -227,7 +219,7 @@ Use in CLI: premium-coding
 Name: free-combo
 Models:
   1. if/kimi-k2-thinking (no published token cap; provider limits may apply)
-  2. qw/qwen3-coder-plus (no published token cap; provider limits may apply)
+  2. kr/qwen3-coder-next
 
 Cost: currently listed as $0; terms and availability may change
 ```
@@ -547,7 +539,6 @@ For the full environment variable reference, see the [README](../README.md).
 
 **Qoder (`if/`)** — FREE: `if/kimi-k2-thinking`, `if/qwen3-coder-plus`, `if/deepseek-r1`
 
-**Qwen (`qw/`)** — FREE: `qw/qwen3-coder-plus`, `qw/qwen3-coder-flash`
 
 **Kiro (`kr/`)** — FREE: `kr/claude-sonnet-4.5`, `kr/claude-haiku-4.5`
 

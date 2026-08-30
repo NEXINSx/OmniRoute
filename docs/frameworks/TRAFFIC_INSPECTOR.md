@@ -174,7 +174,7 @@ This is a substantial subsystem with its own dedicated operator guide — see **
 | Control          | Action                                                                |
 | ---------------- | --------------------------------------------------------------------- |
 | ⎉ Pause          | Stops rendering new requests; "X new" badge accumulates               |
-| 🗑 Clear         | Clears the UI list (server buffer is not affected)                    |
+| 🗑 Clear          | Clears the UI list (server buffer is not affected)                    |
 | ⬇ Export .har    | Downloads current filtered list as HAR file                           |
 | ● Record session | Starts a named recording session                                      |
 | Profile selector | LLM only / Custom hosts / All                                         |
@@ -207,12 +207,18 @@ Custom hosts added via Mode 2 inherit their `kind` from the form input (defaults
 
 ### 4.2 SSE merger (`src/mitm/inspector/sseMerger.ts`)
 
-**MIT port from [chouzz/llm-interceptor](https://github.com/chouzz/llm-interceptor)**
+**Independent clean-room implementation.** Event parsing follows the
+[WHATWG server-sent events algorithm](https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream),
+while reconstruction follows the public [OpenAI](https://platform.openai.com/docs/api-reference/chat/create),
+[Anthropic](https://platform.claude.com/docs/en/build-with-claude/streaming), and
+[Gemini](https://ai.google.dev/api/generate-content#method:-models.streamgeneratecontent)
+streaming schemas.
 
 Reconstructs the final assistant message from raw SSE delta events:
 
 - **Anthropic**: accumulates `content_block_delta` by index; handles `text_delta`, `input_json_delta` (tool calls), `thinking_delta`
-- **OpenAI**: accumulates `choices[i].delta.content` and `tool_calls` by index
+- **OpenAI**: accumulates Chat Completions choices/tool calls and Responses API output items
+  by index
 - **Gemini**: accumulates `candidates[i].content.parts`
 - **Unknown**: returns raw events as-is
 
@@ -220,7 +226,9 @@ The Response tab shows a toggle: **"Raw events ↔ Merged"**.
 
 ### 4.3 Conversation normalizer (`src/mitm/inspector/conversationNormalizer.ts`)
 
-**MIT port from [chouzz/llm-interceptor](https://github.com/chouzz/llm-interceptor)**
+**Independent clean-room implementation.** Normalization is defined by local black-box
+contracts and the public OpenAI, Anthropic, and Gemini message schemas; no upstream
+implementation source is used.
 
 Converts OpenAI, Anthropic, and Gemini message formats to a single `NormalizedConversation` before rendering:
 
@@ -337,14 +345,14 @@ Export via `GET /api/tools/traffic-inspector/sessions/{id}/export.har` or the �
 
 Traffic Inspector shows **all intercepted HTTPS traffic**, including authorization headers and request bodies. The following controls are in place:
 
-| Control                       | Details                                                                                                                              |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **LOCAL_ONLY**                | All routes and the WebSocket endpoint are loopback-only (enforced in `routeGuard.ts` before auth)                                    |
-| **Secret masking**            | `maskSecrets()` applied to all headers and bodies before `TrafficBuffer.push()` — enabled by default (`INSPECTOR_MASK_SECRETS=true`) |
-| **Body size cap**             | Bodies > `INSPECTOR_MAX_BODY_KB` (default 1024 KB) are truncated with `"(truncated for performance)"` notice                         |
-| **Sensitive header masking**  | `authorization`, `cookie`, `api-key`, `x-api-key`, `proxy-authorization` → `Bearer ***` in Headers tab; "Show secrets" toggle        |
-| **CSP**                       | Strict Content Security Policy on Traffic Inspector pages to prevent XSS via injected response bodies                                |
-| **No persistence by default** | The `TrafficBuffer` is in-memory and lost on server restart. Sessions are persisted only when explicitly recorded                    |
+| Control                       | Details                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LOCAL_ONLY**                | All routes and the WebSocket endpoint are loopback-only (enforced in `routeGuard.ts` before auth)                                                     |
+| **Secret masking**            | Linear `maskSecret()` scanner redacts RFC 6750 Bearer credentials, provider-prefixed keys and long opaque tokens before `TrafficBuffer.push()`        |
+| **Body size cap**             | Bodies > `INSPECTOR_MAX_BODY_KB` (default 1024 KB) are truncated with `"(truncated for performance)"` notice                                          |
+| **Header sanitization**       | Names are lowercased; framing/hop-by-hop and proxy-auth headers are dropped; cookies are fully redacted; credential values delegate to `maskSecret()` |
+| **CSP**                       | Strict Content Security Policy on Traffic Inspector pages to prevent XSS via injected response bodies                                                 |
+| **No persistence by default** | The `TrafficBuffer` is in-memory and lost on server restart. Sessions are persisted only when explicitly recorded                                     |
 
 ### Hard Rules applied
 

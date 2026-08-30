@@ -107,7 +107,7 @@ test("BUG-CONFIRMED (regression guard): probe failure renames DB and loses persi
     );
   } finally {
     try {
-      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     } catch {
       /* ok */
     }

@@ -67,10 +67,15 @@ const BEDROCK_CLAUDE_ALIASES = (...modelIds: string[]) => [
 // Keep native/bare Z.AI GLM-5.2 context authoritative, but do not blindly apply
 // it to every provider-wrapped alias: hosted providers can and do cap lower.
 const AUTHORITATIVE_CONTEXT_WINDOW_MODEL_IDS = new Set([
+  "glm-5.3-flash",
   "glm-5.3",
   "glm-5.3-high",
   "glm-5.3-low",
   "glm-5.3-max",
+  "glm-5.3-flash",
+  "glm-5.3-flash-high",
+  "glm-5.3-flash-low",
+  "glm-5.3-flash-max",
   "glm-5.2",
   "glm-5.2-high",
   "glm-5.2-max",
@@ -553,6 +558,14 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
 
   // ── Z.AI GLM-5.3 (1M context mirrored from 5.2 — same base model; 128K max
   // output; effort via reasoning_effort param, tiers are OmniRoute aliases) ──
+  "glm-5.3-flash": {
+    maxOutputTokens: 131072,
+    contextWindow: 1000000,
+    thinkingBudgetCap: 38912,
+    supportsThinking: true,
+    supportsTools: true,
+    supportsVision: true,
+  },
   "glm-5.3": {
     maxOutputTokens: 131072,
     contextWindow: 1000000,
@@ -580,6 +593,30 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     thinkingBudgetCap: 38912,
     supportsThinking: true,
     supportsTools: true,
+  },
+  "glm-5.3-flash-high": {
+    maxOutputTokens: 131072,
+    contextWindow: 1000000,
+    thinkingBudgetCap: 38912,
+    supportsThinking: true,
+    supportsTools: true,
+    supportsVision: true,
+  },
+  "glm-5.3-flash-low": {
+    maxOutputTokens: 131072,
+    contextWindow: 1000000,
+    thinkingBudgetCap: 38912,
+    supportsThinking: true,
+    supportsTools: true,
+    supportsVision: true,
+  },
+  "glm-5.3-flash-max": {
+    maxOutputTokens: 131072,
+    contextWindow: 1000000,
+    thinkingBudgetCap: 38912,
+    supportsThinking: true,
+    supportsTools: true,
+    supportsVision: true,
   },
 
   // ── Z.AI GLM-5.2 (1M context, 128K max output, effort tiers) ────

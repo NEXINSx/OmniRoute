@@ -436,37 +436,10 @@ export function resolveTokenLimit(
   return { limit: DEFAULT_LIMITS.default, specific: false };
 }
 
-/**
- * Resolve the context limit to use for proactive compression of a COMBO
- * request.
- *
- * chatCore always executes with the CONCRETE target's provider/model
- * (handleSingleModel resolves the target before delegating), so the
- * executing target's own limit is authoritative. Using min(...allTargets)
- * here — the previous behavior — compressed at the smallest sibling's
- * window even when running on the largest target, destructively purging
- * history long before the real window filled ("agent keeps forgetting").
- *
- * min(...comboTargetLimits) is kept only as a defensive fallback for the
- * case where the current provider/model resolves no specific limit at all.
- */
-export function resolveComboContextLimit(options: {
-  provider: string;
-  model: string | null;
-  comboTargetLimits: number[];
-}): { limit: number; source: "target" | "combo-min" | "fallback" } {
-  const own = resolveTokenLimit(options.provider, options.model ?? null);
-  if (own.specific) {
-    return { limit: own.limit, source: "target" };
-  }
-  const knownTargets = (options.comboTargetLimits || []).filter(
-    (value) => Number.isFinite(value) && value > 0
-  );
-  if (knownTargets.length > 0) {
-    return { limit: Math.min(...knownTargets), source: "combo-min" };
-  }
-  return { limit: own.limit, source: "fallback" };
-}
+// Combo context-limit resolution lives in ./comboContextLimit.ts; re-exported
+// here so existing importers keep working.
+export { resolveComboContextLimit } from "./comboContextLimit.ts";
+export type { ComboContextLimitSource } from "./comboContextLimit.ts";
 
 /**
  * Apply context compression to request body.

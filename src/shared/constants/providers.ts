@@ -97,6 +97,7 @@ export const AGGREGATOR_PROVIDER_IDS = new Set([
   "kilo-gateway",
   "aimlapi",
   "novita",
+  "opper",
   "piapi",
   "getgoapi",
   "laozhang",
@@ -181,7 +182,7 @@ export const VIDEO_PROVIDER_IDS = new Set([
 // IDE Providers: editors with built-in AI subscription (separate section in UI).
 // These providers live in OAUTH_PROVIDERS but render under "IDE Providers"
 // instead of "OAuth Providers" to avoid visual duplication.
-export const IDE_PROVIDER_IDS = new Set(["cursor", "zed", "trae", "raycast"]);
+export const IDE_PROVIDER_IDS = new Set(["cursor", "zed", "trae"]);
 
 export const EMBEDDING_RERANK_PROVIDER_IDS = new Set(["voyage-ai", "jina-ai"]);
 

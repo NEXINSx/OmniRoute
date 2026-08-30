@@ -48,7 +48,7 @@ class LoginManager extends EventEmitter {
 
   /**
    * Start a login flow for a web-cookie provider.
-   * @param {string} providerId - e.g. "claude-web", "chatgpt-web"
+   * @param {string} providerId - e.g. "claude-web", "perplexity-web"
    * @param {object} [options]
    * @param {number} [options.timeout] - Total timeout in ms (default: config or 300s)
    * @returns {Promise<{success: boolean, credentials?: Record<string, string>, error?: string}>}

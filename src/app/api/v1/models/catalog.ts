@@ -1,14 +1,7 @@
 import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS } from "@/shared/constants/models";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
-import {
-  getCachedRawProviderConnections,
-  getCombos,
-  getAllCustomModels,
-  getSettings,
-  getCachedProviderNodes,
-  getModelAliases,
-  getHiddenModelsByProvider,
-} from "@/lib/localDb";
+import { getCombos } from "@/lib/db/combos";
+import { getSettings } from "@/lib/db/settings";
 import { getUserDatabaseSettings } from "@/lib/db/databaseSettings";
 import { createLazyConnectionView } from "@/lib/db/providers/lazyConnectionView";
 import { extractAliasBackedModels } from "./aliasBackedModels";
@@ -31,6 +24,7 @@ import { getAllMusicModels } from "@omniroute/open-sse/config/musicRegistry";
 import {
   getRegistryModelThinkingEfforts,
   getRegistryThinkingEfforts,
+  providerUsesAuthoritativeLiveCatalog,
   REGISTRY,
 } from "@omniroute/open-sse/config/providerRegistry";
 import { CODEX_NATIVE_UNPREFIXED_MODELS } from "@omniroute/open-sse/services/model";
@@ -48,9 +42,16 @@ import {
   getSyncedAvailableModelsByConnection,
   SYNCED_AVAILABLE_MODELS_MALFORMED,
   type SyncedAvailableModel,
+  getAllCustomModels,
+  getModelAliases,
+  getHiddenModelsByProvider,
 } from "@/lib/db/models";
 import { getAllActiveSyncedModels } from "@/lib/db/models/activeSyncedCatalog";
-import { getModelCatalogCacheVersion } from "@/lib/db/readCache";
+import {
+  getModelCatalogCacheVersion,
+  getCachedRawProviderConnections,
+  getCachedProviderNodes,
+} from "@/lib/db/readCache";
 import { getCompatibleFallbackModels } from "@/lib/providers/managedAvailableModels";
 import {
   providerUsesCuratedModelsOnly,
@@ -71,7 +72,10 @@ import { getModelsDevPricing, getSyncedCapability } from "@/lib/modelsDevSync";
 import { getModelSpec } from "@/shared/constants/modelSpecs";
 import { classifyModelSupportedEndpoints } from "@/shared/constants/modelSupportedEndpoints";
 import { getModelsCatalogPrefixMode } from "@/shared/utils/featureFlags";
-import { buildReservedPrefixes, selectCompatibleNodeForPrefix } from "@/lib/providerNodePrefixes";
+import {
+  isProviderNodePrefixReserved,
+  selectCompatibleNodeForPrefix,
+} from "@/lib/providerNodePrefixes";
 import { applyCatalogPostFilters, finalizeCatalogResponse } from "./catalogResponse";
 import {
   isNoAuthProviderBlocked,
@@ -118,7 +122,8 @@ import {
 } from "./catalogRequest";
 import { incrementCcDiscoveryHitCount } from "@/lib/db/ccDiscoveryMetrics";
 import { isUnifiedChatSourceModelSelectable } from "./catalogModelPolicy";
-import { isFreeModel, providerHasFreeModels } from "@/shared/utils/freeModels";
+import { isFreeModel } from "@/shared/utils/freeModels";
+import { isModelExposureAllowed } from "@/shared/utils/modelExposureList";
 import { isCodexDiscoveryModelExcluded } from "@/shared/services/codexDiscoveryPolicy";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
@@ -171,11 +176,16 @@ function yieldCatalogBuildTurn(): Promise<void> {
 /**
  * Build unified OpenAI-compatible model catalog response.
  * Reused by `/api/v1/models` and `/api/v1` to avoid semantic drift (T09).
+ *
+ * `options.scheduleBackgroundRefresh` is the App Router's injection point for the
+ * stale-while-revalidate rebuild (#8728): the route passes Next's `after()` so the
+ * rebuild starts only once the stale body has been flushed. Omitted by non-route
+ * callers, which fall back to the cache module's own default.
  */
 export async function getUnifiedModelsResponse(
   request: Request,
   corsHeaders: Record<string, string> = {},
-  options: CatalogResponseOptions = {}
+  options: { scheduleBackgroundRefresh?: BackgroundRefreshScheduler } = {}
 ) {
   const diagnosticHeaders = getCatalogDiagnosticsHeaders({ request });
 
@@ -217,9 +227,6 @@ export async function getUnifiedModelsResponse(
         hideAutoCombos:
           settingsForAuth?.hideAutoCombos === true || settingsForAuth?.autoRoutingEnabled === false,
         hideNoThinkVariants: settingsForAuth?.hideNoThinkVariants === true,
-        // #11551: the route injects Next's `after()` here so the SWR background
-        // rebuild starts only once the stale response has been flushed. Without a
-        // scheduler the cache falls back to defaultBackgroundRefreshScheduler.
         scheduleBackgroundRefresh: options.scheduleBackgroundRefresh,
       }
     );
@@ -335,12 +342,28 @@ async function buildUnifiedModelsResponseCore(
     // explicitly — a disabled router rejects every auto/* id with a 400, so
     // listing them offers the client a choice that cannot succeed.
     const hideAuto = settings.hideAutoCombos === true || settings.autoRoutingEnabled === false;
-    const shouldHidePaid = (providerKey: string, modelId: string, pricing?: unknown): boolean => {
+    const shouldHidePaid = (
+      providerKey: string,
+      modelId: string,
+      pricing?: unknown,
+      isFree?: boolean
+    ): boolean => {
       if (!hidePaid) return false;
       const provider = aliasToProviderId[providerKey] || providerKey;
-      if (!providerHasFreeModels(provider)) return true;
-      return !isFreeModel(provider, { id: modelId, pricing: pricing as any });
+      // isFree:true is the first door — custom row kept even when its provider is outside FREE_MODEL_BUDGETS.
+      if (isFreeModel(provider, { id: modelId, pricing: pricing as any, isFree })) return false;
+      // hidePaid is on and model is non-free → hidden. No need to consult FREE_MODEL_BUDGETS
+      // separately: paid on a free-capable provider stays hidden, free on a non-budget provider
+      // already returned above.
+      return true;
     };
+    // #11481: opt-in explicit model exposure allow/deny list — same call sites
+    // as shouldHidePaid above (mirrored into the auto/* combo candidate pool
+    // via open-sse/services/autoCombo/modelExposureFilter.ts, per #6512's
+    // catalog-only-filter-leaks-into-combo-routing lesson). Independent of
+    // hidePaidModels — operator curation, not a cost signal.
+    const shouldHideByExposure = (providerKey: string, modelId: string): boolean =>
+      !isModelExposureAllowed(aliasToProviderId[providerKey] || providerKey, modelId, settings);
 
     // Get active provider connections
     let connections = [];
@@ -383,9 +406,8 @@ async function buildUnifiedModelsResponseCore(
         nodeIdToProviderType[node.id] = node.type;
       }
     }
-    const reservedProviderPrefixes = buildReservedPrefixes();
     for (const prefix of new Set(Object.values(providerIdToPrefix))) {
-      if (reservedProviderPrefixes.has(prefix)) continue;
+      if (isProviderNodePrefixReserved(prefix)) continue;
       const winner = selectCompatibleNodeForPrefix(providerNodes, prefix);
       if (winner?.id) providerNodeIdByPrefix[prefix] = winner.id;
     }
@@ -860,17 +882,56 @@ async function buildUnifiedModelsResponseCore(
         const virtualCombo = await createBuiltinAutoCombo(autoId, suffix, preparedAutoInputs);
         const contextLength = virtualCombo.advertisedContextLength || 128000;
         const maxOutputTokens = virtualCombo.advertisedMaxOutputTokens || 8192;
+
+        // #11947: derive modalities and vision from the effective target pool so
+        // OpenAI-compatible clients can detect vision support for auto/* combos.
+        const autoTargets: ComboCatalogTarget[] = virtualCombo.models.map((m) => ({
+          modelStr: m.model,
+          providerId: m.providerId,
+          connectionId: m.connectionId,
+          ...(m.allowedConnectionIds ? { allowedConnectionIds: m.allowedConnectionIds } : {}),
+        }));
+        const autoTargetMetadata = autoTargets.map((t) => getComboTargetCatalogMetadata(t));
+        const knownAutoMeta = autoTargetMetadata.filter(
+          (m): m is ComboTargetCatalogMetadata => m !== null
+        );
+        const autoInputModalities =
+          knownAutoMeta.length > 0 &&
+          knownAutoMeta.every(
+            (m) => Array.isArray(m.inputModalities) && m.inputModalities.length > 0
+          )
+            ? intersectStringArrays(knownAutoMeta.map((m) => m.inputModalities || []))
+            : [];
+        const autoOutputModalities =
+          knownAutoMeta.length > 0 &&
+          knownAutoMeta.every(
+            (m) => Array.isArray(m.outputModalities) && m.outputModalities.length > 0
+          )
+            ? intersectStringArrays(knownAutoMeta.map((m) => m.outputModalities || []))
+            : [];
+        const autoCapabilities: Record<string, boolean | string[]> = {
+          tool_calling: true,
+          reasoning: true,
+          thinking: true,
+          temperature: true,
+        };
+        if (knownAutoMeta.length > 0) {
+          const allVision = knownAutoMeta.every((m) => m.capabilities.vision === true);
+          if (allVision) autoCapabilities.vision = true;
+        }
+
         models.push({
           ...baseAutoEntry,
           context_length: contextLength,
           max_input_tokens: contextLength,
           max_output_tokens: maxOutputTokens,
-          capabilities: {
-            tool_calling: true,
-            reasoning: true,
-            thinking: true,
-            temperature: true,
-          },
+          ...(autoInputModalities.length > 0
+            ? { input_modalities: autoInputModalities }
+            : {}),
+          ...(autoOutputModalities.length > 0
+            ? { output_modalities: autoOutputModalities }
+            : {}),
+          capabilities: autoCapabilities,
         });
       } catch (err) {
         console.log(`[catalog] Could not materialize built-in auto model ${autoId}:`, err);
@@ -986,11 +1047,13 @@ async function buildUnifiedModelsResponseCore(
         // the fix, a provider with any synced model silently dropped ALL its
         // static models.
         //
-        // Cursor exclusive listing: when an active synced catalog exists, drop
-        // ALL static rows (including effort variants) so Test All / clients only
-        // see live AvailableModels + injected auto*.
+        // An authoritative active synced catalog replaces the static registry.
+        // Partial discovery providers still use exact-id coverage suppression so
+        // their intentionally omitted static routes remain available.
         const syncedForProvider = syncedModelIdsByCanonicalProvider.get(canonicalProviderId);
-        const exclusiveListing = providerUsesExclusiveSyncedListing(canonicalProviderId);
+        const exclusiveListing =
+          providerUsesExclusiveSyncedListing(canonicalProviderId) ||
+          providerUsesAuthoritativeLiveCatalog(canonicalProviderId);
         const providerHasSynced = syncedForProvider !== undefined && syncedForProvider.size > 0;
         const coveredBySynced = shouldSuppressStaticModelForExclusiveListing({
           exclusiveListing,
@@ -1014,6 +1077,7 @@ async function buildUnifiedModelsResponseCore(
         if (isExcludedByProviderConnections(canonicalProviderId, model.id)) continue;
         if (shouldHidePaid(canonicalProviderId, model.id, (model as { pricing?: unknown }).pricing))
           continue;
+        if (shouldHideByExposure(canonicalProviderId, model.id)) continue;
 
         const visionFields =
           getVisionCapabilityFields(aliasId) || getVisionCapabilityFields(model.id);
@@ -1082,10 +1146,19 @@ async function buildUnifiedModelsResponseCore(
       const alias = providerIdToAlias.codex || "cx";
       const aliasId = `${alias}/${modelId}`;
       const providerIdModel = `codex/${modelId}`;
-      const entries = [
-        { id: aliasId, parent: null },
-        { id: providerIdModel, parent: aliasId },
-        { id: modelId, parent: providerIdModel },
+      // #11632: honour the prefix-mode gates resolved at :303-307, like every
+      // other emission loop (static :1022/:1036, synced :1203/:1236, custom
+      // :1628/:1654, alias-backed :1746/:1758). Re-root the canonical row when
+      // the alias row is suppressed, using the same `includeAlias ? aliasId :
+      // null` idiom (:1052, :1246, :1667, :1776), so no surviving row points at
+      // a suppressed predecessor. The bare id is the tail of the alias ->
+      // canonical -> bare chain and only exists when both halves are emitted.
+      const entries: Array<{ id: string; parent: string | null }> = [
+        ...(includeAlias ? [{ id: aliasId, parent: null }] : []),
+        ...(includeCanonical
+          ? [{ id: providerIdModel, parent: includeAlias ? aliasId : null }]
+          : []),
+        ...(includeAlias && includeCanonical ? [{ id: modelId, parent: providerIdModel }] : []),
       ];
 
       for (const entry of entries) {
@@ -1158,12 +1231,13 @@ async function buildUnifiedModelsResponseCore(
             continue;
           }
           // #6328: apply hidePaidModels to synced provider rows too. Synced rows
-          // rarely carry pricing metadata, so shouldHidePaid() falls through to
-          // the FREE_MODEL_IDS_BY_PROVIDER catalog — providers with a curated
-          // free roster show only those; providers with none fall through to
-          // hide-all via providerHasFreeModels() === false.
+          // rarely carry pricing metadata, so shouldHidePaid() keeps only
+          // free-tier rows (catalog + isFree). Custom rows with isFree:true are
+          // already exempt via the isFreeModel gate; other non-free synced rows
+          // are hidden when hidePaid is on.
           if (shouldHidePaid(canonicalProviderId, sm.id, (sm as { pricing?: unknown }).pricing))
             continue;
+          if (shouldHideByExposure(canonicalProviderId, sm.id)) continue;
 
           const registryEntry = REGISTRY[providerId];
           const displayModelId =
@@ -1210,7 +1284,7 @@ async function buildUnifiedModelsResponseCore(
             continue;
           }
 
-          if (includeAlias) {
+          if (includeAlias || Boolean(prefix)) {
             models.push({
               id: aliasId,
               object: "model",
@@ -1222,7 +1296,7 @@ async function buildUnifiedModelsResponseCore(
               ...syncedFields,
             });
           }
-          if (includeAlias && modelType === "audio") {
+          if ((includeAlias || Boolean(prefix)) && modelType === "audio") {
             models.push({
               id: aliasId,
               object: "model",
@@ -1560,9 +1634,15 @@ async function buildUnifiedModelsResponseCore(
           // Custom entries do not carry pricing, so shouldHidePaid() decides
           // via FREE_MODEL_IDS_BY_PROVIDER — matches synced/PROVIDER_MODELS.
           if (
-            shouldHidePaid(canonicalProviderId, modelId, (model as { pricing?: unknown }).pricing)
+            shouldHidePaid(
+              canonicalProviderId,
+              modelId,
+              (model as { pricing?: unknown }).pricing,
+              (model as any).isFree
+            )
           )
             continue;
+          if (shouldHideByExposure(canonicalProviderId, modelId)) continue;
           // noAuth providers have no connection rows; keep auth providers gated. (#2798/#3200)
           const isNoAuthProvider = isNoAuthProviderKey(canonicalProviderId, providerId, alias);
           if (
@@ -1631,12 +1711,11 @@ async function buildUnifiedModelsResponseCore(
           ) {
             continue;
           }
-          const visionFields =
-            !modelType || modelType === "chat"
-              ? getCustomVisionCapabilityFields(model, aliasId, modelId)
-              : null;
+          const visionFields = !modelType
+            ? getCustomVisionCapabilityFields(model, aliasId, modelId)
+            : null;
 
-          if (includeAlias) {
+          if (includeAlias || Boolean(prefix)) {
             models.push({
               id: aliasId,
               object: "model",
@@ -1665,10 +1744,9 @@ async function buildUnifiedModelsResponseCore(
           if (includeCanonical && canonicalProviderId !== alias && !prefix && !isNoAuthProvider) {
             const providerPrefixedId = `${canonicalProviderId}/${modelId}`;
             if (models.some((m) => m.id === providerPrefixedId)) continue;
-            const providerVisionFields =
-              !modelType || modelType === "chat"
-                ? getCustomVisionCapabilityFields(model, providerPrefixedId, modelId)
-                : null;
+            const providerVisionFields = !modelType
+              ? getCustomVisionCapabilityFields(model, providerPrefixedId, modelId)
+              : null;
             models.push({
               id: providerPrefixedId,
               object: "model",
@@ -1742,6 +1820,7 @@ async function buildUnifiedModelsResponseCore(
         // point at providerKey/modelId with no pricing, so shouldHidePaid()
         // decides via the FREE_MODEL_IDS_BY_PROVIDER catalog tier.
         if (shouldHidePaid(canonicalProviderId, modelId)) continue;
+        if (shouldHideByExposure(canonicalProviderId, modelId)) continue;
 
         const aliasId = `${alias}/${modelId}`;
         const rawPrefixedId = `${providerKey}/${modelId}`;
@@ -1755,7 +1834,7 @@ async function buildUnifiedModelsResponseCore(
         const visionFields =
           getVisionCapabilityFields(aliasId) || getVisionCapabilityFields(modelId);
 
-        if (includeAlias) {
+        if (includeAlias || Boolean(nodePrefix)) {
           models.push({
             id: aliasId,
             object: "model",
@@ -1817,6 +1896,7 @@ async function buildUnifiedModelsResponseCore(
         // FREE_MODEL_IDS_BY_PROVIDER catalog tier.
         if (shouldHidePaid(canonicalProviderId, modelId, (model as { pricing?: unknown }).pricing))
           continue;
+        if (shouldHideByExposure(canonicalProviderId, modelId)) continue;
         if (!hasEligibleConnectionForModel([conn], modelId)) continue;
 
         const aliasId = `${alias}/${modelId}`;

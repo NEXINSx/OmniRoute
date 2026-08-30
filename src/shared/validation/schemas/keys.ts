@@ -18,9 +18,13 @@ import { accessScheduleSchema } from "./misc.ts";
 
 // ──── API Key Schemas ────
 
-const requireExclusiveLeaseConnections = (value: {
-  scopes?: string[]; allowedConnections?: string[];
-}, ctx: z.RefinementCtx) => {
+const requireExclusiveLeaseConnections = (
+  value: {
+    scopes?: string[];
+    allowedConnections?: string[];
+  },
+  ctx: z.RefinementCtx
+) => {
   if (value.scopes?.includes("lease:exclusive") && !value.allowedConnections?.length)
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -97,6 +101,7 @@ export const updateKeyPermissionsSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),
     modelAccessMode: z.enum(["all", "restricted"]).optional(),
+    connectionAccessMode: z.enum(["all", "restricted"]).optional(),
     allowedModels: z.array(z.string().trim().min(1)).max(1000).optional(),
     allowedCombos: z.array(z.string().trim().min(1).max(200)).max(500).optional(),
     allowedConnections: z.array(z.string().uuid()).max(100).optional(),
@@ -139,8 +144,30 @@ export const updateKeyPermissionsSchema = z
       });
     }
     if (
+      value.connectionAccessMode === "restricted" &&
+      (!value.allowedConnections || value.allowedConnections.length === 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "allowedConnections must not be empty when connectionAccessMode is 'restricted'",
+        path: ["allowedConnections"],
+      });
+    }
+    if (
+      value.connectionAccessMode === "all" &&
+      value.allowedConnections &&
+      value.allowedConnections.length > 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "allowedConnections must be empty when connectionAccessMode is 'all'",
+        path: ["allowedConnections"],
+      });
+    }
+    if (
       value.name === undefined &&
       value.modelAccessMode === undefined &&
+      value.connectionAccessMode === undefined &&
       value.allowedModels === undefined &&
       value.allowedCombos === undefined &&
       value.allowedConnections === undefined &&

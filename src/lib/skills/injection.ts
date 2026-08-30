@@ -63,9 +63,19 @@ function normalizeInputSchema(input: Record<string, unknown>): Record<string, un
   if (typeof input.type === "string") {
     return input;
   }
+  // Some builtin skills declare property types in shorthand ("content":
+  // "string" instead of "content": { "type": "string" }). Strict schema
+  // validators — Zhipu GLM served through opencode-go (upstream error [1210]
+  // "Invalid API parameter") — reject the shorthand as malformed JSON Schema,
+  // which 400s every request the skill tools are injected into. Expand string
+  // values to { type: value }; non-string values pass through untouched.
+  const properties: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    properties[key] = typeof value === "string" ? { type: value } : value;
+  }
   return {
     type: "object",
-    properties: input,
+    properties,
   };
 }
 

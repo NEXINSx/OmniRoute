@@ -92,6 +92,29 @@ describe("resource pressure cgroup parsers", () => {
 });
 
 describe("sampleResourceSignals", () => {
+  it("keeps an explicit zero file-cache reading distinct from unavailable", async () => {
+    const fs = mapFs([
+      ["/proc/self/cgroup", "0::/slice/service\n"],
+      ["/proc/self/mountinfo", "43 34 0:35 / /sys/fs/cgroup rw - cgroup2 cgroup2 rw\n"],
+      ["/sys/fs/cgroup/slice/service/memory.current", `${800 * MiB}\n`],
+      ["/sys/fs/cgroup/slice/service/memory.max", `${GiB}\n`],
+      ["/sys/fs/cgroup/slice/service/memory.high", "966367641\n"],
+      ["/sys/fs/cgroup/slice/service/memory.events", "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\n"],
+      ["/sys/fs/cgroup/slice/service/memory.stat", "anon 268435456\nfile 0\n"],
+      [
+        "/proc/pressure/memory",
+        "some avg10=1.50 avg60=2.00 avg300=3.25 total=9\nfull avg10=0.25 avg60=0.50 avg300=0.75 total=1\n",
+      ],
+    ]);
+    const signals = await sampleResourceSignals({
+      nowMs: () => 42,
+      memoryUsage: () => memoryUsage(250 * MiB),
+      heapStatistics: () => ({ heap_size_limit: GiB, used_heap_size: 250 * MiB }),
+      fs,
+    });
+    assert.equal(signals.cgroup.fileBytes, 0);
+  });
+
   it("captures process, V8, cgroup, event, and PSI snapshot fields", async () => {
     const fs = mapFs([
       ["/proc/self/cgroup", "0::/slice/service\n"],
@@ -100,6 +123,10 @@ describe("sampleResourceSignals", () => {
       ["/sys/fs/cgroup/slice/service/memory.max", `${GiB}\n`],
       ["/sys/fs/cgroup/slice/service/memory.high", "966367641\n"],
       ["/sys/fs/cgroup/slice/service/memory.events", "low 1\nhigh 2\nmax 3\noom 4\noom_kill 5\n"],
+      [
+        "/sys/fs/cgroup/slice/service/memory.stat",
+        `anon 268435456\nfile ${300 * MiB}\nkernel_stack 1048576\n`,
+      ],
       [
         "/proc/pressure/memory",
         "some avg10=1.50 avg60=2.00 avg300=3.25 total=9\nfull avg10=0.25 avg60=0.50 avg300=0.75 total=1\n",
@@ -128,6 +155,7 @@ describe("sampleResourceSignals", () => {
       currentBytes: 800 * MiB,
       maxBytes: GiB,
       highBytes: 966367641,
+      fileBytes: 300 * MiB,
       events: { low: 1, high: 2, max: 3, oom: 4, oom_kill: 5 },
     });
     assert.equal(signals.psi?.someAvg10, 1.5);
@@ -155,6 +183,7 @@ describe("sampleResourceSignals", () => {
       currentBytes: null,
       maxBytes: null,
       highBytes: null,
+      fileBytes: null,
       events: null,
     });
     assert.equal(signals.psi, null);

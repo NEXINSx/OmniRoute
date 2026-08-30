@@ -21,7 +21,7 @@ const providersDb = await import("../../src/lib/db/providers.ts");
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -88,7 +88,7 @@ test.beforeEach(async () => {
 test.after(() => {
   restorePipelineEnv();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("saveCallLog stores only summary metadata in SQLite and writes detailed artifact", async () => {
@@ -677,7 +677,60 @@ test("saveCallLog falls back to a compact sentinel when the configured cap is ve
     schemaVersion: 5,
     _omniroute_truncated: true,
     reason: "call_log_artifact_size_limit_exceeded",
+    error: null,
   });
+});
+
+test("saveCallLog preserves a truncated error in size-limit-fallback artifacts (opencode-go 504 diagnosability)", async () => {
+  // Regression: the minimal size-limit fallback used to replace the error
+  // with "[omitted: call log artifact size limit exceeded]", wiping the only
+  // field that explains WHY the request failed. The error must survive.
+  process.env.CALL_LOG_PIPELINE_MAX_SIZE_KB = "1";
+  const hugePayload = "x".repeat(64 * 1024);
+  const upstreamError =
+    "[504]: Fetch timeout after 110000ms on https://opencode.ai/zen/go/v1/chat/completions";
+
+  await callLogs.saveCallLog({
+    id: "tiny-cap-preserves-error",
+    timestamp: "2026-03-31T10:08:30.000Z",
+    method: "POST",
+    path: "/v1/chat/completions",
+    status: 504,
+    model: `openai/${"gpt".repeat(512)}`,
+    provider: "opencode-go",
+    requestBody: { payload: "request" },
+    responseBody: { output: "response" },
+    error: upstreamError,
+    pipelinePayloads: {
+      providerRequest: { body: hugePayload },
+      providerResponse: { body: hugePayload },
+    },
+  });
+
+  const db = core.getDbInstance();
+  const row = db
+    .prepare(
+      `
+      SELECT artifact_relpath, artifact_size_bytes, detail_state
+      FROM call_logs WHERE id = ?
+    `
+    )
+    .get("tiny-cap-preserves-error");
+  assert.equal((row as any).detail_state, "ready");
+
+  const artifactPath = path.join(TEST_DATA_DIR, "call_logs", (row as any).artifact_relpath);
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+  assert.equal(
+    artifact.error,
+    upstreamError,
+    "the upstream error must be preserved verbatim in the fallback artifact"
+  );
+  assert.equal(artifact._omniroute_truncated, true);
+  assert.equal(
+    artifact.requestBody,
+    undefined,
+    "oversized bodies must be dropped, but the error must survive"
+  );
 });
 
 test("CALL_LOG_PIPELINE_MAX_SIZE_KB does not cap artifacts without pipeline details", async () => {

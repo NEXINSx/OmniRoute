@@ -29,7 +29,31 @@ type AntigravityDiscoveryModel = {
   id: string;
   name: string;
   isInternal?: boolean;
+  /** Token window advertised by the upstream discovery payload, when present. */
+  inputTokenLimit?: number;
+  outputTokenLimit?: number;
 };
+
+/**
+ * Forward discovery-advertised token windows when the upstream payload carries
+ * them. Field names are probed defensively (payload shape is not contractual);
+ * absent/non-numeric fields yield no entry, so nothing downstream changes.
+ */
+function extractDiscoveryTokenLimits(item: Record<string, unknown>): {
+  inputTokenLimit?: number;
+  outputTokenLimit?: number;
+} {
+  const limits: { inputTokenLimit?: number; outputTokenLimit?: number } = {};
+  const input = item.inputTokenLimit ?? item.contextWindow;
+  if (typeof input === "number" && Number.isFinite(input) && input > 0) {
+    limits.inputTokenLimit = input;
+  }
+  const output = item.outputTokenLimit ?? item.maxOutputTokens;
+  if (typeof output === "number" && Number.isFinite(output) && output > 0) {
+    limits.outputTokenLimit = output;
+  }
+  return limits;
+}
 
 export function normalizeAntigravityModelsResponse(data: unknown): AntigravityDiscoveryModel[] {
   const payload = asRecord(data).models;
@@ -52,7 +76,14 @@ export function normalizeAntigravityModelsResponse(data: unknown): AntigravityDi
             : typeof item.name === "string"
               ? item.name
               : id;
-        return id ? { id, name, ...(item.isInternal === true ? { isInternal: true } : {}) } : null;
+        return id
+          ? {
+              id,
+              name,
+              ...extractDiscoveryTokenLimits(item),
+              ...(item.isInternal === true ? { isInternal: true } : {}),
+            }
+          : null;
       })
       .filter((value): value is AntigravityDiscoveryModel => Boolean(value));
   }
@@ -67,7 +98,14 @@ export function normalizeAntigravityModelsResponse(data: unknown): AntigravityDi
           : typeof item.name === "string"
             ? item.name
             : id;
-      return id ? { id, name, ...(item.isInternal === true ? { isInternal: true } : {}) } : null;
+      return id
+        ? {
+            id,
+            name,
+            ...extractDiscoveryTokenLimits(item),
+            ...(item.isInternal === true ? { isInternal: true } : {}),
+          }
+        : null;
     })
     .filter((value): value is AntigravityDiscoveryModel => Boolean(value));
 }
@@ -86,11 +124,13 @@ export function filterUserCallableAntigravityModels(
 }
 
 export function mapAntigravityModelForClient(
-  model: { id: string; name: string },
+  model: { id: string; name: string; inputTokenLimit?: number; outputTokenLimit?: number },
   provider: "antigravity" | "agy" = "antigravity"
 ): {
   id: string;
   name: string;
+  inputTokenLimit?: number;
+  outputTokenLimit?: number;
 } {
   const clientId = toClientAntigravityModelId(model.id);
   return {
@@ -99,6 +139,12 @@ export function mapAntigravityModelForClient(
       provider === "agy"
         ? getClientVisibleAgyModelName(clientId, model.name)
         : getClientVisibleAntigravityModelName(clientId, model.name),
+    ...(typeof model.inputTokenLimit === "number"
+      ? { inputTokenLimit: model.inputTokenLimit }
+      : {}),
+    ...(typeof model.outputTokenLimit === "number"
+      ? { outputTokenLimit: model.outputTokenLimit }
+      : {}),
   };
 }
 
@@ -108,7 +154,9 @@ export async function fetchAntigravityDiscoveryModelsCached(
   proxy: unknown,
   providerSpecificData?: unknown,
   provider: "antigravity" | "agy" = "antigravity"
-): Promise<Array<{ id: string; name: string }>> {
+): Promise<
+  Array<{ id: string; name: string; inputTokenLimit?: number; outputTokenLimit?: number }>
+> {
   const profile = normalizeAntigravityClientProfile(asRecord(providerSpecificData).clientProfile);
   const cacheKey = `${provider}:${connectionId}:${accessToken.substring(0, 16)}:${profile}`;
   const inflight = antigravityDiscoveryInflight.get(cacheKey);

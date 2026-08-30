@@ -66,8 +66,8 @@ process.exit(7);`
     if (originalPath === undefined) delete process.env.PATH;
     else process.env.PATH = originalPath;
     delete process.env.CAPTURE_PATH;
-    await rm(fake.dir, { recursive: true, force: true });
-    await rm(capture, { recursive: true, force: true });
+    await rm(fake.dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    await rm(capture, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -117,8 +117,8 @@ fs.writeFileSync(process.env.CAPTURE_PATH, JSON.stringify({
     if (originalPath === undefined) delete process.env.PATH;
     else process.env.PATH = originalPath;
     delete process.env.CAPTURE_PATH;
-    await rm(fake.dir, { recursive: true, force: true });
-    await rm(capture, { recursive: true, force: true });
+    await rm(fake.dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    await rm(capture, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -164,7 +164,7 @@ fs.writeFileSync(process.env.CAPTURE_PATH, JSON.stringify({
     if (originalPath === undefined) delete process.env.PATH;
     else process.env.PATH = originalPath;
     delete process.env.CAPTURE_PATH;
-    await rm(fake.dir, { recursive: true, force: true });
-    await rm(capture, { recursive: true, force: true });
+    await rm(fake.dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    await rm(capture, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

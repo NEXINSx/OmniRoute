@@ -153,7 +153,7 @@ function isPendingRequestClearedError(error: unknown): boolean {
  * chunk into the now-closed response stream, as a "Controller is already closed"
  * TypeError. Treating any of these as an upstream error wrongly cools down the
  * account/connection, so the stream error path uses this to skip the provider
- * failover/cooldown (the chatgpt-web / codex / antigravity executors already
+ * failover/cooldown (the Codex / Antigravity executors already
  * guard client aborts the same way).
  */
 export function isClientDisconnectError(error: unknown): boolean {
@@ -599,7 +599,7 @@ function resolveSilentCloseOutcome(input: {
     // #10443: every known path that produces OpenAI chat chunks emits a
     // terminal — the response translators (gemini/claude/kiro/cursor-to-openai)
     // all emit a finish_reason chunk, the non-standard executors (kiro, cursor,
-    // nlpcloud, poe-web, copilot-m365-web, chatgpt-web, chipotle, gitlab)
+    // nlpcloud, poe-web, copilot-m365-web, chipotle, gitlab)
     // enqueue `data: [DONE]` themselves, and standard OpenAI-compatible
     // upstreams end with finish_reason + [DONE] per spec. So a close that
     // forwarded content but no terminal marker is an upstream drop, not a

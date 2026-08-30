@@ -53,14 +53,26 @@ let latestVersionCacheGeneration = 0;
 // for back-compat with existing server-side importers.
 export { normalizeVersion, isNewer } from "./versionCompare";
 
-/** Latest published version via the `npm` CLI (fast when npm is on PATH, e.g. source installs). */
-export async function getLatestVersionFromNpmCli(): Promise<string | null> {
+/**
+ * Latest published version via the `npm` CLI (fast when npm is on PATH, e.g. source installs).
+ *
+ * `execFn` is injectable for tests (same pattern as the CLI's own
+ * `bin/cli/commands/update.mjs::getLatestVersion()`).
+ */
+export async function getLatestVersionFromNpmCli(
+  execFn: typeof execFileAsync = execFileAsync
+): Promise<string | null> {
   try {
     // #5542 — win32 npm is npm.cmd; execFile without a shell throws "spawn npm ENOENT"
     // on Node ≥24 (nodejs/node#52554). buildNpmExecOptions enables the shell on win32.
-    const { stdout } = await execFileAsync(
+    // #11885 — `--prefer-online` forces npm to revalidate its HTTP cache against the
+    // registry. Without it `npm info` can return a stale cached version, the same known
+    // bug class already fixed in the CLI's own copy for #4376 (see that fix's comment in
+    // bin/cli/commands/update.mjs::getLatestVersion()) but never mirrored here — this is
+    // the function backing the dashboard's "Update Available" banner.
+    const { stdout } = await execFn(
       "npm",
-      ["info", "omniroute", "version", "--json"],
+      ["info", "omniroute", "version", "--json", "--prefer-online"],
       buildNpmExecOptions(process.platform, { timeoutMs: LOOKUP_TIMEOUT_MS })
     );
     const parsed = JSON.parse(String(stdout).trim());

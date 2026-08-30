@@ -42,6 +42,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { findProvenanceOnSelfHosted, formatProvenanceFinding } from "./lib/provenanceRunner.mjs";
 
 const ROOT = process.cwd();
 const WORKFLOWS_DIR = path.join(ROOT, ".github", "workflows");
@@ -275,6 +276,23 @@ export function runZizmor(workflowsDir) {
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Hard rule (not a lint count): `--provenance` inside a job that runs on a
+ * self-hosted runner. npm answers 422 at the registry, and in v3.8.50 that
+ * answer only came after the tag, the GitHub Release and the Docker images were
+ * already out. Blocks under --strict AND --ratchet (the CI mode); plain mode
+ * reports it like everything else.
+ * @param {string[]} files absolute workflow paths
+ */
+export function runProvenanceRunnerCheck(files) {
+  const findings = [];
+  for (const file of files) {
+    const text = fs.readFileSync(file, "utf8");
+    findings.push(...findProvenanceOnSelfHosted(text, path.relative(ROOT, file)));
+  }
+  return findings;
+}
+
 function main() {
   const hasActionlint = isBinaryAvailable("actionlint");
   const hasZizmor = isBinaryAvailable("zizmor");
@@ -350,6 +368,16 @@ function main() {
     }
   }
 
+  const provenanceFindings = runProvenanceRunnerCheck(workflowFiles);
+  if (provenanceFindings.length > 0) {
+    console.error(
+      `[check-workflows] provenance×self-hosted: ${provenanceFindings.length} finding(s) — HARD RULE:`
+    );
+    provenanceFindings.forEach((f) => console.error(`  ${formatProvenanceFinding(f)}`));
+  } else if (!QUIET) {
+    console.log("[check-workflows] provenance×self-hosted: OK (0 findings)");
+  }
+
   const total = actionlintCount + zizmorCount;
   process.stdout.write(`workflowFindings=${total}\n`);
   process.stdout.write(`actionlintFindings=${actionlintCount}\n`);
@@ -357,6 +385,15 @@ function main() {
   // Read this line with the count above: a finding total is only reproducible against the
   // version that produced it. See zizmorVersion().
   process.stdout.write(`zizmorVersion=${hasZizmor ? zizmorVersion() : "absent"}\n`);
+  process.stdout.write(`provenanceRunnerFindings=${provenanceFindings.length}\n`);
+  if ((STRICT || RATCHET) && provenanceFindings.length > 0) {
+    console.error(
+      `\n[check-workflows] FAIL — ${provenanceFindings.length} job(s) publish with --provenance from a self-hosted runner.\n` +
+        "  npm rejects that with 422 at the registry. Move the upload step to a github-hosted job\n" +
+        "  (see .github/workflows/npm-publish.yml `stage-npm` for the pattern)."
+    );
+    process.exit(1);
+  }
 
   if (STRICT && total > 0) {
     console.error(`\n[check-workflows] FAIL — ${total} workflow finding(s) total (--strict mode).`);

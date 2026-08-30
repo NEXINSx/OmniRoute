@@ -26,10 +26,30 @@ export const cursorProvider: RegistryEntry = {
     { id: "gpt-5.3-codex-spark-preview", name: "GPT 5.3 Codex Spark Preview" },
     { id: "gpt-5.3-codex-spark-preview-high", name: "GPT 5.3 Codex Spark Preview High" },
     { id: "gpt-5.3-codex-spark-preview-xhigh", name: "GPT 5.3 Codex Spark Preview XHigh" },
-    { id: "claude-4.6-opus-high-thinking-fast", name: "Claude 4.6 Opus High Thinking Fast" },
-    { id: "claude-4.6-opus-max-thinking-fast", name: "Claude 4.6 Opus Max Thinking Fast" },
-    { id: "claude-4.6-sonnet-medium", name: "Claude 4.6 Sonnet Medium" },
-    { id: "claude-4.6-sonnet-medium-thinking", name: "Claude 4.6 Sonnet Medium Thinking" },
+    // #11489: cursor/agy spell Claude ids <version>-<family> ("claude-4.6-opus-high");
+    // the effort splitter strips those to "claude-4.6-opus", which is not a catalog id.
+    // `scoresAs` points each at the canonical <family>-<version> spelling so quality
+    // scores are inherited. Operational metadata stays on these entries.
+    {
+      id: "claude-4.6-opus-high-thinking-fast",
+      name: "Claude 4.6 Opus High Thinking Fast",
+      scoresAs: "claude-opus-4-6",
+    },
+    {
+      id: "claude-4.6-opus-max-thinking-fast",
+      name: "Claude 4.6 Opus Max Thinking Fast",
+      scoresAs: "claude-opus-4-6",
+    },
+    {
+      id: "claude-4.6-sonnet-medium",
+      name: "Claude 4.6 Sonnet Medium",
+      scoresAs: "claude-sonnet-4-6",
+    },
+    {
+      id: "claude-4.6-sonnet-medium-thinking",
+      name: "Claude 4.6 Sonnet Medium Thinking",
+      scoresAs: "claude-sonnet-4-6",
+    },
     { id: "gemini-3.1-pro", name: "Gemini 3.1 Pro" },
     { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash" },
     { id: "gemini-3-flash", name: "Gemini 3 Flash" },
@@ -184,12 +204,24 @@ export const cursorProvider: RegistryEntry = {
     { id: "gpt-5.4-high-fast", name: "GPT-5.4 High Fast" },
     { id: "gpt-5.4-xhigh", name: "GPT-5.4 1M Extra High" },
     { id: "gpt-5.4-xhigh-fast", name: "GPT-5.4 Extra High Fast" },
-    { id: "claude-4.6-opus-high", name: "Opus 4.6 1M" },
-    { id: "claude-4.6-opus-max", name: "Opus 4.6 1M Max" },
-    { id: "claude-4.6-opus-high-thinking", name: "Opus 4.6 1M Thinking" },
-    { id: "claude-4.6-opus-max-thinking", name: "Opus 4.6 1M Max Thinking" },
-    { id: "claude-4.5-opus-high", name: "Opus 4.5" },
-    { id: "claude-4.5-opus-high-thinking", name: "Opus 4.5 Thinking" },
+    // #11489: cursor/agy spell Claude ids <version>-<family> ("claude-4.6-opus-high");
+    // the effort splitter strips those to "claude-4.6-opus", which is not a catalog id.
+    // `scoresAs` points each at the canonical <family>-<version> spelling so quality
+    // scores are inherited. Operational metadata stays on these entries.
+    { id: "claude-4.6-opus-high", name: "Opus 4.6 1M", scoresAs: "claude-opus-4-6" },
+    { id: "claude-4.6-opus-max", name: "Opus 4.6 1M Max", scoresAs: "claude-opus-4-6" },
+    {
+      id: "claude-4.6-opus-high-thinking",
+      name: "Opus 4.6 1M Thinking",
+      scoresAs: "claude-opus-4-6",
+    },
+    {
+      id: "claude-4.6-opus-max-thinking",
+      name: "Opus 4.6 1M Max Thinking",
+      scoresAs: "claude-opus-4-6",
+    },
+    { id: "claude-4.5-opus-high", name: "Opus 4.5", scoresAs: "claude-opus-4-5" },
+    { id: "claude-4.5-opus-high-thinking", name: "Opus 4.5 Thinking", scoresAs: "claude-opus-4-5" },
     { id: "gpt-5.2-low", name: "GPT-5.2 Low" },
     { id: "gpt-5.2-low-fast", name: "GPT-5.2 Low Fast" },
     { id: "gpt-5.2-fast", name: "GPT-5.2 Fast" },
@@ -223,13 +255,17 @@ export const cursorProvider: RegistryEntry = {
     { id: "gpt-5.4-nano-medium", name: "GPT-5.4 Nano" },
     { id: "gpt-5.4-nano-high", name: "GPT-5.4 Nano High" },
     { id: "gpt-5.4-nano-xhigh", name: "GPT-5.4 Nano Extra High" },
-    { id: "claude-4.5-sonnet", name: "Sonnet 4.5" },
-    { id: "claude-4.5-sonnet-thinking", name: "Sonnet 4.5 Thinking" },
+    { id: "claude-4.5-sonnet", name: "Sonnet 4.5", scoresAs: "claude-sonnet-4-5" },
+    {
+      id: "claude-4.5-sonnet-thinking",
+      name: "Sonnet 4.5 Thinking",
+      scoresAs: "claude-sonnet-4-5",
+    },
     { id: "gpt-5.1-low", name: "GPT-5.1 Low" },
     { id: "gpt-5.1", name: "GPT-5.1" },
     { id: "gpt-5.1-high", name: "GPT-5.1 High" },
-    { id: "claude-4-sonnet", name: "Sonnet 4" },
-    { id: "claude-4-sonnet-thinking", name: "Sonnet 4 Thinking" },
+    { id: "claude-4-sonnet", name: "Sonnet 4", scoresAs: "claude-sonnet-4" },
+    { id: "claude-4-sonnet-thinking", name: "Sonnet 4 Thinking", scoresAs: "claude-sonnet-4" },
     { id: "gpt-5-mini", name: "GPT-5 Mini" },
     { id: "kimi-k3-low", name: "Kimi K3 Low" },
     { id: "kimi-k3-max", name: "Kimi K3" },
