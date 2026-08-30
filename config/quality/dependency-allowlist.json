@@ -119,7 +119,7 @@
     "react",
     "react-dom",
     "react-is",
-    "react-json-view-lite",
+    "react18-json-view",
     "react-markdown",
     "react-reconciler",
     "recharts",
