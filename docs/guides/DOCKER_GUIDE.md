@@ -226,16 +226,22 @@ Three build args control what the `builder` stage costs. They are build-time onl
 | --------------------------- | ------- | ----------------------------------------------------------------------------------- |
 | `OMNIROUTE_USE_TURBOPACK`   | `1`     | `0` builds with webpack instead. Lower peak memory, slower.                         |
 | `OMNIROUTE_BUILD_MEMORY_MB` | `6144`  | V8 heap ceiling (`--max-old-space-size`) for the spawned `next build`.              |
-| `OMNIROUTE_BUILD_WORKERS`   | `3`     | Feeds `CIRCLE_NODE_TOTAL`; Next derives `workers = N - 1` for page-data collection. |
+| `OMNIROUTE_BUILD_WORKERS`   | `2`     | Feeds `CIRCLE_NODE_TOTAL`; Next derives `workers = N - 1` for page-data collection. |
 
 `OMNIROUTE_BUILD_WORKERS` is the one to raise on a big builder and the one to
 suspect when a constrained build dies **after** `✓ Compiled successfully`. Each
-page-data worker is its own process and inherits `NODE_OPTIONS`, so the heap
-ceiling is per process, not per build: the default of `3` (→ 2 workers) is sized
-for the 16 GB / 4 vCPU GitHub-hosted runners the publish pipeline uses. At `8`
-(→ 7 workers) that runner ran out of memory and buildkit failed the step with
-`ResourceExhausted: ... cannot allocate memory`. `tests/unit/docker-build-memory-budget.test.ts`
-does the arithmetic and fails if either knob outgrows the runner.
+page-data worker is its own process, and so is the parent `next build` itself;
+a live VPS reproduction (issue #7518) measured each process's peak RSS at
+~4.5 GB independent of the `NODE_OPTIONS` heap flag (Turbopack compiles in
+native/Rust memory outside the V8 heap). The default of `2` (→ 1 worker, 2
+processes total) is sized for the 16 GB / 4 vCPU GitHub-hosted runners the
+publish pipeline uses. At `8` (→ 7 workers) that runner ran out of memory and
+buildkit failed the step with `ResourceExhausted: ... cannot allocate memory`;
+`3` (→ 2 workers) still didn't fit once the per-process RSS was measured
+directly instead of inferred. `tests/unit/docker-build-memory-budget.test.ts`
+does the arithmetic against the measured figure and fails if either knob
+outgrows the runner. Both images (node and Bun) share these defaults; the Bun
+image's are set in `Dockerfile.bun` (Turbopack on Bun 1.4+, `#11719`).
 
 Turbopack compiles in native Rust memory that lives **outside** the V8 heap, so
 `OMNIROUTE_BUILD_MEMORY_MB` does not bound it. On a host with a memory ceiling the

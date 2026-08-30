@@ -1,5 +1,5 @@
 # ── Multi-stage Dockerfile for Native Bun Runtime (web-latest-bun) ───────────
-FROM oven/bun:1.3.14-slim AS base
+FROM oven/bun:1.4.0-slim AS base
 WORKDIR /app
 
 RUN apt-get update \
@@ -34,8 +34,10 @@ RUN if [ -f "node_modules/tls-client-node/scripts/postinstall.js" ]; then \
       bun node_modules/tls-client-node/scripts/postinstall.js || true; \
     fi
 
-# Disable Turbopack for Bun builder stage (Turbopack V8 internal worker bindings require Node)
-ENV OMNIROUTE_USE_TURBOPACK=0
+# Turbopack is supported on Bun 1.4+ (Next 16.3); override via
+# --build-arg OMNIROUTE_USE_TURBOPACK=0 to force the webpack fallback.
+ARG OMNIROUTE_USE_TURBOPACK=1
+ENV OMNIROUTE_USE_TURBOPACK=${OMNIROUTE_USE_TURBOPACK}
 
 ARG OMNIROUTE_BASE_PATH=""
 ENV OMNIROUTE_BASE_PATH=$OMNIROUTE_BASE_PATH
@@ -45,6 +47,33 @@ ENV DASHBOARD_ALLOW_EMBED=$DASHBOARD_ALLOW_EMBED
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+
+# Cap the Next.js build heap and page-data worker pool inside the Bun image the
+# same way the node Dockerfile does (#10060/#11419/#7518). Without these knobs
+# Next falls back to its defaults: worker pool = os.cpus()-1 (3 on the 4-vCPU
+# GitHub runner) and an 8 GB V8 heap ceiling per process. 4+ V8 processes at
+# multi-GB each blow past the 16 GB runner, the cgroup OOM killer SIGKILLs a
+# build worker mid-compile, and buildx fails the step with `ResourceExhausted:
+# ... cannot allocate memory` — every Bun image published on main since the -bun
+# targets landed (#11709, #11039).
+#
+# The per-process peak is a MEASURED ~4.5 GB RSS (dmesg OOM-killer report,
+# #7518), independent of NODE_OPTIONS — Turbopack is native/Rust and compiles
+# outside the V8 heap — and it applies to the parent process too, so 2 page-data
+# workers (3 processes × 4.5 GB ≈ 13.5 GB) do not fit the 12.288 GB (75%)
+# budget either. Both images therefore default to OMNIROUTE_BUILD_WORKERS=2
+# (1 page-data worker): 2 processes × 4.5 GB ≈ 9 GB fits with headroom (#11663).
+# The default Turbopack path keeps the compile outside the V8 heap, but the
+# guards must hold for the webpack fallback (OMNIROUTE_USE_TURBOPACK=0) too, so
+# they are wired exactly like the node image.
+#
+# NODE_OPTIONS propagates to the spawned `next build` child and its workers
+# (build-next-isolated.mjs → resolveNextBuildEnv spreads process.env), so the
+# ceiling is per PROCESS, not per build.
+ARG OMNIROUTE_BUILD_MEMORY_MB=6144
+ENV NODE_OPTIONS="--max-old-space-size=${OMNIROUTE_BUILD_MEMORY_MB}"
+ARG OMNIROUTE_BUILD_WORKERS=2
+ENV CIRCLE_NODE_TOTAL=${OMNIROUTE_BUILD_WORKERS}
 
 # Bun native Next.js build execution
 RUN bun run --quiet build

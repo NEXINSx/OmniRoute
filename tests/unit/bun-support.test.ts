@@ -88,13 +88,37 @@ test("createSyncDriverFactory prefers better-sqlite3 when running under Node", (
   }
 });
 
-test("resolveNextBuildBundlerFlag automatically disables Turbopack and uses Webpack under Bun", async () => {
+// `OMNIROUTE_USE_TURBOPACK` is the operator's only control over the bundler:
+// Turbopack is the default and `0` is the documented escape hatch (webpack), taken
+// for Windows / native-binding trouble / RAM-constrained machines — see
+// docs/reference/ENVIRONMENT.md and #6409. Nothing sniffs the runtime, so pin that:
+// a hidden override would silently ignore an explicit `=1` from an operator who set
+// it on purpose (CI does, in build.yml / ci.yml / quality.yml). Bun 1.4+ supports
+// Turbopack's V8 worker bindings (#11471), so the historical bun-only webpack
+// forced path is gone from the Bun image as well.
+test("resolveNextBuildBundlerFlag is decided by OMNIROUTE_USE_TURBOPACK alone, not by the runtime", async () => {
+  const buildIsolated = await import("../../scripts/build/build-next-isolated.mjs");
   const originalBun = process.versions.bun;
   try {
-    (process.versions as Record<string, string>).bun = "1.1.20";
-    const buildIsolated = await import("../../scripts/build/build-next-isolated.mjs");
-    assert.equal(buildIsolated.resolveNextBuildBundlerFlag({}), "--webpack");
-    assert.equal(buildIsolated.resolveNextBuildBundlerFlag({ OMNIROUTE_USE_TURBOPACK: "1" }), "--webpack");
+    for (const bun of [undefined, "1.1.20", "1.3.14"]) {
+      if (bun === undefined) {
+        delete (process.versions as Record<string, string | undefined>).bun;
+      } else {
+        (process.versions as Record<string, string>).bun = bun;
+      }
+      const where = `bun=${bun ?? "absent"}`;
+      assert.equal(buildIsolated.resolveNextBuildBundlerFlag({}), "--turbopack", where);
+      assert.equal(
+        buildIsolated.resolveNextBuildBundlerFlag({ OMNIROUTE_USE_TURBOPACK: "1" }),
+        "--turbopack",
+        where
+      );
+      assert.equal(
+        buildIsolated.resolveNextBuildBundlerFlag({ OMNIROUTE_USE_TURBOPACK: "0" }),
+        "--webpack",
+        where
+      );
+    }
   } finally {
     if (originalBun === undefined) {
       delete (process.versions as Record<string, string | undefined>).bun;
