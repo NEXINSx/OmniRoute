@@ -20,6 +20,7 @@ import {
   listPlugins as dbListPlugins,
   updatePluginStatus,
   updatePluginConfig,
+  updatePluginManifest,
   deletePlugin as dbDeletePlugin,
   pluginExists,
   type PluginRow,
@@ -371,6 +372,60 @@ class PluginManager {
   }
 
   /**
+   * Refresh the stored manifest from the on-disk plugin.json, falling back to the
+   * DB snapshot when the disk copy is unreadable, invalid, or mismatched.
+   *
+   * The `manifest` column is a snapshot validated by the Zod schema of the OmniRoute
+   * version that INSTALLED the plugin. When a later upgrade adds a manifest field
+   * (e.g. hooks.onStreamComplete, #11934), plugins installed earlier keep a snapshot
+   * with that field stripped — and nothing re-reads plugin.json: scan() only inserts
+   * unknown plugins, upgrade() requires a strictly newer version, and activate()
+   * never re-validated. The new hook then silently never registers while the
+   * dashboard still shows the plugin active.
+   *
+   * Fail-safe by design: any read/parse/validation failure, a name mismatch, or a
+   * `main` escaping the plugin dir returns the stored manifest unchanged, so a
+   * broken plugin.json can never brick an install that used to activate.
+   */
+  private async refreshManifestFromDisk(row: PluginRow): Promise<PluginManifestWithDefaults> {
+    const stored = JSON.parse(row.manifest) as PluginManifestWithDefaults;
+    try {
+      const { safeValidateManifest } = await import("./manifest");
+      const raw = await readFile(join(row.pluginDir, "plugin.json"), "utf-8");
+      const result = safeValidateManifest(JSON.parse(raw));
+      if (!result.success) return stored;
+      const fresh = result.data;
+      // A plugin.json naming a different plugin must never overwrite this row.
+      if (fresh.name !== row.name) return stored;
+      // CRITICAL-3: same containment gate as install/upgrade — never persist a
+      // manifest whose `main` resolves outside the plugin directory.
+      assertEntryPointWithinDest(row.pluginDir, join(row.pluginDir, fresh.main));
+
+      const freshJson = JSON.stringify(fresh);
+      if (freshJson !== row.manifest) {
+        updatePluginManifest(
+          row.name,
+          fresh as unknown as Record<string, unknown>,
+          [
+            fresh.hooks.onRequest && "onRequest",
+            fresh.hooks.onResponse && "onResponse",
+            fresh.hooks.onError && "onError",
+            fresh.hooks.onInstall && "onInstall",
+            fresh.hooks.onActivate && "onActivate",
+            fresh.hooks.onDeactivate && "onDeactivate",
+            fresh.hooks.onUninstall && "onUninstall",
+            fresh.hooks.onStreamComplete && "onStreamComplete",
+          ].filter(Boolean) as string[]
+        );
+        log.info("manager.manifest_refreshed", { name: row.name });
+      }
+      return fresh;
+    } catch {
+      return stored;
+    }
+  }
+
+  /**
    * Activate a plugin — load into VM, register hooks, update DB.
    */
   async activate(name: string): Promise<void> {
@@ -383,7 +438,9 @@ class PluginManager {
     // silently enforces nothing while the UI still reports it as active.
     if (row.status === "active" && this.loadedPlugins.has(name)) return;
 
-    const manifest = JSON.parse(row.manifest) as PluginManifestWithDefaults;
+    // Prefer a fresh read of plugin.json over the install-time DB snapshot so hook
+    // fields added by newer schema versions reach pre-existing installs (#11934).
+    const manifest = await this.refreshManifestFromDisk(row);
 
     // Path traversal guard: use realpath to resolve symlinks
     const entryPoint = join(row.pluginDir, manifest.main);
