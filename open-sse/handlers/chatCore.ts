@@ -5751,6 +5751,8 @@ export async function handleChatCore({
     });
 
     // Plugin onStreamComplete hook — fire-and-forget, fail-open (#9571)
+    // Pass traceId as requestId so plugins can correlate the stream-completion event
+    // with the originating request (the same id used for onRequest/onResponse). (#11825)
     runPluginOnStreamCompleteHook({
       status: normalizedStreamStatus,
       usage: streamUsage as Record<string, unknown> | undefined,
@@ -5759,6 +5761,7 @@ export async function handleChatCore({
       provider,
       errorCode: streamErrorCode,
       startTime,
+      requestId: traceId,
     });
   };
 

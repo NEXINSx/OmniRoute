@@ -264,6 +264,9 @@ export interface Plugin {
 
 export type PluginOnStreamCompletePayload = {
   status: number;
+  /** Correlates this stream-completion event with the originating request — the same
+   *  id passed to onRequest/onResponse for the request (chatCore's traceId). (#11825) */
+  requestId?: string;
   usage?: {
     prompt_tokens?: number;
     completion_tokens?: number;
