@@ -2403,14 +2403,14 @@
     "bypassProviderQuotaDescription": "Cho phép khóa này bỏ qua chính sách ngưỡng của nhà cung cấp/tài khoản thượng nguồn khi định tuyến. Hạn ngạch USD của khóa API vẫn được áp dụng.",
     "quotaPill": "HẠN MỨC",
     "quotaModeOnly": "qtSd-only",
-    "exclusiveLease": "__MISSING__:Exclusive Lease",
-    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
-    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
-    "allConnections": "__MISSING__:All connections",
-    "onlySelectedConnections": "__MISSING__:Only selected connections",
-    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
-    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
-    "restrictedToConnections": "__MISSING__:Restricted to {count} connection{count, plural, one {} other {s}}."
+    "exclusiveLease": "Thuê độc quyền",
+    "exclusiveLeaseNoticeTitle": "Thuê độc quyền",
+    "exclusiveLeaseNoticeDesc": "Khóa API này có quyền thuê độc quyền để định tuyến kết nối chuyên dụng.",
+    "allConnections": "Tất cả kết nối",
+    "onlySelectedConnections": "Chỉ các kết nối đã chọn",
+    "selectAtLeastOneConnection": "Chọn ít nhất một kết nối hoặc chọn Tất cả kết nối.",
+    "allConnectionsDesc": "Khóa này có thể dùng bất kỳ kết nối đang hoạt động nào.",
+    "restrictedToConnections": "Giới hạn ở {count} kết nối{count, plural, one {} other {s}}."
   },
   "auditLog": {
     "title": "Nhật ký kiểm tra",

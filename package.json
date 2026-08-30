@@ -215,6 +215,8 @@
     "check:workflows": "node scripts/check/check-workflows.mjs",
     "quality:collect": "node scripts/quality/collect-metrics.mjs",
     "quality:ratchet": "node scripts/quality/check-quality-ratchet.mjs",
+    "quality:headroom": "node scripts/quality/baseline-headroom.mjs",
+    "quality:relax-baselines": "node scripts/quality/relax-baselines.mjs",
     "quality:refresh-model-lifecycle": "node scripts/quality/refresh-model-lifecycle.mjs",
     "quality:gate": "npm run quality:collect && npm run quality:ratchet -- --allow-missing",
     "quality:scan": "node scripts/quality/run-all-gates.mjs",
