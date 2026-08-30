@@ -2410,7 +2410,7 @@
     "onlySelectedConnections": "Apenas as conexões selecionadas",
     "selectAtLeastOneConnection": "Selecione pelo menos uma conexão ou escolha Todas as conexões.",
     "allConnectionsDesc": "Esta chave pode usar qualquer conexão ativa.",
-    "restrictedToConnections": "{count, plural, other {Restrita a # conexão(ões).}}"
+    "restrictedToConnections": "Restrita a {count, plural, one {# conexão} other {# conexões}}."
   },
   "auditLog": {
     "title": "Log de Auditoria",

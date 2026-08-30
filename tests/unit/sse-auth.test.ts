@@ -745,7 +745,7 @@ test("getProviderCredentials honors forcedConnectionId even when another account
   assert.equal(selected.apiKey, "sk-forced");
 });
 
-test("getProviderCredentials intersects forcedConnectionId with allowedConnections", async () => {
+test("getProviderCredentials refuses a forced pin outside allowedConnections instead of falling back (#12080)", async () => {
   const allowedConn = await seedConnection("openai", {
     name: "forced-allowed",
     apiKey: "sk-allowed",
@@ -765,12 +765,11 @@ test("getProviderCredentials intersects forcedConnectionId with allowedConnectio
     }
   );
 
-  // #8893: a forced pin outside the eligible pool is DROPPED (not honored) so a
-  // stale reset-aware pin cannot brick the request — selection falls back to the
-  // policy-allowed pool. The policy-blocked connection must never be selected.
-  assert.equal(selected.connectionId, allowedConn.id);
-  assert.equal(selected.apiKey, "sk-allowed");
-  assert.notEqual(selected.connectionId, blockedConn.id);
+  // #12080 (supersedes the #8893 fallback): a forced pin that is absent from the
+  // policy-allowed pool keeps its constraint — resolution yields no credential instead
+  // of silently continuing on another connection. The policy-blocked connection must
+  // never be selected, and the allowed one must not be picked behind the caller's back.
+  assert.equal(selected, null);
 });
 
 test("getProviderCredentials retains rate-limited accounts when allowSuppressedConnections is enabled", async () => {

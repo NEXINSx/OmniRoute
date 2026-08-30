@@ -29,7 +29,6 @@ const {
   isArenaEloSyncEnabled,
   isControlPlaneProxyDirectFallbackEnabled,
   areContextWindowChecksDisabled,
-  isDisableThinkingLevelVariantsEnabled,
 } = await import("../../src/shared/utils/featureFlags.ts");
 
 // #10889 added OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN, bumping the count to 51.

@@ -2409,7 +2409,7 @@
     "onlySelectedConnections": "__MISSING__:Only selected connections",
     "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
     "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
-    "restrictedToConnections": "__MISSING__:Restricted to {count} connection{count, plural, one {} other {s}}."
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Tarkastusloki",

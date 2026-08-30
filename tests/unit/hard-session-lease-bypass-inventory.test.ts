@@ -91,6 +91,7 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/models/route.ts": 1,
     "src/app/api/monitoring/health/route.ts": 1,
     "src/app/api/oauth/[provider]/[action]/route.ts": 4,
+    "src/app/api/oauth/codex/import/route.ts": 1,
     "src/app/api/oauth/kiro/api-key/route.ts": 1,
     "src/app/api/oauth/kiro/auto-import/route.ts": 2,
     "src/app/api/oauth/kiro/import/route.ts": 1,

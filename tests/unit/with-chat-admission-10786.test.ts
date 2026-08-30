@@ -2,9 +2,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { ChatAdmissionController, admitChatRequest } = await import(
-  "../../src/shared/middleware/chatBodyAdmission.ts"
-);
+const { ChatAdmissionController, admitChatRequest } =
+  await import("../../src/shared/middleware/chatBodyAdmission.ts");
 const { withChatAdmission } = await import("../../src/shared/middleware/withChatAdmission.ts");
 
 function largeBody(n = 64): string {
@@ -59,8 +58,14 @@ test("withChatAdmission invokes the handler and forwards the admitted request", 
 
 test("responses admits inline before json; messages wrap withChatAdmission before withInjectionGuard", async () => {
   const { readFileSync } = await import("node:fs");
-  const responses = readFileSync(new URL("../../src/app/api/v1/responses/route.ts", import.meta.url), "utf8");
-  const messages = readFileSync(new URL("../../src/app/api/v1/messages/route.ts", import.meta.url), "utf8");
+  const responses = readFileSync(
+    new URL("../../src/app/api/v1/responses/route.ts", import.meta.url),
+    "utf8"
+  );
+  const messages = readFileSync(
+    new URL("../../src/app/api/v1/messages/route.ts", import.meta.url),
+    "utf8"
+  );
   const catchAll = readFileSync(
     new URL("../../src/app/api/v1/responses/[...path]/route.ts", import.meta.url),
     "utf8"
@@ -72,7 +77,10 @@ test("responses admits inline before json; messages wrap withChatAdmission befor
   assert.ok(admitAt >= 0, "responses route must call admitChatRequest");
   assert.ok(jsonAt > admitAt, "admitChatRequest must run before request.json()");
   assert.doesNotMatch(responses, /withChatAdmission/);
-  assert.match(messages, /withChatAdmission\(\s*withInjectionGuard\(postHandler\)\s*\)/);
+  assert.match(
+    messages,
+    /withChatAdmission\(\s*withInjectionGuard\(postHandler(?:,\s*\{[^}]*\})?\)\s*\)/
+  );
   assert.match(catchAll, /export const POST = withChatAdmission\(postHandler\)/);
   assert.doesNotMatch(catchAll, /export async function POST/);
 });
