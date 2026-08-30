@@ -2403,14 +2403,14 @@
     "bypassProviderQuotaDescription": "Permite que esta chave ignore a política de corte do provedor/conta upstream durante o roteamento. As cotas em USD da chave de API ainda se aplicam.",
     "quotaPill": "QUOTA",
     "quotaModeOnly": "só-qtSd",
-    "exclusiveLease": "__MISSING__:Exclusive Lease",
-    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
-    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
-    "allConnections": "__MISSING__:All connections",
-    "onlySelectedConnections": "__MISSING__:Only selected connections",
-    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
-    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
-    "restrictedToConnections": "__MISSING__:Restricted to {count} connection{count, plural, one {} other {s}}."
+    "exclusiveLease": "Arrendamento exclusivo",
+    "exclusiveLeaseNoticeTitle": "Arrendamento exclusivo",
+    "exclusiveLeaseNoticeDesc": "Esta chave de API tem permissões de arrendamento exclusivo para roteamento dedicado de conexões.",
+    "allConnections": "Todas as conexões",
+    "onlySelectedConnections": "Apenas as conexões selecionadas",
+    "selectAtLeastOneConnection": "Selecione pelo menos uma conexão ou escolha Todas as conexões.",
+    "allConnectionsDesc": "Esta chave pode usar qualquer conexão ativa.",
+    "restrictedToConnections": "{count, plural, other {Restrita a # conexão(ões).}}"
   },
   "auditLog": {
     "title": "Log de Auditoria",
