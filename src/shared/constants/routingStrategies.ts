@@ -37,6 +37,7 @@ export type AnyRoutingStrategyValue = RoutingStrategyValue | InternalRoutingStra
 
 export const AUTO_ROUTING_STRATEGY_VALUES = [
   "rules",
+  "score",
   "cost",
   "eco",
   "latency",

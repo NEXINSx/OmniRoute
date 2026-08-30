@@ -413,6 +413,8 @@ Persisted `strategy: "auto"` combos can set `config.routerStrategy` (or legacy
 `config.auto.routerStrategy`) to one of:
 
 - `rules` — default weighted scoring
+- `score` — selects the highest configured weighted score. Exact ties preserve configured
+  candidate order; the existing `explorationRate` samples from the full ranked pool.
 - `cost` / `eco` — cheapest healthy provider
 - `latency` / `fast` — lowest p95 latency with reliability penalty
 - `sla-aware` / `sla` — prefer candidates that satisfy p95 latency, error-rate, and optional
@@ -421,7 +423,7 @@ Persisted `strategy: "auto"` combos can set `config.routerStrategy` (or legacy
 
 ### Router strategies in detail
 
-The auto-combo engine exposes 5 pluggable **RouterStrategy** implementations that
+The auto-combo engine exposes 6 pluggable **RouterStrategy** implementations that
 you can swap via `config.routerStrategy` (or the legacy `config.auto.routerStrategy`).
 Each strategy picks one provider from the candidate pool, given a `RoutingContext`
 (task type, tool/vision hints, token estimate, optional SLA policy, optional

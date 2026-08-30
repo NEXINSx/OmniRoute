@@ -67,6 +67,7 @@ export const MODE_PACK_OPTIONS = [
 
 export const ROUTER_STRATEGY_OPTIONS = [
   { id: "rules", label: "Rules (6-Factor Scoring)" },
+  { id: "score", label: "Highest Weighted Score" },
   { id: "cost", label: "Cost Optimized" },
   { id: "latency", label: "Latency Optimized" },
   { id: "sla-aware", label: "SLA-aware" },

@@ -15,7 +15,10 @@ import {
   listStrategies,
   type RoutingContext,
 } from "../../open-sse/services/autoCombo/routerStrategy.ts";
-import type { ProviderCandidate } from "../../open-sse/services/autoCombo/scoring.ts";
+import {
+  DEFAULT_WEIGHTS,
+  type ProviderCandidate,
+} from "../../open-sse/services/autoCombo/scoring.ts";
 
 function cand(p: Partial<ProviderCandidate> & { provider: string }): ProviderCandidate {
   return {
@@ -32,6 +35,32 @@ function cand(p: Partial<ProviderCandidate> & { provider: string }): ProviderCan
 }
 
 const ctx: RoutingContext = { taskType: "default" };
+
+// ── score ────────────────────────────────────────────────────────────────────
+test("score — exploits the configured winner and uses explorationRate", (t) => {
+  const pool = [
+    cand({ provider: "cheap", costPer1MTokens: 1 }),
+    cand({ provider: "expensive", costPer1MTokens: 9 }),
+  ];
+  const weights = { ...DEFAULT_WEIGHTS, costInv: 1, quota: 0, health: 0, latencyInv: 0 };
+
+  t.mock.method(Math, "random", () => 0.99);
+
+  assert.equal(
+    getStrategy("score").select(pool, { ...ctx, weights, explorationRate: 0 }).provider,
+    "cheap"
+  );
+  assert.equal(
+    getStrategy("score").select(pool, { ...ctx, weights, explorationRate: 1 }).provider,
+    "expensive"
+  );
+});
+
+test("score — exact ties preserve configured candidate order", () => {
+  const pool = [cand({ provider: "first" }), cand({ provider: "second" })];
+
+  assert.equal(getStrategy("score").select(pool, { ...ctx, explorationRate: 0 }).provider, "first");
+});
 
 // ── cost ─────────────────────────────────────────────────────────────────────
 test("cost — selects the cheapest healthy candidate", () => {
@@ -307,6 +336,7 @@ test("selectWithStrategy — unknown strategy silently falls back to rules", () 
 
 test("listStrategies — exposes every registered strategy + aliases", () => {
   const names = listStrategies().map((s) => s.name);
+  assert.ok(names.includes("score"), "listStrategies missing 'score'");
   for (const n of ["rules", "cost", "eco", "latency", "fast", "sla-aware", "sla", "lkgp"]) {
     assert.ok(names.includes(n), `listStrategies missing '${n}'`);
   }
