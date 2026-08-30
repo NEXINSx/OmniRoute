@@ -14,6 +14,56 @@ import {
   ConversationContextSection,
 } from "@/shared/components/RequestLoggerDetail.sections";
 
+// ─── Copy-all composition ────────────────────────────────────────────────────
+// Compose every visible payload section + stream chunk into a single block so
+// users can copy the whole request/response transcript with one click instead
+// of copying each section individually. Pure function, exported for tests.
+type CopyAllSection = { title: string; json: string };
+type CopyAllInput = {
+  sections: CopyAllSection[];
+  streamChunks?: Record<string, string | string[]>;
+  legacyResponse?: string | null;
+  legacyRequest?: string | null;
+  legacyResponseTitle?: string;
+  legacyRequestTitle?: string;
+};
+
+export function buildCopyAllText({
+  sections,
+  streamChunks,
+  legacyResponse,
+  legacyRequest,
+  legacyResponseTitle = "Response",
+  legacyRequestTitle = "Request",
+}: CopyAllInput): string {
+  const parts: string[] = [];
+  const streamNames: Array<[string, string | string[] | undefined]> = [
+    ["provider", streamChunks?.provider],
+    ["client", streamChunks?.client],
+    ["openai", streamChunks?.openai],
+  ];
+
+  for (const [name, value] of streamNames) {
+    if (value == null) continue;
+    const body = Array.isArray(value) ? value.join("") : String(value);
+    if (!body) continue;
+    parts.push(`### ${name.toUpperCase()} STREAM\n${body}`);
+  }
+
+  for (const section of sections) {
+    parts.push(`### ${section.title}\n${section.json}`);
+  }
+
+  if (sections.length === 0 && legacyResponse) {
+    parts.push(`### ${legacyResponseTitle}\n${legacyResponse}`);
+  }
+  if (sections.length === 0 && legacyRequest) {
+    parts.push(`### ${legacyRequestTitle}\n${legacyRequest}`);
+  }
+
+  return parts.join("\n\n---\n\n");
+}
+
 // ─── Stream section + Detail Modal ───────────────────────────────────────────────────────────
 
 function StreamSection({ title, json, onCopy }) {
@@ -172,6 +222,7 @@ export default function RequestLoggerDetail({
 
   const [unblocking, setUnblocking] = useState(false);
   const [cleared, setCleared] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
 
   // #7920 gave this component formatErrorForDisplay for structured error objects, but the
   // #8213 combo/cooldown checks below went straight to the raw field and call
@@ -277,6 +328,26 @@ export default function RequestLoggerDetail({
     if (chunks && typeof chunks === "object") return chunks;
     return null;
   })();
+
+  // Compose every visible payload section + stream chunk into a single block so
+  // users can copy the whole request/response transcript with one click instead
+  // of copying each section individually.
+  const handleCopyAll = async () => {
+    const text = buildCopyAllText({
+      sections: payloadSections,
+      streamChunks: streamChunks || undefined,
+      legacyResponse: payloadSections.length === 0 ? responseJson : null,
+      legacyRequest: payloadSections.length === 0 ? requestJson : null,
+      legacyResponseTitle: t("responsePayloadLegacy"),
+      legacyRequestTitle: t("requestPayloadLegacy"),
+    });
+    if (!text) return;
+    const success = await onCopy(text);
+    if (success !== false) {
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 2000);
+    }
+  };
   const detailIssue =
     detail?.detailState === "missing"
       ? t("payloadMissing")
@@ -365,6 +436,19 @@ export default function RequestLoggerDetail({
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={handleCopyAll}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-bg-subtle text-text-muted hover:text-text-primary transition-colors"
+              aria-label={t("copyAll")}
+              title={t("copyAll")}
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                {copiedAll ? "check" : "content_copy"}
+              </span>
+              <span className="text-xs font-medium">
+                {copiedAll ? t("copiedAll") : t("copyAll")}
+              </span>
+            </button>
             {/* Only rendered when a caller actually wires up navigation (RequestLoggerV2's
                 list view) — a caller with no ordered-list context to navigate through
                 (conversations page, RequestTimeline) passes neither, so there's nothing

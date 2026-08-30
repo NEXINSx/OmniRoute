@@ -26,12 +26,24 @@ import { attachLogMeta } from "./cacheUsageMeta.ts";
  * (see src/lib/db/responsesContinuationStore.ts). Only meaningful when the
  * client actually used the Responses endpoint -- a Chat Completions
  * `chatcmpl-*` id must never be mistaken for a Responses response id.
+ *
+ * A non-streaming clientResponse carries `id` directly. A streaming one goes
+ * through clientPayloadCollector.build(), which always nests the caller's
+ * summary under `.summary` (see createStructuredSSECollector in
+ * streamPayloadCollector.ts) -- check both shapes rather than assuming one.
  */
-function extractResponsesId(sourceFormat: unknown, clientResponse: unknown): string | null {
+export function extractResponsesId(sourceFormat: unknown, clientResponse: unknown): string | null {
   if (sourceFormat !== FORMATS.OPENAI_RESPONSES) return null;
   if (!clientResponse || typeof clientResponse !== "object") return null;
-  const id = (clientResponse as { id?: unknown }).id;
-  return typeof id === "string" && id.length > 0 ? id : null;
+  const record = clientResponse as { id?: unknown; summary?: unknown };
+  const directId = record.id;
+  if (typeof directId === "string" && directId.length > 0) return directId;
+  const summary = record.summary;
+  if (summary && typeof summary === "object") {
+    const summaryId = (summary as { id?: unknown }).id;
+    if (typeof summaryId === "string" && summaryId.length > 0) return summaryId;
+  }
+  return null;
 }
 
 export type PersistAttemptLogsArgs = {

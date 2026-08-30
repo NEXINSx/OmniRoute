@@ -6254,13 +6254,13 @@
       "galadriel": "API 키로 Galadriel을 연결합니다.",
       "predibase": "$25 무료 체험 크레딧 (30일 유효)",
       "chenzk": "chenzk.top의 실시간 모델 카탈로그를 지원하는 OpenAI 호환 게이트웨이입니다.",
-      "magnific": "Freepik의 Mystic API로 이미지를 생성합니다.",
+      "magnific": "Magnific의 Mystic API로 이미지를 생성합니다.",
       "freetheai": "패스스루 모델을 지원하는 무료 OpenAI 호환 게이트웨이입니다.",
-      "g4f-gemini": "키가 필요 없는 무료 g4f.space Gemini 리버스 프록시(분당 5회 요청으로 제한).",
-      "g4f-groq": "키가 필요 없는 무료 g4f.space Groq 리버스 프록시(분당 5회 요청으로 제한).",
-      "g4f-nvidia": "키가 필요 없는 무료 g4f.space NVIDIA NIM 리버스 프록시(분당 5회 요청으로 제한).",
-      "g4f-ollama": "키가 필요 없는 g4f.space의 무료 호스팅 Ollama 게이트웨이(분당 5회 요청으로 제한).",
-      "g4f-pollinations": "키가 필요 없는 무료 g4f.space Pollinations 리버스 프록시(분당 5회 요청으로 제한).",
+      "g4f-gemini": "Gemini용 원격 g4f.space 게이트웨이입니다. 익명 액세스에는 g4f.dev/chat의 작업 증명 크레딧 또는 g4f.dev/members.html의 회원 API 키가 필요하며 한도는 달라질 수 있습니다.",
+      "g4f-groq": "Groq용 원격 g4f.space 게이트웨이입니다. 익명 액세스에는 g4f.dev/chat의 작업 증명 크레딧 또는 g4f.dev/members.html의 회원 API 키가 필요하며 한도는 달라질 수 있습니다.",
+      "g4f-nvidia": "NVIDIA NIM용 원격 g4f.space 게이트웨이입니다. 익명 액세스에는 g4f.dev/chat의 작업 증명 크레딧 또는 g4f.dev/members.html의 회원 API 키가 필요하며 한도는 달라질 수 있습니다.",
+      "g4f-ollama": "Ollama용 원격 g4f.space 게이트웨이입니다. 익명 액세스에는 g4f.dev/chat의 작업 증명 크레딧 또는 g4f.dev/members.html의 회원 API 키가 필요하며 한도는 달라질 수 있습니다.",
+      "g4f-pollinations": "Pollinations용 원격 g4f.space 게이트웨이입니다. 익명 액세스에는 g4f.dev/chat의 작업 증명 크레딧 또는 g4f.dev/members.html의 회원 API 키가 필요하며 한도는 달라질 수 있습니다.",
       "mixedbread": "Mixedbread API로 임베딩을 생성합니다.",
       "segmind": "Segmind의 호스팅 모델로 이미지와 비디오를 생성합니다.",
       "amazon-q": "Kiro와 동일한 AWS Builder ID 또는 가져온 refresh-token 흐름을 사용하지만, Amazon Q 연결은 별도로 유지합니다.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "비디오 브리지",
     "modalityBridgeVideoDesc": "비디오 프레임을 샘플링하고 비전 모델로 설명한 다음 선택한 텍스트 모델로 계속 처리합니다.",
     "modalityBridgeVideoRuntimeReady": "런타임 준비 완료",
+    "modalityBridgeVideoRuntimeChecking": "런타임 확인 중…",
     "modalityBridgeVideoRuntimeUnavailable": "런타임을 사용할 수 없음",
     "modalityBridgeVideoRuntimeInstall": "비디오 추출을 사용하려면 서버의 PATH에 FFmpeg와 ffprobe를 설치하세요.",
     "modalityBridgeVideoEnabled": "비디오 브리지 사용",
@@ -11314,7 +11315,9 @@
       "noPayload": "이 로그 항목에 대한 페이로드 데이터가 없습니다.",
       "correlationId": "상관 ID",
       "correlationIdValue": "상관 ID: {id}",
-      "detailedPayloadInfo": "새 요청에 대한 4단계 클라이언트/제공자 페이로드 보기를 원하시면 먼저 자세한 로깅을 활성화하세요."
+      "detailedPayloadInfo": "새 요청에 대한 4단계 클라이언트/제공자 페이로드 보기를 원하시면 먼저 자세한 로깅을 활성화하세요.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API 키",
     "sortTypeFirst": "쉬운 순서대로",
     "sortTypeFirstHelp": "가입 난이도별로 그룹화(가입 불필요 → OAuth 로그인 → API 키)하고, 각 그룹 내에서 품질 순서 유지",
-    "typeLegend": "가입 불필요 = 설정 없음 · OAuth 로그인 = 본인 계정으로 로그인 · API 키 = 본인 키 사용 또는 해당 제공업체의 무료 등급"
+    "typeLegend": "가입 불필요 = 설정 없음 · OAuth 로그인 = 본인 계정으로 로그인 · API 키 = 본인 키 사용 또는 해당 제공업체의 무료 등급",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "제공업체 탐색",

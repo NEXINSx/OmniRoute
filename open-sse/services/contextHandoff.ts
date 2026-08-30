@@ -48,6 +48,7 @@ export interface ContextRelayConfig {
   handoffThreshold?: number;
   handoffProviders?: string[];
   maxMessagesForSummary?: number;
+  relayMode?: "schema-locked" | "standard";
 }
 
 export interface UniversalHandoffConfig {
@@ -65,6 +66,7 @@ export interface UniversalHandoffConfig {
   ttlMinutes: number;
   /** Preserve existing system prompt when injecting handoff */
   preserveSystemPrompt: boolean;
+  relayMode?: "schema-locked" | "standard";
 }
 
 export const DEFAULT_UNIVERSAL_HANDOFF_CONFIG: UniversalHandoffConfig = {
@@ -155,6 +157,8 @@ export function resolveUniversalHandoffConfig(
       "preserveSystemPrompt",
       DEFAULT_UNIVERSAL_HANDOFF_CONFIG.preserveSystemPrompt
     ),
+    relayMode:
+      getString("relayMode", "standard") === "schema-locked" ? "schema-locked" : "standard",
   };
 }
 export interface ParsedHandoffContent {
@@ -192,6 +196,7 @@ export function resolveContextRelayConfig(
       Number.isFinite(rawMaxMessages) && rawMaxMessages >= 5 && rawMaxMessages <= 100
         ? Math.round(rawMaxMessages)
         : DEFAULT_MAX_MESSAGES_FOR_SUMMARY,
+    relayMode: config?.relayMode === "schema-locked" ? "schema-locked" : "standard",
   };
 }
 
@@ -232,7 +237,8 @@ function formatMessagesForPrompt(messages: MessageLike[]): string {
 
 export function selectMessagesForSummary(
   messages: MessageLike[],
-  maxMessages: number
+  maxMessages: number,
+  relayMode?: "schema-locked" | "standard"
 ): MessageLike[] {
   const validMessages = messages.filter((m) => m && typeof m === "object");
   const system = validMessages.filter(
@@ -242,15 +248,23 @@ export function selectMessagesForSummary(
     (m) => typeof m.role !== "string" || (m.role !== "system" && m.role !== "developer")
   );
 
-  const recentMessages = [...system, ...nonSystem.slice(-maxMessages)];
+  const recentMessages =
+    relayMode === "schema-locked"
+      ? [...nonSystem.slice(-maxMessages)]
+      : [...system, ...nonSystem.slice(-maxMessages)];
   let working = [...recentMessages];
 
-  while (working.length > system.length + 1) {
+  const minWorkingLength = relayMode === "schema-locked" ? 1 : system.length + 1;
+
+  while (working.length > minWorkingLength) {
     const history = formatMessagesForPrompt(working);
     if (estimateTokens(history) <= MAX_HISTORY_TOKENS_FOR_SUMMARY) {
       return working;
     }
-    working = [...system, ...working.slice(system.length + 1)];
+    working =
+      relayMode === "schema-locked"
+        ? working.slice(1)
+        : [...system, ...working.slice(system.length + 1)];
   }
 
   const fallbackHistory = formatMessagesForPrompt(working);
@@ -258,7 +272,7 @@ export function selectMessagesForSummary(
     // If there are system messages, return them so the caller can still produce context.
     // If there are no system messages (system=[]), fall back to the single most-recent
     // non-system message rather than returning [] which would silently drop the handoff.
-    if (system.length > 0) {
+    if (relayMode !== "schema-locked" && system.length > 0) {
       return system;
     }
     const lastNonSystem = nonSystem[nonSystem.length - 1];
@@ -386,7 +400,8 @@ async function generateHandoffAsync(options: {
   const summaryModel = relayConfig.handoffModel || options.model;
   const selectedMessages = selectMessagesForSummary(
     Array.isArray(options.messages) ? options.messages : [],
-    relayConfig.maxMessagesForSummary
+    relayConfig.maxMessagesForSummary,
+    relayConfig.relayMode
   );
   const historyText = formatMessagesForPrompt(selectedMessages);
   if (!historyText) return;
@@ -499,7 +514,8 @@ The context above contains a concise summary of the prior work. Continue seamles
 
 export function injectHandoffIntoBody(
   body: Record<string, unknown>,
-  payload: HandoffPayload
+  payload: HandoffPayload,
+  _relayMode?: "schema-locked" | "standard"
 ): Record<string, unknown> {
   const handoffContent = buildHandoffSystemMessage(payload);
   const isResponsesRequest =
@@ -680,18 +696,31 @@ async function generateUniversalHandoffAsync(options: {
   handoffModel: string;
   ttlMs: number;
   maxMessages: number;
+  relayMode?: "schema-locked" | "standard";
   providerAllowlist: string[];
   handleSingleModel: (body: Record<string, unknown>, modelStr: string) => Promise<Response>;
 }): Promise<UniversalHandoffOutcome> {
   const selectedMessages = selectMessagesForSummary(
     Array.isArray(options.messages) ? options.messages : [],
-    options.maxMessages
+    options.maxMessages,
+    options.relayMode
   );
   const historyText = formatMessagesForPrompt(selectedMessages);
   if (!historyText) return "unavailable";
 
   const summaryPrompt = HANDOFF_PROMPT_TEMPLATE.replace("{HISTORY}", historyText);
   const summaryModel = options.handoffModel || options.currModel;
+
+  if (options.providerAllowlist.length > 0) {
+    const slashIdx = summaryModel.indexOf("/");
+    const modelProvider = slashIdx > 0 ? summaryModel.slice(0, slashIdx) : "";
+    if (modelProvider && !options.providerAllowlist.includes(modelProvider)) {
+      // Policy skip, not a failure: nothing was generated and nothing was
+      // unparseable, so the #11552 backoff state must stay untouched.
+      return "unavailable";
+    }
+  }
+
   const summaryBody: Record<string, unknown> = {
     model: summaryModel,
     messages: [{ role: "user", content: summaryPrompt }],
@@ -778,6 +807,7 @@ export function maybeGenerateUniversalHandoff(options: {
       handoffModel: options.universalConfig.handoffModel || options.currModel,
       ttlMs,
       maxMessages: options.universalConfig.maxMessagesForSummary,
+      relayMode: options.universalConfig.relayMode,
       providerAllowlist: options.universalConfig.providerAllowlist,
       handleSingleModel: options.handleSingleModel,
     })
@@ -801,7 +831,8 @@ export function injectUniversalHandoffBody(
   prevModel: string,
   currModel: string,
   reason: string,
-  existingPayload?: HandoffPayload | null
+  existingPayload?: HandoffPayload | null,
+  _relayMode?: "schema-locked" | "standard"
 ): Record<string, unknown> {
   const handoffContent = buildUniversalHandoffSystemMessage(
     prevModel,

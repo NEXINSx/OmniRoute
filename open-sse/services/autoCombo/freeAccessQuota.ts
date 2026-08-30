@@ -22,6 +22,7 @@ import {
 import { getCachedProviderConnections } from "@/lib/db/readCache";
 import { defaultLogger as log } from "@omniroute/open-sse/utils/logger";
 import type { FreeAccessState } from "./strictZeroCostFilter";
+import { isStateStaleForReset } from "./subscriptionLadder";
 
 const USAGE_FETCHER_PROVIDER_SET = new Set<string>(USAGE_FETCHER_PROVIDERS);
 
@@ -191,7 +192,13 @@ export function resolveFreeAccessState(
 
   const key = cacheKey(provider, connectionId);
   const entry = cache.get(key);
-  const fresh = entry && Date.now() - entry.fetchedAtMs <= ttlMs();
+  // Subscription-first routing (decision 3): an entry whose own `resetAt` has
+  // already passed describes a quota window that no longer exists, so it is
+  // stale REGARDLESS of its age. Without this, a plan that refilled at
+  // midnight keeps reading EXHAUSTED until the TTL happens to lapse, and
+  // routing stays on paid rungs for no reason. See `subscriptionLadder.ts`.
+  const resetElapsed = entry !== undefined && isStateStaleForReset(entry.state);
+  const fresh = entry && !resetElapsed && Date.now() - entry.fetchedAtMs <= ttlMs();
   if (!fresh) {
     void refresh(provider, connectionId);
   }

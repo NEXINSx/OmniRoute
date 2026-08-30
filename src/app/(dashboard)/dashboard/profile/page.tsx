@@ -140,7 +140,12 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        className="flex items-center justify-center min-h-[400px]"
+      >
         <div className="text-text-muted">{t("profileLoading")}</div>
       </div>
     );
@@ -172,7 +177,12 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {error && <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">{error}</div>}
+      <h1 className="sr-only lg:hidden">{t("profile")}</h1>
+      {error && (
+        <div role="alert" className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Level & XP Card */}
       <Card>
@@ -209,7 +219,14 @@ export default function ProfilePage() {
                 {xpInCurrentLevel.toLocaleString()} / {xpForNext.toLocaleString()} XP
               </span>
             </div>
-            <div className="w-full h-3 rounded-full bg-border overflow-hidden">
+            <div
+              role="progressbar"
+              aria-label={tg("levelProgress", { current: level, next: level + 1 })}
+              aria-valuemin={0}
+              aria-valuemax={xpForNext}
+              aria-valuenow={Math.min(Math.max(xpInCurrentLevel, 0), xpForNext)}
+              className="w-full h-3 rounded-full bg-border overflow-hidden"
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
                 style={{ width: `${Math.min(xpProgress, 100)}%` }}
@@ -249,21 +266,23 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {allBadges.map((badge) => {
               const isEarned = earnedIds.has(badge.id);
+              const isHiddenAndLocked = Boolean(badge.hidden) && !isEarned;
               const earnedInfo = earnedBadges.find((b) => b.badgeId === badge.id);
               const rarityColor = RARITY_COLORS[badge.rarity] || RARITY_COLORS.common;
 
               return (
                 <button
                   key={badge.id}
-                  onClick={() => setSelectedBadge(badge)}
+                  onClick={() => !isHiddenAndLocked && setSelectedBadge(badge)}
+                  disabled={isHiddenAndLocked}
                   className={`relative p-4 rounded-xl border transition-all text-left ${
                     isEarned
                       ? `${rarityColor} bg-surface hover:shadow-md`
-                      : "border-border/50 bg-surface/50 opacity-50 grayscale hover:opacity-70"
+                      : "border-border/50 bg-surface/50 opacity-50 grayscale enabled:hover:opacity-70 disabled:cursor-default"
                   }`}
                 >
                   <div className="text-3xl mb-2">
-                    <BadgeIcon icon={badge.icon} earned={isEarned} />
+                    <BadgeIcon icon={isHiddenAndLocked ? null : badge.icon} earned={isEarned} />
                   </div>
                   <p className="font-semibold text-sm truncate">
                     {badge.hidden && !isEarned ? "???" : translateBadge(badge, "name")}

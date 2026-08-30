@@ -54,7 +54,7 @@ export class InAppLoginService extends EventEmitter {
 
   /**
    * Start a login flow for a web-cookie provider using Playwright.
-   * @param providerId - e.g. "claude-web", "chatgpt-web"
+   * @param providerId - e.g. "claude-web", "perplexity-web"
    * @param options.timeout - Total timeout in ms (default: config value or 300s)
    */
   async startLogin(providerId: string, options?: { timeout?: number }): Promise<LoginResult> {

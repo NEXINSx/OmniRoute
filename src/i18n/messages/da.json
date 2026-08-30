@@ -6254,13 +6254,13 @@
       "galadriel": "Forbind Galadriel med en API-nøgle.",
       "predibase": "$25 gratis prøvekredit (30 dages gyldighed)",
       "chenzk": "OpenAI-kompatibel gateway med et live modelkatalog på chenzk.top.",
-      "magnific": "Generer billeder med Freepiks Mystic API.",
+      "magnific": "Generer billeder med Magnifics Mystic API.",
       "freetheai": "Gratis OpenAI-kompatibel gateway med understøttelse af passthrough-modeller.",
-      "g4f-gemini": "Gratis nøglefri g4f.space reverse proxy til Gemini, begrænset til 5 anmodninger pr. minut.",
-      "g4f-groq": "Gratis nøglefri g4f.space reverse proxy til Groq, begrænset til 5 anmodninger pr. minut.",
-      "g4f-nvidia": "Gratis nøglefri g4f.space reverse proxy til NVIDIA NIM, begrænset til 5 anmodninger pr. minut.",
-      "g4f-ollama": "Gratis nøglefri hostet Ollama-gateway fra g4f.space, begrænset til 5 anmodninger pr. minut.",
-      "g4f-pollinations": "Gratis nøglefri g4f.space reverse proxy til Pollinations, begrænset til 5 anmodninger pr. minut.",
+      "g4f-gemini": "Ekstern g4f.space-gateway til Gemini. Anonym adgang kræver proof-of-work-kreditter fra g4f.dev/chat eller en medlems-API-nøgle fra g4f.dev/members.html; grænserne varierer.",
+      "g4f-groq": "Ekstern g4f.space-gateway til Groq. Anonym adgang kræver proof-of-work-kreditter fra g4f.dev/chat eller en medlems-API-nøgle fra g4f.dev/members.html; grænserne varierer.",
+      "g4f-nvidia": "Ekstern g4f.space-gateway til NVIDIA NIM. Anonym adgang kræver proof-of-work-kreditter fra g4f.dev/chat eller en medlems-API-nøgle fra g4f.dev/members.html; grænserne varierer.",
+      "g4f-ollama": "Ekstern g4f.space-gateway til Ollama. Anonym adgang kræver proof-of-work-kreditter fra g4f.dev/chat eller en medlems-API-nøgle fra g4f.dev/members.html; grænserne varierer.",
+      "g4f-pollinations": "Ekstern g4f.space-gateway til Pollinations. Anonym adgang kræver proof-of-work-kreditter fra g4f.dev/chat eller en medlems-API-nøgle fra g4f.dev/members.html; grænserne varierer.",
       "mixedbread": "Opret embeddings med Mixedbread API.",
       "segmind": "Generer billeder og videoer med Segminds hostede modeller.",
       "amazon-q": "Bruger det samme AWS Builder ID eller importerede refresh-token-flow som Kiro, men holder Amazon Q-forbindelser adskilt.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Videobro",
     "modalityBridgeVideoDesc": "Udtag videobilleder, beskriv dem med en visionsmodel, og fortsæt med den valgte tekstmodel.",
     "modalityBridgeVideoRuntimeReady": "Kørselsmiljøet er klar",
+    "modalityBridgeVideoRuntimeChecking": "Kontrollerer runtime…",
     "modalityBridgeVideoRuntimeUnavailable": "Kørselsmiljøet er ikke tilgængeligt",
     "modalityBridgeVideoRuntimeInstall": "Installer FFmpeg og ffprobe i serverens PATH for at aktivere videoudtrækning.",
     "modalityBridgeVideoEnabled": "Aktivér Videobro",
@@ -11314,7 +11315,9 @@
       "noPayload": "Ingen payloaddata tilgængelig for denne logpost.",
       "correlationId": "Korrelations-ID",
       "correlationIdValue": "Korrelation ID: {id}",
-      "detailedPayloadInfo": "Aktivér detaljeret logning først, hvis du ønsker den fire-trins klient/udbyder payload visning for nye anmodninger."
+      "detailedPayloadInfo": "Aktivér detaljeret logning først, hvis du ønsker den fire-trins klient/udbyder payload visning for nye anmodninger.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API-nøgle",
     "sortTypeFirst": "Nemmeste først",
     "sortTypeFirstHelp": "Gruppér efter tilmeldingsindsats (Ingen tilmelding → OAuth-login → API-nøgle), og bevar kvalitetsrækkefølgen inden for hver gruppe",
-    "typeLegend": "Ingen tilmelding = nul opsætning · OAuth-login = log ind med din egen konto · API-nøgle = medbring din egen nøgle eller den pågældende udbyders gratisniveau"
+    "typeLegend": "Ingen tilmelding = nul opsætning · OAuth-login = log ind med din egen konto · API-nøgle = medbring din egen nøgle eller den pågældende udbyders gratisniveau",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Udbyderopdagelse",

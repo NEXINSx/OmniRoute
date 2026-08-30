@@ -11,7 +11,7 @@ import {
   mergeModelCompatOverride,
   getHiddenModelsByProvider,
   type ModelCompatPatch,
-} from "@/lib/localDb";
+} from "@/lib/db/models";
 import {
   getModelContextOverrideRecord,
   setModelContextOverride,
@@ -149,6 +149,7 @@ export async function POST(request) {
       supportsVision,
       // #9820: optional video-generation job preset (job/poll path).
       generationConfig,
+      isFree,
     } = validation.data;
 
     const model = await addCustomModel(
@@ -164,7 +165,8 @@ export async function POST(request) {
         ...(maxOutputTokens != null ? { outputTokenLimit: maxOutputTokens } : {}),
       },
       typeof supportsVision === "boolean" ? supportsVision : undefined,
-      generationConfig
+      generationConfig,
+      typeof isFree === "boolean" ? isFree : undefined
     );
     return Response.json({ model });
   } catch (error) {
@@ -218,6 +220,7 @@ export async function PUT(request) {
       contextWindowOverride,
       supportsVision,
       generationConfig,
+      isFree,
     } = validation.data;
 
     const raw = rawBody as Record<string, unknown>;
@@ -230,8 +233,8 @@ export async function PUT(request) {
     if ("preserveOpenAIDeveloperRole" in raw)
       updates.preserveOpenAIDeveloperRole = preserveOpenAIDeveloperRole;
     if ("upstreamHeaders" in raw) updates.upstreamHeaders = upstreamHeaders;
-    // #1904: manual vision-capability override — null clears back to heuristic.
     if ("supportsVision" in raw) updates.supportsVision = supportsVision;
+    if ("isFree" in raw) updates.isFree = isFree;
     // #9820: video-generation job preset — schema is non-nullable optional, so
     // presence implies a well-formed { preset } object; null is rejected by Zod.
     if ("generationConfig" in raw && generationConfig !== undefined) {
@@ -259,6 +262,8 @@ export async function PUT(request) {
 
     if (!model) {
       const rawKeys = Object.keys(raw);
+      // isFree is intentionally excluded: it has no compat-override home (customModels row only),
+      // so a PUT with isFree against a missing row must 404 rather than enter the compat branch.
       const compatOnly =
         rawKeys.length > 0 &&
         rawKeys.every((k) =>

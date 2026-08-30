@@ -40,6 +40,12 @@ export interface RadarCatalogResult {
   /** Feed metadata — null when falling back to baseline. */
   meta: {
     version: string;
+    /**
+     * Date the feed's data was built. Null for a cache row written before the
+     * column existed — unknown, never substituted by `fetchedAt`, which only
+     * says when this install downloaded it.
+     */
+    generatedAt: string | null;
     tier: string;
     fetchedAt: string;
   } | null;
@@ -48,7 +54,13 @@ export interface RadarCatalogResult {
 /** Injectable deps for testing. */
 export interface GetRadarCatalogDeps {
   getFlag?: (key: string) => boolean;
-  getCache?: () => { version: string; tier: string; payload: string; fetchedAt: string } | null;
+  getCache?: () => {
+    version: string;
+    generatedAt?: string | null;
+    tier: string;
+    payload: string;
+    fetchedAt: string;
+  } | null;
   baseline?: MergedEntry[];
   localOverrides?: Map<string, Partial<MergedEntry>>;
   tombstones?: Set<string>;
@@ -142,6 +154,7 @@ export function getRadarCatalog(deps: GetRadarCatalogDeps = {}): RadarCatalogRes
     entries,
     meta: {
       version: cache.version,
+      generatedAt: cache.generatedAt ?? null,
       tier: cache.tier,
       fetchedAt: cache.fetchedAt,
     },

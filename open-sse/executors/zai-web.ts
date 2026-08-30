@@ -90,13 +90,19 @@ async function resolveZaiBrowserAttachments(
 > {
   try {
     // Browser-page upload: keep the original bytes/mimeType (no Cursor wire prep).
+    // EncodedImage.mimeType is optional on the wire type, but every producer
+    // reachable here (decodeDataUrl / fetchImageBytes) validates an image/*
+    // string before pushing; the fallback only satisfies the attachment type.
     const images = await resolveCursorImages(imageUrls, { prepareForWire: false });
     return {
-      attachments: images.map((image, index) => ({
-        name: zaiImageFileName(image.mimeType, index),
-        mimeType: image.mimeType,
-        buffer: image.data,
-      })),
+      attachments: images.map((image, index) => {
+        const mimeType = image.mimeType ?? "image/jpeg";
+        return {
+          name: zaiImageFileName(mimeType, index),
+          mimeType,
+          buffer: image.data,
+        };
+      }),
     };
   } catch (error) {
     const message =

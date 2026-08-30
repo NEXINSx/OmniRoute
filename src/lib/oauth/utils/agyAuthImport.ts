@@ -2,7 +2,7 @@ import {
   getProviderConnections,
   createProviderConnection,
   updateProviderConnection,
-} from "@/lib/localDb";
+} from "@/lib/db/providers";
 import { AGY_CONFIG } from "@/lib/oauth/constants/oauth";
 import {
   getAntigravityContentHeaders,
@@ -216,6 +216,10 @@ export async function createConnectionFromAgyToken(
         testStatus: "active",
         isActive: true,
         providerSpecificData: {
+          // Auto-sync default for newly discovered backends — see
+          // mapAntigravityTokens. Placed BEFORE the existing-data spread so a
+          // previously persisted operator choice (true or false) wins.
+          autoSync: true,
           ...toRecord(existing.providerSpecificData),
           clientProfile: "cli",
           tokenType: enriched.tokenType,
@@ -249,6 +253,8 @@ export async function createConnectionFromAgyToken(
     isActive: true,
     testStatus: "active",
     providerSpecificData: {
+      // Default new imports into model auto-sync — see mapAntigravityTokens.
+      autoSync: true,
       clientProfile: "cli",
       tokenType: enriched.tokenType,
       authMethod: enriched.authMethod,

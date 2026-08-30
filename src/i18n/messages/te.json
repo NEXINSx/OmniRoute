@@ -1266,7 +1266,7 @@
     "agentBridge": "ఏజెంట్ బ్రిడ్జ్",
     "agentBridgeSubtitle": "IDE ఏజెంట్ ట్రాఫిక్‌ను అడ్డుకోండి",
     "trafficInspector": "ట్రాఫిక్ ఇన్‌స్పెక్టర్",
-    "trafficInspectorSubtitle": "LLM కాల్స్‌ను పర్యవేక్షించండి + ఏదైనా HTTPS ట్రాఫిక్‌ను డీబగ్ చేయండి",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI కోడ్",
     "cliCodeSubtitle": "OmniRoute వైపు చూపే కోడ్ సాధనాలు",
     "cliAgents": "CLI ఏజెంట్లు",
@@ -6254,13 +6254,13 @@
       "galadriel": "API కీతో Galadrielని కనెక్ట్ చేయండి.",
       "predibase": "$25 ఉచిత ట్రయల్ క్రెడిట్‌లు (30 రోజుల చెల్లుబాటు)",
       "chenzk": "chenzk.top వద్ద లైవ్ మోడల్ కేటలాగ్‌తో కూడిన OpenAI-అనుకూల గేట్‌వే.",
-      "magnific": "Freepik యొక్క Mystic APIతో చిత్రాలను రూపొందించండి.",
+      "magnific": "Magnific యొక్క Mystic APIతో చిత్రాలను రూపొందించండి.",
       "freetheai": "పాస్‌త్రూ మోడల్ మద్దతుతో కూడిన ఉచిత OpenAI-అనుకూల గేట్‌వే.",
-      "g4f-gemini": "Geminiకి ఉచిత నో-కీ g4f.space రివర్స్ ప్రాక్సీ, నిమిషానికి 5 అభ్యర్థనలకు పరిమితం చేయబడింది.",
-      "g4f-groq": "Groqకి ఉచిత నో-కీ g4f.space రివర్స్ ప్రాక్సీ, నిమిషానికి 5 అభ్యర్థనలకు పరిమితం చేయబడింది.",
-      "g4f-nvidia": "NVIDIA NIMకి ఉచిత నో-కీ g4f.space రివర్స్ ప్రాక్సీ, నిమిషానికి 5 అభ్యర్థనలకు పరిమితం చేయబడింది.",
-      "g4f-ollama": "g4f.space నుండి ఉచిత నో-కీ హోస్ట్ చేయబడిన Ollama గేట్‌వే, నిమిషానికి 5 అభ్యర్థనలకు పరిమితం చేయబడింది.",
-      "g4f-pollinations": "Pollinationsకి ఉచిత నో-కీ g4f.space రివర్స్ ప్రాక్సీ, నిమిషానికి 5 అభ్యర్థనలకు పరిమితం చేయబడింది.",
+      "g4f-gemini": "Gemini కోసం రిమోట్ g4f.space గేట్‌వే. అనామక యాక్సెస్‌కు g4f.dev/chat నుంచి ప్రూఫ్-ఆఫ్-వర్క్ క్రెడిట్లు లేదా g4f.dev/members.html నుంచి సభ్యుల API కీ అవసరం; పరిమితులు మారుతాయి.",
+      "g4f-groq": "Groq కోసం రిమోట్ g4f.space గేట్‌వే. అనామక యాక్సెస్‌కు g4f.dev/chat నుంచి ప్రూఫ్-ఆఫ్-వర్క్ క్రెడిట్లు లేదా g4f.dev/members.html నుంచి సభ్యుల API కీ అవసరం; పరిమితులు మారుతాయి.",
+      "g4f-nvidia": "NVIDIA NIM కోసం రిమోట్ g4f.space గేట్‌వే. అనామక యాక్సెస్‌కు g4f.dev/chat నుంచి ప్రూఫ్-ఆఫ్-వర్క్ క్రెడిట్లు లేదా g4f.dev/members.html నుంచి సభ్యుల API కీ అవసరం; పరిమితులు మారుతాయి.",
+      "g4f-ollama": "Ollama కోసం రిమోట్ g4f.space గేట్‌వే. అనామక యాక్సెస్‌కు g4f.dev/chat నుంచి ప్రూఫ్-ఆఫ్-వర్క్ క్రెడిట్లు లేదా g4f.dev/members.html నుంచి సభ్యుల API కీ అవసరం; పరిమితులు మారుతాయి.",
+      "g4f-pollinations": "Pollinations కోసం రిమోట్ g4f.space గేట్‌వే. అనామక యాక్సెస్‌కు g4f.dev/chat నుంచి ప్రూఫ్-ఆఫ్-వర్క్ క్రెడిట్లు లేదా g4f.dev/members.html నుంచి సభ్యుల API కీ అవసరం; పరిమితులు మారుతాయి.",
       "mixedbread": "Mixedbread APIతో ఎంబెడ్డింగ్‌లను సృష్టించండి.",
       "segmind": "Segmind యొక్క హోస్ట్ చేయబడిన మోడల్‌లతో చిత్రాలు మరియు వీడియోలను రూపొందించండి.",
       "amazon-q": "Kiro వలె అదే AWS Builder ID లేదా ఇంపోర్ట్ చేసిన refresh-token ఫ్లోను ఉపయోగిస్తుంది, కానీ Amazon Q కనెక్షన్‌లను విడిగా ఉంచుతుంది.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "వీడియో బ్రిడ్జ్",
     "modalityBridgeVideoDesc": "వీడియో ఫ్రేమ్‌లను నమూనాగా తీసుకుని, విజన్ మోడల్‌తో వాటిని వివరించి, ఎంచుకున్న టెక్స్ట్ మోడల్‌తో కొనసాగించండి.",
     "modalityBridgeVideoRuntimeReady": "రన్‌టైమ్ సిద్ధంగా ఉంది",
+    "modalityBridgeVideoRuntimeChecking": "రన్‌టైమ్‌ను తనిఖీ చేస్తోంది…",
     "modalityBridgeVideoRuntimeUnavailable": "రన్‌టైమ్ అందుబాటులో లేదు",
     "modalityBridgeVideoRuntimeInstall": "వీడియో వెలికితీతను ప్రారంభించడానికి సర్వర్ PATH లో FFmpeg మరియు ffprobe ను ఇన్‌స్టాల్ చేయండి.",
     "modalityBridgeVideoEnabled": "వీడియో బ్రిడ్జ్‌ను ప్రారంభించండి",
@@ -11314,7 +11315,9 @@
       "noPayload": "ఈ లాగ్ ఎంట్రీకి అందుబాటులో ఉన్న పేమెంట్ డేటా లేదు.",
       "correlationId": "సంబంధం ID",
       "correlationIdValue": "సంబంధిత ID: {id}",
-      "detailedPayloadInfo": "కొత్త అభ్యర్థనల కోసం నాలుగు దశల క్లయింట్/ప్రొవైడర్ పేమెంట్ వీక్షణను కావాలంటే, మొదట వివరణాత్మక లాగింగ్‌ను ప్రారంభించండి."
+      "detailedPayloadInfo": "కొత్త అభ్యర్థనల కోసం నాలుగు దశల క్లయింట్/ప్రొవైడర్ పేమెంట్ వీక్షణను కావాలంటే, మొదట వివరణాత్మక లాగింగ్‌ను ప్రారంభించండి.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API కీ",
     "sortTypeFirst": "సులభమైనవి మొదట",
     "sortTypeFirstHelp": "సైన్ అప్ శ్రమ ఆధారంగా సమూహపరచండి (సైన్ అప్ అవసరం లేదు → OAuth లాగిన్ → API కీ), ప్రతి సమూహంలో నాణ్యత క్రమాన్ని అలాగే ఉంచండి",
-    "typeLegend": "సైన్ అప్ అవసరం లేదు = జీరో సెటప్ · OAuth లాగిన్ = మీ స్వంత ఖాతాతో సైన్ ఇన్ చేయండి · API కీ = మీ స్వంత కీని లేదా ఆ ప్రొవైడర్ ఉచిత శ్రేణిని ఉపయోగించండి"
+    "typeLegend": "సైన్ అప్ అవసరం లేదు = జీరో సెటప్ · OAuth లాగిన్ = మీ స్వంత ఖాతాతో సైన్ ఇన్ చేయండి · API కీ = మీ స్వంత కీని లేదా ఆ ప్రొవైడర్ ఉచిత శ్రేణిని ఉపయోగించండి",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "ప్రొవైడర్ డిస్కవరీ",

@@ -276,7 +276,16 @@ function resolveProviderModelAlias(
   return aliases?.[modelId] || modelId;
 }
 
-function hasKnownProviderModel(providerOrAlias: string | null | undefined, modelId: string | null) {
+/**
+ * True when the provider serves `modelId` under that exact id (static model list or
+ * a provider-specific alias). Exported for the deprecation-alias provider guard
+ * (#11503): a globally deprecated id that this provider still serves must not be
+ * rewritten out from under the request.
+ */
+export function hasKnownProviderModel(
+  providerOrAlias: string | null | undefined,
+  modelId: string | null
+) {
   if (!providerOrAlias || !modelId) return false;
 
   const providerId = resolveProviderAlias(providerOrAlias);
@@ -323,7 +332,7 @@ function getProviderIdFromConnection(connection: unknown) {
 
 async function getActiveProviderSet() {
   try {
-    const { getCachedProviderConnections } = await import("@/lib/localDb");
+    const { getCachedProviderConnections } = await import("@/lib/db/readCache");
     const conns = (await getCachedProviderConnections()) as unknown[];
     const providers = conns
       .map(getProviderIdFromConnection)
@@ -336,7 +345,7 @@ async function getActiveProviderSet() {
 
 async function getActiveSyncedProvidersForModel(modelId: string) {
   try {
-    const { getActiveProvidersWithSyncedModel } = await import("@/lib/localDb");
+    const { getActiveProvidersWithSyncedModel } = await import("@/lib/db/models");
     const providers = await getActiveProvidersWithSyncedModel(modelId);
     return providers
       .map(resolveProviderAlias)
@@ -394,7 +403,7 @@ function isTruthyEnv(value: string | undefined) {
 
 async function getPreferClaudeCodeForUnprefixedClaudeModels() {
   try {
-    const { getCachedSettings } = await import("@/lib/localDb");
+    const { getCachedSettings } = await import("@/lib/db/readCache");
     const settings = (await getCachedSettings()) as Record<string, unknown>;
     if (typeof settings.preferClaudeCodeForUnprefixedClaudeModels === "boolean") {
       return settings.preferClaudeCodeForUnprefixedClaudeModels;

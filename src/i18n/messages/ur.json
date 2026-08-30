@@ -6254,13 +6254,13 @@
       "galadriel": "Galadriel کو ایک API کلید کے ساتھ منسلک کریں۔",
       "predibase": "$25 کے مفت ٹرائل کریڈٹس (30 دن کی میعاد)",
       "chenzk": "chenzk.top پر لائیو ماڈل کیٹلاگ کے ساتھ OpenAI سے مطابقت رکھنے والا گیٹ وے۔",
-      "magnific": "Freepik کے Mystic API کے ساتھ تصاویر تیار کریں۔",
+      "magnific": "Magnific کے Mystic API کے ساتھ تصاویر تیار کریں۔",
       "freetheai": "passthrough ماڈل سپورٹ کے ساتھ مفت OpenAI سے مطابقت رکھنے والا گیٹ وے۔",
-      "g4f-gemini": "Gemini کے لیے مفت بغیر کلید والا g4f.space ریورس پراکسی، فی منٹ 5 درخواستوں تک محدود۔",
-      "g4f-groq": "Groq کے لیے مفت بغیر کلید والا g4f.space ریورس پراکسی، فی منٹ 5 درخواستوں تک محدود۔",
-      "g4f-nvidia": "NVIDIA NIM کے لیے مفت بغیر کلید والا g4f.space ریورس پراکسی، فی منٹ 5 درخواستوں تک محدود۔",
-      "g4f-ollama": "g4f.space سے مفت بغیر کلید والا ہوسٹڈ Ollama گیٹ وے، فی منٹ 5 درخواستوں تک محدود۔",
-      "g4f-pollinations": "Pollinations کے لیے مفت بغیر کلید والا g4f.space ریورس پراکسی، فی منٹ 5 درخواستوں تک محدود۔",
+      "g4f-gemini": "Gemini کے لیے ریموٹ g4f.space گیٹ وے۔ گمنام رسائی کے لیے g4f.dev/chat سے پروف آف ورک کریڈٹس یا g4f.dev/members.html سے رکن API کلید درکار ہے؛ حدود بدلتی رہتی ہیں۔",
+      "g4f-groq": "Groq کے لیے ریموٹ g4f.space گیٹ وے۔ گمنام رسائی کے لیے g4f.dev/chat سے پروف آف ورک کریڈٹس یا g4f.dev/members.html سے رکن API کلید درکار ہے؛ حدود بدلتی رہتی ہیں۔",
+      "g4f-nvidia": "NVIDIA NIM کے لیے ریموٹ g4f.space گیٹ وے۔ گمنام رسائی کے لیے g4f.dev/chat سے پروف آف ورک کریڈٹس یا g4f.dev/members.html سے رکن API کلید درکار ہے؛ حدود بدلتی رہتی ہیں۔",
+      "g4f-ollama": "Ollama کے لیے ریموٹ g4f.space گیٹ وے۔ گمنام رسائی کے لیے g4f.dev/chat سے پروف آف ورک کریڈٹس یا g4f.dev/members.html سے رکن API کلید درکار ہے؛ حدود بدلتی رہتی ہیں۔",
+      "g4f-pollinations": "Pollinations کے لیے ریموٹ g4f.space گیٹ وے۔ گمنام رسائی کے لیے g4f.dev/chat سے پروف آف ورک کریڈٹس یا g4f.dev/members.html سے رکن API کلید درکار ہے؛ حدود بدلتی رہتی ہیں۔",
       "mixedbread": "Mixedbread API کے ساتھ embeddings بنائیں۔",
       "segmind": "Segmind کے ہوسٹڈ ماڈلز کے ساتھ تصاویر اور ویڈیوز تیار کریں۔",
       "amazon-q": "Kiro کی طرح وہی AWS Builder ID یا امپورٹڈ refresh-token فلو استعمال کرتا ہے، لیکن Amazon Q کنکشنز کو الگ رکھتا ہے۔",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "ویڈیو برج",
     "modalityBridgeVideoDesc": "ویڈیو فریموں کے نمونے لیں، وژن ماڈل سے ان کی وضاحت کریں اور منتخب ٹیکسٹ ماڈل کے ساتھ جاری رکھیں۔",
     "modalityBridgeVideoRuntimeReady": "رن ٹائم تیار ہے",
+    "modalityBridgeVideoRuntimeChecking": "رن ٹائم کی جانچ ہو رہی ہے…",
     "modalityBridgeVideoRuntimeUnavailable": "رن ٹائم دستیاب نہیں",
     "modalityBridgeVideoRuntimeInstall": "ویڈیو اخذ کرنے کے لیے سرور کے PATH میں FFmpeg اور ffprobe انسٹال کریں۔",
     "modalityBridgeVideoEnabled": "ویڈیو برج فعال کریں",
@@ -11314,7 +11315,9 @@
       "noPayload": "اس لاگ اندراج کے لیے کوئی پیلوڈ ڈیٹا دستیاب نہیں ہے۔",
       "correlationId": "کورلیشن آئی ڈی",
       "correlationIdValue": "Correlation ID: {id}",
-      "detailedPayloadInfo": "پہلے تفصیلی لاگنگ فعال کریں اگر آپ نئے درخواستوں کے لیے چار مرحلوں کے کلائنٹ/فراہم کنندہ پے لوڈ ویو چاہتے ہیں۔"
+      "detailedPayloadInfo": "پہلے تفصیلی لاگنگ فعال کریں اگر آپ نئے درخواستوں کے لیے چار مرحلوں کے کلائنٹ/فراہم کنندہ پے لوڈ ویو چاہتے ہیں۔",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API کی",
     "sortTypeFirst": "سب سے آسان پہلے",
     "sortTypeFirstHelp": "سائن اپ کی کوشش کے لحاظ سے گروپ کریں (سائن اپ کے بغیر ← OAuth لاگ ان ← API کی)، ہر گروپ کے اندر معیار کی ترتیب کو برقرار رکھتے ہوئے",
-    "typeLegend": "سائن اپ کے بغیر = صفر سیٹ اپ · OAuth لاگ ان = اپنے اکاؤنٹ سے سائن ان کریں · API کی = اپنی کی لائیں یا اس فراہم کنندہ کا فری ٹیئر"
+    "typeLegend": "سائن اپ کے بغیر = صفر سیٹ اپ · OAuth لاگ ان = اپنے اکاؤنٹ سے سائن ان کریں · API کی = اپنی کی لائیں یا اس فراہم کنندہ کا فری ٹیئر",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "فراہم کنندہ کی دریافت",

@@ -104,7 +104,7 @@ RUN test -f package-lock.json \
 # instead of `npx --yes`, which would install an arbitrary registry version
 # on-demand and run its lifecycle scripts (Sonar docker:S6505).
 #
-# tls-client-node (chatgpt-web/claude-web/grok-web/lmarena/perplexity-web TLS
+# tls-client-node (claude-web/grok-web/lmarena/perplexity-web TLS
 # impersonation) hits the same --ignore-scripts wall: its own postinstall.js
 # fetches a platform .so/.dylib/.dll from the bogdanfinn/tls-client GitHub
 # Releases API and is never invoked when npm ci skips lifecycle scripts. Unlike
@@ -184,19 +184,29 @@ ENV NODE_OPTIONS="--max-old-space-size=${OMNIROUTE_BUILD_MEMORY_MB}"
 # silently leaving no standalone bundle. Next derives the worker count from
 # CIRCLE_NODE_TOTAL (workers = N-1). (#10060)
 #
-# Lowered 8 → 3 (7 workers → 2). Every page-data worker inherits NODE_OPTIONS
-# above, so the ceiling is per PROCESS, not per build: 7 workers on a 16 GB
-# GitHub runner (ubuntu-24.04 / ubuntu-24.04-arm, 4 vCPU) exhausted the host and
-# buildkit failed the whole step with `ResourceExhausted: ... cannot allocate
-# memory`. The compile phase always finished ("✓ Compiled successfully in
-# 4.2min"); the kernel killed the build right after "Collecting page data using
-# 7 workers". It was intermittent for a while and went 100% on 2026-08-22, which
-# is what a threshold being crossed by ordinary codebase growth looks like.
-# tests/unit/docker-build-memory-budget.test.ts does the arithmetic and fails if
-# either knob is raised past what a 16 GB runner holds. 2 workers also stops
-# oversubscribing the runner's 4 vCPU, which 7 did. Override for a big builder:
-# `--build-arg OMNIROUTE_BUILD_WORKERS=8`.
-ARG OMNIROUTE_BUILD_WORKERS=3
+# Lowered 8 → 3 (7 workers → 2) in #11419, then 3 → 2 (2 workers → 1) in #7518.
+# Every page-data worker inherits NODE_OPTIONS above, so the ceiling is per
+# PROCESS, not per build: 7 workers on a 16 GB GitHub runner (ubuntu-24.04 /
+# ubuntu-24.04-arm, 4 vCPU) exhausted the host and buildkit failed the whole
+# step with `ResourceExhausted: ... cannot allocate memory`. The compile phase
+# always finished ("✓ Compiled successfully in 4.2min"); the kernel killed the
+# build right after "Collecting page data using N workers".
+#
+# #11419's first fix (8 → 3) modeled the per-worker peak as an INFERENCE
+# (2560 MB, guessed from "7 workers didn't fit") and assumed the parent
+# process's RSS tracked the V8 heap ceiling. Both assumptions were wrong: a
+# live VPS reproduction (issue #7518, dmesg OOM-killer report) measured the
+# real per-process RSS directly at ~4.5 GB, independent of the NODE_OPTIONS
+# heap flag (Turbopack itself is native/Rust, outside the V8 heap) — and it
+# applies to the parent process too, not just workers. 2 workers (3 processes
+# × 4.5 GB = 13.5 GB) still didn't fit the 12.288 GB (75%) budget on a 16 GB
+# runner, matching the still-live publish failures after #11419 merged. 1
+# worker (2 processes × 4.5 GB = 9 GB) fits with headroom to spare.
+# tests/unit/docker-build-memory-budget.test.ts does the arithmetic against
+# the measured figure and fails if either knob is raised past what a 16 GB
+# runner holds. Override for a big builder: `--build-arg
+# OMNIROUTE_BUILD_WORKERS=8`.
+ARG OMNIROUTE_BUILD_WORKERS=2
 ENV CIRCLE_NODE_TOTAL=${OMNIROUTE_BUILD_WORKERS}
 
 COPY . ./

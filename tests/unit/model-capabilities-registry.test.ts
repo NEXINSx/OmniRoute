@@ -37,7 +37,7 @@ function buildCapability(overrides = {}) {
 
 function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -47,7 +47,7 @@ test.beforeEach(() => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("canonical model capability resolver lets exact synced metadata override global specs", () => {
@@ -163,6 +163,23 @@ test("retired Gemini 3.5 Flash IDs have no provider-neutral model specs", () => 
   ]) {
     assert.equal(MODEL_SPECS[modelId], undefined, modelId);
   }
+});
+
+test("retired provider-neutral Gemini 3.5 tiers keep resolvable capability floors", () => {
+  // gemini-3-flash-agent lost its MODEL_SPECS entry in the 3.5 -> 3.7 catalog
+  // retirement but must still resolve the full Flash capability profile via
+  // family fallbacks; the retired -extra-low/-low neutral tiers must NOT
+  // fabricate context/output ceilings (they stay null) while keeping the
+  // vision-capable default so downstream gating stays conservative.
+  const agentCaps = modelCapabilities.getResolvedModelCapabilities("gemini-3-flash-agent");
+  assert.equal(agentCaps.contextWindow, 1048576, "agent tier keeps the 1M Flash context window");
+  assert.equal(agentCaps.maxOutputTokens, 65536, "agent tier keeps the 64K output ceiling");
+  assert.equal(agentCaps.supportsThinking, false, "agent tier encodes a non-thinking variant");
+  assert.equal(agentCaps.supportsTools, true, "agent tier supports tools");
+  assert.equal(agentCaps.supportsVision, true, "agent tier supports vision");
+
+  const retiredLow = modelCapabilities.getResolvedModelCapabilities("gemini-3.5-flash-low");
+  assert.equal(retiredLow.contextWindow, null, "retired low tier fabricates no context window");
 });
 
 test("Antigravity Gemini 3.7 tier IDs share the Flash capability profile", () => {

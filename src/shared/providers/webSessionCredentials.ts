@@ -56,13 +56,6 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     acceptsFullCookieHeader: false,
     storageKeys: ["apiKey", "token", "uuid", "app-config-uuid"],
   },
-  "chatgpt-web": {
-    kind: "cookie",
-    credentialName: "__Secure-next-auth.session-token",
-    placeholder: "__Secure-next-auth.session-token=...",
-    acceptsFullCookieHeader: true,
-    storageKeys: ["cookie", "sessionToken", "session-token", "__Secure-next-auth.session-token"],
-  },
   "grok-web": {
     kind: "cookie",
     credentialName: "sso + sso-rw",
@@ -82,6 +75,9 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     kind: "cookie",
     credentialName: "__Secure-1PSID (optional: __Secure-1PSIDTS)",
     placeholder: "__Secure-1PSID=...; __Secure-1PSIDTS=...",
+    hintKey: "geminiWebCookieHint",
+    hintFallback:
+      'Accepted formats: full Cookie header without the "Cookie:" prefix, a single __Secure-1PSID value, or browser-export JSON such as {"cookies":{"__Secure-1PSID":"...","__Secure-1PSIDTS":"...","__Secure-1PSIDCC":"..."}}.',
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "__Secure-1PSID", "__Secure-1PSIDTS"],
   },
@@ -132,13 +128,6 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "ecto_1_sess", "abra_sess"],
   },
-  "hailuo-web": {
-    kind: "token",
-    credentialName: "_token",
-    placeholder: '_token=... (hailuo.ai → DevTools → Local Storage → "_token")',
-    acceptsFullCookieHeader: false,
-    storageKeys: ["token", "_token"],
-  },
   "claude-web": {
     kind: "cookie",
     credentialName: "sessionKey",
@@ -157,13 +146,6 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     kind: "token",
     credentialName: "access_token",
     placeholder: "access_token=... or a DevTools HAR export",
-    acceptsFullCookieHeader: false,
-    storageKeys: ["token", "access_token", "accessToken"],
-  },
-  "microsoft-designer-web": {
-    kind: "token",
-    credentialName: "access_token",
-    placeholder: "access_token=... (Authorization: Bearer header from the DallE.ashx request)",
     acceptsFullCookieHeader: false,
     storageKeys: ["token", "access_token", "accessToken"],
   },
@@ -249,14 +231,6 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
       "sessionid=...; ttwid=...; s_v_web_id=... (or fp=verify_... fallback from www.dola.com)",
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "sessionid", "ttwid", "s_v_web_id", "fp"],
-  },
-  "qwen-web": {
-    kind: "cookie",
-    credentialName: "full Cookie header (must include cna, ssxmod_itna, token)",
-    placeholder:
-      "cna=...; token=...; ssxmod_itna=...; ssxmod_itna2=... (full Cookie header from chat.qwen.ai)",
-    acceptsFullCookieHeader: true,
-    storageKeys: ["cookie", "token", "ssxmod_itna", "ssxmod_itna2", "cna", "tongyi_sso_ticket"],
   },
   "duckduckgo-web": {
     kind: "cookie",
@@ -356,8 +330,7 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
   "conol-web": {
     kind: "cookie",
     credentialName: "__Secure-better-auth.session_token",
-    placeholder:
-      "__Secure-better-auth.session_token=... or full Cookie header from conol.ai",
+    placeholder: "__Secure-better-auth.session_token=... or full Cookie header from conol.ai",
     acceptsFullCookieHeader: true,
     storageKeys: ["cookie", "__Secure-better-auth.session_token"],
   },

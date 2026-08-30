@@ -6254,13 +6254,13 @@
       "galadriel": "Sambungkan Galadriel dengan kunci API.",
       "predibase": "Kredit percubaan percuma $25 (tempoh sah 30 hari)",
       "chenzk": "Gerbang serasi OpenAI dengan katalog model langsung di chenzk.top.",
-      "magnific": "Jana imej dengan API Mystic Freepik.",
+      "magnific": "Jana imej dengan API Mystic Magnific.",
       "freetheai": "Gerbang serasi OpenAI percuma dengan sokongan model passthrough.",
-      "g4f-gemini": "Proksi terbalik g4f.space tanpa kunci percuma ke Gemini, terhad kepada 5 permintaan seminit.",
-      "g4f-groq": "Proksi terbalik g4f.space tanpa kunci percuma ke Groq, terhad kepada 5 permintaan seminit.",
-      "g4f-nvidia": "Proksi terbalik g4f.space tanpa kunci percuma ke NVIDIA NIM, terhad kepada 5 permintaan seminit.",
-      "g4f-ollama": "Gerbang Ollama dihoskan tanpa kunci percuma daripada g4f.space, terhad kepada 5 permintaan seminit.",
-      "g4f-pollinations": "Proksi terbalik g4f.space tanpa kunci percuma ke Pollinations, terhad kepada 5 permintaan seminit.",
+      "g4f-gemini": "Gerbang g4f.space jauh ke Gemini. Akses tanpa nama memerlukan kredit bukti kerja daripada g4f.dev/chat atau kunci API ahli daripada g4f.dev/members.html; had berbeza-beza.",
+      "g4f-groq": "Gerbang g4f.space jauh ke Groq. Akses tanpa nama memerlukan kredit bukti kerja daripada g4f.dev/chat atau kunci API ahli daripada g4f.dev/members.html; had berbeza-beza.",
+      "g4f-nvidia": "Gerbang g4f.space jauh ke NVIDIA NIM. Akses tanpa nama memerlukan kredit bukti kerja daripada g4f.dev/chat atau kunci API ahli daripada g4f.dev/members.html; had berbeza-beza.",
+      "g4f-ollama": "Gerbang g4f.space jauh ke Ollama. Akses tanpa nama memerlukan kredit bukti kerja daripada g4f.dev/chat atau kunci API ahli daripada g4f.dev/members.html; had berbeza-beza.",
+      "g4f-pollinations": "Gerbang g4f.space jauh ke Pollinations. Akses tanpa nama memerlukan kredit bukti kerja daripada g4f.dev/chat atau kunci API ahli daripada g4f.dev/members.html; had berbeza-beza.",
       "mixedbread": "Cipta pembenaman dengan API Mixedbread.",
       "segmind": "Jana imej dan video dengan model dihoskan Segmind.",
       "amazon-q": "Menggunakan AWS Builder ID atau aliran refresh-token yang diimport yang sama seperti Kiro, tetapi memastikan sambungan Amazon Q berasingan.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Jambatan Video",
     "modalityBridgeVideoDesc": "Ambil sampel bingkai video, huraikannya dengan model penglihatan dan teruskan dengan model teks yang dipilih.",
     "modalityBridgeVideoRuntimeReady": "Runtime sedia",
+    "modalityBridgeVideoRuntimeChecking": "Memeriksa masa jalan…",
     "modalityBridgeVideoRuntimeUnavailable": "Runtime tidak tersedia",
     "modalityBridgeVideoRuntimeInstall": "Pasang FFmpeg dan ffprobe dalam PATH pelayan untuk mendayakan pengekstrakan video.",
     "modalityBridgeVideoEnabled": "Dayakan Jambatan Video",
@@ -11314,7 +11315,9 @@
       "noPayload": "Tiada data payload tersedia untuk entri log ini.",
       "correlationId": "ID Korelasi",
       "correlationIdValue": "ID Korelasi: {id}",
-      "detailedPayloadInfo": "Aktifkan log terperinci terlebih dahulu jika anda ingin pandangan muatan klien/pemberi perkhidmatan empat peringkat untuk permintaan baru."
+      "detailedPayloadInfo": "Aktifkan log terperinci terlebih dahulu jika anda ingin pandangan muatan klien/pemberi perkhidmatan empat peringkat untuk permintaan baru.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "Kunci API",
     "sortTypeFirst": "Paling mudah dahulu",
     "sortTypeFirstHelp": "Kumpulkan mengikut usaha pendaftaran (Tanpa Pendaftaran → Log Masuk OAuth → Kunci API), mengekalkan susunan kualiti dalam setiap kumpulan",
-    "typeLegend": "Tanpa Pendaftaran = sifar persediaan · Log Masuk OAuth = log masuk dengan akaun anda sendiri · Kunci API = bawa kunci anda sendiri atau peringkat percuma penyedia tersebut"
+    "typeLegend": "Tanpa Pendaftaran = sifar persediaan · Log Masuk OAuth = log masuk dengan akaun anda sendiri · Kunci API = bawa kunci anda sendiri atau peringkat percuma penyedia tersebut",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Penemuan Penyedia",

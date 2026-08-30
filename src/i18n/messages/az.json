@@ -6254,13 +6254,13 @@
       "galadriel": "Galadriel-i API açarı ilə qoşun.",
       "predibase": "$25 pulsuz sınaq krediti (30 günlük etibarlılıq müddəti)",
       "chenzk": "chenzk.top ünvanında canlı model kataloqu olan OpenAI ilə uyğun gələn şlüz.",
-      "magnific": "Freepik-in Mystic API-si ilə şəkillər yaradın.",
+      "magnific": "Magnific-in Mystic API-si ilə şəkillər yaradın.",
       "freetheai": "Passthrough model dəstəyi olan pulsuz OpenAI ilə uyğun gələn şlüz.",
-      "g4f-gemini": "Gemini-yə pulsuz, açarsız g4f.space tərs proksisi, dəqiqədə 5 sorğu ilə məhdudlaşdırılıb.",
-      "g4f-groq": "Groq-a pulsuz, açarsız g4f.space tərs proksisi, dəqiqədə 5 sorğu ilə məhdudlaşdırılıb.",
-      "g4f-nvidia": "NVIDIA NIM-ə pulsuz, açarsız g4f.space tərs proksisi, dəqiqədə 5 sorğu ilə məhdudlaşdırılıb.",
-      "g4f-ollama": "g4f.space-dən pulsuz, açarsız host olunan Ollama şlüzü, dəqiqədə 5 sorğu ilə məhdudlaşdırılıb.",
-      "g4f-pollinations": "Pollinations-a pulsuz, açarsız g4f.space tərs proksisi, dəqiqədə 5 sorğu ilə məhdudlaşdırılıb.",
+      "g4f-gemini": "Gemini üçün uzaq g4f.space şlüzü. Anonim giriş g4f.dev/chat-dan iş sübutu kreditləri və ya g4f.dev/members.html-dan üzv API açarı tələb edir; limitlər dəyişir.",
+      "g4f-groq": "Groq üçün uzaq g4f.space şlüzü. Anonim giriş g4f.dev/chat-dan iş sübutu kreditləri və ya g4f.dev/members.html-dan üzv API açarı tələb edir; limitlər dəyişir.",
+      "g4f-nvidia": "NVIDIA NIM üçün uzaq g4f.space şlüzü. Anonim giriş g4f.dev/chat-dan iş sübutu kreditləri və ya g4f.dev/members.html-dan üzv API açarı tələb edir; limitlər dəyişir.",
+      "g4f-ollama": "Ollama üçün uzaq g4f.space şlüzü. Anonim giriş g4f.dev/chat-dan iş sübutu kreditləri və ya g4f.dev/members.html-dan üzv API açarı tələb edir; limitlər dəyişir.",
+      "g4f-pollinations": "Pollinations üçün uzaq g4f.space şlüzü. Anonim giriş g4f.dev/chat-dan iş sübutu kreditləri və ya g4f.dev/members.html-dan üzv API açarı tələb edir; limitlər dəyişir.",
       "mixedbread": "Mixedbread API ilə embedding-lər yaradın.",
       "segmind": "Segmind-in host olunan modelləri ilə şəkillər və videolar yaradın.",
       "amazon-q": "Kiro ilə eyni AWS Builder ID və ya idxal edilmiş refresh-token axınından istifadə edir, lakin Amazon Q bağlantılarını ayrı saxlayır.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Video körpüsü",
     "modalityBridgeVideoDesc": "Video kadrlarından nümunələr götürün, onları görüntü modeli ilə təsvir edin və seçilmiş mətn modeli ilə davam edin.",
     "modalityBridgeVideoRuntimeReady": "İcra mühiti hazırdır",
+    "modalityBridgeVideoRuntimeChecking": "İş vaxtı yoxlanılır…",
     "modalityBridgeVideoRuntimeUnavailable": "İcra mühiti əlçatan deyil",
     "modalityBridgeVideoRuntimeInstall": "Video çıxarışını aktivləşdirmək üçün serverin PATH mühitinə FFmpeg və ffprobe quraşdırın.",
     "modalityBridgeVideoEnabled": "Video körpüsünü aktivləşdir",
@@ -11314,7 +11315,9 @@
       "noPayload": "Bu log girişi üçün heç bir yük məlumatı mövcud deyil.",
       "correlationId": "Korrelyasiya ID-si",
       "correlationIdValue": "Korrelyasiya ID: {id}",
-      "detailedPayloadInfo": "Əvvəlcə ətraflı qeydiyyatı aktiv edin, əgər yeni tələblər üçün dörd mərhələli müştəri/təchizatçı yük görünüşünü istəyirsinizsə."
+      "detailedPayloadInfo": "Əvvəlcə ətraflı qeydiyyatı aktiv edin, əgər yeni tələblər üçün dörd mərhələli müştəri/təchizatçı yük görünüşünü istəyirsinizsə.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API açarı",
     "sortTypeFirst": "Əvvəlcə ən asanlar",
     "sortTypeFirstHelp": "Qeydiyyat çətinliyinə görə qruplaşdırın (Qeydiyyatsız → OAuth ilə giriş → API açarı), hər qrup daxilində keyfiyyət ardıcıllığını qoruyun",
-    "typeLegend": "Qeydiyyatsız = sıfır quraşdırma · OAuth ilə giriş = öz hesabınızla daxil olun · API açarı = öz açarınızı gətirin və ya həmin provayderin pulsuz paketindən istifadə edin"
+    "typeLegend": "Qeydiyyatsız = sıfır quraşdırma · OAuth ilə giriş = öz hesabınızla daxil olun · API açarı = öz açarınızı gətirin və ya həmin provayderin pulsuz paketindən istifadə edin",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provayder kəşfi",

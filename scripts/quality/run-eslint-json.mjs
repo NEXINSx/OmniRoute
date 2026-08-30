@@ -36,6 +36,12 @@ const args = [
   ".eslintcache",
   "--suppressions-location",
   "config/quality/eslint-suppressions.json",
+  // An "unpruned" suppression means a previously-frozen violation was legitimately
+  // fixed — release-time housekeeping (same bucket as ratchet drift), never a
+  // contributor-blocking defect. Without this flag ESLint 9.x exits 2 for that
+  // reason alone, which would fail this script's own JSON pass on a clean tree
+  // (same failure class already fixed in validate-release-green.mjs — #7837 / #11600).
+  "--pass-on-unpruned-suppressions",
   "--format",
   "json",
   "--output-file",

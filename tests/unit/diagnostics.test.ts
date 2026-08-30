@@ -293,6 +293,30 @@ test("detectMalformedNonStream returns 'empty_choices' for Claude message with e
   assert.equal(detectMalformedNonStream(body), "empty_choices");
 });
 
+test("detectMalformedNonStream returns null for Claude content:[] with stop_reason max_tokens (Claude Code /model probe)", () => {
+  // Claude Code probes model switches with Hi + max_tokens:1. Opus can burn the
+  // token on thinking and return an empty content array with max_tokens — valid
+  // upstream 200, must not become empty_choices / 502.
+  const body = {
+    type: "message",
+    role: "assistant",
+    content: [],
+    stop_reason: "max_tokens",
+    usage: { input_tokens: 33, output_tokens: 1 },
+  };
+  assert.equal(detectMalformedNonStream(body), null);
+});
+
+test("detectMalformedNonStream returns null for Claude content:[] with no stop_reason (#9971 non-terminal)", () => {
+  const body = { type: "message", role: "assistant", content: [] };
+  assert.equal(detectMalformedNonStream(body), null);
+});
+
+test("detectMalformedNonStream returns null for Claude content:[] with stop_reason tool_use (parity with errorClassifier)", () => {
+  const body = { type: "message", role: "assistant", content: [], stop_reason: "tool_use" };
+  assert.equal(detectMalformedNonStream(body), null);
+});
+
 test("detectMalformedNonStream returns 'empty_choices' for Claude message with empty-text block", () => {
   const body = {
     type: "message",

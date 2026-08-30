@@ -289,7 +289,7 @@ test("OpenAI -> Gemini request maps messages, merged system instructions, tools 
   assert.deepEqual(getFunctionResponse(toolResponseTurn.parts[0]), {
     id: "call_1",
     name: "weather",
-    response: { result: { temp: 20 } },
+    response: { result: '{"temp":20}' },
   });
 
   const generationConfig = (result as GeminiRequestWithConfig).generationConfig;
@@ -550,7 +550,7 @@ test("OpenAI -> Cloud Code Gemini emits native functionResponse result", () => {
   assert.deepEqual(getFunctionResponse(toolTurn.parts[0]), {
     id: "read_file_123_0",
     name: "read_file",
-    response: { result: { result: "The answer is capybara-4729." } },
+    response: { result: "The answer is capybara-4729." },
   });
 });
 
@@ -956,7 +956,7 @@ test("OpenAI -> Antigravity Claude path sanitizes tool names for Gemini schema",
   const toolResultBlock = getFunctionResponse(toolTurn.parts[0]);
   assert.equal(toolResultBlock.id, "call_long_2");
   assert.equal(toolResultBlock.name, sanitizedToolName);
-  assert.deepEqual(toolResultBlock.response, { result: { ok: true } });
+  assert.deepEqual(toolResultBlock.response, { result: '{"ok":true}' });
 });
 
 test("OpenAI -> Antigravity Claude path applies output cap and strips thinkingConfig", () => {

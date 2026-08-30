@@ -39,7 +39,7 @@ async function withEnv(name, value, fn) {
 async function resetStorage() {
   delete process.env.INITIAL_PASSWORD;
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -65,7 +65,7 @@ async function withPrepareFailure(match, message, fn) {
 
 test.after(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("v1 management proxies supports create/list/pagination", async () => {

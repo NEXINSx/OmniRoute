@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Перехоплення трафіку агента IDE",
     "trafficInspector": "Інспектор трафіку",
-    "trafficInspectorSubtitle": "Моніторинг викликів LLM + відлагодження будь-якого трафіку HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "Код CLI",
     "cliCodeSubtitle": "Інструменти коду, що вказують на OmniRoute",
     "cliAgents": "Агенти CLI",
@@ -6254,13 +6254,13 @@
       "galadriel": "Connect Galadriel with an API key.",
       "predibase": "$25 free trial credits (30-day validity)",
       "chenzk": "OpenAI-compatible gateway with a live model catalog at chenzk.top.",
-      "magnific": "Generate images with Freepik's Mystic API.",
+      "magnific": "Generate images with Magnific's Mystic API.",
       "freetheai": "Free OpenAI-compatible gateway with passthrough model support.",
-      "g4f-gemini": "Free no-key g4f.space reverse proxy to Gemini, limited to 5 requests per minute.",
-      "g4f-groq": "Free no-key g4f.space reverse proxy to Groq, limited to 5 requests per minute.",
-      "g4f-nvidia": "Free no-key g4f.space reverse proxy to NVIDIA NIM, limited to 5 requests per minute.",
-      "g4f-ollama": "Free no-key hosted Ollama gateway from g4f.space, limited to 5 requests per minute.",
-      "g4f-pollinations": "Free no-key g4f.space reverse proxy to Pollinations, limited to 5 requests per minute.",
+      "g4f-gemini": "Віддалений шлюз g4f.space до Gemini. Для анонімного доступу потрібні proof-of-work-кредити з g4f.dev/chat або API-ключ учасника з g4f.dev/members.html; ліміти змінюються.",
+      "g4f-groq": "Віддалений шлюз g4f.space до Groq. Для анонімного доступу потрібні proof-of-work-кредити з g4f.dev/chat або API-ключ учасника з g4f.dev/members.html; ліміти змінюються.",
+      "g4f-nvidia": "Віддалений шлюз g4f.space до NVIDIA NIM. Для анонімного доступу потрібні proof-of-work-кредити з g4f.dev/chat або API-ключ учасника з g4f.dev/members.html; ліміти змінюються.",
+      "g4f-ollama": "Віддалений шлюз g4f.space до Ollama. Для анонімного доступу потрібні proof-of-work-кредити з g4f.dev/chat або API-ключ учасника з g4f.dev/members.html; ліміти змінюються.",
+      "g4f-pollinations": "Віддалений шлюз g4f.space до Pollinations. Для анонімного доступу потрібні proof-of-work-кредити з g4f.dev/chat або API-ключ учасника з g4f.dev/members.html; ліміти змінюються.",
       "mixedbread": "Create embeddings with the Mixedbread API.",
       "segmind": "Generate images and videos with Segmind's hosted models.",
       "amazon-q": "Uses the same AWS Builder ID or imported refresh-token flow as Kiro, but keeps Amazon Q connections separate.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Відеоміст",
     "modalityBridgeVideoDesc": "Виберіть зразки кадрів відео, опишіть їх за допомогою моделі комп’ютерного зору та продовжте з вибраною текстовою моделлю.",
     "modalityBridgeVideoRuntimeReady": "Середовище виконання готове",
+    "modalityBridgeVideoRuntimeChecking": "Перевірка середовища виконання…",
     "modalityBridgeVideoRuntimeUnavailable": "Середовище виконання недоступне",
     "modalityBridgeVideoRuntimeInstall": "Встановіть FFmpeg і ffprobe у PATH сервера, щоб увімкнути видобування відео.",
     "modalityBridgeVideoEnabled": "Увімкнути Відеоміст",
@@ -11314,7 +11315,9 @@
       "noPayload": "Немає даних про корисне навантаження для цього запису журналу.",
       "correlationId": "Ідентифікатор кореляції",
       "correlationIdValue": "Ідентифікатор кореляції: {id}",
-      "detailedPayloadInfo": "Спочатку увімкніть детальне ведення журналів, якщо ви хочете перегляд чотирьохетапного навантаження клієнта/постачальника для нових запитів."
+      "detailedPayloadInfo": "Спочатку увімкніть детальне ведення журналів, якщо ви хочете перегляд чотирьохетапного навантаження клієнта/постачальника для нових запитів.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "Ключ API",
     "sortTypeFirst": "Спочатку найпростіші",
     "sortTypeFirstHelp": "Групувати за зусиллями для реєстрації (Без реєстрації → Вхід через OAuth → Ключ API), зберігаючи порядок якості всередині кожної групи",
-    "typeLegend": "Без реєстрації = нульове налаштування · Вхід через OAuth = увійдіть за допомогою власного облікового запису · Ключ API = використовуйте власний ключ або безкоштовний тарифний план цього провайдера"
+    "typeLegend": "Без реєстрації = нульове налаштування · Вхід через OAuth = увійдіть за допомогою власного облікового запису · Ключ API = використовуйте власний ключ або безкоштовний тарифний план цього провайдера",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Виявлення провайдерів",

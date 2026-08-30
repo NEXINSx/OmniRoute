@@ -15,6 +15,8 @@ const settingsDb = await import("../../src/lib/db/settings.ts");
 const imageRoute = await import("../../src/app/api/v1/images/generations/route.ts");
 const providerImageRoute =
   await import("../../src/app/api/v1/providers/[provider]/images/generations/route.ts");
+const providerChatRoute =
+  await import("../../src/app/api/v1/providers/[provider]/chat/completions/route.ts");
 const imageEditRoute = await import("../../src/app/api/v1/images/edits/route.ts");
 const v1ModelsCatalog = await import("../../src/app/api/v1/models/catalog.ts");
 
@@ -72,7 +74,7 @@ async function resetStorage() {
   globalThis.fetch = originalFetch;
   apiKeysDb.resetApiKeyState();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   // #6303 moved this route onto the shared unified catalog (getUnifiedModelsResponse),
   // which #6408 wrapped in a 1.5s TTL response cache keyed only by (prefix, isCodex
@@ -120,7 +122,7 @@ test.after(() => {
   globalThis.fetch = originalFetch;
   apiKeysDb.resetApiKeyState();
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("image routes expose CORS preflight handlers", async () => {
@@ -135,6 +137,67 @@ test("image routes expose CORS preflight handlers", async () => {
     assert.match(response.headers.get("Access-Control-Allow-Methods") ?? "", /POST/);
     assert.equal(response.headers.get("Access-Control-Allow-Headers"), "*");
   }
+});
+
+test("v1 image routes fail closed for retired common ChatGPT Web ids without network", async () => {
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("Retired image providers must not reach the network");
+  };
+
+  for (const provider of ["chatgpt-web", "cgpt-web"]) {
+    const generationResponse = await imageRoute.POST(
+      new Request("http://localhost/api/v1/images/generations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: `${provider}/gpt-5.5`, prompt: "draw a lighthouse" }),
+      })
+    );
+    const generationBody = (await generationResponse.json()) as ErrorResponseBody;
+    assert.equal(generationResponse.status, 410);
+    assert.equal(generationBody.error.code, "PROVIDER_RETIRED");
+    assert.equal(generationBody.error.message, "Provider is retired and unavailable.");
+
+    const editResponse = await imageEditRoute.POST(
+      new Request("http://localhost/api/v1/images/edits", {
+        method: "POST",
+        body: createCodexEditForm("make it brighter", { model: `${provider}/gpt-5.5` }),
+      })
+    );
+    const editBody = (await editResponse.json()) as ErrorResponseBody;
+    assert.equal(editResponse.status, 410);
+    assert.equal(editBody.error.code, "PROVIDER_RETIRED");
+    assert.equal(editBody.error.message, "Provider is retired and unavailable.");
+
+    const providerImageResponse = await providerImageRoute.POST(
+      new Request(`http://localhost/api/v1/providers/${provider}/images/generations`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "gpt-5.5", prompt: "draw a lighthouse" }),
+      }),
+      { params: Promise.resolve({ provider }) }
+    );
+    const providerImageBody = (await providerImageResponse.json()) as ErrorResponseBody;
+    assert.equal(providerImageResponse.status, 410);
+    assert.equal(providerImageBody.error.code, "PROVIDER_RETIRED");
+    assert.equal(providerImageBody.error.message, "Provider is retired and unavailable.");
+
+    const providerChatResponse = await providerChatRoute.POST(
+      new Request(`http://localhost/api/v1/providers/${provider}/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "gpt-5.5", messages: [{ role: "user", content: "hi" }] }),
+      }),
+      { params: Promise.resolve({ provider }) }
+    );
+    const providerChatBody = (await providerChatResponse.json()) as ErrorResponseBody;
+    assert.equal(providerChatResponse.status, 410);
+    assert.equal(providerChatBody.error.code, "PROVIDER_RETIRED");
+    assert.equal(providerChatBody.error.message, "Provider is retired and unavailable.");
+  }
+
+  assert.equal(fetchCalls, 0);
 });
 
 test("v1 image models GET exposes image-only modalities for credential-backed image-only models", async () => {
@@ -251,7 +314,7 @@ test("v1 image edit POST enforces disabled API key policy", async () => {
 
   const formData = new FormData();
   formData.set("prompt", "make the background lighter");
-  formData.set("model", "cgpt-web/gpt-5.5");
+  formData.set("model", "openai/gpt-image-2");
   formData.set("image", new File([new Uint8Array([1, 2, 3])], "source.png", { type: "image/png" }));
 
   const response = await imageEditRoute.POST(
@@ -265,6 +328,33 @@ test("v1 image edit POST enforces disabled API key policy", async () => {
 
   assert.equal(response.status, 403);
   assert.match(body.error.message, /disabled/);
+});
+
+test("v1 image edit retirement takes precedence over API key policy", async () => {
+  const createdKey = await apiKeysDb.createApiKey("Disabled retired image key", "retired-edit");
+  await apiKeysDb.updateApiKeyPermissions(createdKey.id, { isActive: false });
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("Retired image providers must not reach the network");
+  };
+
+  for (const provider of ["chatgpt-web", "cgpt-web"]) {
+    const response = await imageEditRoute.POST(
+      new Request("http://localhost/api/v1/images/edits", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${createdKey.key}` },
+        body: createCodexEditForm("make it brighter", { model: `${provider}/gpt-5.5` }),
+      })
+    );
+    const body = (await response.json()) as ErrorResponseBody;
+
+    assert.equal(response.status, 410);
+    assert.equal(body.error.code, "PROVIDER_RETIRED");
+    assert.equal(body.error.message, "Provider is retired and unavailable.");
+  }
+
+  assert.equal(fetchCalls, 0);
 });
 
 test("v1 image edit POST guards multipart prompts after parsing", async () => {
@@ -442,7 +532,7 @@ test("v1 image edit POST rejects excessive or malformed Codex reference sets", a
 
 test("v1 image edit POST keeps non-Codex providers single-reference", async () => {
   const formData = new FormData();
-  formData.set("model", "cgpt-web/gpt-5.5");
+  formData.set("model", "openai/gpt-image-2");
   formData.set("prompt", "combine these references");
   formData.set("image", new File([VALID_PNG_BYTES], "reference-1.png", { type: "image/png" }));
   formData.append("image[]", new File([VALID_PNG_BYTES], "reference-2.png", { type: "image/png" }));

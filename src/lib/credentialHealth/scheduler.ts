@@ -18,7 +18,7 @@
  */
 
 import { testSingleConnection } from "@/app/api/providers/[id]/test/route";
-import { getProviderConnections } from "@/lib/localDb";
+import { getProviderConnections } from "@/lib/db/providers";
 import {
   setCredentialHealth,
   removeCredentialHealth,

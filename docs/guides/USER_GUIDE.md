@@ -55,7 +55,6 @@ Complete guide for configuring providers, creating combos, integrating CLI tools
 |                     | MiniMax M2.1      | $0.2/1M     | 5-hour rolling | Cheapest option      |
 |                     | Kimi K2           | $9/mo flat  | 10M tokens/mo  | Predictable cost     |
 | **🆓 FREE**         | Qoder             | $0          | Provider limits apply | Verify current catalog |
-|                     | Qwen              | $0          | Provider limits apply | Verify current catalog |
 |                     | Kiro              | $0          | ~50 credits/mo | Claude free          |
 
 ---
@@ -827,7 +826,7 @@ Configure via **Dashboard → Settings → Routing**. The dashboard exposes the 
 - `p2c` (Power of Two Choices)
 - `least-used` and `cost-optimized`
 - `auto` — score-driven across all candidates
-- `lkgp` (Last Known Good Provider) — sticks to the last successful model per session
+- `lkgp` (Last Known Good Provider) — pins to the last successful provider, then falls back to rules
 - `context-optimized` — picks the model with the largest free context window
 - `context-relay` — chains long-context models for follow-up turns
 
@@ -1027,7 +1026,6 @@ If only OpenRouter is configured, use `openrouter/deepgram/nova-3`.
 - `kie/`
 - `aws-polly/`
 - `xiaomi-mimo/`
-- `edgetts/` (Microsoft Edge "Read Aloud" — free, no API key; unofficial/reverse-engineered endpoint)
 - `coqui/`, `tortoise/`
 - `qwen/`
 
@@ -1088,15 +1086,15 @@ Access via **Dashboard → Health**. Real-time system health overview with 6 car
 
 OmniRoute ships with a **score-driven auto-router** that picks the best model for each request across every connected provider — no combo to maintain. Just send the request with one of the `auto/*` prefixes and OmniRoute will assemble a virtual combo on the fly, scoring candidates on latency, cost, success rate, context fit, model fitness for the task, recent failures, quota, and circuit-breaker state.
 
-| Prefix         | Optimizes for                                                                 |
-| -------------- | ----------------------------------------------------------------------------- |
-| `auto`         | Balanced default (latency × cost × success rate)                              |
-| `auto/coding`  | Coding tasks: prefers Claude, GPT-5, GLM, Kimi, Qwen Coder, DeepSeek coders   |
-| `auto/cheap`   | Lowest $/token, accepts higher latency                                        |
-| `auto/fast`    | Lowest latency, ignores cost                                                  |
-| `auto/offline` | Local-only providers (Ollama, vLLM, llama.cpp) — useful for air-gapped setups |
-| `auto/smart`   | Reasoning quality first (Opus, GPT-5 xhigh, R1, GLM 5.1 reasoning)            |
-| `auto/lkgp`    | "Last Known Good Provider" — sticky to the most recently successful target    |
+| Prefix         | Optimizes for                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| `auto`         | Balanced default (latency × cost × success rate)                                            |
+| `auto/coding`  | Coding tasks: prefers Claude, GPT-5, GLM, Kimi, Qwen Coder, DeepSeek coders                 |
+| `auto/cheap`   | Lowest $/token, accepts higher latency                                                      |
+| `auto/fast`    | Lowest latency, ignores cost                                                                |
+| `auto/offline` | Local-only providers (Ollama, vLLM, llama.cpp) — useful for air-gapped setups               |
+| `auto/smart`   | Reasoning quality first (Opus, GPT-5 xhigh, R1, GLM 5.1 reasoning)                          |
+| `auto/lkgp`    | "Last Known Good Provider" — pins to the last successful provider, then falls back to rules |
 
 Example:
 

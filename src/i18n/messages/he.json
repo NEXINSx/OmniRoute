@@ -6254,13 +6254,13 @@
       "galadriel": "חבר את Galadriel באמצעות מפתח API.",
       "predibase": "קרדיט ניסיון חינם בסך $25 (תוקף ל-30 יום)",
       "chenzk": "שער תואם OpenAI עם קטלוג מודלים חי ב-chenzk.top.",
-      "magnific": "צור תמונות באמצעות ה-API של Mystic מבית Freepik.",
+      "magnific": "צור תמונות באמצעות ה-API של Mystic מבית Magnific.",
       "freetheai": "שער חינמי תואם OpenAI עם תמיכה במודלים בשיטת passthrough.",
-      "g4f-gemini": "פרוקסי הפוך חינמי ללא מפתח מ-g4f.space ל-Gemini, מוגבל ל-5 בקשות לדקה.",
-      "g4f-groq": "פרוקסי הפוך חינמי ללא מפתח מ-g4f.space ל-Groq, מוגבל ל-5 בקשות לדקה.",
-      "g4f-nvidia": "פרוקסי הפוך חינמי ללא מפתח מ-g4f.space ל-NVIDIA NIM, מוגבל ל-5 בקשות לדקה.",
-      "g4f-ollama": "שער Ollama מתארח חינמי ללא מפתח מ-g4f.space, מוגבל ל-5 בקשות לדקה.",
-      "g4f-pollinations": "פרוקסי הפוך חינמי ללא מפתח מ-g4f.space ל-Pollinations, מוגבל ל-5 בקשות לדקה.",
+      "g4f-gemini": "שער g4f.space מרוחק אל Gemini. גישה אנונימית דורשת נקודות הוכחת עבודה מ-g4f.dev/chat או מפתח API לחברים מ-g4f.dev/members.html; המגבלות משתנות.",
+      "g4f-groq": "שער g4f.space מרוחק אל Groq. גישה אנונימית דורשת נקודות הוכחת עבודה מ-g4f.dev/chat או מפתח API לחברים מ-g4f.dev/members.html; המגבלות משתנות.",
+      "g4f-nvidia": "שער g4f.space מרוחק אל NVIDIA NIM. גישה אנונימית דורשת נקודות הוכחת עבודה מ-g4f.dev/chat או מפתח API לחברים מ-g4f.dev/members.html; המגבלות משתנות.",
+      "g4f-ollama": "שער g4f.space מרוחק אל Ollama. גישה אנונימית דורשת נקודות הוכחת עבודה מ-g4f.dev/chat או מפתח API לחברים מ-g4f.dev/members.html; המגבלות משתנות.",
+      "g4f-pollinations": "שער g4f.space מרוחק אל Pollinations. גישה אנונימית דורשת נקודות הוכחת עבודה מ-g4f.dev/chat או מפתח API לחברים מ-g4f.dev/members.html; המגבלות משתנות.",
       "mixedbread": "צור embeddings באמצעות ה-API של Mixedbread.",
       "segmind": "צור תמונות וסרטונים באמצעות המודלים המתארחים של Segmind.",
       "amazon-q": "משתמש באותו תהליך של AWS Builder ID או refresh-token מיובא כמו Kiro, אך שומר על חיבורי Amazon Q נפרדים.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "גשר וידאו",
     "modalityBridgeVideoDesc": "דגמו פריימים מהווידאו, תארו אותם באמצעות מודל ראייה והמשיכו עם מודל הטקסט שנבחר.",
     "modalityBridgeVideoRuntimeReady": "סביבת הריצה מוכנה",
+    "modalityBridgeVideoRuntimeChecking": "בודק את סביבת הריצה…",
     "modalityBridgeVideoRuntimeUnavailable": "סביבת הריצה אינה זמינה",
     "modalityBridgeVideoRuntimeInstall": "התקינו את FFmpeg ואת ffprobe ב-PATH של השרת כדי לאפשר חילוץ וידאו.",
     "modalityBridgeVideoEnabled": "הפעלת גשר וידאו",
@@ -11314,7 +11315,9 @@
       "noPayload": "אין נתוני payload זמינים עבור רשומת יומן זו.",
       "correlationId": "מזהה קורלציה",
       "correlationIdValue": "מזהה קורלציה: {id}",
-      "detailedPayloadInfo": "אפשר לוגים מפורטים קודם אם אתה רוצה את תצוגת העומס של הלקוח/ספק בארבעה שלבים עבור בקשות חדשות."
+      "detailedPayloadInfo": "אפשר לוגים מפורטים קודם אם אתה רוצה את תצוגת העומס של הלקוח/ספק בארבעה שלבים עבור בקשות חדשות.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "מפתח API",
     "sortTypeFirst": "הקל ביותר תחילה",
     "sortTypeFirstHelp": "קבץ לפי מאמץ ההרשמה (ללא הרשמה → התחברות באמצעות OAuth → מפתח API), תוך שמירה על סדר האיכות בכל קבוצה",
-    "typeLegend": "ללא הרשמה = אפס הגדרות · התחברות באמצעות OAuth = כניסה עם החשבון שלך · מפתח API = שימוש במפתח משלך או במסלול החינמי של אותו ספק"
+    "typeLegend": "ללא הרשמה = אפס הגדרות · התחברות באמצעות OAuth = כניסה עם החשבון שלך · מפתח API = שימוש במפתח משלך או במסלול החינמי של אותו ספק",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "גילוי ספקים",

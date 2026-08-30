@@ -1,4 +1,4 @@
-import { FREE_MODEL_BUDGETS } from "@omniroute/open-sse/config/freeModelCatalog";
+import { FREE_MODEL_BUDGETS, grantsFreeAccess } from "@omniroute/open-sse/config/freeModelCatalog";
 import { resolveProviderId } from "@/shared/constants/providers";
 import { globToRegex } from "@/shared/utils/globPattern";
 import { AI_MODELS } from "@/shared/constants/models";
@@ -12,16 +12,25 @@ import { AI_MODELS } from "@/shared/constants/models";
  * considered free when its id carries the OpenRouter-style `:free` suffix, when
  * both its prompt and completion prices are zero, or when its id is listed as a
  * free model for that provider in the catalog.
+ *
+ * The catalog also records the regime of every entry via `freeType`
+ * (`FreeModelFreeType`). A regime can retire a free tier behind a paid key
+ * (`discontinued`); `grantsFreeAccess` is the single predicate that decides
+ * whether a regime still grants free access, and the two structures below are
+ * derived only from entries whose regime grants it — so a `discontinued` entry
+ * is never reported free, and a future regime that forgets to be classified
+ * fails to compile rather than defaulting silently.
  */
 
+/** Catalogued entries whose regime still grants free access. */
+const FREE_BUDGETS = FREE_MODEL_BUDGETS.filter((m) => grantsFreeAccess(m.freeType));
+
 /** Provider ids that have at least one documented free model. */
-export const PROVIDERS_WITH_FREE_MODELS: Set<string> = new Set(
-  FREE_MODEL_BUDGETS.map((m) => m.provider)
-);
+export const PROVIDERS_WITH_FREE_MODELS: Set<string> = new Set(FREE_BUDGETS.map((m) => m.provider));
 
 const FREE_MODEL_IDS_BY_PROVIDER: Map<string, Set<string>> = (() => {
   const map = new Map<string, Set<string>>();
-  for (const m of FREE_MODEL_BUDGETS) {
+  for (const m of FREE_BUDGETS) {
     let set = map.get(m.provider);
     if (!set) {
       set = new Set<string>();
@@ -51,10 +60,12 @@ function isZeroPrice(value: unknown): boolean {
 export interface FreeModelCandidate {
   id?: string;
   pricing?: { prompt?: string | number; completion?: string | number };
+  isFree?: boolean;
 }
 
 /** Whether a single fetched model qualifies as free for the given provider (id or alias). */
 export function isFreeModel(provider: string, model: FreeModelCandidate): boolean {
+  if (model.isFree === true) return true;
   if (typeof model.id === "string" && model.id.endsWith(":free")) return true;
   if (isZeroPrice(model.pricing?.prompt) && isZeroPrice(model.pricing?.completion)) return true;
   if (typeof model.id === "string") {

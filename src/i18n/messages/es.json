@@ -6254,13 +6254,13 @@
       "galadriel": "Connect Galadriel with an API key.",
       "predibase": "$25 free trial credits (30-day validity)",
       "chenzk": "OpenAI-compatible gateway with a live model catalog at chenzk.top.",
-      "magnific": "Generate images with Freepik's Mystic API.",
+      "magnific": "Generate images with Magnific's Mystic API.",
       "freetheai": "Free OpenAI-compatible gateway with passthrough model support.",
-      "g4f-gemini": "Free no-key g4f.space reverse proxy to Gemini, limited to 5 requests per minute.",
-      "g4f-groq": "Free no-key g4f.space reverse proxy to Groq, limited to 5 requests per minute.",
-      "g4f-nvidia": "Free no-key g4f.space reverse proxy to NVIDIA NIM, limited to 5 requests per minute.",
-      "g4f-ollama": "Free no-key hosted Ollama gateway from g4f.space, limited to 5 requests per minute.",
-      "g4f-pollinations": "Free no-key g4f.space reverse proxy to Pollinations, limited to 5 requests per minute.",
+      "g4f-gemini": "Puerta de enlace remota de g4f.space a Gemini. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-groq": "Puerta de enlace remota de g4f.space a Groq. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-nvidia": "Puerta de enlace remota de g4f.space a NVIDIA NIM. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-ollama": "Puerta de enlace remota de g4f.space a Ollama. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
+      "g4f-pollinations": "Puerta de enlace remota de g4f.space a Pollinations. El acceso anónimo requiere créditos de prueba de trabajo de g4f.dev/chat o una clave API de miembro de g4f.dev/members.html; los límites varían.",
       "mixedbread": "Create embeddings with the Mixedbread API.",
       "segmind": "Generate images and videos with Segmind's hosted models.",
       "amazon-q": "Uses the same AWS Builder ID or imported refresh-token flow as Kiro, but keeps Amazon Q connections separate.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Puente de vídeo",
     "modalityBridgeVideoDesc": "Muestrea fotogramas del vídeo, descríbelos con un modelo de visión y continúa con el modelo de texto elegido.",
     "modalityBridgeVideoRuntimeReady": "Entorno de ejecución listo",
+    "modalityBridgeVideoRuntimeChecking": "Comprobando el entorno de ejecución…",
     "modalityBridgeVideoRuntimeUnavailable": "Entorno de ejecución no disponible",
     "modalityBridgeVideoRuntimeInstall": "Instala FFmpeg y ffprobe en el PATH del servidor para habilitar la extracción de vídeo.",
     "modalityBridgeVideoEnabled": "Activar Puente de vídeo",
@@ -11314,7 +11315,9 @@
       "noPayload": "No hay datos de carga útiles disponibles para esta entrada de registro.",
       "correlationId": "ID de correlación",
       "correlationIdValue": "ID de correlación: {id}",
-      "detailedPayloadInfo": "Habilita primero el registro detallado si deseas la vista de carga útil de cliente/proveedor de cuatro etapas para nuevas solicitudes."
+      "detailedPayloadInfo": "Habilita primero el registro detallado si deseas la vista de carga útil de cliente/proveedor de cuatro etapas para nuevas solicitudes.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "Clave API",
     "sortTypeFirst": "Más sencillos primero",
     "sortTypeFirstHelp": "Group by signup effort (No Signup → OAuth Login → API Key), keeping quality order within each group",
-    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier"
+    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provider Discovery",

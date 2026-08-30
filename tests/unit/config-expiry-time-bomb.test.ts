@@ -92,7 +92,7 @@ test("scanConfigExpiry: walks a config tree, skips node_modules and invalid JSON
     const found = scanConfigExpiry(dir).map((f) => `${f.file}:${f.keyPath}`);
     assert.deepEqual(found, ["a.json:validUntil", "sub/b.json:deep.expiresAt"]);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

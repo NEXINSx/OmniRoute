@@ -3,9 +3,9 @@ import {
   getApiKeys,
   getApiKeysCount,
   createApiKey,
-  isCloudEnabled,
   updateApiKeyPermissions,
-} from "@/lib/localDb";
+} from "@/lib/db/apiKeys";
+import { isCloudEnabled } from "@/lib/db/settings";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
 import { createKeySchema } from "@/shared/validation/schemas";

@@ -6254,13 +6254,13 @@
       "galadriel": "Connecter Galadriel avec une clé API.",
       "predibase": "25 $ de crédits d'essai gratuit (validité de 30 jours)",
       "chenzk": "Passerelle compatible OpenAI avec un catalogue de modèles en direct sur chenzk.top.",
-      "magnific": "Générer des images avec l'API Mystic de Freepik.",
+      "magnific": "Générer des images avec l'API Mystic de Magnific.",
       "freetheai": "Passerelle gratuite compatible OpenAI avec prise en charge des modèles en passthrough.",
-      "g4f-gemini": "Reverse proxy g4f.space gratuit sans clé vers Gemini, limité à 5 requêtes par minute.",
-      "g4f-groq": "Reverse proxy g4f.space gratuit sans clé vers Groq, limité à 5 requêtes par minute.",
-      "g4f-nvidia": "Reverse proxy g4f.space gratuit sans clé vers NVIDIA NIM, limité à 5 requêtes par minute.",
-      "g4f-ollama": "Passerelle Ollama hébergée gratuite sans clé de g4f.space, limitée à 5 requêtes par minute.",
-      "g4f-pollinations": "Reverse proxy g4f.space gratuit sans clé vers Pollinations, limité à 5 requêtes par minute.",
+      "g4f-gemini": "Passerelle distante g4f.space vers Gemini. L’accès anonyme nécessite des crédits de preuve de travail de g4f.dev/chat ou une clé API membre de g4f.dev/members.html ; les limites varient.",
+      "g4f-groq": "Passerelle distante g4f.space vers Groq. L’accès anonyme nécessite des crédits de preuve de travail de g4f.dev/chat ou une clé API membre de g4f.dev/members.html ; les limites varient.",
+      "g4f-nvidia": "Passerelle distante g4f.space vers NVIDIA NIM. L’accès anonyme nécessite des crédits de preuve de travail de g4f.dev/chat ou une clé API membre de g4f.dev/members.html ; les limites varient.",
+      "g4f-ollama": "Passerelle distante g4f.space vers Ollama. L’accès anonyme nécessite des crédits de preuve de travail de g4f.dev/chat ou une clé API membre de g4f.dev/members.html ; les limites varient.",
+      "g4f-pollinations": "Passerelle distante g4f.space vers Pollinations. L’accès anonyme nécessite des crédits de preuve de travail de g4f.dev/chat ou une clé API membre de g4f.dev/members.html ; les limites varient.",
       "mixedbread": "Créer des embeddings avec l'API Mixedbread.",
       "segmind": "Générer des images et des vidéos avec les modèles hébergés de Segmind.",
       "amazon-q": "Utilise le même flux AWS Builder ID ou refresh-token importé que Kiro, mais conserve les connexions Amazon Q séparées.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Pont vidéo",
     "modalityBridgeVideoDesc": "Échantillonnez des images de la vidéo, décrivez-les avec un modèle de vision, puis poursuivez avec le modèle de texte choisi.",
     "modalityBridgeVideoRuntimeReady": "Environnement d’exécution prêt",
+    "modalityBridgeVideoRuntimeChecking": "Vérification de l’environnement d’exécution…",
     "modalityBridgeVideoRuntimeUnavailable": "Environnement d’exécution indisponible",
     "modalityBridgeVideoRuntimeInstall": "Installez FFmpeg et ffprobe dans le PATH du serveur pour activer l’extraction vidéo.",
     "modalityBridgeVideoEnabled": "Activer le Pont vidéo",
@@ -11314,7 +11315,9 @@
       "noPayload": "Aucune donnée de charge utile n’est disponible pour cette entrée de journal.",
       "correlationId": "ID de corrélation",
       "correlationIdValue": "ID de corrélation : {id}",
-      "detailedPayloadInfo": "Activez d’abord la journalisation détaillée si vous voulez voir l’affichage en 4 étapes des payloads client/fournisseur pour les nouvelles requêtes."
+      "detailedPayloadInfo": "Activez d’abord la journalisation détaillée si vous voulez voir l’affichage en 4 étapes des payloads client/fournisseur pour les nouvelles requêtes.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "Clé API",
     "sortTypeFirst": "Le plus simple en premier",
     "sortTypeFirstHelp": "Grouper par effort d'inscription (Sans inscription → Connexion OAuth → Clé API), en conservant l'ordre de qualité au sein de chaque groupe",
-    "typeLegend": "Sans inscription = configuration nulle · Connexion OAuth = connectez-vous avec votre propre compte · Clé API = utilisez votre propre clé ou le forfait gratuit de ce fournisseur"
+    "typeLegend": "Sans inscription = configuration nulle · Connexion OAuth = connectez-vous avec votre propre compte · Clé API = utilisez votre propre clé ou le forfait gratuit de ce fournisseur",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Découverte de fournisseurs",

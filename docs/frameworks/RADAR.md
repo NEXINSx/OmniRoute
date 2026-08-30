@@ -283,6 +283,32 @@ currently cached version (`compareVersions()`, dotted `YYYY.MM.DD.n` comparison)
 `{ status: "stale" }`. This prevents a compromised or misconfigured feed endpoint from
 rolling a client back to an older, differently-signed payload.
 
+### Two dates, and why both are kept
+
+A cached feed carries two distinct dates, and confusing them is the whole point of
+keeping both:
+
+| Field         | Comes from           | Answers                             |
+| ------------- | -------------------- | ----------------------------------- |
+| `generatedAt` | the signed feed body | how old the **data** is             |
+| `fetchedAt`   | this install's clock | when this install **downloaded** it |
+
+A feed fetched minutes ago can carry weeks-old figures, so `fetchedAt` alone cannot
+tell an operator whether the overlay is fresher than the baseline it sits on. Both are
+persisted in `radar_feed_cache`, returned by `getRadarCatalog().meta`, and reported
+separately by `GET /api/radar/status`. A row cached before the `generated_at` column
+existed (migration 163) reads back as `null` — unknown stays unknown rather than
+borrowing the fetch time. `radar_referrals_cache` has kept its own `generated_at` since
+migration 142.
+
+The version floor above compares `version`, not either date.
+
+Two gaps remain, both deliberate: the dashboard still shows only `Last fetched`, so reading
+the build date there needs a new label (and its 42 locale entries); and the offers and intel
+caches keep no build date at all, even though their feed schemas carry one — `GET
+/api/radar/status` therefore omits the field for those two rather than reporting a `null`
+that would read as "unknown".
+
 ### Schema validation
 
 The downloaded bytes are parsed and validated against `RadarFeedSchema`

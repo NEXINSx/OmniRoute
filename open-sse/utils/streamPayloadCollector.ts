@@ -81,7 +81,7 @@ function inferFormatFromEvents(
   if (normalizedFallback) return normalizedFallback;
 
   for (const evt of events) {
-    const payload = asRecord(evt.data);
+    const payload = unwrapEventEnvelope(evt.data);
     const eventType = toString(payload.type || evt.event);
 
     if (eventType.startsWith("response.") || payload.object === "response") {
@@ -761,9 +761,27 @@ function createSummaryReducer(
   }
 }
 
+// A pushed payload is either the bare provider/passthrough event (what
+// providerPayloadCollector always receives), or a `{event, data}` SSE
+// envelope (what emitTranslatedClientItem pushes for every translate-mode
+// client item, since formatSSE needs the `event:` line name separate from
+// the `data:` payload) -- unwrap the latter so every reducer's ingest() sees
+// the real payload's own `.type`/`.choices`/etc. either way. Without this,
+// a client-facing summary built from translate-mode events (clientPayload
+// when sourceFormat is Responses/Claude/Gemini) never found a real `type`
+// field, since it was always one level too shallow.
+function unwrapEventEnvelope(payload: unknown): JsonRecord {
+  const record = asRecord(payload);
+  const inner = record.data;
+  if (typeof record.event === "string" && inner && typeof inner === "object") {
+    return asRecord(inner);
+  }
+  return record;
+}
+
 function buildOpenAISummary(events: StructuredSSEEvent[], fallbackModel?: string | null): unknown {
   const reducer = createOpenAIReducer(fallbackModel);
-  for (const evt of events) reducer.ingest(asRecord(evt.data));
+  for (const evt of events) reducer.ingest(unwrapEventEnvelope(evt.data));
   return reducer.finalize();
 }
 
@@ -772,19 +790,19 @@ function buildResponsesSummary(
   fallbackModel?: string | null
 ): unknown {
   const reducer = createResponsesReducer(fallbackModel);
-  for (const evt of events) reducer.ingest(asRecord(evt.data));
+  for (const evt of events) reducer.ingest(unwrapEventEnvelope(evt.data));
   return reducer.finalize();
 }
 
 function buildClaudeSummary(events: StructuredSSEEvent[], fallbackModel?: string | null): unknown {
   const reducer = createClaudeReducer(fallbackModel);
-  for (const evt of events) reducer.ingest(asRecord(evt.data));
+  for (const evt of events) reducer.ingest(unwrapEventEnvelope(evt.data));
   return reducer.finalize();
 }
 
 function buildGeminiSummary(events: StructuredSSEEvent[], fallbackModel?: string | null): unknown {
   const reducer = createGeminiReducer(fallbackModel);
-  for (const evt of events) reducer.ingest(asRecord(evt.data));
+  for (const evt of events) reducer.ingest(unwrapEventEnvelope(evt.data));
   return reducer.finalize();
 }
 
@@ -854,7 +872,7 @@ export function createStructuredSSECollector(options: CollectorOptions = {}) {
       if (payload === null || payload === undefined) return;
 
       const clonedData = cloneLogPayload(payload);
-      reducer?.ingest(asRecord(clonedData));
+      reducer?.ingest(unwrapEventEnvelope(clonedData));
 
       const event: StructuredSSEEvent = {
         index: events.length + droppedEvents,

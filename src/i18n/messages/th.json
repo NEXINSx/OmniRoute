@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "ดักจับทราฟฟิกของ IDE agent",
     "trafficInspector": "ตัวตรวจสอบทราฟฟิก",
-    "trafficInspectorSubtitle": "ตรวจสอบการเรียกใช้งาน LLM + ดีบั๊กทราฟฟิก HTTPS ใดๆ",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "โค้ด CLI",
     "cliCodeSubtitle": "เครื่องมือโค้ดที่ชี้ไปยัง OmniRoute",
     "cliAgents": "เอเจนต์ CLI",
@@ -6254,13 +6254,13 @@
       "galadriel": "เชื่อมต่อ Galadriel ด้วยคีย์ API",
       "predibase": "เครดิตทดลองใช้ฟรี $25 (มีอายุ 30 วัน)",
       "chenzk": "เกตเวย์ที่เข้ากันได้กับ OpenAI พร้อมแคตตาล็อกโมเดลแบบสดที่ chenzk.top",
-      "magnific": "สร้างรูปภาพด้วย Mystic API ของ Freepik",
+      "magnific": "สร้างรูปภาพด้วย Mystic API ของ Magnific",
       "freetheai": "เกตเวย์ฟรีที่เข้ากันได้กับ OpenAI พร้อมการรองรับโมเดลแบบ passthrough",
-      "g4f-gemini": "รีเวิร์สพร็อกซี g4f.space ฟรีแบบไม่ต้องใช้คีย์ไปยัง Gemini จำกัด 5 คำขอต่อนาที",
-      "g4f-groq": "รีเวิร์สพร็อกซี g4f.space ฟรีแบบไม่ต้องใช้คีย์ไปยัง Groq จำกัด 5 คำขอต่อนาที",
-      "g4f-nvidia": "รีเวิร์สพร็อกซี g4f.space ฟรีแบบไม่ต้องใช้คีย์ไปยัง NVIDIA NIM จำกัด 5 คำขอต่อนาที",
-      "g4f-ollama": "เกตเวย์ Ollama โฮสต์ฟรีแบบไม่ต้องใช้คีย์จาก g4f.space จำกัด 5 คำขอต่อนาที",
-      "g4f-pollinations": "รีเวิร์สพร็อกซี g4f.space ฟรีแบบไม่ต้องใช้คีย์ไปยัง Pollinations จำกัด 5 คำขอต่อนาที",
+      "g4f-gemini": "เกตเวย์ g4f.space ระยะไกลไปยัง Gemini การเข้าถึงแบบไม่ระบุตัวตนต้องใช้เครดิต proof-of-work จาก g4f.dev/chat หรือคีย์ API สมาชิกจาก g4f.dev/members.html โดยขีดจำกัดอาจเปลี่ยนแปลงได้",
+      "g4f-groq": "เกตเวย์ g4f.space ระยะไกลไปยัง Groq การเข้าถึงแบบไม่ระบุตัวตนต้องใช้เครดิต proof-of-work จาก g4f.dev/chat หรือคีย์ API สมาชิกจาก g4f.dev/members.html โดยขีดจำกัดอาจเปลี่ยนแปลงได้",
+      "g4f-nvidia": "เกตเวย์ g4f.space ระยะไกลไปยัง NVIDIA NIM การเข้าถึงแบบไม่ระบุตัวตนต้องใช้เครดิต proof-of-work จาก g4f.dev/chat หรือคีย์ API สมาชิกจาก g4f.dev/members.html โดยขีดจำกัดอาจเปลี่ยนแปลงได้",
+      "g4f-ollama": "เกตเวย์ g4f.space ระยะไกลไปยัง Ollama การเข้าถึงแบบไม่ระบุตัวตนต้องใช้เครดิต proof-of-work จาก g4f.dev/chat หรือคีย์ API สมาชิกจาก g4f.dev/members.html โดยขีดจำกัดอาจเปลี่ยนแปลงได้",
+      "g4f-pollinations": "เกตเวย์ g4f.space ระยะไกลไปยัง Pollinations การเข้าถึงแบบไม่ระบุตัวตนต้องใช้เครดิต proof-of-work จาก g4f.dev/chat หรือคีย์ API สมาชิกจาก g4f.dev/members.html โดยขีดจำกัดอาจเปลี่ยนแปลงได้",
       "mixedbread": "สร้าง embeddings ด้วย Mixedbread API",
       "segmind": "สร้างรูปภาพและวิดีโอด้วยโมเดลที่โฮสต์ของ Segmind",
       "amazon-q": "ใช้ AWS Builder ID หรือโฟลว์ refresh-token ที่นำเข้าแบบเดียวกับ Kiro แต่แยกการเชื่อมต่อ Amazon Q ต่างหาก",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "สะพานวิดีโอ",
     "modalityBridgeVideoDesc": "สุ่มตัวอย่างเฟรมวิดีโอ อธิบายด้วยโมเดลการมองเห็น แล้วดำเนินการต่อด้วยโมเดลข้อความที่เลือก",
     "modalityBridgeVideoRuntimeReady": "รันไทม์พร้อมใช้งาน",
+    "modalityBridgeVideoRuntimeChecking": "กำลังตรวจสอบรันไทม์…",
     "modalityBridgeVideoRuntimeUnavailable": "รันไทม์ไม่พร้อมใช้งาน",
     "modalityBridgeVideoRuntimeInstall": "ติดตั้ง FFmpeg และ ffprobe ใน PATH ของเซิร์ฟเวอร์เพื่อเปิดใช้การแยกวิดีโอ",
     "modalityBridgeVideoEnabled": "เปิดใช้สะพานวิดีโอ",
@@ -11314,7 +11315,9 @@
       "noPayload": "ไม่มีข้อมูล payload สำหรับรายการบันทึกนี้.",
       "correlationId": "รหัสความสัมพันธ์",
       "correlationIdValue": "รหัสความสัมพันธ์: {id}",
-      "detailedPayloadInfo": "โปรดเปิดใช้งานการบันทึกข้อมูลอย่างละเอียดก่อนหากคุณต้องการดูข้อมูลการส่งข้อมูลของไคลเอนต์/ผู้ให้บริการแบบสี่ขั้นตอนสำหรับคำขอใหม่"
+      "detailedPayloadInfo": "โปรดเปิดใช้งานการบันทึกข้อมูลอย่างละเอียดก่อนหากคุณต้องการดูข้อมูลการส่งข้อมูลของไคลเอนต์/ผู้ให้บริการแบบสี่ขั้นตอนสำหรับคำขอใหม่",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "คีย์ API",
     "sortTypeFirst": "ง่ายที่สุดก่อน",
     "sortTypeFirstHelp": "จัดกลุ่มตามความยากง่ายในการลงทะเบียน (ไม่ต้องลงทะเบียน → เข้าสู่ระบบด้วย OAuth → คีย์ API) โดยยังคงเรียงลำดับตามคุณภาพภายในแต่ละกลุ่ม",
-    "typeLegend": "ไม่ต้องลงทะเบียน = ไม่ต้องตั้งค่า · เข้าสู่ระบบด้วย OAuth = ลงชื่อเข้าใช้ด้วยบัญชีของคุณเอง · คีย์ API = ใช้คีย์ของคุณเองหรือระดับใช้งานฟรีของผู้ให้บริการนั้น"
+    "typeLegend": "ไม่ต้องลงทะเบียน = ไม่ต้องตั้งค่า · เข้าสู่ระบบด้วย OAuth = ลงชื่อเข้าใช้ด้วยบัญชีของคุณเอง · คีย์ API = ใช้คีย์ของคุณเองหรือระดับใช้งานฟรีของผู้ให้บริการนั้น",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "การค้นหาผู้ให้บริการ",

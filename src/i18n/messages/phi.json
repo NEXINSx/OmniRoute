@@ -6254,13 +6254,13 @@
       "galadriel": "Ikonekta ang Galadriel gamit ang isang API key.",
       "predibase": "$25 na libreng trial credits (30-araw na validity)",
       "chenzk": "OpenAI-compatible na gateway na may live model catalog sa chenzk.top.",
-      "magnific": "Bumuo ng mga larawan gamit ang Mystic API ng Freepik.",
+      "magnific": "Bumuo ng mga larawan gamit ang Mystic API ng Magnific.",
       "freetheai": "Libreng OpenAI-compatible na gateway na may suporta sa passthrough model.",
-      "g4f-gemini": "Libreng no-key na g4f.space reverse proxy sa Gemini, limitado sa 5 kahilingan bawat minuto.",
-      "g4f-groq": "Libreng no-key na g4f.space reverse proxy sa Groq, limitado sa 5 kahilingan bawat minuto.",
-      "g4f-nvidia": "Libreng no-key na g4f.space reverse proxy sa NVIDIA NIM, limitado sa 5 kahilingan bawat minuto.",
-      "g4f-ollama": "Libreng no-key na hosted Ollama gateway mula sa g4f.space, limitado sa 5 kahilingan bawat minuto.",
-      "g4f-pollinations": "Libreng no-key na g4f.space reverse proxy sa Pollinations, limitado sa 5 kahilingan bawat minuto.",
+      "g4f-gemini": "Remote na g4f.space gateway papunta sa Gemini. Ang anonymous access ay nangangailangan ng proof-of-work credits mula sa g4f.dev/chat o member API key mula sa g4f.dev/members.html; nagbabago ang mga limitasyon.",
+      "g4f-groq": "Remote na g4f.space gateway papunta sa Groq. Ang anonymous access ay nangangailangan ng proof-of-work credits mula sa g4f.dev/chat o member API key mula sa g4f.dev/members.html; nagbabago ang mga limitasyon.",
+      "g4f-nvidia": "Remote na g4f.space gateway papunta sa NVIDIA NIM. Ang anonymous access ay nangangailangan ng proof-of-work credits mula sa g4f.dev/chat o member API key mula sa g4f.dev/members.html; nagbabago ang mga limitasyon.",
+      "g4f-ollama": "Remote na g4f.space gateway papunta sa Ollama. Ang anonymous access ay nangangailangan ng proof-of-work credits mula sa g4f.dev/chat o member API key mula sa g4f.dev/members.html; nagbabago ang mga limitasyon.",
+      "g4f-pollinations": "Remote na g4f.space gateway papunta sa Pollinations. Ang anonymous access ay nangangailangan ng proof-of-work credits mula sa g4f.dev/chat o member API key mula sa g4f.dev/members.html; nagbabago ang mga limitasyon.",
       "mixedbread": "Gumawa ng mga embedding gamit ang Mixedbread API.",
       "segmind": "Bumuo ng mga larawan at video gamit ang mga naka-host na modelo ng Segmind.",
       "amazon-q": "Gumagamit ng parehong AWS Builder ID o na-import na refresh-token flow tulad ng Kiro, ngunit pinapanatiling hiwalay ang mga koneksyon sa Amazon Q.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Tulay ng Video",
     "modalityBridgeVideoDesc": "Kumuha ng mga sample na frame ng video, ilarawan ang mga ito gamit ang vision model, at magpatuloy sa napiling text model.",
     "modalityBridgeVideoRuntimeReady": "Handa ang runtime",
+    "modalityBridgeVideoRuntimeChecking": "Sinusuri ang runtime…",
     "modalityBridgeVideoRuntimeUnavailable": "Hindi available ang runtime",
     "modalityBridgeVideoRuntimeInstall": "I-install ang FFmpeg at ffprobe sa PATH ng server para paganahin ang pagkuha ng video.",
     "modalityBridgeVideoEnabled": "Paganahin ang Tulay ng Video",
@@ -11314,7 +11315,9 @@
       "noPayload": "Walang payload data na magagamit para sa log entry na ito.",
       "correlationId": "ID ng Ugnayan",
       "correlationIdValue": "Correlation ID: {id}",
-      "detailedPayloadInfo": "I-enable ang detalyadong pag-log muna kung nais mo ang apat na yugto ng view ng client/provider payload para sa mga bagong kahilingan."
+      "detailedPayloadInfo": "I-enable ang detalyadong pag-log muna kung nais mo ang apat na yugto ng view ng client/provider payload para sa mga bagong kahilingan.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API Key",
     "sortTypeFirst": "Pinakamadali muna",
     "sortTypeFirstHelp": "I-grupo ayon sa hirap ng pag-signup (Walang Signup → OAuth Login → API Key), habang pinapanatili ang pagkakasunod-sunod ng kalidad sa bawat grupo",
-    "typeLegend": "Walang Signup = zero setup · OAuth Login = mag-sign in gamit ang sarili mong account · API Key = magdala ng sarili mong key o ang libreng tier ng provider na iyon"
+    "typeLegend": "Walang Signup = zero setup · OAuth Login = mag-sign in gamit ang sarili mong account · API Key = magdala ng sarili mong key o ang libreng tier ng provider na iyon",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Pagtuklas ng Provider",

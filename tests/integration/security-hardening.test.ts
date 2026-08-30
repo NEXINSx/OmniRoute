@@ -300,6 +300,7 @@ test("OAuth routes that can create provider connections require auth guard", () 
     "src/app/api/oauth/kiro/social-exchange/route.ts",
   ];
 
+
   for (const relPath of targets) {
     const content = readIfExists(relPath);
     assert.ok(content, `${relPath} should exist`);

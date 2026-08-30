@@ -103,7 +103,7 @@ test("Claude -> Gemini maps system, thinking, tool use, tool result and tools", 
     functionResponse: {
       id: "tu_1",
       name: "weather",
-      response: { result: { result: "20C" } },
+      response: { result: "20C" },
     },
   });
   assert.equal(result.generationConfig.maxOutputTokens, 256);

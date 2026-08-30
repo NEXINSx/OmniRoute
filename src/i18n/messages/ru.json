@@ -1266,7 +1266,7 @@
     "agentBridge": "Агентский Мост",
     "agentBridgeSubtitle": "Перехват трафика агента IDE",
     "trafficInspector": "Инспектор Трафика",
-    "trafficInspectorSubtitle": "Мониторинг вызовов LLM + отладка любого HTTPS-трафика",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI Кодов",
     "cliCodeSubtitle": "Инструменты кода, указывающие на OmniRoute",
     "cliAgents": "CLI Агенты",
@@ -6254,13 +6254,13 @@
       "galadriel": "Подключите Galadriel с помощью API-ключа.",
       "predibase": "Бесплатный пробный баланс $25 (срок действия 30 дней)",
       "chenzk": "Совместимый с OpenAI шлюз с актуальным каталогом моделей на chenzk.top.",
-      "magnific": "Генерация изображений с помощью Freepik Mystic API.",
+      "magnific": "Генерация изображений с помощью Magnific Mystic API.",
       "freetheai": "Бесплатный совместимый с OpenAI шлюз с поддержкой сквозной передачи моделей (passthrough).",
-      "g4f-gemini": "Бесплатный обратный прокси g4f.space без ключа к Gemini, лимит 5 запросов в минуту.",
-      "g4f-groq": "Бесплатный обратный прокси g4f.space без ключа к Groq, лимит 5 запросов в минуту.",
-      "g4f-nvidia": "Бесплатный обратный прокси g4f.space без ключа к NVIDIA NIM, лимит 5 запросов в минуту.",
-      "g4f-ollama": "Бесплатный хостинг-шлюз Ollama без ключа от g4f.space, лимит 5 запросов в минуту.",
-      "g4f-pollinations": "Бесплатный обратный прокси g4f.space без ключа к Pollinations, лимит 5 запросов в минуту.",
+      "g4f-gemini": "Удалённый шлюз g4f.space к Gemini. Для анонимного доступа нужны proof-of-work-кредиты с g4f.dev/chat либо API-ключ участника с g4f.dev/members.html; лимиты меняются.",
+      "g4f-groq": "Удалённый шлюз g4f.space к Groq. Для анонимного доступа нужны proof-of-work-кредиты с g4f.dev/chat либо API-ключ участника с g4f.dev/members.html; лимиты меняются.",
+      "g4f-nvidia": "Удалённый шлюз g4f.space к NVIDIA NIM. Для анонимного доступа нужны proof-of-work-кредиты с g4f.dev/chat либо API-ключ участника с g4f.dev/members.html; лимиты меняются.",
+      "g4f-ollama": "Удалённый шлюз g4f.space к Ollama. Для анонимного доступа нужны proof-of-work-кредиты с g4f.dev/chat либо API-ключ участника с g4f.dev/members.html; лимиты меняются.",
+      "g4f-pollinations": "Удалённый шлюз g4f.space к Pollinations. Для анонимного доступа нужны proof-of-work-кредиты с g4f.dev/chat либо API-ключ участника с g4f.dev/members.html; лимиты меняются.",
       "mixedbread": "Создавайте эмбеддинги с помощью Mixedbread API.",
       "segmind": "Генерируйте изображения и видео с помощью размещенных моделей Segmind.",
       "amazon-q": "Использует тот же AWS Builder ID или импортированный процесс refresh-token, что и Kiro, но сохраняет подключения Amazon Q отдельными.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Видеомост",
     "modalityBridgeVideoDesc": "Возьмите образцы кадров видео, опишите их с помощью модели компьютерного зрения и продолжите работу с выбранной текстовой моделью.",
     "modalityBridgeVideoRuntimeReady": "Среда выполнения готова",
+    "modalityBridgeVideoRuntimeChecking": "Проверка среды выполнения…",
     "modalityBridgeVideoRuntimeUnavailable": "Среда выполнения недоступна",
     "modalityBridgeVideoRuntimeInstall": "Установите FFmpeg и ffprobe в PATH сервера, чтобы включить извлечение видео.",
     "modalityBridgeVideoEnabled": "Включить Видеомост",
@@ -11314,7 +11315,9 @@
       "noPayload": "Нет данных о полезной нагрузке для этой записи журнала.",
       "correlationId": "Идентификатор корреляции",
       "correlationIdValue": "Идентификатор корреляции: {id}",
-      "detailedPayloadInfo": "Сначала включите детализированный логгинг, если вы хотите получить четырехступенчатый просмотр полезной нагрузки клиента/поставщика для новых запросов."
+      "detailedPayloadInfo": "Сначала включите детализированный логгинг, если вы хотите получить четырехступенчатый просмотр полезной нагрузки клиента/поставщика для новых запросов.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API-ключ",
     "sortTypeFirst": "Сначала самые простые",
     "sortTypeFirstHelp": "Группировать по сложности регистрации (Без регистрации → Вход через OAuth → API-ключ), сохраняя порядок качества внутри каждой группы",
-    "typeLegend": "Без регистрации = без настройки · Вход через OAuth = вход со своим аккаунтом · API-ключ = использование своего ключа или бесплатного тарифа провайдера"
+    "typeLegend": "Без регистрации = без настройки · Вход через OAuth = вход со своим аккаунтом · API-ключ = использование своего ключа или бесплатного тарифа провайдера",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Поиск провайдеров",

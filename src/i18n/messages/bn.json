@@ -1266,7 +1266,7 @@
     "agentBridge": "এজেন্ট ব্রিজ",
     "agentBridgeSubtitle": "IDE এজেন্ট ট্র্যাফিক ইন্টারসেপ্ট করুন",
     "trafficInspector": "ট্র্যাফিক ইন্সপেক্টর",
-    "trafficInspectorSubtitle": "LLM কল মনিটর করুন + যেকোনো HTTPS ট্র্যাফিক ডিবাগ করুন",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI কোড",
     "cliCodeSubtitle": "OmniRoute-এর দিকে নির্দেশিত কোড টুল",
     "cliAgents": "CLI এজেন্ট",
@@ -6254,13 +6254,13 @@
       "galadriel": "একটি API কী দিয়ে Galadriel সংযুক্ত করুন।",
       "predibase": "$25 ফ্রি ট্রায়াল ক্রেডিট (30 দিনের মেয়াদ)",
       "chenzk": "chenzk.top-এ লাইভ মডেল ক্যাটালগ সহ OpenAI-সামঞ্জস্যপূর্ণ গেটওয়ে।",
-      "magnific": "Freepik-এর Mystic API দিয়ে ছবি তৈরি করুন।",
+      "magnific": "Magnific-এর Mystic API দিয়ে ছবি তৈরি করুন।",
       "freetheai": "passthrough মডেল সমর্থন সহ বিনামূল্যের OpenAI-সামঞ্জস্যপূর্ণ গেটওয়ে।",
-      "g4f-gemini": "Gemini-এর জন্য বিনামূল্যের কী-বিহীন g4f.space রিভার্স প্রক্সি, প্রতি মিনিটে 5টি অনুরোধে সীমাবদ্ধ।",
-      "g4f-groq": "Groq-এর জন্য বিনামূল্যের কী-বিহীন g4f.space রিভার্স প্রক্সি, প্রতি মিনিটে 5টি অনুরোধে সীমাবদ্ধ।",
-      "g4f-nvidia": "NVIDIA NIM-এর জন্য বিনামূল্যের কী-বিহীন g4f.space রিভার্স প্রক্সি, প্রতি মিনিটে 5টি অনুরোধে সীমাবদ্ধ।",
-      "g4f-ollama": "g4f.space থেকে বিনামূল্যের কী-বিহীন হোস্ট করা Ollama গেটওয়ে, প্রতি মিনিটে 5টি অনুরোধে সীমাবদ্ধ।",
-      "g4f-pollinations": "Pollinations-এর জন্য বিনামূল্যের কী-বিহীন g4f.space রিভার্স প্রক্সি, প্রতি মিনিটে 5টি অনুরোধে সীমাবদ্ধ।",
+      "g4f-gemini": "Gemini-এর জন্য দূরবর্তী g4f.space গেটওয়ে। বেনামী ব্যবহারে g4f.dev/chat থেকে প্রুফ-অফ-ওয়ার্ক ক্রেডিট অথবা g4f.dev/members.html থেকে সদস্য API কী প্রয়োজন; সীমা পরিবর্তনশীল।",
+      "g4f-groq": "Groq-এর জন্য দূরবর্তী g4f.space গেটওয়ে। বেনামী ব্যবহারে g4f.dev/chat থেকে প্রুফ-অফ-ওয়ার্ক ক্রেডিট অথবা g4f.dev/members.html থেকে সদস্য API কী প্রয়োজন; সীমা পরিবর্তনশীল।",
+      "g4f-nvidia": "NVIDIA NIM-এর জন্য দূরবর্তী g4f.space গেটওয়ে। বেনামী ব্যবহারে g4f.dev/chat থেকে প্রুফ-অফ-ওয়ার্ক ক্রেডিট অথবা g4f.dev/members.html থেকে সদস্য API কী প্রয়োজন; সীমা পরিবর্তনশীল।",
+      "g4f-ollama": "Ollama-এর জন্য দূরবর্তী g4f.space গেটওয়ে। বেনামী ব্যবহারে g4f.dev/chat থেকে প্রুফ-অফ-ওয়ার্ক ক্রেডিট অথবা g4f.dev/members.html থেকে সদস্য API কী প্রয়োজন; সীমা পরিবর্তনশীল।",
+      "g4f-pollinations": "Pollinations-এর জন্য দূরবর্তী g4f.space গেটওয়ে। বেনামী ব্যবহারে g4f.dev/chat থেকে প্রুফ-অফ-ওয়ার্ক ক্রেডিট অথবা g4f.dev/members.html থেকে সদস্য API কী প্রয়োজন; সীমা পরিবর্তনশীল।",
       "mixedbread": "Mixedbread API দিয়ে এম্বেডিংস তৈরি করুন।",
       "segmind": "Segmind-এর হোস্ট করা মডেলগুলি দিয়ে ছবি এবং ভিডিও তৈরি করুন।",
       "amazon-q": "Kiro-এর মতো একই AWS Builder ID বা ইম্পোর্ট করা refresh-token ফ্লো ব্যবহার করে, তবে Amazon Q সংযোগগুলি আলাদা রাখে।",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "ভিডিও ব্রিজ",
     "modalityBridgeVideoDesc": "ভিডিও ফ্রেমের নমুনা নিন, ভিশন মডেল দিয়ে সেগুলো বর্ণনা করুন এবং নির্বাচিত টেক্সট মডেল দিয়ে চালিয়ে যান।",
     "modalityBridgeVideoRuntimeReady": "রানটাইম প্রস্তুত",
+    "modalityBridgeVideoRuntimeChecking": "রানটাইম পরীক্ষা করা হচ্ছে…",
     "modalityBridgeVideoRuntimeUnavailable": "রানটাইম উপলভ্য নয়",
     "modalityBridgeVideoRuntimeInstall": "ভিডিও এক্সট্র্যাকশন চালু করতে সার্ভারের PATH-এ FFmpeg ও ffprobe ইনস্টল করুন।",
     "modalityBridgeVideoEnabled": "ভিডিও ব্রিজ চালু করুন",
@@ -11314,7 +11315,9 @@
       "noPayload": "এই লগ এন্ট্রির জন্য কোনো পেলোড ডেটা উপলব্ধ নেই।",
       "correlationId": "সংযোগ আইডি",
       "correlationIdValue": "সংযোগ আইডি: {id}",
-      "detailedPayloadInfo": "নতুন অনুরোধের জন্য চার-পর্যায়ের ক্লায়েন্ট/প্রদানকারী পে-লোড ভিউ পেতে হলে প্রথমে বিস্তারিত লগিং সক্ষম করুন।"
+      "detailedPayloadInfo": "নতুন অনুরোধের জন্য চার-পর্যায়ের ক্লায়েন্ট/প্রদানকারী পে-লোড ভিউ পেতে হলে প্রথমে বিস্তারিত লগিং সক্ষম করুন।",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API কী",
     "sortTypeFirst": "সবচেয়ে সহজটি প্রথমে",
     "sortTypeFirstHelp": "সাইনআপের প্রয়াস অনুযায়ী গ্রুপ করুন (সাইনআপ ছাড়া → OAuth লগইন → API কী), প্রতিটি গ্রুপের মধ্যে গুণমানের ক্রম বজায় রেখে",
-    "typeLegend": "সাইনআপ ছাড়া = জিরো সেটআপ · OAuth লগইন = আপনার নিজস্ব অ্যাকাউন্ট দিয়ে সাইন ইন করুন · API কী = আপনার নিজস্ব কী ব্যবহার করুন অথবা ওই প্রোভাইডারের ফ্রি টিয়ার"
+    "typeLegend": "সাইনআপ ছাড়া = জিরো সেটআপ · OAuth লগইন = আপনার নিজস্ব অ্যাকাউন্ট দিয়ে সাইন ইন করুন · API কী = আপনার নিজস্ব কী ব্যবহার করুন অথবা ওই প্রোভাইডারের ফ্রি টিয়ার",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "প্রোভাইডার ডিসকভারি",

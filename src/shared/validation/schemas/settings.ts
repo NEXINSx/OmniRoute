@@ -32,6 +32,7 @@ export const legacyResilienceDefaultsSchema = z
     requestsPerMinute: z.number().int().min(1).optional(),
     minTimeBetweenRequests: z.number().int().min(0).optional(),
     concurrentRequests: z.number().int().min(1).optional(),
+    globalConcurrentRequests: z.number().int().min(0).max(100_000).optional(),
   })
   .strict();
 
@@ -170,6 +171,7 @@ export const updateResilienceSchema = z
           .object({
             rpm: z.number().int().min(1).optional(),
             concurrency: z.number().int().min(1).optional(),
+            providerConcurrency: z.number().int().min(0).max(100_000).optional(),
           })
           .strict()
       )

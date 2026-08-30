@@ -4,12 +4,9 @@ import {
   getProviderAuditTarget,
   summarizeProviderConnectionForAudit,
 } from "@/lib/compliance/providerAudit";
-import {
-  getCachedProviderConnectionById,
-  updateProviderConnection,
-  deleteProviderConnection,
-  isCloudEnabled,
-} from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { updateProviderConnection, deleteProviderConnection } from "@/lib/db/providers";
+import { isCloudEnabled } from "@/lib/db/settings";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
 import { updateProviderConnectionSchema } from "@/shared/validation/schemas";
@@ -36,6 +33,7 @@ import {
   decodeChatGptWebCodexSecrets,
   encodeChatGptWebCodexSecrets,
 } from "@omniroute/open-sse/services/chatgptWebCodexAdmin.ts";
+import { rejectRetiredCommonChatGptWebProvider } from "@/lib/providers/chatgptWebRetirementResponse";
 
 function normalizeCodexLimitPolicy(
   incoming: unknown,
@@ -129,10 +127,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         ...validation.error.details.map((d) => d.field).filter(Boolean),
         ...validation.error.details.flatMap((d) => d.keys ?? []),
       ];
-      return NextResponse.json(
-        { error: { ...validation.error, rejected } },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: { ...validation.error, rejected } }, { status: 400 });
     }
     const body = validation.data;
     const {
@@ -166,6 +161,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!existing) {
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
+    const retirementResponse = rejectRetiredCommonChatGptWebProvider(existing.provider);
+    if (retirementResponse) return retirementResponse;
 
     const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;

@@ -13,7 +13,7 @@ const contextHandoff = await import("../../open-sse/services/contextHandoff.ts")
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -33,7 +33,7 @@ test.beforeEach(async () => {
 
 test.after(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("buildHandoffSystemMessage and injectHandoffIntoBody preserve existing history", () => {
@@ -305,6 +305,63 @@ test("maybeGenerateHandoff allows a new attempt after a failed in-flight generat
   assert.ok(saved);
   assert.equal(saved.summary, "Retry succeeded");
   assert.equal(calls, 2);
+});
+
+test("selectMessagesForSummary handles schema-locked vs standard relayMode", () => {
+  const messages = [
+    { role: "system", content: "System instruction" },
+    { role: "user", content: "Msg 1" },
+    { role: "assistant", content: "Msg 2" },
+    { role: "user", content: "Msg 3" },
+  ];
+
+  // Standard mode includes system message
+  const standard = contextHandoff.selectMessagesForSummary(messages, 2, "standard");
+  assert.equal(standard[0].role, "system");
+  assert.equal(standard.length, 3); // system + last 2
+
+  // Schema-locked mode excludes system message
+  const locked = contextHandoff.selectMessagesForSummary(messages, 2, "schema-locked");
+  assert.equal(locked[0].role, "assistant");
+  assert.equal(locked[0].content, "Msg 2");
+  assert.equal(locked.length, 2); // only non-system slice
+});
+
+test("selectMessagesForSummary trims non-system messages and excludes system in schema-locked token overflow", () => {
+  // Input with system messages and huge non-system messages exceeding token limit
+  const hugeText = "x".repeat(35000);
+  const messages = [
+    { role: "system", content: "System prompt" },
+    { role: "developer", content: "Developer prompt" },
+    { role: "user", content: `User msg 1: ${hugeText}` },
+    { role: "assistant", content: `Assistant msg 2: ${hugeText}` },
+    { role: "user", content: "User msg 3 short" },
+  ];
+
+  const trimmedLocked = contextHandoff.selectMessagesForSummary(messages, 10, "schema-locked");
+  // Should exclude system and developer messages
+  assert.ok(trimmedLocked.every((m) => m.role !== "system" && m.role !== "developer"));
+  // Should have trimmed down to non-overflowing messages (or last non-system)
+  assert.ok(trimmedLocked.length < 3);
+  assert.equal(trimmedLocked[trimmedLocked.length - 1].content, "User msg 3 short");
+});
+
+test("resolveUniversalHandoffConfig correctly parses relayMode", async () => {
+  const comboSchema = await import("../../src/shared/validation/schemas/combo.ts");
+  const parsedLocked = comboSchema.comboRuntimeConfigSchema.parse({
+    relayMode: "schema-locked",
+  });
+  assert.equal(parsedLocked.relayMode, "schema-locked");
+
+  const parsedStandard = comboSchema.comboRuntimeConfigSchema.parse({
+    relayMode: "standard",
+  });
+  assert.equal(parsedStandard.relayMode, "standard");
+
+  const resolvedConfig = contextHandoff.resolveUniversalHandoffConfig({
+    relayMode: "schema-locked",
+  });
+  assert.equal(resolvedConfig.relayMode, "schema-locked");
 });
 
 test("maybeGenerateHandoff respects explicit empty handoffProviders and skips generation", async () => {

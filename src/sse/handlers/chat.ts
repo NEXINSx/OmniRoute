@@ -59,10 +59,13 @@ import {
   getModelTargetFormat,
   PROVIDER_ID_TO_ALIAS,
 } from "@omniroute/open-sse/config/providerModels.ts";
+import { getPassthroughProviders } from "@omniroute/open-sse/config/providerRegistry.ts";
 import * as log from "../utils/logger";
 import { checkAndRefreshToken } from "../services/tokenRefresh";
 import { createHookContext, runHooks, initPreRequestRegistry } from "@/lib/middleware/registry";
 import { rejectPeerRequest } from "@/shared/resilience/peerRouting";
+import { isRuntimeProviderRetirementError } from "@/shared/constants/providerRetirement";
+import { isCommonChatGptWebRetirementError } from "@/shared/constants/chatgptWebRetirement";
 import { deleteHandoff, getHandoff } from "@/lib/db/contextHandoffs";
 import { getComboByName, updateCombo } from "@/lib/db/combos";
 import { isModelAllowedForKey } from "@/lib/db/apiKeys";
@@ -135,6 +138,7 @@ import { generateRequestId } from "../../shared/utils/requestId";
 import { logAuditEvent } from "../../lib/compliance/index";
 import { enforceApiKeyPolicy } from "../../shared/utils/apiKeyPolicy";
 import { hasProviderQuotaBypassScope } from "../../shared/constants/apiKeyPolicyScopes";
+import { isMicrosoftDesignerWebProviderRetiredError } from "../../shared/constants/designerWebRetirement";
 import { cloneBoundedForLog } from "@omniroute/open-sse/utils/requestLogger.ts";
 import { handleInternalUsageCommand } from "@/lib/usage/internalUsageCommand";
 import {
@@ -948,7 +952,17 @@ async function handleChatImplementation(
       // prefix may differ from the credential provider ID (e.g. model
       // "xiaomi/mimo-v2-flash" resolves to provider "xiaomi" but the combo
       // target specifies providerId: "opengate" for credential lookup).
-      const modelInfo = await getModelInfo(modelString);
+      let modelInfo;
+      try {
+        modelInfo = await getModelInfo(modelString);
+      } catch (error) {
+        // Persisted explicit combos may still reference the retired provider. Treat
+        // that target as unavailable so priority/fallback strategies can continue.
+        if (isMicrosoftDesignerWebProviderRetiredError(error)) return false;
+        if (isRuntimeProviderRetirementError(error)) return false;
+        if (isCommonChatGptWebRetirementError(error)) return false;
+        throw error;
+      }
       // Apply the same prefix-override guard as handleSingleModelChat:
       // if providerId is just the prefix already in the model string, use
       // the fully-resolved modelInfo.provider for a precise credential check.
@@ -1085,7 +1099,7 @@ async function handleChatImplementation(
               return credentials;
             })(),
             cachedSettings: settings,
-            providerId: target?.providerId ?? null,
+            providerId: target?.providerId ?? (target as any)?.provider ?? null,
             correlationId: reqId,
             conversationId,
             modelPinned: (target as any)?.modelPinned ?? false,
@@ -1376,7 +1390,7 @@ async function handleSingleModelChat(
             comboExecutionKey: null,
             skipUpstreamRetry: resolvedTarget?.failoverBeforeRetry === true,
             allowRateLimitedConnection: resolvedTarget?.allowRateLimitedConnection === true,
-            providerId: resolvedTarget?.providerId ?? null,
+            providerId: resolvedTarget?.providerId ?? (resolvedTarget as any)?.provider ?? null,
             correlationId: runtimeOptions?.correlationId ?? null,
             reasoningTransportFallback:
               redirectCombo.config?.reasoningTransportFallback === "skip" ? "skip" : "drop",
@@ -1725,10 +1739,18 @@ async function handleSingleModelChat(
       // defaultModel, resolve the bare name to that real model ID before the
       // upstream call so the provider receives a concrete model rather than the
       // placeholder. A "/"-qualified model name is always left untouched.
-      const effectiveModel =
+      let effectiveModel =
         resolveBareModelToConnectionDefault(modelStr, model, credentials.defaultModel) ?? model;
       let requestBody =
         effectiveModel !== model ? { ...body, model: `${provider}/${effectiveModel}` } : body;
+
+      // If the combo explicitly overrode the provider to a passthrough provider, we
+      // must preserve the original unstripped modelStr so that proxy providers
+      // (e.g., cline, kilocode) get the exact string they expect.
+      if (provider !== resolvedProvider && getPassthroughProviders().has(provider)) {
+        effectiveModel = modelStr;
+        requestBody = { ...body, model: modelStr };
+      }
       if (!runtimeOptions.reasoningDecision && runtimeOptions.reasoningIntent) {
         const connectionRouting = await applyConnectionReasoningRule({
           requestBody,
@@ -1900,11 +1922,15 @@ async function handleSingleModelChat(
         }
         if (telemetry) telemetry.startPhase("finalize");
         if (telemetry) telemetry.endPhase();
+        const successResponse = withSelectedConnectionHeader(
+          result.response,
+          credentials?.connectionId
+        );
         if (requestBody.stream === true) {
-          return wrapResponseWithOAuthSessionRelease(result.response, releaseOAuthSession);
+          return wrapResponseWithOAuthSessionRelease(successResponse, releaseOAuthSession);
         }
         releaseOAuthSession();
-        return result.response;
+        return successResponse;
       }
 
       // A final hard-lease fence rejection is authoritative. It must never mutate
@@ -2291,6 +2317,7 @@ async function handleSingleModelChat(
                 (failureKind === "rate_limit" || failureKind === "transient")
               ),
               isCombo,
+              headers: result.response.headers,
             }
           );
 

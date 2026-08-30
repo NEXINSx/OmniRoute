@@ -6254,13 +6254,13 @@
       "galadriel": "Unganisha Galadriel kwa ufunguo wa API.",
       "predibase": "Salio la majaribio ya bure la $25 (uhalali wa siku 30)",
       "chenzk": "Lango linalooana na OpenAI lenye orodha ya miundo ya moja kwa moja kwenye chenzk.top.",
-      "magnific": "Zalisha picha kwa kutumia Mystic API ya Freepik.",
+      "magnific": "Zalisha picha kwa kutumia Mystic API ya Magnific.",
       "freetheai": "Lango la bure linalooana na OpenAI lenye usaidizi wa miundo ya passthrough.",
-      "g4f-gemini": "Reverse proxy ya bure isiyo na ufunguo ya g4f.space kwenda Gemini, yenye kikomo cha maombi 5 kwa dakika.",
-      "g4f-groq": "Reverse proxy ya bure isiyo na ufunguo ya g4f.space kwenda Groq, yenye kikomo cha maombi 5 kwa dakika.",
-      "g4f-nvidia": "Reverse proxy ya bure isiyo na ufunguo ya g4f.space kwenda NVIDIA NIM, yenye kikomo cha maombi 5 kwa dakika.",
-      "g4f-ollama": "Lango la bure la Ollama lililopangishwa lisilo na ufunguo kutoka g4f.space, lenye kikomo cha maombi 5 kwa dakika.",
-      "g4f-pollinations": "Reverse proxy ya bure isiyo na ufunguo ya g4f.space kwenda Pollinations, yenye kikomo cha maombi 5 kwa dakika.",
+      "g4f-gemini": "Lango la mbali la g4f.space kwenda Gemini. Ufikiaji bila utambulisho unahitaji salio la uthibitisho wa kazi kutoka g4f.dev/chat au ufunguo wa API wa mwanachama kutoka g4f.dev/members.html; vikomo hubadilika.",
+      "g4f-groq": "Lango la mbali la g4f.space kwenda Groq. Ufikiaji bila utambulisho unahitaji salio la uthibitisho wa kazi kutoka g4f.dev/chat au ufunguo wa API wa mwanachama kutoka g4f.dev/members.html; vikomo hubadilika.",
+      "g4f-nvidia": "Lango la mbali la g4f.space kwenda NVIDIA NIM. Ufikiaji bila utambulisho unahitaji salio la uthibitisho wa kazi kutoka g4f.dev/chat au ufunguo wa API wa mwanachama kutoka g4f.dev/members.html; vikomo hubadilika.",
+      "g4f-ollama": "Lango la mbali la g4f.space kwenda Ollama. Ufikiaji bila utambulisho unahitaji salio la uthibitisho wa kazi kutoka g4f.dev/chat au ufunguo wa API wa mwanachama kutoka g4f.dev/members.html; vikomo hubadilika.",
+      "g4f-pollinations": "Lango la mbali la g4f.space kwenda Pollinations. Ufikiaji bila utambulisho unahitaji salio la uthibitisho wa kazi kutoka g4f.dev/chat au ufunguo wa API wa mwanachama kutoka g4f.dev/members.html; vikomo hubadilika.",
       "mixedbread": "Unda vipachiko kwa kutumia Mixedbread API.",
       "segmind": "Zalisha picha na video kwa kutumia miundo iliyopangishwa ya Segmind.",
       "amazon-q": "Hutumia AWS Builder ID ile ile au mtiririko wa refresh-token ulioingizwa kama Kiro, lakini huweka miunganisho ya Amazon Q kando.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Daraja la video",
     "modalityBridgeVideoDesc": "Chukua sampuli za fremu za video, zieleze kwa modeli ya kuona, kisha uendelee na modeli ya maandishi iliyochaguliwa.",
     "modalityBridgeVideoRuntimeReady": "Mazingira ya utekelezaji yako tayari",
+    "modalityBridgeVideoRuntimeChecking": "Inakagua mazingira ya utekelezaji…",
     "modalityBridgeVideoRuntimeUnavailable": "Mazingira ya utekelezaji hayapatikani",
     "modalityBridgeVideoRuntimeInstall": "Sakinisha FFmpeg na ffprobe kwenye PATH ya seva ili kuwezesha uchimbaji wa video.",
     "modalityBridgeVideoEnabled": "Washa Daraja la video",
@@ -11314,7 +11315,9 @@
       "noPayload": "Hakuna data ya payload inayopatikana kwa ajili ya ingizo hili la kumbukumbu.",
       "correlationId": "Kitambulisho cha Uhusiano",
       "correlationIdValue": "Kitambulisho cha Uhusiano: {id}",
-      "detailedPayloadInfo": "Washa ufuatiliaji wa kina kwanza ikiwa unataka mtazamo wa mzigo wa mteja/mtoa huduma wa hatua nne kwa maombi mapya."
+      "detailedPayloadInfo": "Washa ufuatiliaji wa kina kwanza ikiwa unataka mtazamo wa mzigo wa mteja/mtoa huduma wa hatua nne kwa maombi mapya.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "Ufunguo wa API",
     "sortTypeFirst": "Rahisi zaidi kwanza",
     "sortTypeFirstHelp": "Panga kwa juhudi za kujisajili (Bila Kujisajili → Kuingia kwa OAuth → Ufunguo wa API), ukizingatia mpangilio wa ubora ndani ya kila kikundi",
-    "typeLegend": "Bila Kujisajili = hakuna usanidi · Kuingia kwa OAuth = ingia ukitumia akaunti yako mwenyewe · Ufunguo wa API = leta ufunguo wako mwenyewe au kiwango cha bure cha mtoa huduma huyo"
+    "typeLegend": "Bila Kujisajili = hakuna usanidi · Kuingia kwa OAuth = ingia ukitumia akaunti yako mwenyewe · Ufunguo wa API = leta ufunguo wako mwenyewe au kiwango cha bure cha mtoa huduma huyo",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Ugunduzi wa Mtoa Huduma",

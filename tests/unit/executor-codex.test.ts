@@ -273,7 +273,6 @@ test("CodexExecutor.transformRequest non-passthrough allowlist strips all residu
     function_call: "auto",
     functions: [{ name: "test", parameters: {} }],
     max_completion_tokens: 1000,
-    parallel_tool_calls: true,
     user: "cursor-user",
     metadata: { key: "value" },
     stream_options: { include_usage: true },
@@ -310,7 +309,6 @@ test("CodexExecutor.transformRequest non-passthrough allowlist strips all residu
   assert.equal(result.function_call, undefined, "function_call should be stripped");
   assert.equal(result.functions, undefined, "functions should be stripped");
   assert.equal(result.max_completion_tokens, undefined, "max_completion_tokens should be stripped");
-  assert.equal(result.parallel_tool_calls, undefined, "parallel_tool_calls should be stripped");
   assert.equal(result.user, undefined, "user should be stripped");
   assert.equal(result.metadata, undefined, "metadata should be stripped");
   assert.equal(result.stream_options, undefined, "stream_options should be stripped");

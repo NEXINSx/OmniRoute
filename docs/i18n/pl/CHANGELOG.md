@@ -8,9 +8,82 @@
 
 ---
 
+## [3.8.51] — TBD
+
+_Living section — cycle opened at the v3.8.50 freeze (parallel-cycle model). Bullets are aggregated from `changelog.d/` fragments at each `/generate-release` phase._
+
+### ✨ New Features
+
+### 🐛 Bug Fixes
+
+### 📝 Maintenance
+
+---
+
 ## [3.8.50] — 2026-08-25
 
 _Living section — regenerated 2026-08-12 from all cycle commits (cycle open `ed2db6cb19` → tip). Bullets carry the merged PR and its author; direct pushes listed separately._
+
+### 📊 Release by the numbers
+
+| | |
+| --- | ---: |
+| 👥 People who contributed | **248** |
+| 📝 Commits in the cycle | **1,714** |
+| 🔀 Pull requests referenced | **1,666** |
+| 📋 Changelog entries | **1,182** |
+| 🙌 Contributors credited in entries | **256** |
+| 🤖 Automated dependency commits | 22 |
+
+**Entries by type**
+
+| Type | Count |
+| --- | ---: |
+| 🐛 Fixes | 779 |
+| ✨ Features | 169 |
+| 📚 Docs | 29 |
+| 🧹 Chore | 27 |
+| 🧪 Tests | 15 |
+| ♻️ Refactor | 5 |
+| ⚡ Performance | 3 |
+| providers | 2 |
+| 🔒 Security | 2 |
+| ⚙️ CI | 2 |
+| deps | 2 |
+| maint | 2 |
+
+### 🏆 Top 25 contributors this cycle
+
+_By commits in `ed2db6cb19..v3.8.50`, author identities consolidated via `.mailmap`. Bots excluded._
+
+| # | Contributor | Commits |
+| ---: | --- | ---: |
+| 🥇 | diegosouzapw | 738 |
+| 🥈 | backryun | 88 |
+| 🥉 | Dizzle | 66 |
+| 4 | Ravi Tharuma | 52 |
+| 5 | Markus Hartung | 48 |
+| 6 | Bob.Hou | 42 |
+| 7 | Rouzbeh† | 38 |
+| 8 | Xiangzhe | 31 |
+| 9 | Paco Cartones | 28 |
+| 10 | Nguyen Thanh Dat | 23 |
+| 11 | Aman | 22 |
+| 12 | Will Gordon | 19 |
+| 13 | 小妍儿 ✨ | 17 |
+| 14 | adevwithpurpose | 16 |
+| 15 | Andrew B. | 10 |
+| 16 | NOXX - Commiter | 10 |
+| 17 | ignamiranda | 10 |
+| 18 | Jonathan Bailey | 9 |
+| 19 | Ke Jin | 9 |
+| 20 | Austin Liu | 8 |
+| 21 | Chewji | 8 |
+| 22 | Prudhvi Vuda | 7 |
+| 23 | benzntech | 7 |
+| 24 | rinseaid | 7 |
+| 25 | stanley | 7 |
+
 
 ### ✨ New Features
 - **feat(search):** first-class X Search provider (`x-search`) on `POST /v1/search` and MCP `omniroute_x_search` using SuperGrok / xAI server-side `x_search`. Explicit provider or `search_type: "x"` only — never auto-selected for web. Reuses `xai-oauth` / `xao` / `xai` credentials. Not the X Developer Platform MCP. ([#10985](https://github.com/diegosouzapw/OmniRoute/issues/10985))
@@ -1030,6 +1103,12 @@ _Living section — regenerated 2026-08-12 from all cycle commits (cycle open `e
 - **fix(models):** health-check-excluded models are hidden from the `/v1/models` catalog ([#10026](https://github.com/diegosouzapw/OmniRoute/issues/10026) — thanks @ritheshcn25)
 - **fix(skills):** the CLI skills left stale by the quota subcommands are regenerated ([#10698](https://github.com/diegosouzapw/OmniRoute/issues/10698))
 - **fix(mcp):** CLI MCP call protocol issues were resolved ([#10960](https://github.com/diegosouzapw/OmniRoute/issues/10960) — thanks @YunyunZhai)
+- **fix(dashboard):** expert mode in the Combo Builder can type a provider/model pair by hand again ([#8875](https://github.com/diegosouzapw/OmniRoute/pull/8875)) — [#8285](https://github.com/diegosouzapw/OmniRoute/pull/8285) (global model search) replaced the "Manual model" block positionally with the new search panel, removing the only way to enter a model that is not in the catalog. The state and handlers behind it survived as dead code, so neither typecheck nor lint noticed the loss. The block is restored above the search panel, unchanged from its pre-#8285 form, and guarded by `tests/e2e/combos-flow.spec.ts` ("expert mode shows a single-page combo form with manual model entry").
+- **fix(sse):** a combo step pinned to an explicit connection (or a request pinned with `x-omniroute-connection`) is honored on fallback instead of silently rotating to a sibling account ([#8875](https://github.com/diegosouzapw/OmniRoute/pull/8875)) — the generic account-fallback branch excluded the pinned connection after an upstream failure and re-selected another account of the same provider, so a priority combo repeating one provider/model with two different fixed accounts ran **both** attempts under the first step; the second step and its own pin never executed, and per-step attribution (`comboStepId` / `comboExecutionKey`) was wrong. Rotation is now gated on there being no forced connection, matching the stream-readiness, pre-response-timeout and account-semaphore branches. Cooldown recording is unchanged, and unpinned selection still skips burned connections.
+- **fix(cli):** the local CLI sees the full `/api/monitoring/health` payload again — `version` included — restoring the `check:pack-boot` release gate. [#11040](https://github.com/diegosouzapw/OmniRoute/pull/11040) reduced that route to a liveness-only view for non-management callers (GHSA-mvf8-qc78-5mxm), but the route is classified PUBLIC and `runAuthzPipeline` strips the machine-token header for every route class — so the PUBLIC policy stamped `anonymous` and the loopback CLI could never be recognized as a management principal. The PUBLIC policy now stamps the same loopback-gated `local-cli-token` subject the MANAGEMENT policy already did; anonymous callers still get liveness only.
+- **fix(search):** a configured search connection (Serper, Brave, Tavily…) is now used instead of being silently passed over for the free `duckduckgo-free` fallback ([#11524](https://github.com/diegosouzapw/OmniRoute/issues/11524)) — when no provider was named explicitly and the cheapest auto-selected one had no credentials, the last-resort loop ran first and `duckduckgo-free` (cost 0, no auth) always won it with empty credentials. On `/v1/responses` the call then returned `success: true` with **zero results**, so web search looked healthy while the paid connection the operator had set up was never called. Credentialed regular providers are now swept before the last-resort loop, and fallback-only providers can no longer outrank a configured one on price.
+- **fix(api):** `/v1/models` no longer blocks the stale response while it rebuilds the catalog ([#11551](https://github.com/diegosouzapw/OmniRoute/issues/11551)) — the route has been passing a `scheduleBackgroundRefresh` option since #10198, but the parameter had already been removed from `getUnifiedModelsResponse()`, so the object was silently dropped and the stale-while-revalidate rebuild still ran on a `setTimeout(..., 0)`. The builder is essentially synchronous under the App Router, so it pinned the event loop **before** the cached response was flushed — the [#8728](https://github.com/diegosouzapw/OmniRoute/pull/8728) guarantee did not actually exist for operators with large catalogs. `catalogCache` now schedules through `after()` (with a macrotask fallback outside a request scope) and the option is threaded end to end. The extra argument was invisible to CI because `typecheck:core` is a curated allowlist and `next.config.mjs` sets `ignoreBuildErrors: true`.
+- **fix(sse):** a universal handoff whose summary comes back unusable is no longer regenerated on every single model switch, which was burning paid quota on upstream calls whose answers were thrown away ([#11552](https://github.com/diegosouzapw/OmniRoute/issues/11552)) — nothing is persisted when the summary does not parse, so the next switch in the same session re-issued the same full-history summarization request and discarded it again, forever. With a switch-heavy combo strategy (weighted, random, round-robin, p2c) that landed on a large share of requests: measured at n=200, roughly **one request in four carried an extra discarded upstream call**, and that traffic skewed a weighted 70/30 combo to an observed 0.895 share for one provider even though the share actually delivered to the client was a correct 0.70. There is now an exponential back-off per (session, combo) — 5 min up to 1 h, cleared on the first successful handoff, capped at 500 tracked keys. A transient upstream failure is deliberately **not** tracked, so it still retries immediately. After the fix: 201 upstream calls for 200 requests, and the measured share matches the delivered one.
 
 ### 📝 Maintenance
 
@@ -1274,6 +1353,10 @@ _Living section — regenerated 2026-08-12 from all cycle commits (cycle open `e
 - **docs(i18n):** localization contributions — a complete Persian user guide ([#11254](https://github.com/diegosouzapw/OmniRoute/issues/11254)), improved and completed Turkish documentation ([#11237](https://github.com/diegosouzapw/OmniRoute/issues/11237)), the Italian README restored ([#11246](https://github.com/diegosouzapw/OmniRoute/issues/11246)), a Farsi README ([#10777](https://github.com/diegosouzapw/OmniRoute/issues/10777) — thanks @farshidrezaei), a `SETUP_GUIDE.md` correction ([#10490](https://github.com/diegosouzapw/OmniRoute/issues/10490) — thanks @realize000), a `python_requests.py` example fix ([#10731](https://github.com/diegosouzapw/OmniRoute/issues/10731) — thanks @pandaaaa1990), and a retranslation of the CLI reference and integrations guide across all 42 locales
 - **chore(repo):** repository hygiene — the self-referential `_tasks` symlink was untracked and `.gitignore` anchored so a `_tasks` symlink can never be tracked again, `.source/dynamic.ts`, `.source`, `/output/` and the Playwright CLI artifact directory were ignored, an initial `.cbmignore` was added for codebase-memory indexing, unused `.source/dynamic.ts` and `source.config.mjs` files were removed, the stray unresolved conflict marker in `ENVIRONMENT.md` was cleaned up, and the Open Collective sponsorship link was removed from the README
 - **chore(release):** localized `llm.txt` mirrors and the v3.8.50 base quality docs were synchronized, and the 363 `changelog.d` fragments were aggregated into this section
+- **fix(ci):** the pack-artifact provenance gate now checks the branch under test instead of `origin/main` ([#8875](https://github.com/diegosouzapw/OmniRoute/pull/8875)) — the guard added for [#10427](https://github.com/diegosouzapw/OmniRoute/issues/10427) is correct at publish time (that workflow runs on `main`), but in a `pull_request` context the head is by construction not an ancestor of `main` and the shallow checkout never fetches it, so the probe always answered false and the job failed 100% of the time. It became visible only once it stopped being cancelled behind Build. Pre-merge it resolves the ref from `refs/pull/<N>/head`, which exists on origin even for fork PRs.
+- **test(dashboard):** the proxy-registry e2e smoke flow opens the toolbar's "More actions" overflow menu before clicking bulk assign ([#8875](https://github.com/diegosouzapw/OmniRoute/pull/8875)) — [#9870](https://github.com/diegosouzapw/OmniRoute/pull/9870) moved the action into that menu, which only renders its items while open, so the locator never resolved and the test burned its full 180 s budget. Every existing assertion is unchanged.
+- **test(api):** the `/v1/models` e2e check accepts the auth gate introduced by [#9320](https://github.com/diegosouzapw/OmniRoute/pull/9320) ([#8875](https://github.com/diegosouzapw/OmniRoute/pull/8875)) — the catalog now requires auth whenever management auth is configured, and the harness boots with `INITIAL_PASSWORD` set, so the endpoint had been answering 401 since 2026-08-04 and the check was red the whole time, hidden behind a cancelled job. It now mirrors the sibling `/api/providers` check: assert the catalog shape when the catalog is served, otherwise pin the gate by status **and** error type so an unrelated 401 cannot pass for the deliberate one.
+- **chore(quality):** refreshed the combos-page ESLint suppressions after the manual-model restore ([#8875](https://github.com/diegosouzapw/OmniRoute/pull/8875)) — three `no-unused-vars` suppressions existed only because #8285 had deleted the JSX consuming that state; with the block back they are live again, and a stale suppression makes ESLint exit 2, which is what actually turned the Lint job red. The 7 `react-hooks/set-state-in-effect` plus 1 `react-hooks/immutability` errors in the same file are pre-existing (reproducible on the file's `091e2ba4da` content) and surfaced only because touching the file evicted it from the restored `.eslintcache`; they are frozen here and tracked separately rather than refactored mid-release.
 
 
 ### 🙌 Contributors

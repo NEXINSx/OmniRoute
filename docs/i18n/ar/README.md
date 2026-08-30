@@ -93,28 +93,28 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free-access AI gat
       </td>
       <td align="center" width="110">
         <a href="https://github.com/HKUDS/nanobot">
-          <img src="./public/providers/nanobot.png" alt="NanoBot" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="NanoBot" width="48"/><br/>
           <b>NanoBot</b>
         </a><br/>
         <sub>⭐ 20.9K</sub>
       </td>
       <td align="center" width="110">
         <a href="https://github.com/sipeed/picoclaw">
-          <img src="./public/providers/picoclaw.jpg" alt="PicoClaw" width="48"/><br/>
+          <img src="./public/providers/picoclaw.svg" alt="PicoClaw" width="48"/><br/>
           <b>PicoClaw</b>
         </a><br/>
         <sub>⭐ 14.6K</sub>
       </td>
       <td align="center" width="110">
         <a href="https://github.com/zeroclaw-labs/zeroclaw">
-          <img src="./public/providers/zeroclaw.png" alt="ZeroClaw" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="ZeroClaw" width="48"/><br/>
           <b>ZeroClaw</b>
         </a><br/>
         <sub>⭐ 9.9K</sub>
       </td>
       <td align="center" width="110">
         <a href="https://github.com/nearai/ironclaw">
-          <img src="./public/providers/ironclaw.png" alt="IronClaw" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="IronClaw" width="48"/><br/>
           <b>IronClaw</b>
         </a><br/>
         <sub>⭐ 2.1K</sub>
@@ -123,7 +123,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free-access AI gat
     <tr>
       <td align="center" width="110">
         <a href="https://github.com/anomalyco/opencode">
-          <img src="./public/providers/opencode.svg" alt="OpenCode" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="OpenCode" width="48"/><br/>
           <b>OpenCode</b>
         </a><br/>
         <sub>⭐ 106K</sub>
@@ -144,7 +144,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free-access AI gat
       </td>
       <td align="center" width="110">
         <a href="https://github.com/Kilo-Org/kilocode">
-          <img src="./public/providers/kilocode.svg" alt="Kilo Code" width="48"/><br/>
+          <img src="../../../public/providers/cli-generic.svg" alt="Kilo Code" width="48"/><br/>
           <b>Kilo Code</b>
         </a><br/>
         <sub>⭐ 15.5K</sub>
@@ -217,7 +217,7 @@ This generates a `system-info.txt` with your Node.js version, OmniRoute version,
        │   ↓ budget limit
        ├─→ [Tier 3: CHEAP] GLM ($0.6/1M), MiniMax ($0.2/1M)
        │   ↓ budget limit
-       └─→ [Tier 4: FREE] Qoder, Qwen, Kiro (provider limits apply)
+       └─→ [Tier 4: FREE] Qoder, Kiro (provider limits apply)
 
 Result: broader fallback coverage and cost control; availability is not guaranteed
 ```
@@ -287,7 +287,7 @@ Not everyone can pay $20–200/month for AI subscriptions. Students, devs from e
 **How OmniRoute solves it:**
 
 - **Ollama Cloud** — Cloud-hosted Ollama models at `api.ollama.com` with free "Light usage" tier; use `ollamacloud/<model>` prefix
-- **Free-Only Combos** — Chain `if/kimi-k2-thinking → qw/qwen3-coder-plus` can use currently listed $0 access; limits and availability apply
+- **Free-Only Combos** — Chain `if/kimi-k2-thinking → kr/qwen3-coder-next` can use currently listed $0 access; limits and availability apply
 - **NVIDIA NIM Free Access** — ~40 RPM free access as currently listed; provider terms and model availability apply at build.nvidia.com (transitioning from credits to pure rate limits)
 - **Cost Optimized Strategy** — Routing strategy that automatically chooses the cheapest available provider
 
@@ -348,7 +348,7 @@ Claude Code, Codex, Copilot — all use OAuth 2.0 with expiring tokens. Develope
 **How OmniRoute solves it:**
 
 - **Auto Token Refresh** — OAuth tokens refresh in background before expiration
-- **OAuth 2.0 (PKCE) Built-in** — Automatic flow for Claude Code, Codex, Copilot, Kiro, Qwen, Qoder
+- **OAuth 2.0 (PKCE) Built-in** — Automatic flow for Claude Code, Codex, Copilot, Kiro, Qoder
 - **Multi-Account OAuth** — Multiple accounts per provider via JWT/ID token extraction
 - **OAuth LAN/Remote Fix** — Private IP detection for `redirect_uri` + manual URL mode for remote servers
 - **OAuth Behind Nginx** — Uses `window.location.origin` for reverse proxy compatibility
@@ -701,7 +701,7 @@ Outcome: higher quality, near-zero interruption
 ```txt
 Combo: "free-access"
   1. if/kimi-k2-thinking       (no published token cap; limits apply)
-  2. qw/qwen3-coder-plus       (no published token cap; limits apply)
+  2. kr/qwen3-coder-next
 
 Monthly cost: $0
 Outcome: broader free-access fallback; upstream availability is not guaranteed
@@ -735,12 +735,11 @@ Outcome: deep fallback depth for deadline-critical workloads
 
 > Setup AI coding in minutes at **$0/month**. Connect these free accounts and use the built-in **Free Stack** combo.
 
-| Step | Action                                             | Providers Unlocked                                                 |
-| ---- | -------------------------------------------------- | ------------------------------------------------------------------ |
+| Step | Action                                             | Providers Unlocked                                                                 |
+| ---- | -------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | 1    | Connect **Kiro** (AWS Builder ID OAuth)            | Claude Sonnet 4.5, Haiku 4.5 — provider/account limits apply                       |
 | 2    | Connect **Qoder** (Google OAuth)                   | kimi-k2-thinking, qwen3-coder-plus, deepseek-r1... — provider/account limits apply |
-| 3    | Connect **Qwen** (Device Code)                     | qwen3-coder-plus, qwen3-coder-flash... — provider/account limits apply             |
-| 4    | `/dashboard/combos` → **Free Stack ($0)** template | Round-robin all free providers automatically                       |
+| 3    | `/dashboard/combos` → **Free Stack ($0)** template | Round-robin all free providers automatically                       |
 
 **Point any IDE/CLI to:** `http://localhost:20128/v1` · API Key: `any-string` · Done.
 
@@ -1153,7 +1152,6 @@ When minimized, OmniRoute lives in your system tray with quick actions:
 |                     | Kimi K2.5 (Moonshot API) 🆕 | Pay-per-use                           | None                  | Direct Moonshot API access         |
 |                     | Kimi K2                     | $9/mo flat                            | 10M tokens/mo         | Predictable cost                   |
 | **🆓 FREE ACCESS**  | Qoder                       | **$0**                                | Limits apply          | Selected models; terms apply       |
-|                     | Qwen                        | **$0**                                | Limits apply          | Selected models; terms apply       |
 |                     | Kiro                        | **$0**                                | Credit/account limits | Claude access; current terms apply |
 |                     | LongCat signup credit       | **$0** (10M one-time; KYC)            | One-time              | Signup grant; not recurring        |
 |                     | Pollinations AI 🆕          | **$0** (no key needed)                | 1 req/15s             | GPT-5, Claude, DeepSeek, Llama 4   |
@@ -1170,7 +1168,6 @@ Kiro (kr/)             → Claude access — account/credit limits apply
 Qoder (if/)            → selected models — no published token cap; rate/account limits apply
 LongCat (lc/)          → LongCat-2.0 — 10M one-time signup credit; KYC required
 Pollinations (pol/)    → GPT-5, Claude, DeepSeek, Llama 4 — no key needed
-Qwen (qw/)             → selected models — no published token cap; rate/account limits apply
 Gemini (gemini/)       → selected free-tier models — current API quotas apply
 Cloudflare AI (cf/)    → Llama 70B, Gemma 3, Mistral — 10K Neurons/day
 Scaleway (scw/)        → Qwen3 235B, Llama 70B — 1M free tokens (EU)
@@ -1191,16 +1188,16 @@ Cerebras (cerebras/)   → Llama/Qwen world-fastest — 1M tok/day
 
 ### 🔵 CLAUDE MODELS (via Kiro — AWS Builder ID)
 
-| Model               | Prefix | Limit         | Rate Limit            |
-| ------------------- | ------ | ------------- | --------------------- |
-| `claude-sonnet-4.5` | `kr/`  | No published token cap | Provider/account limits may apply |
-| `claude-haiku-4.5`  | `kr/`  | No published token cap | Provider/account limits may apply |
-| `claude-opus-4.6`   | `kr/`  | No published token cap | Latest Opus; provider/account limits apply  |
+| Model               | Prefix | Limit                  | Rate Limit                                 |
+| ------------------- | ------ | ---------------------- | ------------------------------------------ |
+| `claude-sonnet-4.5` | `kr/`  | No published token cap | Provider/account limits may apply          |
+| `claude-haiku-4.5`  | `kr/`  | No published token cap | Provider/account limits may apply          |
+| `claude-opus-4.6`   | `kr/`  | No published token cap | Latest Opus; provider/account limits apply |
 
 ### 🟢 QODER MODELS (Free PAT via qodercli)
 
-| Model              | Prefix | Limit         | Rate Limit      |
-| ------------------ | ------ | ------------- | --------------- |
+| Model              | Prefix | Limit                  | Rate Limit                        |
+| ------------------ | ------ | ---------------------- | --------------------------------- |
 | `kimi-k2-thinking` | `if/`  | No published token cap | Provider/account limits may apply |
 | `qwen3-coder-plus` | `if/`  | No published token cap | Provider/account limits may apply |
 | `deepseek-r1`      | `if/`  | No published token cap | Provider/account limits may apply |
@@ -1210,14 +1207,6 @@ Cerebras (cerebras/)   → Llama/Qwen world-fastest — 1M tok/day
 > Recommended connection method: **Personal Access Token + `qodercli`**. Browser OAuth is
 > experimental and disabled by default unless `QODER_OAUTH_*` environment variables are configured.
 
-### 🟡 QWEN MODELS (Device Code Auth)
-
-| Model               | Prefix | Limit         | Rate Limit          |
-| ------------------- | ------ | ------------- | ------------------- |
-| `qwen3-coder-plus`  | `qw/`  | No published token cap | Provider/account limits may apply     |
-| `qwen3-coder-flash` | `qw/`  | No published token cap | Provider/account limits may apply     |
-| `qwen3-coder-next`  | `qw/`  | No published token cap | Provider/account limits may apply     |
-| `vision-model`      | `qw/`  | No published token cap | Multimodal; provider/account limits may apply |
 
 ### ⚫ NVIDIA NIM (Free API Key — build.nvidia.com)
 
@@ -1291,7 +1280,6 @@ Available free: `qwen3-235b-a22b-instruct-2507` (Qwen3 235B!), `llama-3.1-70b-in
 > Qoder (if/)            → selected models — no published token cap; limits apply
 > LongCat (lc/)          → LongCat-2.0 — 10M one-time signup credit; KYC required
 > Pollinations (pol/)    → GPT-5, Claude, DeepSeek, Llama 4 — no key needed
-> Qwen (qw/)             → selected models — no published token cap; limits apply
 > Gemini (gemini/)       → selected free-tier models — current quotas apply
 > Cloudflare AI (cf/)    → 50+ models — 10K Neurons/day
 > Scaleway (scw/)        → Qwen3 235B, Llama 70B — 1M free tokens (EU)
@@ -1787,17 +1775,6 @@ Models:
   if/deepseek-r1
 ```
 
-### Qwen (4 FREE models via Device Code)
-
-```bash
-Dashboard → Connect Qwen
-→ Device code authorization
-→ Access is subject to current provider limits
-
-Models:
-  qw/qwen3-coder-plus
-  qw/qwen3-coder-flash
-```
 
 ### Kiro (Claude FREE)
 
@@ -1836,7 +1813,7 @@ Use in CLI: premium-coding
 Name: free-combo
 Models:
   1. if/kimi-k2-thinking (no published token cap; provider limits may apply)
-  2. qw/qwen3-coder-plus (no published token cap; provider limits may apply)
+  2. kr/qwen3-coder-next
 
 Cost: currently listed as $0; terms and availability may change
 ```

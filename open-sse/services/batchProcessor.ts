@@ -1,22 +1,20 @@
 import { v4 as uuidv4 } from "uuid";
-import type { BatchItemCheckpoint, BatchRecord } from "@/lib/localDb";
 import {
+  type BatchItemCheckpoint,
+  type BatchRecord,
   countBatchItemCheckpoints,
-  createFile,
-  deleteFile,
   ensureBatchItemCheckpoints,
-  getApiKeyById,
   getBatch,
-  getFileContent,
   getPendingBatches,
   getTerminalBatches,
   listBatchItemCheckpoints,
-  listFiles,
   markBatchItemError,
   markBatchItemProcessing,
   markBatchItemResult,
   updateBatch,
-} from "@/lib/localDb";
+} from "@/lib/db/batches";
+import { createFile, deleteFile, getFileContent, listFiles } from "@/lib/db/files";
+import { getApiKeyById } from "@/lib/db/apiKeys";
 import { dispatch } from "@/lib/batches/dispatch";
 import type { SupportedBatchEndpoint } from "@/shared/constants/batchEndpoints";
 import { DEFAULT_BATCH_EXPIRATION_SECONDS } from "@/shared/constants/batch";

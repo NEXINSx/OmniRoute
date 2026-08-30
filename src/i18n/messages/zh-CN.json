@@ -6254,13 +6254,13 @@
       "galadriel": "使用 API 密钥连接 Galadriel。",
       "predibase": "$25 免费试用额度（30 天有效期）",
       "chenzk": "兼容 OpenAI 的网关，在 chenzk.top 提供实时模型目录。",
-      "magnific": "使用 Freepik 的 Mystic API 生成图像。",
+      "magnific": "使用 Magnific 的 Mystic API 生成图像。",
       "freetheai": "免费的 OpenAI 兼容网关，支持直通模型。",
-      "g4f-gemini": "免费免密钥的 g4f.space Gemini 反向代理，限制为每分钟 5 次请求。",
-      "g4f-groq": "免费免密钥的 g4f.space Groq 反向代理，限制为每分钟 5 次请求。",
-      "g4f-nvidia": "免费免密钥的 g4f.space NVIDIA NIM 反向代理，限制为每分钟 5 次请求。",
-      "g4f-ollama": "来自 g4f.space 的免费免密钥托管 Ollama 网关，限制为每分钟 5 次请求。",
-      "g4f-pollinations": "免费免密钥的 g4f.space Pollinations 反向代理，限制为每分钟 5 次请求。",
+      "g4f-gemini": "通往 Gemini 的远程 g4f.space 网关。匿名访问需要来自 g4f.dev/chat 的工作量证明额度，或来自 g4f.dev/members.html 的会员 API 密钥；限制可能变化。",
+      "g4f-groq": "通往 Groq 的远程 g4f.space 网关。匿名访问需要来自 g4f.dev/chat 的工作量证明额度，或来自 g4f.dev/members.html 的会员 API 密钥；限制可能变化。",
+      "g4f-nvidia": "通往 NVIDIA NIM 的远程 g4f.space 网关。匿名访问需要来自 g4f.dev/chat 的工作量证明额度，或来自 g4f.dev/members.html 的会员 API 密钥；限制可能变化。",
+      "g4f-ollama": "通往 Ollama 的远程 g4f.space 网关。匿名访问需要来自 g4f.dev/chat 的工作量证明额度，或来自 g4f.dev/members.html 的会员 API 密钥；限制可能变化。",
+      "g4f-pollinations": "通往 Pollinations 的远程 g4f.space 网关。匿名访问需要来自 g4f.dev/chat 的工作量证明额度，或来自 g4f.dev/members.html 的会员 API 密钥；限制可能变化。",
       "mixedbread": "使用 Mixedbread API 创建嵌入。",
       "segmind": "使用 Segmind 的托管模型生成图像和视频。",
       "amazon-q": "使用与 Kiro 相同的 AWS Builder ID 或导入的 refresh-token 流程，但保持 Amazon Q 连接独立。",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "视频桥接",
     "modalityBridgeVideoDesc": "对视频帧进行采样，使用视觉模型描述这些帧，然后继续使用所选的文本模型。",
     "modalityBridgeVideoRuntimeReady": "运行时已就绪",
+    "modalityBridgeVideoRuntimeChecking": "正在检查运行时…",
     "modalityBridgeVideoRuntimeUnavailable": "运行时不可用",
     "modalityBridgeVideoRuntimeInstall": "请在服务器的 PATH 中安装 FFmpeg 和 ffprobe 以启用视频提取。",
     "modalityBridgeVideoEnabled": "启用视频桥接",
@@ -11314,7 +11315,9 @@
       "noPayload": "此日志条目没有可用的有效负载数据。",
       "correlationId": "关联 ID",
       "correlationIdValue": "关联 ID: {id}",
-      "detailedPayloadInfo": "如果您想要新请求的四阶段客户端/提供者负载视图，请先启用详细日志记录。"
+      "detailedPayloadInfo": "如果您想要新请求的四阶段客户端/提供者负载视图，请先启用详细日志记录。",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API 密钥",
     "sortTypeFirst": "最简优先",
     "sortTypeFirstHelp": "按注册难度分组（免注册 → OAuth 登录 → API 密钥），并在每个组内保持质量排序",
-    "typeLegend": "免注册 = 零设置 · OAuth 登录 = 使用您自己的账户登录 · API 密钥 = 自备密钥或使用该服务商的免费额度"
+    "typeLegend": "免注册 = 零设置 · OAuth 登录 = 使用您自己的账户登录 · API 密钥 = 自备密钥或使用该服务商的免费额度",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "服务商探索",

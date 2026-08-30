@@ -18,7 +18,7 @@ const store = await import("../../src/lib/db/responsesContinuationStore.ts");
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 function insertCallLog(row: {
@@ -78,6 +78,7 @@ test("resolvePreviousResponseState reconstructs input/output from the call-log a
     artifactRelPath: "2026-01-01/log-1.json",
   });
   writeArtifact("2026-01-01/log-1.json", {
+    clientRawRequest: { body: { input: [{ type: "message", role: "user", content: "hi" }] } },
     providerRequest: { body: { input: [{ type: "message", role: "user", content: "hi" }] } },
     clientResponse: {
       id: "resp_abc",
@@ -86,6 +87,44 @@ test("resolvePreviousResponseState reconstructs input/output from the call-log a
   });
 
   const result = store.resolvePreviousResponseState("resp_abc", "key-1");
+  assert.deepEqual(result, {
+    input: [{ type: "message", role: "user", content: "hi" }],
+    output: [{ type: "message", role: "assistant", content: "hello" }],
+  });
+});
+
+test("resolvePreviousResponseState reads output from a wrapped (streaming) clientResponse shape", () => {
+  // A streaming reply's clientResponse is clientPayloadCollector.build()'s output,
+  // which always nests the caller-supplied summary under `.summary` (see
+  // createStructuredSSECollector in streamPayloadCollector.ts) rather than
+  // carrying `output` at the top level like a non-streaming reply does. This
+  // must resolve exactly like the unwrapped shape above -- it was the actual
+  // cause of previous_response_id continuation always failing for a streaming
+  // Responses-API passthrough connection (fixed alongside the clientPayload
+  // builder gap in open-sse/utils/stream.ts).
+  insertCallLog({
+    id: "log-1-streamed",
+    responseId: "resp_streamed",
+    apiKeyId: "key-1",
+    detailState: "ready",
+    artifactRelPath: "2026-01-01/log-1-streamed.json",
+  });
+  writeArtifact("2026-01-01/log-1-streamed.json", {
+    clientRawRequest: { body: { input: [{ type: "message", role: "user", content: "hi" }] } },
+    providerRequest: { body: { input: [{ type: "message", role: "user", content: "hi" }] } },
+    clientResponse: {
+      _streamed: true,
+      _format: "sse-json",
+      _eventCount: 1,
+      summary: {
+        id: "resp_streamed",
+        object: "response",
+        output: [{ type: "message", role: "assistant", content: "hello" }],
+      },
+    },
+  });
+
+  const result = store.resolvePreviousResponseState("resp_streamed", "key-1");
   assert.deepEqual(result, {
     input: [{ type: "message", role: "user", content: "hi" }],
     output: [{ type: "message", role: "assistant", content: "hello" }],
@@ -106,6 +145,7 @@ test("resolvePreviousResponseState never crosses tenants (scoped by api_key_id)"
     artifactRelPath: "2026-01-01/log-2.json",
   });
   writeArtifact("2026-01-01/log-2.json", {
+    clientRawRequest: { body: { input: [{ role: "user", content: "secret" }] } },
     providerRequest: { body: { input: [{ role: "user", content: "secret" }] } },
     clientResponse: { id: "resp_tenant_a", output: [{ role: "assistant", content: "reply" }] },
   });
@@ -139,11 +179,86 @@ test("resolvePreviousResponseState fails closed when the pipeline payload was si
   // an object -- resolvePreviousResponseState must never try to reconstruct
   // from it and silently drop history.
   writeArtifact("2026-01-01/log-4.json", {
-    providerRequest: { body: "[omitted: call log artifact size limit exceeded]" },
+    clientRawRequest: { body: "[omitted: call log artifact size limit exceeded]" },
     clientResponse: { id: "resp_omitted", output: [] },
   });
 
   assert.equal(store.resolvePreviousResponseState("resp_omitted", "key-1"), null);
+});
+
+test("resolvePreviousResponseState resolves input from clientRawRequest when providerRequest was translated to a different upstream wire shape", () => {
+  // Real shape from a live auto-routed free-tier connection: OmniRoute
+  // translates the client's Responses-API request into Chat Completions
+  // (`messages`, no `input` at all) before forwarding upstream. Reading
+  // `input` from providerRequest.body made this permanently unresolvable --
+  // previous_response_not_found on every attempt -- for any connection where
+  // the selected upstream isn't itself a native Responses-API passthrough.
+  // The client's own request is always Responses-API shaped (this store only
+  // fires for sourceFormat === OPENAI_RESPONSES, see chat.ts), so
+  // clientRawRequest is the correct source regardless of upstream shape.
+  insertCallLog({
+    id: "log-6",
+    responseId: "resp_gen-translate-mode",
+    apiKeyId: "key-1",
+    detailState: "ready",
+    artifactRelPath: "2026-01-01/log-6.json",
+  });
+  writeArtifact("2026-01-01/log-6.json", {
+    clientRawRequest: { body: { input: [{ type: "message", role: "user", content: "hi" }] } },
+    providerRequest: {
+      body: { model: "laguna-s-2.1-free", messages: [{ role: "user", content: "hi" }] },
+    },
+    clientResponse: {
+      summary: {
+        id: "resp_gen-translate-mode",
+        output: [{ type: "message", role: "assistant", content: "hello" }],
+      },
+    },
+  });
+
+  const result = store.resolvePreviousResponseState("resp_gen-translate-mode", "key-1");
+  assert.deepEqual(result, {
+    input: [{ type: "message", role: "user", content: "hi" }],
+    output: [{ type: "message", role: "assistant", content: "hello" }],
+  });
+});
+
+test("resolvePreviousResponseState fails closed when the stored input array was log-truncated", () => {
+  // Real production shape: cloneBoundedChatLogPayload (chatCore/logTruncation.ts)
+  // and cloneBoundedForLog (utils/requestLogger.ts) both prepend an
+  // `_omniroute_truncated_array` sentinel in place of the items they dropped
+  // once a logged array exceeds their tail-item cap (~24 items) -- routine
+  // for any conversation that's been going a while, not an edge case. Reading
+  // that sentinel back as a real Responses-API item and forwarding it upstream
+  // produced a live 400: "input item type 'missing' cannot be represented in
+  // Chat Completions" -- worse than the plain cache-miss this function is
+  // otherwise designed to fail into.
+  insertCallLog({
+    id: "log-7",
+    responseId: "resp_gen-truncated-history",
+    apiKeyId: "key-1",
+    detailState: "ready",
+    artifactRelPath: "2026-01-01/log-7.json",
+  });
+  writeArtifact("2026-01-01/log-7.json", {
+    clientRawRequest: {
+      body: {
+        input: [
+          { _omniroute_truncated_array: true, originalLength: 26, retainedTailItems: 24 },
+          { type: "function_call_output", call_id: "call_1", output: "ok" },
+        ],
+      },
+    },
+    providerRequest: { body: { input: [] } },
+    clientResponse: {
+      summary: {
+        id: "resp_gen-truncated-history",
+        output: [{ type: "message", role: "assistant", content: "hello" }],
+      },
+    },
+  });
+
+  assert.equal(store.resolvePreviousResponseState("resp_gen-truncated-history", "key-1"), null);
 });
 
 test("resolvePreviousResponseState returns null when detail logging was never captured for this row", () => {

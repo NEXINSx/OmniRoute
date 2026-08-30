@@ -63,7 +63,7 @@ async function resetStorage() {
   // under load this cache is evicted at unpredictable times, so tests that rely
   // on the stale cache flake. Make the reset honest and deterministic here.
   invalidateDbCache("settings");
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -88,7 +88,7 @@ test.after(async () => {
   clearPendingRequests();
   resetAccountSemaphores();
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("network failure persisted call log includes providerRequest in pipeline payloads", async () => {
@@ -153,7 +153,7 @@ test("network failure persisted call log includes providerRequest in pipeline pa
 
 test("network timeout persisted call log includes providerRequest in pipeline payloads", async () => {
   const { getExecutor } = await import("../../open-sse/executors/index.ts");
-  const executor = getExecutor("openai");
+  const executor = await getExecutor("openai");
   const originalGetTimeoutMs = executor.getTimeoutMs?.bind(executor);
   executor.getTimeoutMs = () => 200;
 

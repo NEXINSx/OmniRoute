@@ -32,6 +32,17 @@ test("Hermes quick-config is registered as a guide-based CLI tool", () => {
   assert.ok(CLI_TOOL_IDS.includes("hermes"));
 });
 
+test("CLI tools with unresolved logo provenance use the bundled generic icon", () => {
+  for (const toolId of ["droid", "kilo", "omp", "letta"] as const) {
+    assert.ok(CLI_TOOLS[toolId], `${toolId} must remain in the CLI catalog`);
+    assert.equal(CLI_TOOLS[toolId].image, "/providers/cli-generic.svg");
+  }
+
+  assert.ok(CLI_TOOLS.opencode, "opencode must remain in the CLI catalog");
+  assert.equal(CLI_TOOLS.opencode.imageLight, "/providers/cli-generic.svg");
+  assert.equal(CLI_TOOLS.opencode.imageDark, "/providers/cli-generic.svg");
+});
+
 test("ACP registry accepts the Gemini CLI target used by the manager", () => {
   assert.equal(hasRegisteredAgent("gemini"), true);
   assert.equal(hasRegisteredAgent("definitely-not-an-agent"), false);

@@ -6254,13 +6254,13 @@
       "galadriel": "APIキーを使用してGaladrielに接続します。",
       "predibase": "$25の無料トライアルクレジット（有効期限30日間）",
       "chenzk": "chenzk.top でライブモデルカタログを提供するOpenAI互換ゲートウェイ。",
-      "magnific": "FreepikのMystic APIで画像を生成します。",
+      "magnific": "MagnificのMystic APIで画像を生成します。",
       "freetheai": "パススルーモデルをサポートする無料のOpenAI互換ゲートウェイ。",
-      "g4f-gemini": "キー不要で無料のg4f.spaceによるGeminiへのリバースプロキシ（1分あたり5リクエストに制限）。",
-      "g4f-groq": "キー不要で無料のg4f.spaceによるGroqへのリバースプロキシ（1分あたり5リクエストに制限）。",
-      "g4f-nvidia": "キー不要で無料のg4f.spaceによるNVIDIA NIMへのリバースプロキシ（1分あたり5リクエストに制限）。",
-      "g4f-ollama": "キー不要で無料のg4f.spaceがホストするOllamaゲートウェイ（1分あたり5リクエストに制限）。",
-      "g4f-pollinations": "キー不要で無料のg4f.spaceによるPollinationsへのリバースプロキシ（1分あたり5リクエストに制限）。",
+      "g4f-gemini": "Gemini 向けのリモート g4f.space ゲートウェイ。匿名アクセスには g4f.dev/chat のプルーフ・オブ・ワーククレジット、または g4f.dev/members.html のメンバー API キーが必要です。上限は変動します。",
+      "g4f-groq": "Groq 向けのリモート g4f.space ゲートウェイ。匿名アクセスには g4f.dev/chat のプルーフ・オブ・ワーククレジット、または g4f.dev/members.html のメンバー API キーが必要です。上限は変動します。",
+      "g4f-nvidia": "NVIDIA NIM 向けのリモート g4f.space ゲートウェイ。匿名アクセスには g4f.dev/chat のプルーフ・オブ・ワーククレジット、または g4f.dev/members.html のメンバー API キーが必要です。上限は変動します。",
+      "g4f-ollama": "Ollama 向けのリモート g4f.space ゲートウェイ。匿名アクセスには g4f.dev/chat のプルーフ・オブ・ワーククレジット、または g4f.dev/members.html のメンバー API キーが必要です。上限は変動します。",
+      "g4f-pollinations": "Pollinations 向けのリモート g4f.space ゲートウェイ。匿名アクセスには g4f.dev/chat のプルーフ・オブ・ワーククレジット、または g4f.dev/members.html のメンバー API キーが必要です。上限は変動します。",
       "mixedbread": "Mixedbread APIで埋め込みを作成します。",
       "segmind": "Segmindのホスト型モデルで画像や動画を生成します。",
       "amazon-q": "Kiroと同じAWS Builder IDまたはインポートされたリフレッシュトークンフローを使用しますが、Amazon Qの接続は個別に維持します。",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "動画ブリッジ",
     "modalityBridgeVideoDesc": "動画のフレームをサンプリングし、視覚モデルで説明してから、選択したテキストモデルで処理を続けます。",
     "modalityBridgeVideoRuntimeReady": "ランタイムは準備完了です",
+    "modalityBridgeVideoRuntimeChecking": "ランタイムを確認しています…",
     "modalityBridgeVideoRuntimeUnavailable": "ランタイムを利用できません",
     "modalityBridgeVideoRuntimeInstall": "動画抽出を有効にするには、サーバーの PATH に FFmpeg と ffprobe をインストールしてください。",
     "modalityBridgeVideoEnabled": "動画ブリッジを有効にする",
@@ -11314,7 +11315,9 @@
       "noPayload": "このログエントリにはペイロードデータがありません。",
       "correlationId": "相関ID",
       "correlationIdValue": "相関ID: {id}",
-      "detailedPayloadInfo": "新しいリクエストのために四段階のクライアント/プロバイダー ペイロードビューを表示したい場合は、まず詳細なログ記録を有効にしてください。"
+      "detailedPayloadInfo": "新しいリクエストのために四段階のクライアント/プロバイダー ペイロードビューを表示したい場合は、まず詳細なログ記録を有効にしてください。",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "APIキー",
     "sortTypeFirst": "簡単な順",
     "sortTypeFirstHelp": "サインアップの手間（サインアップ不要 → OAuthログイン → APIキー）でグループ化し、各グループ内では品質順を維持",
-    "typeLegend": "サインアップ不要 = セットアップ不要 · OAuthログイン = 自身のアカウントでサインイン · APIキー = 自身のキーまたはプロバイダーの無料枠を使用"
+    "typeLegend": "サインアップ不要 = セットアップ不要 · OAuthログイン = 自身のアカウントでサインイン · APIキー = 自身のキーまたはプロバイダーの無料枠を使用",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "プロバイダー検出",

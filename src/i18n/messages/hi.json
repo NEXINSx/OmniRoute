@@ -1266,7 +1266,7 @@
     "agentBridge": "एजेंट ब्रिज",
     "agentBridgeSubtitle": "IDE एजेंट ट्रैफ़िक को इंटरसेप्ट करें",
     "trafficInspector": "ट्रैफ़िक इंस्पेक्टर",
-    "trafficInspectorSubtitle": "LLM कॉल्स की निगरानी करें + किसी भी HTTPS ट्रैफ़िक को डीबग करें",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI कोड",
     "cliCodeSubtitle": "OmniRoute पर पॉइंट करने वाले कोड टूल्स",
     "cliAgents": "CLI एजेंट्स",
@@ -6254,13 +6254,13 @@
       "galadriel": "API कुंजी के साथ Galadriel को कनेक्ट करें।",
       "predibase": "$25 मुफ्त ट्रायल क्रेडिट (30 दिनों की वैधता)",
       "chenzk": "chenzk.top पर लाइव मॉडल कैटलॉग के साथ OpenAI-संगत गेटवे।",
-      "magnific": "Freepik के Mystic API के साथ चित्र जनरेट करें।",
+      "magnific": "Magnific के Mystic API के साथ चित्र जनरेट करें।",
       "freetheai": "पासथ्रू मॉडल समर्थन के साथ मुफ्त OpenAI-संगत गेटवे।",
-      "g4f-gemini": "Gemini के लिए मुफ्त बिना-कुंजी वाला g4f.space रिवर्स प्रॉक्सी, प्रति मिनट 5 अनुरोधों तक सीमित।",
-      "g4f-groq": "Groq के लिए मुफ्त बिना-कुंजी वाला g4f.space रिवर्स प्रॉक्सी, प्रति मिनट 5 अनुरोधों तक सीमित।",
-      "g4f-nvidia": "NVIDIA NIM के लिए मुफ्त बिना-कुंजी वाला g4f.space रिवर्स प्रॉक्सी, प्रति मिनट 5 अनुरोधों तक सीमित।",
-      "g4f-ollama": "g4f.space से मुफ्त बिना-कुंजी वाला होस्टेड Ollama गेटवे, प्रति मिनट 5 अनुरोधों तक सीमित।",
-      "g4f-pollinations": "Pollinations के लिए मुफ्त बिना-कुंजी वाला g4f.space रिवर्स प्रॉक्सी, प्रति मिनट 5 अनुरोधों तक सीमित।",
+      "g4f-gemini": "Gemini के लिए रिमोट g4f.space गेटवे। अनाम पहुँच के लिए g4f.dev/chat से प्रूफ-ऑफ-वर्क क्रेडिट या g4f.dev/members.html से सदस्य API कुंजी चाहिए; सीमाएँ बदलती रहती हैं।",
+      "g4f-groq": "Groq के लिए रिमोट g4f.space गेटवे। अनाम पहुँच के लिए g4f.dev/chat से प्रूफ-ऑफ-वर्क क्रेडिट या g4f.dev/members.html से सदस्य API कुंजी चाहिए; सीमाएँ बदलती रहती हैं।",
+      "g4f-nvidia": "NVIDIA NIM के लिए रिमोट g4f.space गेटवे। अनाम पहुँच के लिए g4f.dev/chat से प्रूफ-ऑफ-वर्क क्रेडिट या g4f.dev/members.html से सदस्य API कुंजी चाहिए; सीमाएँ बदलती रहती हैं।",
+      "g4f-ollama": "Ollama के लिए रिमोट g4f.space गेटवे। अनाम पहुँच के लिए g4f.dev/chat से प्रूफ-ऑफ-वर्क क्रेडिट या g4f.dev/members.html से सदस्य API कुंजी चाहिए; सीमाएँ बदलती रहती हैं।",
+      "g4f-pollinations": "Pollinations के लिए रिमोट g4f.space गेटवे। अनाम पहुँच के लिए g4f.dev/chat से प्रूफ-ऑफ-वर्क क्रेडिट या g4f.dev/members.html से सदस्य API कुंजी चाहिए; सीमाएँ बदलती रहती हैं।",
       "mixedbread": "Mixedbread API के साथ एम्बेडिंग बनाएं।",
       "segmind": "Segmind के होस्टेड मॉडल के साथ चित्र और वीडियो जनरेट करें।",
       "amazon-q": "Kiro के समान ही AWS Builder ID या इम्पोर्टेड refresh-token फ़्लो का उपयोग करता है, लेकिन Amazon Q कनेक्शन को अलग रखता है।",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "वीडियो ब्रिज",
     "modalityBridgeVideoDesc": "वीडियो फ़्रेम के नमूने लें, विज़न मॉडल से उनका वर्णन कराएँ और चुने हुए टेक्स्ट मॉडल के साथ जारी रखें।",
     "modalityBridgeVideoRuntimeReady": "रनटाइम तैयार है",
+    "modalityBridgeVideoRuntimeChecking": "रनटाइम जाँच रहे हैं…",
     "modalityBridgeVideoRuntimeUnavailable": "रनटाइम उपलब्ध नहीं है",
     "modalityBridgeVideoRuntimeInstall": "वीडियो निष्कर्षण सक्षम करने के लिए सर्वर के PATH में FFmpeg और ffprobe इंस्टॉल करें।",
     "modalityBridgeVideoEnabled": "वीडियो ब्रिज सक्षम करें",
@@ -11314,7 +11315,9 @@
       "noPayload": "इस लॉग प्रविष्टि के लिए कोई पेलोड डेटा उपलब्ध नहीं है।",
       "correlationId": "संबंध पहचानकर्ता",
       "correlationIdValue": "संबंध पहचानकर्ता: {id}",
-      "detailedPayloadInfo": "यदि आप नए अनुरोधों के लिए चार-चरणीय क्लाइंट/प्रदाता पेलोड दृश्य चाहते हैं, तो पहले विस्तृत लॉगिंग सक्षम करें।"
+      "detailedPayloadInfo": "यदि आप नए अनुरोधों के लिए चार-चरणीय क्लाइंट/प्रदाता पेलोड दृश्य चाहते हैं, तो पहले विस्तृत लॉगिंग सक्षम करें।",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "API की",
     "sortTypeFirst": "सबसे आसान पहले",
     "sortTypeFirstHelp": "साइनअप प्रयास के आधार पर समूहीकृत करें (कोई साइनअप नहीं → OAuth लॉगिन → API की), प्रत्येक समूह के भीतर गुणवत्ता क्रम बनाए रखते हुए",
-    "typeLegend": "कोई साइनअप नहीं = शून्य सेटअप · OAuth लॉगिन = अपने स्वयं के खाते से साइन इन करें · API की = अपनी खुद की की लाएं या उस प्रदाता के फ्री टियर का उपयोग करें"
+    "typeLegend": "कोई साइनअप नहीं = शून्य सेटअप · OAuth लॉगिन = अपने स्वयं के खाते से साइन इन करें · API की = अपनी खुद की की लाएं या उस प्रदाता के फ्री टियर का उपयोग करें",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "प्रदाता खोज",

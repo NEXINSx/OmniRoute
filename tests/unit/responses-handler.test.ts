@@ -130,7 +130,7 @@ function buildJsonResponse(status: number, payload: unknown) {
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -185,7 +185,7 @@ test.afterEach(async () => {
 test.after(async () => {
   globalThis.fetch = originalFetch;
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("handleResponsesCore converts Responses API input, instructions, tools, metadata, and forces streaming", async () => {
@@ -362,11 +362,8 @@ test("handleResponsesCore transforms Command Code executor SSE through Responses
           choices: [{ index: 0, delta }],
         })}\n\n`;
       return new Response(
-        [
-          chunk({ role: "assistant" }),
-          chunk({ content: "command" }),
-          chunk({}),
-        ].join("") + "data: [DONE]\n\n",
+        [chunk({ role: "assistant" }), chunk({ content: "command" }), chunk({})].join("") +
+          "data: [DONE]\n\n",
         { status: 200, headers: { "Content-Type": "text/event-stream" } }
       );
     },

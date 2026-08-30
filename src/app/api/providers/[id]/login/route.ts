@@ -7,8 +7,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCachedProviderConnectionById, updateProviderConnection } from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { updateProviderConnection } from "@/lib/db/providers";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
+import { clampLoginTimeoutMs } from "@/lib/api/loginTimeout";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 
 const ADOBE_FIREFLY_SLUGS = new Set(["adobe-firefly", "firefly"]);
@@ -194,9 +196,8 @@ export async function POST(
   // persistence (same shape as the other web-cookie providers).
   if (providerSlug === "conol-web" || providerSlug === "cnl") {
     try {
-      const { startConolBrowserLogin } = await import(
-        "@omniroute/open-sse/services/conolBrowserLogin.ts"
-      );
+      const { startConolBrowserLogin } =
+        await import("@omniroute/open-sse/services/conolBrowserLogin.ts");
       const result = await startConolBrowserLogin(
         typeof body.timeout === "number" ? body.timeout : undefined
       );
@@ -237,7 +238,7 @@ export async function POST(
     const { inAppLoginService } = await import("@omniroute/open-sse/services/inAppLoginService.ts");
 
     const result = await inAppLoginService.startLogin(providerSlug || id, {
-      timeout: typeof body.timeout === "number" ? body.timeout : undefined,
+      timeout: clampLoginTimeoutMs(body.timeout),
     });
 
     // Persist credentials if extraction succeeded

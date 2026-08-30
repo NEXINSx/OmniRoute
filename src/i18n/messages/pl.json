@@ -6254,13 +6254,13 @@
       "galadriel": "Połącz z Galadriel za pomocą klucza API.",
       "predibase": "$25 darmowych środków próbnych (ważność 30 dni)",
       "chenzk": "Brama zgodna z OpenAI z aktywnym katalogiem modeli na chenzk.top.",
-      "magnific": "Generuj obrazy za pomocą Mystic API od Freepik.",
+      "magnific": "Generuj obrazy za pomocą Mystic API od Magnific.",
       "freetheai": "Darmowa brama zgodna z OpenAI z obsługą modeli w trybie passthrough.",
-      "g4f-gemini": "Darmowe, niewymagające klucza reverse proxy g4f.space do Gemini, z limitem do 5 żądań na minutę.",
-      "g4f-groq": "Darmowe, niewymagające klucza reverse proxy g4f.space do Groq, z limitem do 5 żądań na minutę.",
-      "g4f-nvidia": "Darmowe, niewymagające klucza reverse proxy g4f.space do NVIDIA NIM, z limitem do 5 żądań na minutę.",
-      "g4f-ollama": "Darmowa, niewymagająca klucza hostowana brama Ollama od g4f.space, ograniczona do 5 żądań na minutę.",
-      "g4f-pollinations": "Darmowe, niewymagające klucza odwrotne proxy g4f.space do Pollinations, ograniczone do 5 żądań na minutę.",
+      "g4f-gemini": "Zdalna brama g4f.space do Gemini. Dostęp anonimowy wymaga kredytów proof-of-work z g4f.dev/chat albo członkowskiego klucza API z g4f.dev/members.html; limity są zmienne.",
+      "g4f-groq": "Zdalna brama g4f.space do Groq. Dostęp anonimowy wymaga kredytów proof-of-work z g4f.dev/chat albo członkowskiego klucza API z g4f.dev/members.html; limity są zmienne.",
+      "g4f-nvidia": "Zdalna brama g4f.space do NVIDIA NIM. Dostęp anonimowy wymaga kredytów proof-of-work z g4f.dev/chat albo członkowskiego klucza API z g4f.dev/members.html; limity są zmienne.",
+      "g4f-ollama": "Zdalna brama g4f.space do Ollama. Dostęp anonimowy wymaga kredytów proof-of-work z g4f.dev/chat albo członkowskiego klucza API z g4f.dev/members.html; limity są zmienne.",
+      "g4f-pollinations": "Zdalna brama g4f.space do Pollinations. Dostęp anonimowy wymaga kredytów proof-of-work z g4f.dev/chat albo członkowskiego klucza API z g4f.dev/members.html; limity są zmienne.",
       "mixedbread": "Twórz embeddingi za pomocą API Mixedbread.",
       "segmind": "Generuj obrazy i filmy za pomocą hostowanych modeli Segmind.",
       "amazon-q": "Używa tego samego AWS Builder ID lub zaimportowanego przepływu refresh-token co Kiro, ale utrzymuje połączenia Amazon Q oddzielnie.",
@@ -8186,6 +8186,7 @@
     "modalityBridgeVideoTitle": "Most wideo",
     "modalityBridgeVideoDesc": "Pobierz próbki klatek wideo, opisz je modelem wizyjnym i kontynuuj za pomocą wybranego modelu tekstowego.",
     "modalityBridgeVideoRuntimeReady": "Środowisko uruchomieniowe jest gotowe",
+    "modalityBridgeVideoRuntimeChecking": "Sprawdzanie środowiska uruchomieniowego…",
     "modalityBridgeVideoRuntimeUnavailable": "Środowisko uruchomieniowe jest niedostępne",
     "modalityBridgeVideoRuntimeInstall": "Zainstaluj FFmpeg i ffprobe w PATH serwera, aby włączyć wyodrębnianie wideo.",
     "modalityBridgeVideoEnabled": "Włącz Most wideo",
@@ -11314,7 +11315,9 @@
       "noPayload": "Brak danych ładunku dostępnych dla tego wpisu dziennika.",
       "correlationId": "Identyfikator korelacji",
       "correlationIdValue": "Identyfikator korelacji: {id}",
-      "detailedPayloadInfo": "Najpierw włącz szczegółowe logowanie, jeśli chcesz uzyskać widok ładunku klienta/dostawcy w czterech etapach dla nowych żądań."
+      "detailedPayloadInfo": "Najpierw włącz szczegółowe logowanie, jeśli chcesz uzyskać widok ładunku klienta/dostawcy w czterech etapach dla nowych żądań.",
+      "copyAll": "Copy all",
+      "copiedAll": "Copied all"
     }
   },
   "proxyLogger": {
@@ -12485,7 +12488,12 @@
     "typeApikey": "Klucz API",
     "sortTypeFirst": "Najłatwiejsze najpierw",
     "sortTypeFirstHelp": "Grupuj według nakładu pracy przy rejestracji (Bez rejestracji → Logowanie OAuth → Klucz API), zachowując kolejność jakości w każdej grupie",
-    "typeLegend": "Bez rejestracji = zero konfiguracji · Logowanie OAuth = zaloguj się za pomocą własnego konta · Klucz API = użyj własnego klucza lub darmowego planu tego provider"
+    "typeLegend": "Bez rejestracji = zero konfiguracji · Logowanie OAuth = zaloguj się za pomocą własnego konta · Klucz API = użyj własnego klucza lub darmowego planu tego provider",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provider Discovery",

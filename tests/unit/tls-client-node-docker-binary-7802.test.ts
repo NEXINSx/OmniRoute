@@ -42,7 +42,7 @@ test("Dockerfile's --ignore-scripts npm ci is compensated for tls-client-node's 
     "tls-client-node has no --ignore-scripts compensation in Dockerfile or " +
       "scripts/build/postinstall.mjs (unlike better-sqlite3 and wreq-js) — " +
       "node_modules/tls-client-node/bin/ is never populated in the official " +
-      "Docker image, so chatgpt-web/claude-web/grok-web/lmarena/perplexity-web " +
+      "Docker image, so claude-web/grok-web/lmarena/perplexity-web " +
       "all fail with TlsClientUnavailableError at first request (#7802)"
   );
 });

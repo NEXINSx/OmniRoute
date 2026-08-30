@@ -179,7 +179,7 @@ test("collectWorkflowFiles: returns .yml files from directory", () => {
     assert.ok(files.some((f) => f.endsWith("deploy.yml")));
     assert.ok(!files.some((f) => f.endsWith("README.md")));
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -194,7 +194,7 @@ test("collectWorkflowFiles: also collects .yaml extension", () => {
     assert.ok(files.some((f) => f.endsWith(".yaml")));
     assert.ok(files.some((f) => f.endsWith(".yml")));
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -206,7 +206,7 @@ test("collectWorkflowFiles: returns absolute paths", () => {
     assert.equal(files.length, 1);
     assert.ok(path.isAbsolute(files[0]));
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -216,7 +216,7 @@ test("collectWorkflowFiles: empty directory returns empty array", () => {
     const files = collectWorkflowFiles(dir);
     assert.deepEqual(files, []);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -282,7 +282,7 @@ function withTmpBaseline(content: string | null, fn: (p: string) => void) {
   try {
     fn(p);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 
@@ -318,7 +318,7 @@ test("readBaselineZizmorValue: invalid JSON returns null (does not throw)", () =
 // quality.yml — release PR build gate regression coverage (#7307)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test("#7307 quality.yml adds an advisory production build for release PR code changes", () => {
+test("#7307 quality.yml keeps the advisory production build (disabled: hosted 7 GB cannot finish it)", () => {
   const source = readQualityWorkflow();
   const buildJob = source.match(/\n  build:\n[\s\S]*?\n  # Docs\/OpenAPI contract gates only/);
 
@@ -326,17 +326,15 @@ test("#7307 quality.yml adds an advisory production build for release PR code ch
   assert.ok(buildJob, "quality.yml must define the build job before docs-gates");
   assert.match(buildJob[0], /name: Build \(advisory\)/);
   assert.match(buildJob[0], /needs: changes/);
-  assert.match(buildJob[0], /needs\.changes\.outputs\.code == 'true'/);
-  assert.match(buildJob[0], /github\.event\.pull_request\.draft == false/);
-  assert.match(buildJob[0], /startsWith\(github\.head_ref, 'mergify\/merge-queue\/'\)/);
-  // FORK PRs ONLY (2026-08-14). build.yml's `Fast Production Build` fires on
-  // `push: branches: ["**"]` and runs the superset `build:release`, so own-origin branches
-  // were building twice; a fork's push never reaches this repo, making this their only
-  // pre-merge build signal — and forks are 72 of the last 100 PRs into release/**.
-  assert.match(
-    buildJob[0],
-    /github\.event\.pull_request\.head\.repo\.full_name != github\.repository/
-  );
+  // Live predicate is a static skip. `continue-on-error` still paints a GitHub
+  // check FAILURE, and the hosted runner ResourceExhausts this tree (#11976) —
+  // so the job must not run. Bare `if: false` (zizmor obfuscation flags
+  // `${{ false }}`). The body below is the restore recipe, not dead code.
+  const buildDirectives = buildJob[0]
+    .split("\n")
+    .filter((line) => !/^\s*#/.test(line))
+    .join("\n");
+  assert.match(buildDirectives, /\n {4}if: false\n/);
   // Runner PINNED to hosted. The self-hosted pool is 2 permanently-busy runners, where this
   // job either queued for hours or was killed by cancel-in-progress — ~10-15% of runs ever
   // reached a conclusion across 2026-08-13/14. It must NOT go back on the USE_VPS_RUNNER
@@ -345,10 +343,6 @@ test("#7307 quality.yml adds an advisory production build for release PR code ch
   // Check the DIRECTIVES, not the prose: the comment above legitimately explains why the
   // self-hosted pool was abandoned, so a naive /self-hosted/ scan over the whole block would
   // match its own rationale.
-  const buildDirectives = buildJob[0]
-    .split("\n")
-    .filter((line) => !/^\s*#/.test(line))
-    .join("\n");
   assert.doesNotMatch(buildDirectives, /self-hosted/);
   assert.doesNotMatch(buildDirectives, /USE_VPS_RUNNER/);
   // Memory provisioning mirrored from build.yml: --max-old-space-size bounds only V8's heap,

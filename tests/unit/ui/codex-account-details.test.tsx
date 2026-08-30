@@ -113,4 +113,46 @@ describe("CodexAccountDetails", () => {
     expect(container.textContent).not.toContain("Cooling down");
     expect(container.textContent).toContain("Until ");
   });
+
+  it("renders cache-derived percentages when absolute usage and limit are unavailable", () => {
+    const container = renderPool({
+      parentConnectionId: "parent-cache-quota",
+      aggregate: { status: "available", limitedChildCount: 0 },
+      children: [
+        {
+          key: { parentConnectionId: "parent-cache-quota", scope: "codex" },
+          unavailable: false,
+          cooldown: { active: false, rateLimitedUntil: null },
+          quota: {
+            exhaustedWindow: null,
+            observedAt: "2026-08-26T12:00:00.000Z",
+            windows: {
+              "5h": {
+                usage: null,
+                limit: null,
+                resetAt: "2026-08-26T17:00:00.000Z",
+                usedPercentage: 100,
+              },
+              "7d": {
+                usage: null,
+                limit: null,
+                resetAt: "2026-09-02T12:00:00.000Z",
+                usedPercentage: 25,
+              },
+            },
+          },
+        },
+        {
+          key: { parentConnectionId: "parent-cache-quota", scope: "spark" },
+          unavailable: false,
+          cooldown: { active: false, rateLimitedUntil: null },
+          quota: quota(),
+        },
+      ],
+    });
+
+    expect(container.textContent).toContain("5h: 100% used");
+    expect(container.textContent).toContain("7d: 25% used");
+    expect(container.textContent).not.toContain("100/100");
+  });
 });
