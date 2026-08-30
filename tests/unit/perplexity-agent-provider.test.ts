@@ -142,16 +142,14 @@ test("perplexity-agent is available from the canonical API-key provider catalog"
   assert.equal(getProviderByAlias("pplx-agent"), entry);
 });
 
-test("perplexity-agent exposes starter models without restricting passthrough routing", () => {
+test("perplexity-agent exposes minimal starter models without duplicating live discovery", () => {
   const entry = REGISTRY["perplexity-agent"];
   const ids = new Set(entry.models.map((model) => model.id));
 
-  for (const modelId of DOCUMENTED_AGENT_MODEL_IDS) {
-    assert.ok(ids.has(modelId), `expected Perplexity Agent catalog to include ${modelId}`);
-  }
-  assert.equal(entry.models.length, DOCUMENTED_AGENT_MODEL_IDS.length);
+  assert.deepEqual([...ids].sort(), ["openai/gpt-5.6-sol", "perplexity/kimi-k3"].sort());
+  assert.equal(entry.models.length, 2);
+  assert.ok(entry.models.some((model) => model.id === "openai/gpt-5.6-sol"));
   assert.ok(entry.models.some((model) => model.id === "perplexity/kimi-k3"));
-  assert.ok(entry.models.some((model) => model.name.includes("Kimi K3")));
 });
 
 test("pplx-agent prefix preserves raw slash-containing Agent API model IDs", async () => {
