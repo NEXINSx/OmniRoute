@@ -26,6 +26,16 @@ export function overviewProjection(snap: OrchSnapshot, comboActive: number): Ove
   };
 
   for (const n of snap.nodes) {
+    // Overflow nodes (MAX_WORK_NODES cap) fold their dropped work nodes' true
+    // per-state counts into `counts` only — never into `columns`, since those
+    // nodes are not rendered on the canvas. Counters must show TRUE totals
+    // even when the canvas caps the rendered node count (operator ruling).
+    if (n.kind === "overflow" && n.droppedByState) {
+      for (const s of ORCH_STATES) {
+        counts[s] += n.droppedByState[s] ?? 0;
+      }
+      continue;
+    }
     if (n.kind !== "work" || !n.state) continue;
     counts[n.state] += 1;
     if (n.state === "queued" || n.state === "running" || n.state === "waiting_approval") {

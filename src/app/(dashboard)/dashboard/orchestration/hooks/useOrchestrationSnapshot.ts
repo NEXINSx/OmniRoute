@@ -19,7 +19,11 @@ interface Raw {
   a2a: A2ATask[];
   conductor: FleetSnapshot;
 }
-const EMPTY_RAW: Raw = { cloudAgent: [], a2a: [], conductor: { offline: true, runners: [], tasks: [] } };
+const EMPTY_RAW: Raw = {
+  cloudAgent: [],
+  a2a: [],
+  conductor: { offline: true, runners: [], tasks: [] },
+};
 
 async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
   const res = await fetch(url, { signal, cache: "no-store" });
@@ -36,7 +40,11 @@ export function useOrchestrationSnapshot() {
   // without either violation.
   const [raw, setRaw] = useState<Raw>(EMPTY_RAW);
   const [statuses, setStatuses] = useState<SourceStatus[]>([]);
-  const [polledAt, setPolledAt] = useState<number>(0);
+  // Lazy initializer (not a literal 0) so the pre-first-poll render already has a
+  // real timestamp — with `0` the very first `mergeSnapshot` call stamped
+  // `generatedAt` as the 1970 epoch. Safe: with EMPTY_RAW there is nothing to
+  // staleness-filter at mount, so seeding `Date.now()` here changes no behavior.
+  const [polledAt, setPolledAt] = useState<number>(() => Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,12 +68,24 @@ export function useOrchestrationSnapshot() {
       const nowIso = new Date(nowMs).toISOString();
       const next: SourceStatus[] = [];
       if (ca.status === "fulfilled") next.push({ source: "cloud-agent", ok: true });
-      else next.push({ source: "cloud-agent", ok: false, error: String(ca.reason), staleSince: nowIso });
+      else
+        next.push({
+          source: "cloud-agent",
+          ok: false,
+          error: String(ca.reason),
+          staleSince: nowIso,
+        });
       if (a2a.status === "fulfilled") next.push({ source: "a2a", ok: true });
       else next.push({ source: "a2a", ok: false, error: String(a2a.reason), staleSince: nowIso });
       if (cond.status === "fulfilled") {
         next.push({ source: "conductor", ok: true, offline: cond.value.offline });
-      } else next.push({ source: "conductor", ok: false, error: String(cond.reason), staleSince: nowIso });
+      } else
+        next.push({
+          source: "conductor",
+          ok: false,
+          error: String(cond.reason),
+          staleSince: nowIso,
+        });
 
       // Failed sources keep the previously stored slice — only overwrite what
       // actually resolved this round ("last good data" contract from the brief).
@@ -85,7 +105,10 @@ export function useOrchestrationSnapshot() {
     return () => {
       clearInterval(id);
       controller.abort();
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
     };
   }, []);
 

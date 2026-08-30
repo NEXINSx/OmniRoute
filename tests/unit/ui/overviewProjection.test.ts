@@ -44,4 +44,24 @@ describe("overviewProjection", () => {
     assert.equal(columns.done[0].id, "a2a:3");
     assert.equal(columns.running.length, 1);
   });
+  it("folds an overflow node's droppedByState into counts but not into columns", () => {
+    const snapWithOverflow: OrchSnapshot = {
+      ...snap,
+      nodes: [
+        ...snap.nodes,
+        {
+          id: "overflow:cloud-agent",
+          kind: "overflow",
+          source: "cloud-agent",
+          label: "+7 more",
+          droppedByState: { running: 5, failed: 2 },
+        },
+      ],
+    };
+    const { counts, columns } = overviewProjection(snapWithOverflow, 0);
+    assert.equal(counts.running, 1 + 5);
+    assert.equal(counts.failed, 1 + 2);
+    assert.equal(columns.running.length, 1);
+    assert.equal(columns.done.length, 1);
+  });
 });

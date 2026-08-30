@@ -108,6 +108,10 @@ export function mergeSnapshot(
         source,
         label: `+${excess.length} more`,
         counts,
+        // Additive: lets overviewProjection fold true per-state totals into its
+        // counters even though these nodes no longer render on the canvas
+        // (operator ruling — spec governs, counters must show TRUE totals).
+        droppedByState: counts,
       });
     }
     nodes = nodes.filter((n) => !dropped.has(n.id)).concat(overflowNodes);
@@ -127,7 +131,11 @@ export function mergeSnapshot(
   const root: OrchNode = { id: "orchestrator", kind: "orchestrator", label: "OmniRoute" };
   const sourceIds = new Set(nodes.filter((n) => n.kind === "source").map((n) => n.id));
   for (const s of sources) {
-    if (!s.ok && !sourceIds.has(`source:${s.source}`) && s.source !== "routing") {
+    // `!s.ok` covers hard failures; `s.offline` also materializes a placeholder
+    // for a source that reported ok:true but offline:true (e.g. Conductor with
+    // no hub configured) — otherwise that source never gets a SourceNode at all
+    // and its "offline" sublabel can never render.
+    if ((!s.ok || s.offline) && !sourceIds.has(`source:${s.source}`) && s.source !== "routing") {
       nodes.push({
         id: `source:${s.source}`,
         kind: "source",

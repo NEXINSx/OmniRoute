@@ -14,12 +14,17 @@ vi.mock("@/hooks/useLiveDashboard", () => ({
 
 import { useOrchestrationSnapshot } from "@/app/(dashboard)/dashboard/orchestration/hooks/useOrchestrationSnapshot";
 
-function HookProbe({ onRender }: { onRender: (v: ReturnType<typeof useOrchestrationSnapshot>) => void }) {
+function HookProbe({
+  onRender,
+}: {
+  onRender: (v: ReturnType<typeof useOrchestrationSnapshot>) => void;
+}) {
   onRender(useOrchestrationSnapshot());
   return null;
 }
 
-const okJson = (body: unknown) => Promise.resolve({ ok: true, json: () => Promise.resolve(body) } as Response);
+const okJson = (body: unknown) =>
+  Promise.resolve({ ok: true, json: () => Promise.resolve(body) } as Response);
 
 describe("useOrchestrationSnapshot", () => {
   let container: HTMLDivElement;
@@ -39,25 +44,49 @@ describe("useOrchestrationSnapshot", () => {
 
   it("polls the three endpoints and builds a snapshot; a failed source keeps the last good data", async () => {
     let latest: ReturnType<typeof useOrchestrationSnapshot> | null = null;
-    const task = { id: "t1", providerId: "devin", status: "running", prompt: "p", source: { repoName: "r", repoUrl: "https://x" }, options: {}, activities: [], createdAt: "2026-08-30T10:00:00Z", updatedAt: "2026-08-30T10:00:00Z" };
+    const task = {
+      id: "t1",
+      providerId: "devin",
+      status: "running",
+      prompt: "p",
+      source: { repoName: "r", repoUrl: "https://x" },
+      options: {},
+      activities: [],
+      createdAt: "2026-08-30T10:00:00Z",
+      updatedAt: "2026-08-30T10:00:00Z",
+    };
     const fetchMock = vi.fn((url: string) => {
       if (url.startsWith("/api/v1/agents/tasks")) return okJson({ data: [task] });
-      if (url.startsWith("/api/a2a/tasks")) return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
+      if (url.startsWith("/api/a2a/tasks"))
+        return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
       return okJson({ offline: false, runners: [], tasks: [] });
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await act(async () => { root.render(<HookProbe onRender={(v) => { latest = v; }} />); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+    await act(async () => {
+      root.render(
+        <HookProbe
+          onRender={(v) => {
+            latest = v;
+          }}
+        />
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10);
+    });
     expect(latest!.snapshot.nodes.some((n) => n.id === "cloud-agent:t1")).toBe(true);
 
     // Second tick: cloud agent fails — node must survive from the last good photo, source marked stale.
     fetchMock.mockImplementation((url: string) => {
       if (url.startsWith("/api/v1/agents/tasks")) return Promise.reject(new Error("boom"));
-      if (url.startsWith("/api/a2a/tasks")) return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
+      if (url.startsWith("/api/a2a/tasks"))
+        return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
       return okJson({ offline: false, runners: [], tasks: [] });
     });
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_100); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
     expect(latest!.snapshot.nodes.some((n) => n.id === "cloud-agent:t1")).toBe(true);
     const st = latest!.snapshot.sources.find((s) => s.source === "cloud-agent");
     expect(st?.ok).toBe(false);
@@ -66,16 +95,26 @@ describe("useOrchestrationSnapshot", () => {
   it("a requests-channel WS event triggers a debounced immediate refetch", async () => {
     const fetchMock = vi.fn((url: string) => {
       if (url.startsWith("/api/v1/agents/tasks")) return okJson({ data: [] });
-      if (url.startsWith("/api/a2a/tasks")) return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
+      if (url.startsWith("/api/a2a/tasks"))
+        return okJson({ tasks: [], total: 0, limit: 200, offset: 0 });
       return okJson({ offline: false, runners: [], tasks: [] });
     });
     vi.stubGlobal("fetch", fetchMock);
-    await act(async () => { root.render(<HookProbe onRender={() => {}} />); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+    await act(async () => {
+      root.render(<HookProbe onRender={() => {}} />);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10);
+    });
     const callsAfterMount = fetchMock.mock.calls.length;
 
-    act(() => { capturedOnEvent?.({ channel: "requests" }); capturedOnEvent?.({ channel: "requests" }); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(1_100); });
+    act(() => {
+      capturedOnEvent?.({ channel: "requests" });
+      capturedOnEvent?.({ channel: "requests" });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_100);
+    });
     // Two burst events → exactly ONE extra round of 3 fetches (debounce), not two.
     expect(fetchMock.mock.calls.length).toBe(callsAfterMount + 3);
   });

@@ -43,9 +43,16 @@ export function fromConductor(snap: FleetSnapshot): { nodes: OrchNode[]; edges: 
     counts[s] = (counts[s] ?? 0) + 1;
   };
 
+  // Only tasks whose runner actually exists in snap.runners can be "absorbed"
+  // into that runner's ActivityNode below — a running task pointing at a runner
+  // id that has since deregistered must fall through to the normal work-node
+  // loop instead of being silently skipped as "already an activity".
+  const runnerIds = new Set(snap.runners.map((r) => r.id));
   const activeByRunner = new Map<string, FleetTask>();
   for (const t of snap.tasks) {
-    if (t.runner && mapHubStatus(t.status) === "running") activeByRunner.set(t.runner, t);
+    if (t.runner && runnerIds.has(t.runner) && mapHubStatus(t.status) === "running") {
+      activeByRunner.set(t.runner, t);
+    }
   }
 
   for (const r of snap.runners) {

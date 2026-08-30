@@ -21,6 +21,11 @@ export interface OrchNode {
   endedAt?: string;
   cost?: number;
   counts?: Partial<Record<OrchState, number>>;
+  // Overflow nodes only: per-state counts of the work nodes folded into this
+  // overflow node when the MAX_WORK_NODES cap engages. overviewProjection folds
+  // this into its `counts` totals (never into `columns`) so operators still see
+  // TRUE totals even when the canvas caps the rendered node count.
+  droppedByState?: Partial<Record<OrchState, number>>;
   mirrorOf?: string;
   raw?: unknown;
 }

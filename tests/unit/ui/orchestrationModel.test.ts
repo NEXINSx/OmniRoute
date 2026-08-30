@@ -205,6 +205,27 @@ describe("fromConductor", () => {
     assert.equal(w?.state, "failed");
     assert.match(w?.sublabel ?? "", /vaporized/);
   });
+  it("running task whose runner is not present in snap.runners is emitted as a work node, not swallowed", () => {
+    const snap: FleetSnapshot = {
+      offline: false,
+      runners: [],
+      tasks: [
+        {
+          ...baseSnap.tasks[0],
+          id: "ct-orphan",
+          status: "running",
+          runner: "ghost-runner",
+        },
+      ],
+    };
+    const { nodes, edges } = fromConductor(snap);
+    const w = nodes.find((n) => n.id === "conductor:task:ct-orphan");
+    assert.equal(w?.kind, "work");
+    assert.equal(w?.state, "running");
+    assert.ok(
+      edges.some((e) => e.from === "source:conductor" && e.to === "conductor:task:ct-orphan")
+    );
+  });
 });
 
 const OK_SOURCES = [
@@ -290,6 +311,37 @@ describe("mergeSnapshot", () => {
     );
     const mergedNode = snap.nodes.find((n) => n.id === "conductor:task:ct1");
     assert.equal(mergedNode?.mirrorOf, "a2a:am2");
+  });
+  it("materializes an offline placeholder source node for a source reporting offline:true even when ok:true", () => {
+    const src = [{ source: "conductor" as const, ok: true, offline: true }];
+    const snap = mergeSnapshot({ cloudAgent: empty, a2a: empty, conductor: empty }, src, {
+      now: NOW,
+    });
+    const node = snap.nodes.find((n) => n.id === "source:conductor");
+    assert.ok(node, "offline placeholder source:conductor node expected");
+    assert.equal(node?.sublabel, "offline");
+    assert.ok(
+      snap.edges.some(
+        (e) => e.from === "orchestrator" && e.to === "source:conductor" && e.kind === "owns"
+      )
+    );
+  });
+  it("overflow node carries droppedByState with the per-state counts of dropped work nodes", () => {
+    const many = Array.from({ length: MAX_WORK_NODES + 5 }, (_, i) =>
+      caTask({
+        id: `ov${i}`,
+        status: i < MAX_WORK_NODES ? "running" : "failed",
+        updatedAt: new Date(NOW - i * 1000).toISOString(),
+      })
+    );
+    const snap = mergeSnapshot(
+      { cloudAgent: fromCloudAgent(many), a2a: empty, conductor: empty },
+      OK_SOURCES,
+      { now: NOW }
+    );
+    const overflow = snap.nodes.find((n) => n.id === "overflow:cloud-agent");
+    assert.ok(overflow, "overflow node expected");
+    assert.deepEqual(overflow?.droppedByState, { failed: 5 });
   });
   it("drops a stale terminal Conductor task older than STALE_COMPLETED_MS unless showCompleted", () => {
     const staleSnap: FleetSnapshot = {

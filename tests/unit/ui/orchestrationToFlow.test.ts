@@ -16,14 +16,18 @@ const snap: OrchSnapshot = {
     { id: "e2", from: "source:a2a", to: "a2a:t1", kind: "owns", active: true },
     { id: "e3", from: "source:a2a", to: "a2a:t2", kind: "owns", active: false },
   ],
-  sources: [], generatedAt: "2026-08-30T12:00:00Z",
+  sources: [],
+  generatedAt: "2026-08-30T12:00:00Z",
 };
 
 describe("orchestrationToFlow", () => {
   it("puts each kind on its own Y layer and is deterministic", () => {
     const a = orchestrationToFlow(snap);
     const b = orchestrationToFlow(snap);
-    assert.deepEqual(a.nodes.map((n) => n.position), b.nodes.map((n) => n.position));
+    assert.deepEqual(
+      a.nodes.map((n) => n.position),
+      b.nodes.map((n) => n.position)
+    );
     const ys = new Map(a.nodes.map((n) => [n.id, n.position.y]));
     assert.equal(ys.get("orchestrator"), 0);
     assert.equal(ys.get("source:a2a"), 150);
@@ -37,9 +41,16 @@ describe("orchestrationToFlow", () => {
   });
   it("fitKey only tracks the set of work ids", () => {
     const k1 = orchestrationToFlow(snap).fitKey;
-    const stateChanged = { ...snap, nodes: snap.nodes.map((n) => n.id === "a2a:t1" ? { ...n, state: "succeeded" as const } : n) };
+    const stateChanged = {
+      ...snap,
+      nodes: snap.nodes.map((n) => (n.id === "a2a:t1" ? { ...n, state: "succeeded" as const } : n)),
+    };
     assert.equal(orchestrationToFlow(stateChanged).fitKey, k1);
-    const nodeRemoved = { ...snap, nodes: snap.nodes.filter((n) => n.id !== "a2a:t2"), edges: snap.edges.filter((e) => e.to !== "a2a:t2") };
+    const nodeRemoved = {
+      ...snap,
+      nodes: snap.nodes.filter((n) => n.id !== "a2a:t2"),
+      edges: snap.edges.filter((e) => e.to !== "a2a:t2"),
+    };
     assert.notEqual(orchestrationToFlow(nodeRemoved).fitKey, k1);
   });
 });
