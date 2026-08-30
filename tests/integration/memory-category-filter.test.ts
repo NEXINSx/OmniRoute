@@ -8,7 +8,8 @@ const TEST_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-memory-ca
 process.env.DATA_DIR = TEST_DATA_DIR;
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("../../src/lib/db/settings.ts");
+const localDb = { updateSettings };
 const { GET } = await import("../../src/app/api/memory/route.ts");
 
 async function resetStorage() {
