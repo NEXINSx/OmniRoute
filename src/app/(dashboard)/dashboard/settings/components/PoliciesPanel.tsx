@@ -13,6 +13,16 @@ import { Card, Button } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useTranslations } from "next-intl";
 
+async function fetchPoliciesData() {
+  try {
+    const res = await fetch("/api/policies");
+    if (res.ok) return await res.json();
+  } catch {
+    // silent
+  }
+  return null;
+}
+
 export default function PoliciesPanel() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,25 +30,27 @@ export default function PoliciesPanel() {
   const notify = useNotificationStore();
   const t = useTranslations("settings");
 
-  const fetchPolicies = useCallback(async () => {
-    try {
-      const res = await fetch("/api/policies");
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
+  const applyPolicies = useCallback((json) => {
+    if (json) setData(json);
+    setLoading(false);
   }, []);
 
+  const fetchPolicies = useCallback(async () => {
+    applyPolicies(await fetchPoliciesData());
+  }, [applyPolicies]);
+
   useEffect(() => {
-    fetchPolicies();
+    let cancelled = false;
+    void (async () => {
+      const json = await fetchPoliciesData();
+      if (!cancelled) applyPolicies(json);
+    })();
     const interval = setInterval(fetchPolicies, 15000);
-    return () => clearInterval(interval);
-  }, [fetchPolicies]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [applyPolicies, fetchPolicies]);
 
   const handleUnlock = async (identifier) => {
     setUnlocking(identifier);

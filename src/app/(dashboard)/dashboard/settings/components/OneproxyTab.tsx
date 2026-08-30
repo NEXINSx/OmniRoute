@@ -36,6 +36,42 @@ type SyncStatus = {
   consecutiveFailures: number;
 };
 
+type OneproxyFetchResult = {
+  proxies?: OneproxyItem[];
+  statsPayload?: { stats: OneproxyStats; status: SyncStatus };
+};
+
+async function fetchOneproxyData(
+  filterProtocol: string,
+  filterCountry: string,
+  minQuality: string
+): Promise<OneproxyFetchResult> {
+  const result: OneproxyFetchResult = {};
+  try {
+    const params = new URLSearchParams();
+    if (filterProtocol) params.set("protocol", filterProtocol);
+    if (filterCountry) params.set("countryCode", filterCountry);
+    if (minQuality) params.set("minQuality", minQuality);
+
+    const [proxiesRes, statsRes] = await Promise.all([
+      fetch(`/api/settings/oneproxy?${params.toString()}`),
+      fetch("/api/settings/oneproxy?action=stats"),
+    ]);
+
+    if (proxiesRes.ok) {
+      const data = await proxiesRes.json();
+      result.proxies = data.items || [];
+    }
+    if (statsRes.ok) {
+      const data = await statsRes.json();
+      result.statsPayload = { stats: data.stats, status: data.status };
+    }
+  } catch {
+    /* silent */
+  }
+  return result;
+}
+
 export default function OneproxyTab() {
   const t = useTranslations("settings");
   const [proxies, setProxies] = useState<OneproxyItem[]>([]);
@@ -49,37 +85,37 @@ export default function OneproxyTab() {
   const [filterCountry, setFilterCountry] = useState("");
   const [minQuality, setMinQuality] = useState("");
 
+  const applyData = useCallback((result: OneproxyFetchResult) => {
+    if (result.proxies) setProxies(result.proxies);
+    if (result.statsPayload) {
+      setStats(result.statsPayload.stats);
+      setStatus(result.statsPayload.status);
+    }
+    setLoading(false);
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filterProtocol) params.set("protocol", filterProtocol);
-      if (filterCountry) params.set("countryCode", filterCountry);
-      if (minQuality) params.set("minQuality", minQuality);
+    applyData(await fetchOneproxyData(filterProtocol, filterCountry, minQuality));
+  }, [applyData, filterProtocol, filterCountry, minQuality]);
 
-      const [proxiesRes, statsRes] = await Promise.all([
-        fetch(`/api/settings/oneproxy?${params.toString()}`),
-        fetch("/api/settings/oneproxy?action=stats"),
-      ]);
-
-      if (proxiesRes.ok) {
-        const data = await proxiesRes.json();
-        setProxies(data.items || []);
-      }
-      if (statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data.stats);
-        setStatus(data.status);
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }, [filterProtocol, filterCountry, minQuality]);
+  const filtersKey = `${filterProtocol}|${filterCountry}|${minQuality}`;
+  const [prevFiltersKey, setPrevFiltersKey] = useState(filtersKey);
+  if (prevFiltersKey !== filtersKey) {
+    setPrevFiltersKey(filtersKey);
+    setLoading(true);
+  }
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchOneproxyData(filterProtocol, filterCountry, minQuality);
+      if (!cancelled) applyData(result);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyData, filterProtocol, filterCountry, minQuality]);
 
   const handleSync = async () => {
     setSyncing(true);

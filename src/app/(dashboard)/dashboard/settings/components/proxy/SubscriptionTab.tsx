@@ -48,6 +48,21 @@ const EMPTY_FORM: FormState = {
   enabled: true,
 };
 
+type SubscriptionsFetchResult = { items?: SubscriptionRecord[]; error?: string };
+
+async function fetchSubscriptionsResult(
+  loadFailedMessage: string
+): Promise<SubscriptionsFetchResult> {
+  try {
+    const res = await fetch("/api/v1/management/proxy-subscriptions");
+    if (!res.ok) throw new Error(loadFailedMessage);
+    const data = await res.json();
+    return { items: Array.isArray(data.items) ? data.items : [] };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export default function SubscriptionTab() {
   const [subs, setSubs] = useState<SubscriptionRecord[]>([]);
   const [providers, setProviders] = useState<ProviderOption[]>([]);
@@ -83,43 +98,46 @@ export default function SubscriptionTab() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const applyLoadResult = useCallback((result: SubscriptionsFetchResult) => {
+    if (result.items) setSubs(result.items);
+    if (result.error !== undefined) setError(result.error);
+    setLoading(false);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch("/api/v1/management/proxy-subscriptions");
-      if (!res.ok) throw new Error(t("proxySubscription.loadFailed"));
-      const data = await res.json();
-      setSubs(Array.isArray(data.items) ? data.items : []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  const loadProviders = useCallback(async () => {
-    try {
-      const res = await fetch("/api/providers");
-      if (!res.ok) return;
-      const data = await res.json();
-      const connections = Array.isArray(data.connections) ? data.connections : [];
-      setProviders(
-        connections.map((c: Record<string, unknown>) => ({
-          id: String(c.id),
-          name: typeof c.name === "string" && c.name ? c.name : String(c.provider),
-          provider: String(c.provider),
-        }))
-      );
-    } catch {
-      /* non-fatal: rule mode just won't offer a provider picker */
-    }
-  }, []);
+    applyLoadResult(await fetchSubscriptionsResult(t("proxySubscription.loadFailed")));
+  }, [applyLoadResult, t]);
 
   useEffect(() => {
-    load();
-    loadProviders();
-  }, [load, loadProviders]);
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchSubscriptionsResult(t("proxySubscription.loadFailed"));
+      if (!cancelled) applyLoadResult(result);
+    })();
+    void (async () => {
+      try {
+        const res = await fetch("/api/providers");
+        if (!res.ok) return;
+        const data = await res.json();
+        const connections = Array.isArray(data.connections) ? data.connections : [];
+        if (cancelled) return;
+        setProviders(
+          connections.map((c: Record<string, unknown>) => ({
+            id: String(c.id),
+            name: typeof c.name === "string" && c.name ? c.name : String(c.provider),
+            provider: String(c.provider),
+          }))
+        );
+      } catch {
+        /* non-fatal: rule mode just won't offer a provider picker */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyLoadResult, t]);
 
   const resetForm = () => {
     setForm(EMPTY_FORM);

@@ -188,10 +188,12 @@ function RequestQueueCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setDraft(value);
-  }, [value]);
+  }
 
   return (
     <Card className="p-6">
@@ -277,7 +279,9 @@ function RequestQueueCard({
               value={draft.executionMaxWaitMs}
               min={1}
               suffix="ms"
-              onChange={(executionMaxWaitMs) => setDraft((prev) => ({ ...prev, executionMaxWaitMs }))}
+              onChange={(executionMaxWaitMs) =>
+                setDraft((prev) => ({ ...prev, executionMaxWaitMs }))
+              }
             />
           </>
         ) : (
@@ -349,10 +353,12 @@ function ConnectionCooldownCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setDraft(value);
-  }, [value]);
+  }
 
   const renderProfile = (key: "oauth" | "apikey", title: string, icon: string) => {
     const current = editing ? draft[key] : value[key];
@@ -532,10 +538,12 @@ function ProviderBreakerCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setDraft(value);
-  }, [value]);
+  }
 
   const renderProfile = (key: "oauth" | "apikey", title: string, icon: string) => {
     const current = editing ? draft[key] : value[key];
@@ -642,10 +650,12 @@ function WaitForCooldownCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setDraft(value);
-  }, [value]);
+  }
 
   return (
     <Card className="p-6">
@@ -738,10 +748,12 @@ function ComboCooldownWaitCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setDraft(value);
-  }, [value]);
+  }
 
   const title = t("resilienceComboCooldownWaitTitle");
   const desc =
@@ -848,10 +860,12 @@ function QuotaShareConcurrencyLimitCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setDraft(value);
-  }, [value]);
+  }
 
   const title = t("resilienceQuotaShareConcurrencyTitle");
   const desc =
@@ -918,10 +932,12 @@ export function ProviderCooldownCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setEditing(value);
-  }, [value]);
+  }
 
   return (
     <Card className="p-6">
@@ -1025,10 +1041,12 @@ function CredentialHealthCheckCard({
   const t = useTranslations("settings");
   const [editing, setEditing] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setEditing(value);
-  }, [value]);
+  }
 
   const disabled = editing.intervalMinutes <= 0;
 
@@ -1037,7 +1055,9 @@ function CredentialHealthCheckCard({
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-xl text-primary">health_and_safety</span>
+            <span className="material-symbols-outlined text-xl text-primary">
+              health_and_safety
+            </span>
             <h2 className="text-lg font-bold">{t("resilienceCredentialHealthTitle")}</h2>
           </div>
           <SectionDescription

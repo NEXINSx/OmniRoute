@@ -1498,11 +1498,6 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/settings/components/AccessTokensTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/settings/components/AppearanceTab.tsx": {
     "@next/next/no-img-element": {
       "count": 4
@@ -1510,9 +1505,6 @@
   },
   "src/app/(dashboard)/dashboard/settings/components/AuthzSection.tsx": {
     "no-restricted-syntax": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1531,21 +1523,8 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/settings/components/FallbackChainsEditor.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/IPFilterSection.tsx": {
-    "react-hooks/immutability": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/settings/components/MitmProxyTab.tsx": {
     "@next/next/no-html-link-for-pages": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1557,46 +1536,10 @@
   "src/app/(dashboard)/dashboard/settings/components/ModelCapabilityOverridesTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/app/(dashboard)/dashboard/settings/components/ModelLockoutCard.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/ModelsDevSyncTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/OneproxyTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/PayloadRulesTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/PoliciesPanel.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/PricingTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/ProviderAccountRoutingCard.tsx": {
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1605,18 +1548,8 @@
       "count": 3
     }
   },
-  "src/app/(dashboard)/dashboard/settings/components/ResilienceTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 8
-    }
-  },
   "src/app/(dashboard)/dashboard/settings/components/ResponsesStatePolicyTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/RoutingStrategyCard.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1632,19 +1565,6 @@
   },
   "src/app/(dashboard)/dashboard/settings/components/SystemStorageTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/proxy/GlobalConfigTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/settings/components/proxy/SubscriptionTab.tsx": {
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },

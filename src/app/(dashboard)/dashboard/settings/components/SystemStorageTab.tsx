@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, Button, Badge, ConfirmModal } from "@/shared/components";
 import { useLocale, useTranslations } from "next-intl";
 import DatabaseBackupRetentionCard from "./DatabaseBackupRetentionCard";
@@ -17,6 +17,27 @@ const RESET_USAGE_PERIOD_VALUES = [
   "30d",
   "all",
 ] as const;
+
+async function fetchStorageHealthData() {
+  try {
+    const res = await fetch("/api/storage/health");
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error("Failed to fetch storage health:", err);
+    return null;
+  }
+}
+
+async function fetchDatabaseSettingsData() {
+  try {
+    const res = await fetch("/api/settings/database");
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.error("Failed to load database settings:", err);
+  }
+  return null;
+}
 
 export default function SystemStorageTab() {
   const [backups, setBackups] = useState([]);
@@ -103,34 +124,27 @@ export default function SystemStorageTab() {
     }
   };
 
+  const applyStorageHealth = useCallback((data) => {
+    if (!data) return;
+    setStorageHealth((prev) => ({ ...prev, ...data }));
+    setBackupCleanupOptions({
+      keepLatest: data.backupRetention?.maxFiles || 20,
+      retentionDays: data.backupRetention?.days || 0,
+    });
+  }, []);
+
   const loadStorageHealth = async () => {
-    try {
-      const res = await fetch("/api/storage/health");
-      if (!res.ok) return;
-      const data = await res.json();
-      setStorageHealth((prev) => ({ ...prev, ...data }));
-      setBackupCleanupOptions({
-        keepLatest: data.backupRetention?.maxFiles || 20,
-        retentionDays: data.backupRetention?.days || 0,
-      });
-    } catch (err) {
-      console.error("Failed to fetch storage health:", err);
-    }
+    applyStorageHealth(await fetchStorageHealthData());
   };
+
+  const applyDatabaseSettings = useCallback((data) => {
+    if (data) setDbSettings(data);
+    setDbSettingsLoading(false);
+  }, []);
 
   const loadDatabaseSettings = async () => {
     setDbSettingsLoading(true);
-    try {
-      const res = await fetch("/api/settings/database");
-      if (res.ok) {
-        const data = await res.json();
-        setDbSettings(data);
-      }
-    } catch (err) {
-      console.error("Failed to load database settings:", err);
-    } finally {
-      setDbSettingsLoading(false);
-    }
+    applyDatabaseSettings(await fetchDatabaseSettingsData());
   };
 
   const saveDatabaseSettings = async () => {
@@ -480,9 +494,19 @@ export default function SystemStorageTab() {
   };
 
   useEffect(() => {
-    loadStorageHealth();
-    loadDatabaseSettings();
-  }, []);
+    let cancelled = false;
+    void (async () => {
+      const data = await fetchStorageHealthData();
+      if (!cancelled) applyStorageHealth(data);
+    })();
+    void (async () => {
+      const data = await fetchDatabaseSettingsData();
+      if (!cancelled) applyDatabaseSettings(data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyStorageHealth, applyDatabaseSettings]);
 
   /** Triggers a browser file download from an existing Blob. */
   const triggerDownload = (blob: Blob, filename: string) => {
