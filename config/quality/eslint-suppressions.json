@@ -961,57 +961,11 @@
   "src/app/(dashboard)/dashboard/cli-code/components/AntigravityToolCard.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    },
-    "react-hooks/immutability": {
-      "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/cli-code/components/ClaudeClassifierCompatToggle.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/cli-code/components/ClaudeToolCard.tsx": {
-    "react-hooks/immutability": {
-      "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
-  "src/app/(dashboard)/dashboard/cli-code/components/CliProfileAutoSyncToggles.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/app/(dashboard)/dashboard/cli-code/components/ClineToolCard.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/immutability": {
-      "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
-  "src/app/(dashboard)/dashboard/cli-code/components/CliproxyapiToolCard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/cli-code/components/CodexToolCard.tsx": {
-    "react-hooks/immutability": {
-      "count": 4
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 2
     }
   },
   "src/app/(dashboard)/dashboard/cli-code/components/CopilotToolCard.tsx": {
@@ -1019,49 +973,13 @@
       "count": 3
     }
   },
-  "src/app/(dashboard)/dashboard/cli-code/components/DroidToolCard.tsx": {
-    "react-hooks/immutability": {
-      "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
-  "src/app/(dashboard)/dashboard/cli-code/components/GrokBuildToolCard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
   "src/app/(dashboard)/dashboard/cli-code/components/HermesAgentToolCard.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    },
-    "react-hooks/immutability": {
-      "count": 1
-    },
-    "react-hooks/purity": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/app/(dashboard)/dashboard/cli-code/components/KiloToolCard.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 2
-    },
-    "react-hooks/immutability": {
-      "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/cli-code/components/OpenClawToolCard.tsx": {
-    "react-hooks/immutability": {
-      "count": 3
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 2
     }
   },

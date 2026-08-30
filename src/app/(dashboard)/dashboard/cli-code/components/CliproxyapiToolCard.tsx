@@ -56,10 +56,12 @@ export default function CliproxyapiToolCard({ isExpanded = false, onToggle = () 
   }, []);
 
   useEffect(() => {
-    if (isExpanded) {
-      fetchStatus();
-      fetchUpdateInfo();
-    }
+    if (!isExpanded) return;
+    // Load in an async continuation so every setState happens after an await
+    // (react-hooks/set-state-in-effect: no synchronous setState in effect bodies).
+    void (async () => {
+      await Promise.all([fetchStatus(), fetchUpdateInfo()]);
+    })();
   }, [isExpanded, fetchStatus, fetchUpdateInfo]);
 
   const apiCall = async (action: string, body?: Record<string, unknown>) => {
