@@ -1829,11 +1829,6 @@
       "count": 2
     }
   },
-  "src/lib/credentialHealth/scheduler.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/lib/db/apiKeys.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
@@ -3448,9 +3443,6 @@
   "tests/unit/cli-nodes-commands.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 15
-    },
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
     }
   },
   "tests/unit/cli-oauth-commands.test.ts": {
@@ -4316,6 +4308,11 @@
   "tests/unit/executor-pollinations.test.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 4
+    }
+  },
+  "tests/unit/feature-flags-settings.test.ts": {
+    "@typescript-eslint/no-unused-vars": {
+      "count": 1
     }
   },
   "tests/unit/fetch-timeout.test.ts": {
