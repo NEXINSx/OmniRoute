@@ -79,4 +79,6 @@ async function postHandler(request: any, context: any, preParsedBody: any = null
   return await handleChat(request, null, body);
 }
 
-export const POST = withChatAdmission(withInjectionGuard(postHandler));
+// `logger: null` — the guardrail registry re-evaluates this request inside
+// handleChat with the pino logger (#11936 dedupe).
+export const POST = withChatAdmission(withInjectionGuard(postHandler, { logger: null }));

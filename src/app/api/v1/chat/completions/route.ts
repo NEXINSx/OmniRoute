@@ -39,8 +39,9 @@ import {
 
 let initPromise = null;
 
-// Singleton injection guard instance
-const injectionGuard = createInjectionGuard();
+// Singleton injection guard instance. `logger: null` — the guardrail registry
+// re-evaluates this request inside handleChat with the pino logger (#11936 dedupe).
+const injectionGuard = createInjectionGuard({ logger: null });
 
 /**
  * Initialize translators once (Promise-based singleton — no race condition)
