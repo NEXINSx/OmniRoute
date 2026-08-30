@@ -39,9 +39,7 @@
   "incremental": true,
   "incrementalFile": "reports/mutation/stryker-incremental.json",
   "testRunner": "tap",
-  "plugins": [
-    "@stryker-mutator/tap-runner"
-  ],
+  "plugins": ["@stryker-mutator/tap-runner"],
   "tap": {
     "testFiles": [
       "tests/unit/10085-compatible-generic-vs-uuid-credential.test.ts",
@@ -266,6 +264,7 @@
       "tests/unit/issue-7071-ollama-session-quota.test.ts",
       "tests/unit/kimi-quota-reset-recovery.test.ts",
       "tests/unit/least-used-rotation-10945.test.ts",
+      "tests/unit/lkgp-stale-pin-exhaustion-11911.test.ts",
       "tests/unit/livews-forward-backoff-4604.test.ts",
       "tests/unit/management-auth-hardening.test.ts",
       "tests/unit/mark-account-unavailable-numeric-epoch-guard.test.ts",
@@ -513,11 +512,7 @@
     ".worktrees",
     ".stryker-tmp"
   ],
-  "reporters": [
-    "progress",
-    "html",
-    "json"
-  ],
+  "reporters": ["progress", "html", "json"],
   "htmlReporter": {
     "fileName": "reports/mutation/mutation.html"
   },
