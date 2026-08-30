@@ -19,6 +19,9 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "open-sse/services/videoCombo.ts": 2,
     "src/app/api/compression/compare/verify/route.ts": 1,
     "src/app/api/internal/codex-responses-ws/route.ts": 1,
+    // PR #11390: rerank listing endpoint probes configured credentials so the
+    // dashboard rerank selector only offers providers that can actually serve.
+    "src/app/api/memory/rerank-providers/route.ts": 1,
     "src/app/api/search/providers/route.ts": 3,
     "src/app/api/v1/_shared/elevenLabsProxy.ts": 1,
     "src/app/api/v1/audio/speech/route.ts": 1,
@@ -49,7 +52,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     // from resolveLocalSyncedEndpointRoute, and handles allRateLimited, so it is
     // fenced the same way as the two pre-existing sites.
     "src/lib/embeddings/service.ts": 3,
-    "src/lib/memory/embedding/index.ts": 1,
+    // PR #11390: second site is the generic derived-provider listing fallback —
+    // read-only key presence probe used to decide whether a configured chat
+    // provider may appear in the memory embedding-source dropdown.
+    "src/lib/memory/embedding/index.ts": 2,
     "src/lib/search/executeWebSearch.ts": 2,
     "src/lib/skills/webFetchExecution.ts": 1,
     "src/sse/handlers/chat.ts": 2,
