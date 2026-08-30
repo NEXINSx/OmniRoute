@@ -1,5 +1,5 @@
 /** Conductor fleet snapshot → unified orchestration nodes. Pure. */
-import type { FleetSnapshot, FleetTask } from "@/lib/conductor/hubProxy";
+import type { FleetRunner, FleetSnapshot, FleetTask } from "@/lib/conductor/hubProxy";
 import type { OrchEdge, OrchNode, OrchState } from "./orchestrationTypes";
 
 const TERMINAL: ReadonlySet<OrchState> = new Set(["succeeded", "failed", "cancelled"]);
@@ -32,21 +32,13 @@ function taskNode(t: FleetTask, kind: "work" | "activity"): OrchNode {
   };
 }
 
-export function fromConductor(snap: FleetSnapshot): { nodes: OrchNode[]; edges: OrchEdge[] } {
-  if (snap.offline || (snap.runners.length === 0 && snap.tasks.length === 0)) {
-    return { nodes: [], edges: [] };
-  }
-  const nodes: OrchNode[] = [];
-  const edges: OrchEdge[] = [];
-  const counts: Partial<Record<OrchState, number>> = {};
-  const bump = (s: OrchState) => {
-    counts[s] = (counts[s] ?? 0) + 1;
-  };
-
-  // Only tasks whose runner actually exists in snap.runners can be "absorbed"
-  // into that runner's ActivityNode below — a running task pointing at a runner
-  // id that has since deregistered must fall through to the normal work-node
-  // loop instead of being silently skipped as "already an activity".
+/**
+ * Tasks whose runner actually exists in `snap.runners` AND is currently "running" — those
+ * get "absorbed" into that runner's ActivityNode instead of getting their own work node.
+ * A running task pointing at a runner id that has since deregistered falls through to the
+ * normal work-node loop instead of being silently skipped as "already an activity".
+ */
+function computeActiveByRunner(snap: FleetSnapshot): Map<string, FleetTask> {
   const runnerIds = new Set(snap.runners.map((r) => r.id));
   const activeByRunner = new Map<string, FleetTask>();
   for (const t of snap.tasks) {
@@ -54,17 +46,27 @@ export function fromConductor(snap: FleetSnapshot): { nodes: OrchNode[]; edges: 
       activeByRunner.set(t.runner, t);
     }
   }
+  return activeByRunner;
+}
 
+function runnerState(r: FleetRunner, activeTask: FleetTask | undefined): OrchState {
+  if (!r.online) return "failed";
+  if (r.draining) return "cancelled";
+  return activeTask ? "running" : "queued";
+}
+
+/** One work node per runner, plus an activity node for its currently-active task. */
+function runnerWorkNodes(
+  snap: FleetSnapshot,
+  activeByRunner: Map<string, FleetTask>,
+  bump: (s: OrchState) => void
+): { nodes: OrchNode[]; edges: OrchEdge[] } {
+  const nodes: OrchNode[] = [];
+  const edges: OrchEdge[] = [];
   for (const r of snap.runners) {
     const id = `conductor:runner:${r.id}`;
     const activeTask = activeByRunner.get(r.id);
-    const state: OrchState = !r.online
-      ? "failed"
-      : r.draining
-        ? "cancelled"
-        : activeTask
-          ? "running"
-          : "queued";
+    const state = runnerState(r, activeTask);
     bump(state);
     nodes.push({
       id,
@@ -93,7 +95,17 @@ export function fromConductor(snap: FleetSnapshot): { nodes: OrchNode[]; edges: 
       });
     }
   }
+  return { nodes, edges };
+}
 
+/** Work nodes for tasks not already absorbed as a runner's activity node. */
+function remainingTaskWorkNodes(
+  snap: FleetSnapshot,
+  activeByRunner: Map<string, FleetTask>,
+  bump: (s: OrchState) => void
+): { nodes: OrchNode[]; edges: OrchEdge[] } {
+  const nodes: OrchNode[] = [];
+  const edges: OrchEdge[] = [];
   for (const t of snap.tasks) {
     if (t.runner && activeByRunner.get(t.runner)?.id === t.id) continue; // already an activity
     const node = taskNode(t, "work");
@@ -107,6 +119,23 @@ export function fromConductor(snap: FleetSnapshot): { nodes: OrchNode[]; edges: 
       active: node.state === "running",
     });
   }
+  return { nodes, edges };
+}
+
+export function fromConductor(snap: FleetSnapshot): { nodes: OrchNode[]; edges: OrchEdge[] } {
+  if (snap.offline || (snap.runners.length === 0 && snap.tasks.length === 0)) {
+    return { nodes: [], edges: [] };
+  }
+  const counts: Partial<Record<OrchState, number>> = {};
+  const bump = (s: OrchState) => {
+    counts[s] = (counts[s] ?? 0) + 1;
+  };
+
+  const activeByRunner = computeActiveByRunner(snap);
+  const runners = runnerWorkNodes(snap, activeByRunner, bump);
+  const tasks = remainingTaskWorkNodes(snap, activeByRunner, bump);
+  const nodes = [...runners.nodes, ...tasks.nodes];
+  const edges = [...runners.edges, ...tasks.edges];
 
   nodes.unshift({
     id: "source:conductor",

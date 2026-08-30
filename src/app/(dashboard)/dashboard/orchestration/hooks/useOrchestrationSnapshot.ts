@@ -31,6 +31,36 @@ async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** Builds the 3-source status list from a `Promise.allSettled` triple. */
+function buildSourceStatuses(
+  ca: PromiseSettledResult<{ data: CloudAgentTask[] }>,
+  a2a: PromiseSettledResult<{ tasks: A2ATask[] }>,
+  cond: PromiseSettledResult<FleetSnapshot>,
+  nowIso: string
+): SourceStatus[] {
+  const next: SourceStatus[] = [];
+  if (ca.status === "fulfilled") next.push({ source: "cloud-agent", ok: true });
+  else
+    next.push({
+      source: "cloud-agent",
+      ok: false,
+      error: String(ca.reason),
+      staleSince: nowIso,
+    });
+  if (a2a.status === "fulfilled") next.push({ source: "a2a", ok: true });
+  else next.push({ source: "a2a", ok: false, error: String(a2a.reason), staleSince: nowIso });
+  if (cond.status === "fulfilled") {
+    next.push({ source: "conductor", ok: true, offline: cond.value.offline });
+  } else
+    next.push({
+      source: "conductor",
+      ok: false,
+      error: String(cond.reason),
+      staleSince: nowIso,
+    });
+  return next;
+}
+
 export function useOrchestrationSnapshot() {
   // `raw` and `polledAt` are React state (not refs) so the merge below reads them
   // during render like any other state — a ref read during render trips the
@@ -66,26 +96,7 @@ export function useOrchestrationSnapshot() {
       if (controller.signal.aborted) return;
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();
-      const next: SourceStatus[] = [];
-      if (ca.status === "fulfilled") next.push({ source: "cloud-agent", ok: true });
-      else
-        next.push({
-          source: "cloud-agent",
-          ok: false,
-          error: String(ca.reason),
-          staleSince: nowIso,
-        });
-      if (a2a.status === "fulfilled") next.push({ source: "a2a", ok: true });
-      else next.push({ source: "a2a", ok: false, error: String(a2a.reason), staleSince: nowIso });
-      if (cond.status === "fulfilled") {
-        next.push({ source: "conductor", ok: true, offline: cond.value.offline });
-      } else
-        next.push({
-          source: "conductor",
-          ok: false,
-          error: String(cond.reason),
-          staleSince: nowIso,
-        });
+      const next = buildSourceStatuses(ca, a2a, cond, nowIso);
 
       // Failed sources keep the previously stored slice — only overwrite what
       // actually resolved this round ("last good data" contract from the brief).
