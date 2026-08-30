@@ -176,7 +176,7 @@ test("perplexity-agent default executor dispatches to Perplexity Responses endpo
   assert.equal(executor.buildUrl("openai/gpt-5.6-sol", false, 0, null), AGENT_RESPONSES_URL);
 });
 
-test("perplexity-agent defaults max_output_tokens for Anthropic Agent models", () => {
+test("perplexity-agent defaults max_output_tokens when Agent requests omit token fields", () => {
   const executor = new DefaultExecutor("perplexity-agent");
   const explicit = executor.transformRequest(
     "anthropic/claude-opus-4-5",
@@ -190,16 +190,23 @@ test("perplexity-agent defaults max_output_tokens for Anthropic Agent models", (
     false,
     null
   ) as Record<string, unknown>;
-  const openaiAgent = executor.transformRequest(
-    "openai/gpt-5.6-sol",
-    { model: "openai/gpt-5.6-sol", input: "hi" },
+  const kimiAgent = executor.transformRequest(
+    "perplexity/kimi-k3",
+    { model: "perplexity/kimi-k3", input: "hi" },
+    false,
+    null
+  ) as Record<string, unknown>;
+  const futureAgent = executor.transformRequest(
+    "future-lab/model-alpha-1",
+    { model: "future-lab/model-alpha-1", input: "hi" },
     false,
     null
   ) as Record<string, unknown>;
 
   assert.equal(explicit.max_output_tokens, 32);
   assert.equal(defaulted.max_output_tokens, 4096);
-  assert.equal("max_output_tokens" in openaiAgent, false);
+  assert.equal(kimiAgent.max_output_tokens, 4096);
+  assert.equal(futureAgent.max_output_tokens, 4096);
 });
 
 test("perplexity-agent model discovery accepts documented and future Agent API model IDs", async () => {

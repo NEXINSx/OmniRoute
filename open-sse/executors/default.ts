@@ -67,18 +67,12 @@ import { resolveAlibabaProviderBaseUrl } from "@/shared/constants/alibabaProvide
 import { usesCcWireImage } from "../services/ccWireImageBuiltins.ts";
 
 const NVIDIA_TOOL_CALL_ID_PATTERN = /^[A-Za-z0-9]{9}$/;
-const PERPLEXITY_AGENT_ANTHROPIC_DEFAULT_MAX_OUTPUT_TOKENS = 4096;
+const PERPLEXITY_AGENT_DEFAULT_MAX_OUTPUT_TOKENS = 4096;
 
-function isPerplexityAgentAnthropicModel(model: unknown): boolean {
-  return typeof model === "string" && model.toLowerCase().startsWith("anthropic/");
-}
-
-function defaultPerplexityAgentAnthropicMaxOutputTokens<T>(body: T, model: unknown): T {
+function defaultPerplexityAgentMaxOutputTokens<T>(body: T): T {
   if (!body || typeof body !== "object" || Array.isArray(body)) return body;
 
   const record = body as Record<string, unknown>;
-  const outboundModel = typeof record.model === "string" ? record.model : model;
-  if (!isPerplexityAgentAnthropicModel(outboundModel)) return body;
   if (
     record.max_output_tokens !== undefined ||
     record.max_completion_tokens !== undefined ||
@@ -89,7 +83,7 @@ function defaultPerplexityAgentAnthropicMaxOutputTokens<T>(body: T, model: unkno
 
   return {
     ...record,
-    max_output_tokens: PERPLEXITY_AGENT_ANTHROPIC_DEFAULT_MAX_OUTPUT_TOKENS,
+    max_output_tokens: PERPLEXITY_AGENT_DEFAULT_MAX_OUTPUT_TOKENS,
   } as T;
 }
 
@@ -752,7 +746,7 @@ export class DefaultExecutor extends BaseExecutor {
     withDefaults = this.applyJsonSchemaFallback(withDefaults);
     withDefaults = this.defaultResponsesTextFormat(withDefaults);
     if (this.provider === "perplexity-agent") {
-      withDefaults = defaultPerplexityAgentAnthropicMaxOutputTokens(withDefaults, model);
+      withDefaults = defaultPerplexityAgentMaxOutputTokens(withDefaults);
     }
 
     if (this.provider === "nvidia") {
