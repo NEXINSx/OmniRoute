@@ -403,7 +403,8 @@
       "tests/unit/felo-web-runtime-block.test.ts",
       "tests/unit/microsoft-designer-web-runtime-block.test.ts",
       "tests/unit/qwen-web-runtime-block.test.ts",
-      "tests/unit/tunnel-routes-error-sanitization.test.ts"
+      "tests/unit/tunnel-routes-error-sanitization.test.ts",
+      "tests/unit/lkgp-stale-pin-exhaustion-11911.test.ts"
     ],
     "nodeArgs": [
       "--import",
