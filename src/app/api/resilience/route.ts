@@ -144,6 +144,7 @@ export async function GET() {
       quotaShareConcurrencyLimit: resilience.quotaShareConcurrencyLimit,
       providerCooldown: resilience.providerCooldown,
       providerQuotaOverrides: resilience.providerQuotaOverrides,
+      credentialHealthCheck: resilience.credentialHealthCheck,
       legacy: buildLegacyResilienceCompat(resilience),
     });
   } catch (err: unknown) {
@@ -222,6 +223,12 @@ export async function PATCH(request) {
               body.providerQuotaOverrides as ResilienceSettingsPatch["providerQuotaOverrides"],
           }
         : {}),
+      ...(body.credentialHealthCheck
+        ? {
+            credentialHealthCheck:
+              body.credentialHealthCheck as ResilienceSettingsPatch["credentialHealthCheck"],
+          }
+        : {}),
       ...normalizeLegacyPatch(body),
     });
 
@@ -260,6 +267,7 @@ export async function PATCH(request) {
       quotaShareConcurrencyLimit: nextResilience.quotaShareConcurrencyLimit,
       providerCooldown: nextResilience.providerCooldown,
       providerQuotaOverrides: nextResilience.providerQuotaOverrides,
+      credentialHealthCheck: nextResilience.credentialHealthCheck,
       legacy: buildLegacyResilienceCompat(nextResilience),
     });
   } catch (err: unknown) {

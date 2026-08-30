@@ -132,6 +132,14 @@ export const providerCooldownSettingsSchema = z
     }
   });
 
+// Global default cadence (minutes) for the background credential health check
+// sweep. 0 = disabled; 1440 = 24 hours. Per-connection overrides win.
+export const credentialHealthCheckSettingsSchema = z
+  .object({
+    intervalMinutes: z.number().int().min(0).max(1440).optional(),
+  })
+  .strict();
+
 export const updateResilienceSchema = z
   .object({
     requestQueue: requestQueueSettingsSchema.optional(),
@@ -177,6 +185,7 @@ export const updateResilienceSchema = z
           .strict()
       )
       .optional(),
+    credentialHealthCheck: credentialHealthCheckSettingsSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -190,7 +199,8 @@ export const updateResilienceSchema = z
       !value.providerCooldown &&
       !value.profiles &&
       !value.defaults &&
-      !value.providerQuotaOverrides
+      !value.providerQuotaOverrides &&
+      !value.credentialHealthCheck
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
