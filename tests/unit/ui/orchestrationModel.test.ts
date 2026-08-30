@@ -15,6 +15,11 @@ import { fromA2A } from "../../../src/app/(dashboard)/dashboard/orchestration/mo
 import type { A2ATask } from "../../../src/lib/a2a/taskManager.ts";
 import { fromConductor } from "../../../src/app/(dashboard)/dashboard/orchestration/model/fromConductor.ts";
 import type { FleetSnapshot } from "../../../src/lib/conductor/hubProxy.ts";
+import { mergeSnapshot } from "../../../src/app/(dashboard)/dashboard/orchestration/model/mergeSnapshot.ts";
+import {
+  STALE_COMPLETED_MS,
+  MAX_WORK_NODES,
+} from "../../../src/app/(dashboard)/dashboard/orchestration/model/orchestrationTypes.ts";
 
 describe("orchestrationTypes", () => {
   it("covers all six states with a color each", () => {
@@ -199,5 +204,75 @@ describe("fromConductor", () => {
     const w = fromConductor(snap).nodes.find((n) => n.id === "conductor:task:ct3");
     assert.equal(w?.state, "failed");
     assert.match(w?.sublabel ?? "", /vaporized/);
+  });
+});
+
+const OK_SOURCES = [
+  { source: "cloud-agent" as const, ok: true },
+  { source: "a2a" as const, ok: true },
+  { source: "conductor" as const, ok: true },
+];
+const NOW = Date.parse("2026-08-30T12:00:00Z");
+const empty = { nodes: [], edges: [] };
+
+describe("mergeSnapshot", () => {
+  it("adds the orchestrator root and root→source edges", () => {
+    const snap = mergeSnapshot(
+      { cloudAgent: fromCloudAgent([caTask({})]), a2a: empty, conductor: empty },
+      OK_SOURCES,
+      { now: NOW }
+    );
+    assert.ok(snap.nodes.some((n) => n.id === "orchestrator"));
+    assert.ok(snap.edges.some((e) => e.from === "orchestrator" && e.to === "source:cloud-agent"));
+  });
+  it("dedupes a Conductor-mirrored A2A task into one node with a mirror edge", () => {
+    const a2a = fromA2A([
+      a2aTask({ id: "am1", skill: "conductor", metadata: { conductor: { task_id: "ct1" } } }),
+    ]);
+    const conductor = fromConductor(baseSnap); // contains conductor:task:ct1 as activity of r1
+    const snap = mergeSnapshot({ cloudAgent: empty, a2a, conductor }, OK_SOURCES, { now: NOW });
+    assert.ok(
+      !snap.nodes.some((n) => n.id === "a2a:am1"),
+      "mirrored A2A work node must be dropped"
+    );
+    const mirrorEdge = snap.edges.find((e) => e.kind === "mirror");
+    assert.equal(mirrorEdge?.to, "source:a2a");
+  });
+  it("drops terminal work older than STALE_COMPLETED_MS unless showCompleted", () => {
+    const old = caTask({
+      id: "old",
+      status: "completed",
+      completedAt: new Date(NOW - STALE_COMPLETED_MS - 1000).toISOString(),
+    });
+    const parts = { cloudAgent: fromCloudAgent([old]), a2a: empty, conductor: empty };
+    assert.ok(
+      !mergeSnapshot(parts, OK_SOURCES, { now: NOW }).nodes.some((n) => n.id === "cloud-agent:old")
+    );
+    assert.ok(
+      mergeSnapshot(parts, OK_SOURCES, { now: NOW, showCompleted: true }).nodes.some(
+        (n) => n.id === "cloud-agent:old"
+      )
+    );
+  });
+  it("caps work nodes at MAX_WORK_NODES with a per-source overflow node", () => {
+    const many = Array.from({ length: MAX_WORK_NODES + 10 }, (_, i) =>
+      caTask({ id: `m${i}`, updatedAt: new Date(NOW - i * 1000).toISOString() })
+    );
+    const snap = mergeSnapshot(
+      { cloudAgent: fromCloudAgent(many), a2a: empty, conductor: empty },
+      OK_SOURCES,
+      { now: NOW }
+    );
+    const works = snap.nodes.filter((n) => n.kind === "work");
+    assert.ok(works.length <= MAX_WORK_NODES, `got ${works.length}`);
+    const overflow = snap.nodes.find((n) => n.id === "overflow:cloud-agent");
+    assert.ok(overflow, "overflow node expected");
+  });
+  it("keeps SourceStatus[] verbatim on the snapshot", () => {
+    const src = [{ source: "conductor" as const, ok: false, offline: true }];
+    const snap = mergeSnapshot({ cloudAgent: empty, a2a: empty, conductor: empty }, src, {
+      now: NOW,
+    });
+    assert.deepEqual(snap.sources, src);
   });
 });
