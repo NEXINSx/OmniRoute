@@ -3786,6 +3786,8 @@
     "rangeAll": "Todos os tempos",
     "spend30d": "Spend30D",
     "activeModels": "Modelos Ativos",
+    "flatRateEstimateNotice": "__MISSING__:Includes token-price estimates for flat-rate subscriptions, not billed cost.",
+    "flatRateEstimateForecast": "__MISSING__:Projection includes flat-rate estimates.",
     "selectedWindow": "Janela Selecionada",
     "activeProviders": "Fornecedores Ativos",
     "overviewTitle": "Overview Title",

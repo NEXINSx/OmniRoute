@@ -3786,6 +3786,8 @@
     "rangeAll": "Toàn bộ thời gian",
     "spend30d": "Chi tiêu 30 ngày",
     "activeModels": "Mô hình đang hoạt động",
+    "flatRateEstimateNotice": "Bao gồm ước tính theo giá token cho các gói thuê bao trọn gói, không phải chi phí đã bị tính phí.",
+    "flatRateEstimateForecast": "Dự báo bao gồm ước tính cho gói thuê bao trọn gói.",
     "selectedWindow": "Khoảng thời gian đã chọn",
     "activeProviders": "Nhà cung cấp đang hoạt động",
     "overviewTitle": "Tổng quan chi phí",

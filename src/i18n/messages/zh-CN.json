@@ -3786,6 +3786,8 @@
     "rangeAll": "全部时间",
     "spend30d": "30 天支出",
     "activeModels": "活跃 Model",
+    "flatRateEstimateNotice": "__MISSING__:Includes token-price estimates for flat-rate subscriptions, not billed cost.",
+    "flatRateEstimateForecast": "__MISSING__:Projection includes flat-rate estimates.",
     "selectedWindow": "已选窗口",
     "activeProviders": "活跃 Provider",
     "overviewTitle": "概览",

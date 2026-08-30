@@ -3786,6 +3786,8 @@
     "rangeAll": "Todo el tiempo",
     "spend30d": "Spend30D",
     "activeModels": "Active Models",
+    "flatRateEstimateNotice": "__MISSING__:Includes token-price estimates for flat-rate subscriptions, not billed cost.",
+    "flatRateEstimateForecast": "__MISSING__:Projection includes flat-rate estimates.",
     "selectedWindow": "Selected Window",
     "activeProviders": "Active Providers",
     "overviewTitle": "Overview Title",

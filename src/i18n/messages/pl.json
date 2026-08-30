@@ -3786,6 +3786,8 @@
     "rangeAll": "Od początku",
     "spend30d": "Wydatki 30D",
     "activeModels": "Aktywne models",
+    "flatRateEstimateNotice": "__MISSING__:Includes token-price estimates for flat-rate subscriptions, not billed cost.",
+    "flatRateEstimateForecast": "__MISSING__:Projection includes flat-rate estimates.",
     "selectedWindow": "Wybrany okres",
     "activeProviders": "Aktywni providers",
     "overviewTitle": "Przegląd kosztów",
