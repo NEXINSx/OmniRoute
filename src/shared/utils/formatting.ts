@@ -216,3 +216,13 @@ export function formatErrorForDisplay(err: unknown): string | null {
     return String(err);
   }
 }
+
+/** Percentage of `tokensIn` served from cache, clamped to [0, 100]. */
+export function formatCachePercentage(
+  tokensIn: number | null | undefined,
+  cacheRead: number | null | undefined
+): number {
+  if (!tokensIn || tokensIn <= 0) return 0;
+  if (!cacheRead || cacheRead <= 0) return 0;
+  return Math.min(100, Math.round((cacheRead / tokensIn) * 100));
+}

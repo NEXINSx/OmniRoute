@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatCachePercentage } from "../../src/shared/components/RequestLoggerV2";
+import { formatCachePercentage } from "../../src/shared/utils/formatting";
 
 test("formatCachePercentage", async (t) => {
   await t.test("returns 0 when tokensIn is 0, null, or undefined", () => {

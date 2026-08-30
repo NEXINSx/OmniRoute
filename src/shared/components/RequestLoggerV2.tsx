@@ -25,6 +25,7 @@ import {
   maskAccount,
   stableAccountSuffix,
   formatApiKeyLabel,
+  formatCachePercentage,
 } from "@/shared/utils/formatting";
 import { getProviderDisplayLabel } from "@/shared/utils/providerDisplayLabel";
 import useEmailPrivacyStore from "@/store/emailPrivacyStore";
@@ -69,15 +70,6 @@ function formatTps(tps: number): string {
   if (tps <= 0) return "—";
   if (tps >= 100) return Math.round(tps).toLocaleString();
   return tps.toFixed(1);
-}
-
-export function formatCachePercentage(
-  tokensIn: number | null | undefined,
-  cacheRead: number | null | undefined
-): number {
-  if (!tokensIn || tokensIn <= 0) return 0;
-  if (!cacheRead || cacheRead <= 0) return 0;
-  return Math.min(100, Math.round((cacheRead / tokensIn) * 100));
 }
 
 function getCacheSourceMeta(cacheSource: unknown) {
