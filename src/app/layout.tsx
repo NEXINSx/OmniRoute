@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale, getTranslations } from "next-intl/server";
 import { RTL_LOCALES } from "@/i18n/config";
 import { normalizeComplianceEventTypes } from "@/i18n/request";
-import { getSettings } from "@/lib/db/settings";
+import { getRootLayoutSettings } from "@/lib/db/rootLayoutSettings";
 import type { Viewport } from "next";
 import { PwaRegister } from "@/shared/components/PwaRegister";
 import { LocaleAutoDetect } from "@/shared/components/LocaleAutoDetect";
@@ -22,9 +22,9 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata() {
-  const settings = await getSettings();
-  const instanceName = settings?.instanceName || "OmniRoute";
-  const customFaviconUrl = settings?.customFaviconUrl || settings?.customFaviconBase64;
+  const settings = await getRootLayoutSettings();
+  const instanceName = settings.instanceName;
+  const customFaviconUrl = settings.customFaviconUrl || settings.customFaviconBase64;
 
   return {
     title: `${instanceName} — AI Gateway for Multi-Provider LLMs`,

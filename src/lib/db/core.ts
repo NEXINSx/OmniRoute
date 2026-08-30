@@ -40,6 +40,7 @@ import { invalidateDbCache } from "./readCache";
 import { rowToCamel } from "./caseMapping";
 import { isAutomatedTestProcess } from "@/shared/utils/testProcess";
 import { parseModelAccessMode } from "./apiKeys/modelAccessMode";
+import { getExistingDbInstance as getDb, setDbInstance as setDb } from "./singleton";
 // Re-exported so existing call sites that pull these helpers off the core module keep working.
 export { toSnakeCase, toCamelCase, objToSnake, rowToCamel, cleanNulls } from "./caseMapping";
 import {
@@ -514,7 +515,6 @@ const SCHEMA_SQL = `
 // Module-level `let` resets on every webpack recompile, causing connection leaks.
 
 declare global {
-  var __omnirouteDb: SqliteAdapter | undefined;
   // Cycle-breaker counter for the probe-failed/restore cascade. Survives
   // Next.js HMR re-evaluations so concurrent subsystems all see the same
   // count and we abort with a clear error instead of looping forever.
@@ -527,18 +527,6 @@ declare global {
   // (BATCH, HealthCheck, ProviderLimitsSync, ModelSync) re-throws the same
   // OOM error forever with no terminal diagnostic.
   var __omnirouteDbOomFailureCount: number | undefined;
-}
-
-function getDb(): SqliteDatabase | null {
-  return globalThis.__omnirouteDb ?? null;
-}
-
-function setDb(db: SqliteDatabase | null): void {
-  if (db) {
-    globalThis.__omnirouteDb = db;
-  } else {
-    delete globalThis.__omnirouteDb;
-  }
 }
 
 function checkpointDb(db: SqliteDatabase, mode: CheckpointMode = "TRUNCATE"): boolean {
