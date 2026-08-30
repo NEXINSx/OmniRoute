@@ -124,7 +124,11 @@ test("program registers 'update' command", () => {
   assert.ok(cmd, "update command exists");
 });
 
-test("nodes endpoint commands reserve --base-url for the global server target", () => {
+test("nodes endpoint commands accept --endpoint and --base-url for the provider-node URL", () => {
+  // Contract since #12033 (issue #11999): the subcommands register BOTH flags, so
+  // `omniroute nodes add --provider p --base-url <url>` is no longer rejected by
+  // Commander's global --base-url. The global server target is still kept apart
+  // from the payload baseUrl — see the next test.
   const program = createProgram();
   const nodes = program.commands.find((c) => c.name() === "nodes");
   assert.ok(nodes, "nodes command exists");
@@ -132,22 +136,20 @@ test("nodes endpoint commands reserve --base-url for the global server target", 
   for (const commandName of ["add", "update", "validate"]) {
     const command = nodes.commands.find((c) => c.name() === commandName);
     assert.ok(command, `nodes ${commandName} command exists`);
-    assert.ok(
-      command.options.some((option) => option.long === "--endpoint"),
-      `nodes ${commandName} exposes --endpoint for the provider-node URL`
-    );
-    assert.equal(
-      command.options.some((option) => option.long === "--base-url"),
-      false,
-      `nodes ${commandName} does not shadow the global --base-url option`
-    );
-    command.parseOptions([
+    for (const flag of ["--endpoint", "--base-url"]) {
+      assert.ok(
+        command.options.some((option) => option.long === flag),
+        `nodes ${commandName} exposes ${flag} for the provider-node URL`
+      );
+    }
+    const positional = [
       ...(commandName === "update" ? ["node-1"] : []),
       ...(commandName === "add" || commandName === "validate" ? ["--provider", "openai"] : []),
-      "--endpoint",
-      "https://api.openai.com/v1",
-    ]);
+    ];
+    command.parseOptions([...positional, "--endpoint", "https://api.openai.com/v1"]);
     assert.equal(command.opts().endpoint, "https://api.openai.com/v1");
+    command.parseOptions([...positional, "--base-url", "https://api.openai.com/v1"]);
+    assert.equal(command.opts().baseUrl, "https://api.openai.com/v1");
   }
 });
 
