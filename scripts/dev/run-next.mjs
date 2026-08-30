@@ -137,6 +137,11 @@ function createNextApp() {
   });
 }
 
+// The custom HTTP server owns process exit. Application instrumentation still
+// registers its cleanup function, but must not install a competing signal
+// listener that can race this runner's async server/Next teardown.
+globalThis.__omnirouteCustomServerOwnsShutdown = true;
+
 let nextApp = createNextApp();
 
 // Best-effort self-heal for a corrupted Turbopack persistent dev cache (#6289):
@@ -231,6 +236,7 @@ async function start() {
     systemdNotifier.stopping();
     try {
       await new Promise((resolve) => server.close(resolve));
+      await globalThis.__omnirouteRequestShutdown?.(signal);
       await nextApp.close();
     } catch (error) {
       console.error("[SHUTDOWN] Failed during signal:", signal, error);
