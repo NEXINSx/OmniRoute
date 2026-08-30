@@ -289,7 +289,7 @@ export function buildWebSearchCallItem(
             : "";
       return { title, url, caption };
     })
-    .filter((source): source is Record<string, string> => source !== null);
+    .filter((source): source is { title: string; url: string; caption: string } => source !== null);
 
   return {
     id: `ws_${call.id}`,
