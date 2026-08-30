@@ -1,0 +1,54 @@
+{
+  "name": "omniroute-control-room",
+  "productName": "OmniRoute Control Room",
+  "version": "3.8.50",
+  "description": "Desktop-Shell fuer den OmniRoute Orchestra Control Room (PWA-Wrapper)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "online.omniroute.controlroom",
+    "productName": "OmniRoute Control Room",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false
+  },
+  "dependencies": {}
+}
