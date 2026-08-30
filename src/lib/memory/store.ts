@@ -468,6 +468,7 @@ export async function listMemories(filters: {
   apiKeyId?: string;
   type?: MemoryType;
   sessionId?: string;
+  category?: string;
   query?: string;
   limit?: number;
   offset?: number;
@@ -492,6 +493,13 @@ export async function listMemories(filters: {
   if (filters.sessionId) {
     whereClauses.push("session_id = ?");
     whereParams.push(filters.sessionId);
+  }
+
+  if (typeof filters.category === "string" && filters.category.trim().length > 0) {
+    whereClauses.push(
+      "json_extract(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END, '$.category') = ?"
+    );
+    whereParams.push(filters.category.trim());
   }
 
   if (typeof filters.query === "string" && filters.query.trim().length > 0) {
