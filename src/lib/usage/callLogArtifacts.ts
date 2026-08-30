@@ -16,10 +16,41 @@ const SIZE_LIMIT_EXCEEDED_REASON = "call_log_artifact_size_limit_exceeded";
 const OMITTED_FOR_SIZE_LIMIT = "[omitted: call log artifact size limit exceeded]";
 const STREAM_CHUNKS_OMITTED_FOR_SIZE_LIMIT =
   "[stream chunks omitted: call log artifact size limit exceeded]";
-// Error strings are kept even in the size-limit fallback (truncated to this
-// cap) so every log row stays diagnosable; see buildMinimalArtifactForSizeLimit.
-const MAX_CALL_LOG_ARTIFACT_ERROR_BYTES = 4 * 1024;
-const SIZE_LIMIT_EXCEEDED_SUFFIX = "…[truncated: call log artifact size limit exceeded]";
+
+// The error is the only field that says *why* a request failed, and it is
+// typically ~90 bytes next to the multi-hundred-KB bodies that trip the cap.
+// Dropping it made a size-limited row undiagnosable: a provider outage, a local
+// timeout and an upstream 400 all rendered as the same omission marker. It is
+// kept at every fallback stage instead, truncated rather than discarded.
+const MAX_PRESERVED_ERROR_BYTES = 4 * 1024;
+const ERROR_TRUNCATED_FOR_SIZE_LIMIT = "[truncated: call log artifact size limit exceeded]";
+
+function truncateUtf8(text: string, maxBytes: number): string {
+  const buffer = Buffer.from(text, "utf8");
+  if (buffer.length <= maxBytes) return text;
+  // Cut back off a partial multi-byte sequence so the tail is not a U+FFFD.
+  let end = maxBytes;
+  while (end > 0 && (buffer[end] & 0xc0) === 0x80) end--;
+  return buffer.subarray(0, end).toString("utf8");
+}
+
+/**
+ * Keep the error through a size-limit fallback, truncating it if it is itself
+ * large. Returns the value unchanged when it already fits, so a normal-sized
+ * error is byte-identical to what a non-truncated artifact would carry.
+ */
+function preserveErrorForSizeLimit(error: unknown): unknown {
+  if (error === null || error === undefined) return null;
+  let serialized: string;
+  try {
+    serialized = typeof error === "string" ? error : JSON.stringify(error) ?? String(error);
+  } catch {
+    // A circular or unserializable error must not take the whole artifact down.
+    serialized = String(error);
+  }
+  if (Buffer.byteLength(serialized, "utf8") <= MAX_PRESERVED_ERROR_BYTES) return error;
+  return `${truncateUtf8(serialized, MAX_PRESERVED_ERROR_BYTES)} ${ERROR_TRUNCATED_FOR_SIZE_LIMIT}`;
+}
 
 export type CallLogDetailState = "none" | "ready" | "missing" | "corrupt" | "legacy-inline";
 
@@ -141,7 +172,7 @@ function buildMinimalArtifactForSizeLimit(artifact: CallLogArtifact) {
     // failed (e.g. "Fetch timeout after 110000ms on https://..."). Diagnosing
     // provider outages from a log row that shows only an omission marker is
     // impossible; the error string is tiny next to the request/response bodies.
-    error: artifact.error ? truncateErrorForSizeLimit(artifact.error) : null,
+    error: preserveErrorForSizeLimit(artifact.error),
     pipeline: {
       error: {
         _omniroute_truncated: true,
@@ -149,12 +180,6 @@ function buildMinimalArtifactForSizeLimit(artifact: CallLogArtifact) {
       },
     },
   };
-}
-
-function truncateErrorForSizeLimit(error: unknown): string {
-  const text = typeof error === "string" ? error : JSON.stringify(error) ?? String(error);
-  if (Buffer.byteLength(text) <= MAX_CALL_LOG_ARTIFACT_ERROR_BYTES) return text;
-  return `${text.slice(0, MAX_CALL_LOG_ARTIFACT_ERROR_BYTES)}${SIZE_LIMIT_EXCEEDED_SUFFIX}`;
 }
 
 function serializeFinalSizeLimitFallback(artifact: CallLogArtifact, maxBytes: number): string {
@@ -169,16 +194,20 @@ function serializeFinalSizeLimitFallback(artifact: CallLogArtifact, maxBytes: nu
     schemaVersion: artifact.schemaVersion,
     _omniroute_truncated: true,
     reason: SIZE_LIMIT_EXCEEDED_REASON,
-    error: artifact.error ? truncateErrorForSizeLimit(artifact.error) : null,
+    error: preserveErrorForSizeLimit(artifact.error),
   });
   if (Buffer.byteLength(errorOnly) <= maxBytes) {
     return errorOnly;
   }
 
+  // Last resort: even the error-only payload did not fit. The error still
+  // rides along -- without it this row says only "something was too big",
+  // which is the state this change exists to remove.
   return JSON.stringify({
     schemaVersion: artifact.schemaVersion,
     _omniroute_truncated: true,
     reason: SIZE_LIMIT_EXCEEDED_REASON,
+    error: preserveErrorForSizeLimit(artifact.error),
   });
 }
 
@@ -212,7 +241,7 @@ function serializeArtifactForStorage(artifact: CallLogArtifact): string {
     ...omitOversizedPipeline(artifact),
     requestBody: OMITTED_FOR_SIZE_LIMIT,
     responseBody: OMITTED_FOR_SIZE_LIMIT,
-    error: artifact.error ? truncateErrorForSizeLimit(artifact.error) : null,
+    error: preserveErrorForSizeLimit(artifact.error),
   });
   if (Buffer.byteLength(minimal) <= maxBytes) {
     return minimal;
