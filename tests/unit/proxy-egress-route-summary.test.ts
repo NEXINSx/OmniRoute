@@ -17,7 +17,8 @@ process.env.API_KEY_SECRET = "test-api-key-secret";
 
 const core = await import("../../src/lib/db/core.ts");
 const proxyLogger = await import("../../src/lib/proxyLogger.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
 const route = await import("../../src/app/api/settings/proxies/egress/route.ts");
 

@@ -1588,11 +1588,6 @@
       "count": 2
     }
   },
-  "src/lib/db/compressionCombos.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/lib/db/core.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
@@ -1614,11 +1609,6 @@
     }
   },
   "src/lib/db/healthCheck.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
-    }
-  },
-  "src/lib/db/middleware.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
     }
@@ -2436,11 +2426,6 @@
       "count": 2
     }
   },
-  "tests/integration/files-api.test.ts": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "tests/integration/fingerprint-expansion.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -2584,11 +2569,6 @@
     }
   },
   "tests/integration/traffic-inspector-error-sanitization.test.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "tests/integration/traffic-inspector-hosts.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
     }
@@ -2867,11 +2847,6 @@
   },
   "tests/unit/batch-b-final.test.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "tests/unit/batch-deletion.test.ts": {
-    "no-restricted-imports": {
       "count": 1
     }
   },
@@ -4100,9 +4075,6 @@
       "count": 1
     },
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    },
-    "no-restricted-imports": {
       "count": 1
     }
   },

@@ -46,16 +46,6 @@ export interface UserBadge {
   badgeCategory?: string | null;
   badgeRarity?: string;
 }
-
-export interface XpAuditLogEntry {
-  id: number;
-  apiKeyId: string;
-  action: string;
-  xpEarned: number;
-  metadata: string | null;
-  createdAt: string;
-}
-
 export interface TokenLedgerEntry {
   id: number;
   fromApiKeyId: string;

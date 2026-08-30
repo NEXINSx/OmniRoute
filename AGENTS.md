@@ -289,8 +289,7 @@ When creating _any_ validation tests or one-off logic scripts, default to `scrip
 ### Database
 
 - **Always** go through `src/lib/db/` domain modules — **never** write raw SQL in routes or handlers
-- **Never** add logic to `src/lib/localDb.ts` (re-export layer only)
-- **Never** barrel-import from `localDb.ts` — import specific `db/` modules instead
+- **Never** barrel-import from `localDb.ts` — import specific `src/lib/db/*` modules
 - DB singleton: `getDbInstance()` from `src/lib/db/core.ts` (WAL journaling)
 - Migrations: `src/lib/db/migrations/` — versioned SQL files, idempotent, run in transactions
 
@@ -355,8 +354,7 @@ Documentation must describe verified behavior, not plausible behavior.
 1. Create `src/lib/db/yourModule.ts` — import `getDbInstance` from `./core.ts`
 2. Export CRUD functions for your domain table(s)
 3. Add migration in `src/lib/db/migrations/` if new tables needed
-4. Re-export from `src/lib/localDb.ts` (add to the re-export list only)
-5. Write tests
+4. Write tests
 
 ### Adding a New MCP Tool
 
@@ -668,7 +666,7 @@ the stale-enforcement added in Fase 6A.3.
 ## Hard Rules
 
 1. Never commit secrets or credentials
-2. Never add logic to `localDb.ts`
+2. Never barrel-import from `localDb.ts` — import specific `src/lib/db/*` modules
 3. Never use `eval()` / `new Function()` / implied eval
 4. Never commit directly to `main`
 5. Never write raw SQL in routes — use `src/lib/db/` modules

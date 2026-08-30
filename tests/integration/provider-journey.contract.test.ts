@@ -56,7 +56,10 @@ process.env.DISABLE_SQLITE_AUTO_BACKUP = "true";
 process.env.INITIAL_PASSWORD = "provider-journey-bootstrap";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const { updateProviderConnection } = await import("@/lib/db/providers");
+const { getCachedProviderNodes } = await import("@/lib/db/readCache");
+const localDb = { updateSettings, updateProviderConnection, getCachedProviderNodes };
 const modelsDb = await import("../../src/lib/db/models.ts");
 const providerNodesRoute = await import("../../src/app/api/provider-nodes/route.ts");
 const providersRoute = await import("../../src/app/api/providers/route.ts");

@@ -10,7 +10,8 @@ const ORIGINAL_API_KEY_SECRET = process.env.API_KEY_SECRET;
 process.env.API_KEY_SECRET = "test-usage-analytics-secret";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updatePricing } = await import("@/lib/db/settings");
+const localDb = { updatePricing };
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
 const usageHistory = await import("../../src/lib/usage/usageHistory.ts");

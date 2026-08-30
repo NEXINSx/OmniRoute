@@ -370,7 +370,7 @@ export function clearStaleLKGP(
 ): void {
   void (async () => {
     try {
-      const { clearLKGP } = await import("@/lib/localDb");
+      const { clearLKGP } = await import("@/lib/db/settings");
       const promises: Promise<void>[] = [clearLKGP(comboName, comboId || comboName)];
       if (executionKey) {
         promises.push(clearLKGP(comboName, executionKey));

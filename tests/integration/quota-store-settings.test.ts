@@ -26,7 +26,8 @@ delete process.env.QUOTA_STORE_REDIS_URL;
 process.env.QUOTA_STORE_DRIVER = "sqlite";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 const compliance = await import("../../src/lib/compliance/index.ts");
 const { resetQuotaStoreSingleton } = await import("../../src/lib/quota/QuotaStore.ts");
 const settingsRoute = await import("../../src/app/api/settings/quota-store/route.ts");

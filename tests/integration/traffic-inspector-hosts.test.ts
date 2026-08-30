@@ -16,7 +16,6 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 
 // Boot DB so migrations run
 const { resetDbInstance } = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
 
 const hostsRoute = await import("../../src/app/api/tools/traffic-inspector/hosts/route.ts");
 const hostDetailRoute =
