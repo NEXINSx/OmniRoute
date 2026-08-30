@@ -363,6 +363,17 @@ export function classifyProviderError(
     if (recoverableProject403) {
       return PROVIDER_ERROR_TYPES.PROJECT_ROUTE_ERROR;
     }
+    // Kiro IDC missing profileArn — AWS returns 403 "User is not authorized to make this call"
+    // when the request is sent without a profileArn or to the wrong Q Developer region.
+    // This is a recoverable configuration issue, not a ban: the account still works in Kiro IDE.
+    // Do NOT classify as FORBIDDEN (which bans permanently). Treat as PROJECT_ROUTE_ERROR
+    // so the connection stays active and can be retried after profile discovery (#10725).
+    const isKiroProfile403 =
+      (p === "kiro" || p === "amazon-q") &&
+      bodyStr.includes("User is not authorized to make this call");
+    if (isKiroProfile403) {
+      return PROVIDER_ERROR_TYPES.PROJECT_ROUTE_ERROR;
+    }
     // A Cloudflare Sentinel/Turnstile 403 is a TERMINAL block for browser-session
     // providers: the user's IP/session needs a browser Turnstile challenge, and
     // retrying the same connection will keep 403ing. Classify as FORBIDDEN so
