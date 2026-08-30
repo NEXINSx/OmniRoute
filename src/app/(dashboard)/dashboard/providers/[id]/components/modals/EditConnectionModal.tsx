@@ -275,10 +275,6 @@ export default function EditConnectionModal({
       const existingOpenRouterPreset = stringField(connection.providerSpecificData?.preset);
       const existingCx = stringField(connection.providerSpecificData?.cx);
       const existingAccountId = stringField(connection.providerSpecificData?.accountId);
-      const existingOpenCodeGoWorkspaceId =
-        stringField(connection.providerSpecificData?.opencodeGoWorkspaceId) ||
-        stringField(connection.providerSpecificData?.openCodeGoWorkspaceId) ||
-        stringField(connection.providerSpecificData?.workspaceId);
       const existingGlmOrganizationId =
         stringField(connection.providerSpecificData?.glmOrganizationId) ||
         stringField(connection.providerSpecificData?.bigmodelOrganization) ||
@@ -369,8 +365,6 @@ export default function EditConnectionModal({
         quotaPerUnit: existingQuotaPerUnit,
         glmOrganizationId: existingGlmOrganizationId,
         glmProjectId: existingGlmProjectId,
-        opencodeGoWorkspaceId: existingOpenCodeGoWorkspaceId,
-        opencodeGoAuthCookie: "",
         ollamaCloudUsageCookie: "",
         alibabaConsoleCookie: stringField(connection.providerSpecificData?.alibabaConsoleCookie),
         qwenCloudCookie: stringField(connection.providerSpecificData?.qwenCloudCookie),
