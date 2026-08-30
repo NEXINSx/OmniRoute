@@ -24,15 +24,6 @@ export interface OneproxyProxyRecord {
   updatedAt: string;
 }
 
-export interface OneproxyStats {
-  total: number;
-  active: number;
-  avgQuality: number | null;
-  lastValidated: string | null;
-  byProtocol: Array<{ protocol: string; count: number }>;
-  byCountry: Array<{ countryCode: string; count: number }>;
-}
-
 interface OneproxyUpsertInput {
   ip: string;
   port: number;
@@ -73,19 +64,6 @@ function mapProxyRow(row: unknown): OneproxyProxyRecord {
   };
 }
 
-function mapStatsRow(row: unknown) {
-  const r = toRecord(row);
-  return {
-    total: Number(r.total) || 0,
-    active: Number(r.active) || 0,
-    avgQuality:
-      r.avg_quality !== null && r.avg_quality !== undefined
-        ? Math.round(Number(r.avg_quality) * 100) / 100
-        : null,
-    lastValidated: typeof r.last_validated === "string" ? r.last_validated : null,
-  };
-}
-
 export async function listOneproxyProxies(options?: {
   protocol?: string;
   countryCode?: string;
@@ -119,47 +97,6 @@ export async function listOneproxyProxies(options?: {
 
   const rows = db.prepare(sql).all(...params);
   return rows.map(mapProxyRow);
-}
-
-export async function getOneproxyStats(): Promise<OneproxyStats> {
-  const db = getDbInstance();
-
-  const statsRow = db
-    .prepare(
-      `SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
-        AVG(quality_score) as avg_quality,
-        MAX(last_validated) as last_validated
-       FROM proxy_registry WHERE source = 'oneproxy'`
-    )
-    .get();
-
-  const stats = mapStatsRow(statsRow);
-
-  const byProtocol = db
-    .prepare(
-      "SELECT type as protocol, COUNT(*) as count FROM proxy_registry WHERE source = 'oneproxy' GROUP BY type ORDER BY count DESC"
-    )
-    .all() as Array<JsonRecord>;
-
-  const byCountry = db
-    .prepare(
-      "SELECT country_code as countryCode, COUNT(*) as count FROM proxy_registry WHERE source = 'oneproxy' AND country_code IS NOT NULL GROUP BY country_code ORDER BY count DESC LIMIT 20"
-    )
-    .all() as Array<JsonRecord>;
-
-  return {
-    ...stats,
-    byProtocol: byProtocol.map((r) => ({
-      protocol: String(r.protocol || "unknown"),
-      count: Number(r.count) || 0,
-    })),
-    byCountry: byCountry.map((r) => ({
-      countryCode: String(r.countryCode || "unknown"),
-      count: Number(r.count) || 0,
-    })),
-  };
 }
 
 export async function upsertOneproxyProxy(
@@ -234,22 +171,6 @@ export async function getOneproxyProxyById(id: string): Promise<OneproxyProxyRec
     .get(id);
   if (!row) return null;
   return mapProxyRow(row);
-}
-
-export async function deleteOneproxyProxy(id: string): Promise<boolean> {
-  const db = getDbInstance();
-  const result = db
-    .prepare("DELETE FROM proxy_registry WHERE id = ? AND source = 'oneproxy'")
-    .run(id);
-  backupDbFile("pre-write");
-  return result.changes > 0;
-}
-
-export async function clearAllOneproxyProxies(): Promise<number> {
-  const db = getDbInstance();
-  const result = db.prepare("DELETE FROM proxy_registry WHERE source = 'oneproxy'").run();
-  backupDbFile("pre-write");
-  return result.changes;
 }
 
 export async function getOneproxyProxyForRotation(options?: {
