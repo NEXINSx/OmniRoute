@@ -485,6 +485,9 @@ jobs:
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+          # Explicit: the advisory scan above already points at it, and the blocking
+          # gate must honour the same accepted-risk list (#12084).
+          trivyignores: .trivyignore
 
       - name: Upload Trivy SARIF to Security tab
         if: needs.prepare.outputs.version != 'main'
