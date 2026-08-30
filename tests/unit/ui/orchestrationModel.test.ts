@@ -13,6 +13,8 @@ import { fromCloudAgent } from "../../../src/app/(dashboard)/dashboard/orchestra
 import type { CloudAgentTask } from "../../../src/lib/cloudAgent/types.ts";
 import { fromA2A } from "../../../src/app/(dashboard)/dashboard/orchestration/model/fromA2A.ts";
 import type { A2ATask } from "../../../src/lib/a2a/taskManager.ts";
+import { fromConductor } from "../../../src/app/(dashboard)/dashboard/orchestration/model/fromConductor.ts";
+import type { FleetSnapshot } from "../../../src/lib/conductor/hubProxy.ts";
 
 describe("orchestrationTypes", () => {
   it("covers all six states with a color each", () => {
@@ -142,5 +144,60 @@ describe("fromA2A", () => {
   });
   it("empty input emits nothing", () => {
     assert.equal(fromA2A([]).nodes.length, 0);
+  });
+});
+
+const baseSnap: FleetSnapshot = {
+  offline: false,
+  runners: [{ id: "r1", name: "runner-one", clis: ["claude"], online: true, draining: false }],
+  tasks: [
+    {
+      id: "ct1",
+      status: "running",
+      mode: "auto",
+      repo: "acme/app",
+      runner: "r1",
+      summary: "Refactor auth",
+      branch: null,
+      error: null,
+      updated_at: "2026-08-30T10:00:00Z",
+    },
+  ],
+};
+
+describe("fromConductor", () => {
+  it("online runner with a running task → running WorkNode + ActivityNode for the task", () => {
+    const { nodes, edges } = fromConductor(baseSnap);
+    const runner = nodes.find((n) => n.id === "conductor:runner:r1");
+    assert.equal(runner?.state, "running");
+    const act = nodes.find((n) => n.id === "conductor:task:ct1");
+    assert.equal(act?.kind, "activity");
+    assert.ok(edges.some((e) => e.from === "conductor:runner:r1" && e.to === "conductor:task:ct1"));
+  });
+  it("queued task without runner hangs directly under the source as a work node", () => {
+    const snap: FleetSnapshot = {
+      ...baseSnap,
+      runners: [],
+      tasks: [{ ...baseSnap.tasks[0], id: "ct2", status: "queued", runner: null }],
+    };
+    const { nodes, edges } = fromConductor(snap);
+    const w = nodes.find((n) => n.id === "conductor:task:ct2");
+    assert.equal(w?.kind, "work");
+    assert.equal(w?.state, "queued");
+    assert.ok(edges.some((e) => e.from === "source:conductor" && e.to === "conductor:task:ct2"));
+  });
+  it("offline snapshot emits only nothing (hook marks the source offline separately)", () => {
+    const out = fromConductor({ offline: true, runners: [], tasks: [] });
+    assert.equal(out.nodes.length, 0);
+  });
+  it("unknown hub status maps to failed with the raw value in sublabel", () => {
+    const snap: FleetSnapshot = {
+      ...baseSnap,
+      runners: [],
+      tasks: [{ ...baseSnap.tasks[0], id: "ct3", status: "vaporized", runner: null }],
+    };
+    const w = fromConductor(snap).nodes.find((n) => n.id === "conductor:task:ct3");
+    assert.equal(w?.state, "failed");
+    assert.match(w?.sublabel ?? "", /vaporized/);
   });
 });
