@@ -521,7 +521,10 @@ jobs:
     name: No new ESLint warnings
     needs: changes
     if: ${{ github.event_name != 'pull_request' || ((github.event.pull_request.draft == false || startsWith(github.head_ref, 'mergify/merge-queue/')) && needs.changes.outputs.code == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.USE_VPS_RUNNER == 'true' && fromJSON('["self-hosted","omni-light"]')) || 'ubuntu-latest' }}
+    # 2026-08-30: a cold full lint with the eslint-plugin-react-hooks 7 compiler rules is
+    # killed on the 7 GB hosted runner without a message (status null → exit 1, the
+    # JSON never written); the box lints it in ~12 min with the heap below.
     continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true }}
     # G0 (trilho .50): security-events:read lets the CodeQL ratchet below read open
     # code-scanning alerts via `gh api .../code-scanning/alerts` (same as ci.yml's
@@ -553,6 +556,8 @@ jobs:
       - name: ESLint (baseline congelado — warning novo = vermelho)
         # lint:json writes the report; --max-warnings 0 keeps no-new-warnings policy.
         run: npm run lint:json -- --max-warnings 0
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
       # ── G0 (trilho .50): motor de ratchet também no trilho B ─────────────────────
       # This job just wrote .artifacts/eslint-results.json — collect-metrics prefers
       # that file, so the ratchet engine lands here at ZERO extra ESLint cost (one

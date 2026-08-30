@@ -162,6 +162,8 @@ test("shared set excludes manual aliases that never intercept nodes at runtime",
 });
 
 test("shared set size includes live REGISTRY and retired Designer + Felo + Qwen Web prefixes", () => {
+  // 2026-08-30: 398 → 400 with Perplexity Agent API (#12103) and the second prefix the same
+  // afternoon batch registered — computed, not hand-derived (see the note below).
   // Computed (not hand-derived) after combining Designer's 2 retired
   // ids/aliases with Felo's 2 retired ids/aliases and Qwen Web's 2 retired
   // ids/aliases (qwen-web's REGISTRY id/alias were identical strings, so its
@@ -169,7 +171,7 @@ test("shared set size includes live REGISTRY and retired Designer + Felo + Qwen 
   // 1 and adds 2 distinct tombstones "qwen-web"/"qw", a net +1) on top of the
   // live REGISTRY walk, minus the 3 GPL-derived Raycast/Hailuo Web
   // ids/aliases removed from REGISTRY by #11691's migration 166.
-  assert.equal(RESERVED_PREFIX_COUNT, 398);
+  assert.equal(RESERVED_PREFIX_COUNT, 400);
 });
 
 test("isReservedProviderPrefix rejects non-string input", () => {
