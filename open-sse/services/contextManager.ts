@@ -454,7 +454,20 @@ export function resolveComboContextLimit(options: {
   provider: string;
   model: string | null;
   comboTargetLimits: number[];
-}): { limit: number; source: "target" | "combo-min" | "fallback" } {
+  comboContextLength?: number | null;
+}): { limit: number; source: "combo-explicit" | "target" | "combo-min" | "fallback" } {
+  // An operator-set `context_length` on the combo record is an explicit
+  // declaration of the window this combo runs at, so it outranks every
+  // inferred value — including a target's own registry/catalog window.
+  // Without this branch the field was accepted and persisted by the combo
+  // editor but never consulted at request time, so a combo whose members
+  // carry no per-model window fell through to the provider's generic
+  // `defaultContextLength` and rejected large requests the operator had
+  // explicitly sized for.
+  const explicit = options.comboContextLength;
+  if (typeof explicit === "number" && Number.isFinite(explicit) && explicit > 0) {
+    return { limit: explicit, source: "combo-explicit" };
+  }
   const own = resolveTokenLimit(options.provider, options.model ?? null);
   if (own.specific) {
     return { limit: own.limit, source: "target" };
