@@ -2,6 +2,8 @@
 import type { FleetSnapshot, FleetTask } from "@/lib/conductor/hubProxy";
 import type { OrchEdge, OrchNode, OrchState } from "./orchestrationTypes";
 
+const TERMINAL: ReadonlySet<OrchState> = new Set(["succeeded", "failed", "cancelled"]);
+
 function mapHubStatus(status: string): OrchState | null {
   const s = status.toLowerCase();
   if (s === "queued" || s === "pending") return "queued";
@@ -14,14 +16,18 @@ function mapHubStatus(status: string): OrchState | null {
 
 function taskNode(t: FleetTask, kind: "work" | "activity"): OrchNode {
   const mapped = mapHubStatus(t.status);
+  const state: OrchState = mapped ?? "failed";
   return {
     id: `conductor:task:${t.id}`,
     kind,
     source: "conductor",
-    state: mapped ?? "failed",
+    state,
     label: t.summary ?? t.id,
     sublabel: mapped ? (t.repo ?? t.mode) : `unknown status: ${t.status}`,
     updatedAt: t.updated_at ?? undefined,
+    // FleetTask has no dedicated completion timestamp — updated_at is the closest
+    // proxy, same pattern as fromA2A.ts (A2ATask has no completedAt either).
+    endedAt: TERMINAL.has(state) ? (t.updated_at ?? undefined) : undefined,
     raw: t,
   };
 }

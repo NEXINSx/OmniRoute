@@ -275,4 +275,46 @@ describe("mergeSnapshot", () => {
     });
     assert.deepEqual(snap.sources, src);
   });
+  it("does not mutate input node objects when deduping (honors the Pure contract)", () => {
+    const a2a = fromA2A([
+      a2aTask({ id: "am2", skill: "conductor", metadata: { conductor: { task_id: "ct1" } } }),
+    ]);
+    const conductor = fromConductor(baseSnap); // contains conductor:task:ct1 as activity of r1
+    const originalNode = conductor.nodes.find((n) => n.id === "conductor:task:ct1");
+    assert.ok(originalNode, "conductor:task:ct1 must exist in the source part");
+    const snap = mergeSnapshot({ cloudAgent: empty, a2a, conductor }, OK_SOURCES, { now: NOW });
+    assert.equal(
+      "mirrorOf" in (originalNode as object),
+      false,
+      "the original conductor input node must not be mutated"
+    );
+    const mergedNode = snap.nodes.find((n) => n.id === "conductor:task:ct1");
+    assert.equal(mergedNode?.mirrorOf, "a2a:am2");
+  });
+  it("drops a stale terminal Conductor task older than STALE_COMPLETED_MS unless showCompleted", () => {
+    const staleSnap: FleetSnapshot = {
+      ...baseSnap,
+      runners: [],
+      tasks: [
+        {
+          ...baseSnap.tasks[0],
+          id: "ctOld",
+          status: "completed",
+          runner: null,
+          updated_at: new Date(NOW - STALE_COMPLETED_MS - 1000).toISOString(),
+        },
+      ],
+    };
+    const parts = { cloudAgent: empty, a2a: empty, conductor: fromConductor(staleSnap) };
+    assert.ok(
+      !mergeSnapshot(parts, OK_SOURCES, { now: NOW }).nodes.some(
+        (n) => n.id === "conductor:task:ctOld"
+      )
+    );
+    assert.ok(
+      mergeSnapshot(parts, OK_SOURCES, { now: NOW, showCompleted: true }).nodes.some(
+        (n) => n.id === "conductor:task:ctOld"
+      )
+    );
+  });
 });

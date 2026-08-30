@@ -48,9 +48,12 @@ export function mergeSnapshot(
     const mirror = conductorMirrorId(n);
     if (mirror && conductorTaskIds.has(mirror)) {
       dropped.add(n.id);
-      const cNode = nodes.find((c) => c.id === `conductor:task:${mirror}`);
-      if (cNode) {
-        cNode.mirrorOf = n.id;
+      const cIndex = nodes.findIndex((c) => c.id === `conductor:task:${mirror}`);
+      if (cIndex !== -1) {
+        // Copy rather than mutate — the original object is still referenced by
+        // parts.conductor.nodes, and this function's contract is Pure.
+        const cNode: OrchNode = { ...nodes[cIndex], mirrorOf: n.id };
+        nodes[cIndex] = cNode;
         edges.push({
           id: `e:mirror:${cNode.id}`,
           from: cNode.id,
