@@ -64,4 +64,37 @@ if (!fs.existsSync(outFile)) {
   fs.writeFileSync(outFile, "[]\n");
 }
 
+// 2026-08-30 (#12144): with --format json --output-file a red run printed NOTHING — three
+// blind debugging rounds. On failure, summarize the problems from the report so the CI log
+// says WHAT failed; status null means the process was killed (OOM), also silent before.
+if (result.status !== 0) {
+  if (result.status === null) {
+    console.error(
+      `[lint:json] eslint was killed (signal ${result.signal || "?"}) — likely OOM; no report written.`
+    );
+  }
+  try {
+    const report = JSON.parse(fs.readFileSync(outFile, "utf8"));
+    const problems = [];
+    for (const f of report) {
+      for (const m of f.messages || []) {
+        problems.push(
+          `${path.relative(root, f.filePath)}:${m.line ?? 0} ${m.severity === 2 ? "error" : "warning"} ${m.ruleId ?? "(core)"} — ${String(m.message).split("\n")[0].slice(0, 120)}`
+        );
+      }
+    }
+    console.error(
+      `[lint:json] exit ${result.status}: ${problems.length} problem(s) in the report:`
+    );
+    for (const line of problems.slice(0, 60)) console.error("  ✗ " + line);
+    if (problems.length > 60) {
+      console.error(
+        `  … and ${problems.length - 60} more (full report: ${path.relative(root, outFile)})`
+      );
+    }
+  } catch (err) {
+    console.error(`[lint:json] could not summarize ${outFile}: ${err && err.message}`);
+  }
+}
+
 process.exit(result.status === null ? 1 : result.status);
