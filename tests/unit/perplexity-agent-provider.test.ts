@@ -202,7 +202,7 @@ test("perplexity-agent defaults max_output_tokens for Anthropic Agent models", (
   assert.equal("max_output_tokens" in openaiAgent, false);
 });
 
-test("perplexity-agent model discovery fetches the Perplexity models endpoint with the saved API key", async () => {
+test("perplexity-agent model discovery accepts documented and future Agent API model IDs", async () => {
   const { id } = (await createProviderConnection({
     provider: "perplexity-agent",
     authType: "apikey",
@@ -213,6 +213,8 @@ test("perplexity-agent model discovery fetches the Perplexity models endpoint wi
   assert.equal(typeof id, "string");
 
   const originalFetch = globalThis.fetch;
+  const futureModelId = "future-lab/model-alpha-1";
+  const upstreamModelIds = [...DOCUMENTED_AGENT_MODEL_IDS, futureModelId];
   let upstreamUrl: string | null = null;
   let upstreamAuthorization: string | null = null;
   globalThis.fetch = (async (input, init) => {
@@ -223,10 +225,11 @@ test("perplexity-agent model discovery fetches the Perplexity models endpoint wi
     return new Response(
       JSON.stringify({
         object: "list",
-        data: [
-          { id: "openai/gpt-5.6-sol", object: "model", owned_by: "perplexity-agent" },
-          { id: "anthropic/claude-sonnet-5", object: "model", owned_by: "perplexity-agent" },
-        ],
+        data: upstreamModelIds.map((modelId) => ({
+          id: modelId,
+          object: "model",
+          owned_by: "perplexity-agent",
+        })),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -244,8 +247,13 @@ test("perplexity-agent model discovery fetches the Perplexity models endpoint wi
     assert.equal(response.status, 200);
     assert.equal(upstreamUrl, AGENT_MODELS_URL);
     assert.equal(upstreamAuthorization, "Bearer pplx-valid-test-key");
-    assert.ok(modelIds.includes("openai/gpt-5.6-sol"));
-    assert.ok(modelIds.includes("anthropic/claude-sonnet-5"));
+    for (const modelId of upstreamModelIds) {
+      assert.ok(modelIds.includes(modelId), `expected discovered catalog to include ${modelId}`);
+    }
+
+    const futureInfo = await getModelInfo(`pplx-agent/${futureModelId}`);
+    assert.equal(futureInfo.provider, "perplexity-agent");
+    assert.equal(futureInfo.model, futureModelId);
   } finally {
     globalThis.fetch = originalFetch;
   }
