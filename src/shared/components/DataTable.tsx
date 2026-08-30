@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 const INTERACTIVE_ELEMENT_SELECTOR =
@@ -48,11 +50,11 @@ export interface DataTableRow {
   [key: string]: unknown;
 }
 
-interface DataTableProps {
+export interface DataTableProps {
   columns?: DataTableColumn[];
   data?: DataTableRow[];
-  renderCell: (row: DataTableRow, column: DataTableColumn) => React.ReactNode;
-  renderHeader?: (column: DataTableColumn) => React.ReactNode;
+  renderCell: (row: DataTableRow, column: DataTableColumn) => ReactNode;
+  renderHeader?: (column: DataTableColumn) => ReactNode;
   onRowClick?: (row: DataTableRow) => void;
   selectedId?: string | number;
   loading?: boolean;
@@ -128,9 +130,13 @@ export default function DataTable({
         overflow: "auto",
         maxHeight,
         borderRadius: "8px",
-        // Opaque surface so the body grid wallpaper never bleeds through the
-        // transparent even-rows / low-alpha zebra when the table renders card-less.
-        background: "var(--color-surface)",
+        // Glass-aware: inside a glass-card this preserves translucency (lens stack);
+        // when rendered card-less the 0.6 alpha still frosts the wallpaper but keeps
+        // zebra/transparent rows legible. Opaque fallback only via prefers-reduced-transparency.
+        background: "var(--glass-bg-subtle)",
+        backdropFilter: "var(--glass-blur-sm)",
+        WebkitBackdropFilter: "var(--glass-blur-sm)",
+        border: "1px solid var(--glass-border-subtle)",
       }}
     >
       <table
@@ -151,10 +157,14 @@ export default function DataTable({
                   textAlign: "left",
                   fontWeight: 600,
                   color: "var(--color-text-muted)",
-                  borderBottom: "1px solid var(--color-border)",
+                  borderBottom: "1px solid var(--glass-border-subtle)",
                   position: "sticky",
                   top: 0,
-                  background: "var(--table-header-bg)",
+                  // Lens-correct sticky header: translucent glass-bg-subtle + glass-blur-sm
+                  // pairs with --table-header-bg (0.85 alpha) — never opaque.
+                  background: "var(--glass-bg-subtle)",
+                  backdropFilter: "var(--glass-blur-sm)",
+                  WebkitBackdropFilter: "var(--glass-blur-sm)",
                   zIndex: 1,
                   whiteSpace: "nowrap",
                   fontSize: "11px",

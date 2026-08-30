@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardSkeleton, Button, Modal } from "@/shared/components";
+import { CardSkeleton, Button, Modal } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { AI_PROVIDERS, NOAUTH_PROVIDERS, OAUTH_PROVIDERS } from "@/shared/constants/providers";
 import {
@@ -770,7 +770,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-12 max-w-[980px] mx-auto w-full px-6">
         <CardSkeleton />
         <CardSkeleton />
       </div>
@@ -780,7 +780,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
   const currentEndpoint = baseUrl;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-12 max-w-[980px] mx-auto w-full px-6">
       {/* Update Progress Overlay */}
       {showUpdateOverlay && (
         <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -895,25 +895,28 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
         </div>
       )}
 
-      {/* Update Notification Banner */}
+      {/* Update Notification Banner — Apple soft: #F5F5F7 + minimal primary dot */}
       {versionInfo?.updateAvailable && !showUpdateOverlay && (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/10 px-5 py-4 text-primary">
+          <div className="flex flex-col gap-3 rounded-[18px] border border-black/5 dark:border-white/10 bg-[#F5F5F7] dark:bg-white/[0.04] px-5 py-4">
             <div className="flex min-h-[48px] items-center justify-between">
               <div className="flex min-w-0 items-center gap-4">
-                <span className="material-symbols-outlined shrink-0 text-[24px]">
-                  {isElectron && electronUpdateStatus.status === "downloading"
-                    ? "downloading"
-                    : "system_update_alt"}
-                </span>
+                <div className="relative flex items-center justify-center size-10 rounded-2xl bg-white dark:bg-white/[0.06] border border-black/5 dark:border-white/10 shrink-0">
+                  <span className="material-symbols-outlined shrink-0 text-[20px] text-text-muted">
+                    {isElectron && electronUpdateStatus.status === "downloading"
+                      ? "downloading"
+                      : "system_update_alt"}
+                  </span>
+                  <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary ring-2 ring-[#F5F5F7] dark:ring-white/[0.04]" />
+                </div>
                 <div>
-                  <p className="font-semibold text-sm">
+                  <p className="font-semibold text-sm tracking-tight text-[#1D1D1F] dark:text-text-main">
                     {t("updateAvailableTitle", {
                       version: versionInfo.latest,
                       desktop: isElectron ? ` ${t("desktopAppLabel")}` : "",
                     })}
                   </p>
-                  <p className="text-xs opacity-80 mt-0.5">
+                  <p className="text-xs text-text-muted leading-relaxed mt-0.5">
                     {isElectron ? (
                       <>
                         {electronUpdateStatus.status === "checking" && t("checkingForUpdates")}
@@ -1005,8 +1008,8 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
                 electronUpdateStatus.status === "idle" ||
                 electronUpdateStatus.status === "available" ||
                 electronUpdateStatus.status === "not-available") && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-primary/20 mt-2 pt-3 gap-2">
-                  <p className="text-xs opacity-75">{t("directDownloadHint")}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-black/5 dark:border-white/10 mt-2 pt-3 gap-2">
+                  <p className="text-xs text-text-muted">{t("directDownloadHint")}</p>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
@@ -1034,14 +1037,18 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
         </div>
       )}
 
-      {/* Quick Start (controlled by Appearance setting, default on) */}
+      {/* Quick Start — Apple bento grid */}
       {showQuickStartOnHome && (
-        <Card>
+        <section className="flex flex-col gap-6">
           <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">{t("quickStart")}</h2>
-                <p className="text-sm text-text-muted">{t("quickStartDesc")}</p>
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight tracking-[-0.02em] text-[#1D1D1F] dark:text-text-main">
+                  {t("quickStart")}
+                </h2>
+                <p className="text-[15px] leading-relaxed text-text-muted mt-1.5">
+                  {t("quickStartDesc")}
+                </p>
               </div>
               <Link href="/docs" prefetch={false} className={DOCS_LINK}>
                 <span className="material-symbols-outlined text-[14px]">menu_book</span>
@@ -1049,14 +1056,16 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               </Link>
             </div>
 
-            <ol className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <li className="rounded-lg border border-border bg-bg-subtle p-4 flex gap-3">
-                <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 text-primary shrink-0">
+            <ol className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <li className="rounded-[18px] bg-[#F5F5F7] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/10 p-6 flex gap-4">
+                <div className="flex items-center justify-center size-10 rounded-2xl bg-primary/10 text-primary shrink-0 border border-black/5 dark:border-white/10">
                   <span className="material-symbols-outlined text-[18px]">key</span>
                 </div>
                 <div>
-                  <span className="font-semibold">{t("step1Title")}</span>
-                  <p className="text-text-muted mt-0.5">
+                  <span className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-text-main">
+                    {t("step1Title")}
+                  </span>
+                  <p className="text-[13px] leading-relaxed text-text-muted mt-1">
                     {t.rich("step1Desc", {
                       endpoint: (chunks) => (
                         <Link
@@ -1071,13 +1080,15 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
                   </p>
                 </div>
               </li>
-              <li className="rounded-lg border border-border bg-bg-subtle p-4 flex gap-3">
-                <div className="flex items-center justify-center size-8 rounded-lg bg-green-500/10 text-green-500 shrink-0">
+              <li className="rounded-[18px] bg-[#F5F5F7] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/10 p-6 flex gap-4">
+                <div className="flex items-center justify-center size-10 rounded-2xl bg-green-500/10 text-green-500 shrink-0 border border-black/5 dark:border-white/10">
                   <span className="material-symbols-outlined text-[18px]">dns</span>
                 </div>
                 <div>
-                  <span className="font-semibold">{t("step2Title")}</span>
-                  <p className="text-text-muted mt-0.5">
+                  <span className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-text-main">
+                    {t("step2Title")}
+                  </span>
+                  <p className="text-[13px] leading-relaxed text-text-muted mt-1">
                     {t.rich("step2Desc", {
                       providers: (chunks) => (
                         <Link href="/dashboard/providers" prefetch={false} className={INLINE_LINK}>
@@ -1088,24 +1099,28 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
                   </p>
                 </div>
               </li>
-              <li className="rounded-lg border border-border bg-bg-subtle p-4 flex gap-3">
-                <div className="flex items-center justify-center size-8 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
+              <li className="rounded-[18px] bg-[#F5F5F7] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/10 p-6 flex gap-4">
+                <div className="flex items-center justify-center size-10 rounded-2xl bg-blue-500/10 text-blue-500 shrink-0 border border-black/5 dark:border-white/10">
                   <span className="material-symbols-outlined text-[18px]">link</span>
                 </div>
                 <div>
-                  <span className="font-semibold">{t("step3Title")}</span>
-                  <p className="text-text-muted mt-0.5">
+                  <span className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-text-main">
+                    {t("step3Title")}
+                  </span>
+                  <p className="text-[13px] leading-relaxed text-text-muted mt-1">
                     {t("step3Desc", { url: currentEndpoint })}
                   </p>
                 </div>
               </li>
-              <li className="rounded-lg border border-border bg-bg-subtle p-4 flex gap-3">
-                <div className="flex items-center justify-center size-8 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+              <li className="rounded-[18px] bg-[#F5F5F7] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/10 p-6 flex gap-4">
+                <div className="flex items-center justify-center size-10 rounded-2xl bg-amber-500/10 text-amber-500 shrink-0 border border-black/5 dark:border-white/10">
                   <span className="material-symbols-outlined text-[18px]">analytics</span>
                 </div>
                 <div>
-                  <span className="font-semibold">{t("step4Title")}</span>
-                  <p className="text-text-muted mt-0.5">
+                  <span className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-text-main">
+                    {t("step4Title")}
+                  </span>
+                  <p className="text-[13px] leading-relaxed text-text-muted mt-1">
                     {t.rich("step4Desc", {
                       logs: (chunks) => (
                         <Link href="/dashboard/logs" prefetch={false} className={INLINE_LINK}>
@@ -1123,7 +1138,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               </li>
             </ol>
           </div>
-        </Card>
+        </section>
       )}
 
       {showProviderTopologyOnHome && (
