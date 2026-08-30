@@ -24,6 +24,50 @@ const { getModelInfo } = await import("../../src/sse/services/model.ts");
 const AGENT_RESPONSES_URL = "https://api.perplexity.ai/v1/responses";
 const AGENT_MODELS_URL = "https://api.perplexity.ai/v1/models";
 const AGENT_CONNECTION_ID = "perplexity-agent-live-catalog-test";
+const DOCUMENTED_AGENT_MODEL_IDS = [
+  "anthropic/claude-fable-5",
+  "anthropic/claude-opus-5",
+  "anthropic/claude-opus-4-8",
+  "anthropic/claude-opus-4-7",
+  "anthropic/claude-opus-4-6",
+  "anthropic/claude-opus-4-5",
+  "anthropic/claude-sonnet-5",
+  "anthropic/claude-sonnet-4-6",
+  "anthropic/claude-sonnet-4-5",
+  "anthropic/claude-haiku-4-5",
+  "openai/gpt-5.6-sol",
+  "openai/gpt-5.6-terra",
+  "openai/gpt-5.6-luna",
+  "openai/gpt-5.5",
+  "openai/gpt-5.4",
+  "openai/gpt-5.4-mini",
+  "openai/gpt-5.4-nano",
+  "openai/gpt-5.2",
+  "openai/gpt-5.1",
+  "openai/gpt-5",
+  "openai/gpt-5-mini",
+  "google/gemini-3.1-pro-preview",
+  "google/gemini-3.1-flash-lite",
+  "google/gemini-3.5-flash",
+  "google/gemini-3.5-flash-lite",
+  "google/gemini-3.6-flash",
+  "google/gemini-3.7-flash",
+  "google/gemini-3-flash-preview",
+  "xai/grok-4.6",
+  "xai/grok-4.5",
+  "xai/grok-4.3",
+  "xai/grok-4.20-reasoning",
+  "xai/grok-4.20-non-reasoning",
+  "xai/grok-4.20-multi-agent",
+  "perplexity/deepseek-v4-flash-0731",
+  "perplexity/glm-5.2",
+  "perplexity/glm-5.3",
+  "perplexity/kimi-k3",
+  "perplexity/kimi-k2.7-code",
+  "perplexity/nemotron-3.5-lightning-30b-a3b",
+  "perplexity/nemotron-3-ultra-550b-a55b",
+  "perplexity/sonar",
+] as const;
 
 test.after(() => {
   dbCore.resetDbInstance();
@@ -100,9 +144,14 @@ test("perplexity-agent is available from the canonical API-key provider catalog"
 
 test("perplexity-agent exposes starter models without restricting passthrough routing", () => {
   const entry = REGISTRY["perplexity-agent"];
+  const ids = new Set(entry.models.map((model) => model.id));
 
-  assert.ok(entry.models.some((model) => model.id === "openai/gpt-5.6-sol"));
-  assert.ok(entry.models.some((model) => model.name.includes("GPT-5.6 Sol")));
+  for (const modelId of DOCUMENTED_AGENT_MODEL_IDS) {
+    assert.ok(ids.has(modelId), `expected Perplexity Agent catalog to include ${modelId}`);
+  }
+  assert.equal(entry.models.length, DOCUMENTED_AGENT_MODEL_IDS.length);
+  assert.ok(entry.models.some((model) => model.id === "perplexity/kimi-k3"));
+  assert.ok(entry.models.some((model) => model.name.includes("Kimi K3")));
 });
 
 test("pplx-agent prefix preserves raw slash-containing Agent API model IDs", async () => {
