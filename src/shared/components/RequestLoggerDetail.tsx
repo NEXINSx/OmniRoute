@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import JsonViewModule from "react18-json-view";
-// Stylesheets for react18-json-view live in src/app/globals.css: a CSS import here
-// is fine for Next but crashes node:test (ERR_UNKNOWN_FILE_EXTENSION) and the
-// browser-bundle safety check for every module that imports this component.
+import { JsonView } from "@/shared/components/jsonView";
 import {
   PROVIDER_COLORS,
   getHttpStatusStyle as getStatusStyle,
@@ -24,12 +21,6 @@ import {
   PayloadSection,
   ConversationContextSection,
 } from "@/shared/components/RequestLoggerDetail.sections";
-
-// react18-json-view ships no `exports` map: bundlers take the ESM `module` build and
-// hand over the component, but node ESM (node:test) resolves the CJS `main`, where the
-// default import is the whole module namespace. Same interop as redisQuotaStore/keytar.
-const JsonView = ((JsonViewModule as unknown as { default?: typeof JsonViewModule }).default ??
-  JsonViewModule) as typeof JsonViewModule;
 
 // ─── Copy-all composition ────────────────────────────────────────────────────
 // Compose every visible payload section + stream chunk into a single block so
