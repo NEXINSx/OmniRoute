@@ -72,18 +72,13 @@ async function fetchOneproxyData(
   return result;
 }
 
-export default function OneproxyTab() {
-  const t = useTranslations("settings");
+/** Owns the proxy-list data state: fetch-on-mount/filter-change, refresh, and the
+ * loading-spinner reset when the filters tuple changes (state adjustment during render). */
+function useOneproxyData(filterProtocol: string, filterCountry: string, minQuality: string) {
   const [proxies, setProxies] = useState<OneproxyItem[]>([]);
   const [stats, setStats] = useState<OneproxyStats | null>(null);
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<string | null>(null);
-  const [syncSucceeded, setSyncSucceeded] = useState(false);
-  const [filterProtocol, setFilterProtocol] = useState("");
-  const [filterCountry, setFilterCountry] = useState("");
-  const [minQuality, setMinQuality] = useState("");
 
   const applyData = useCallback((result: OneproxyFetchResult) => {
     if (result.proxies) setProxies(result.proxies);
@@ -116,6 +111,24 @@ export default function OneproxyTab() {
       cancelled = true;
     };
   }, [applyData, filterProtocol, filterCountry, minQuality]);
+
+  return { proxies, setProxies, stats, setStats, status, loading, loadData };
+}
+
+export default function OneproxyTab() {
+  const t = useTranslations("settings");
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [syncSucceeded, setSyncSucceeded] = useState(false);
+  const [filterProtocol, setFilterProtocol] = useState("");
+  const [filterCountry, setFilterCountry] = useState("");
+  const [minQuality, setMinQuality] = useState("");
+
+  const { proxies, setProxies, stats, setStats, status, loading, loadData } = useOneproxyData(
+    filterProtocol,
+    filterCountry,
+    minQuality
+  );
 
   const handleSync = async () => {
     setSyncing(true);
