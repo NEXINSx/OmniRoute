@@ -99,14 +99,14 @@ export function memoLookup(key: string): CompressionResult | null {
   const hit = memoMap.get(key);
   if (!hit) return null;
   // Return a clone so downstream mutation cannot corrupt the cached value.
-  return JSON.parse(JSON.stringify(hit)) as CompressionResult;
+  return structuredClone(hit);
 }
 
 export function memoStore(key: string, result: CompressionResult): void {
   // Clone on STORE too (memoLookup already clones on read). Storing the caller's live
   // object would let a later mutation of it (e.g. an async engine holding a sub-ref)
   // corrupt the cached entry. Both ends isolated ⇒ the cache is immutable once stored.
-  boundedSet(key, JSON.parse(JSON.stringify(result)) as CompressionResult);
+  boundedSet(key, structuredClone(result));
 }
 
 /** For tests only — clears the in-process memo store. */
