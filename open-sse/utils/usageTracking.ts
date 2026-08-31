@@ -661,9 +661,24 @@ export function hasValidUsage(usage: UsageLike | null | undefined) {
 
 /**
  * Extract usage from supported formats (Claude, OpenAI, Gemini, Responses API)
+ * Fast-path: return early for chunks without any usage-related fields.
+ * Most streaming chunks (content deltas) have no usage — avoids property checks.
  */
 export function extractUsage(chunk: UsagePayloadLike | null | undefined) {
   if (!chunk || typeof chunk !== "object") return null;
+
+  // Fast-path: check for any usage-like fields before doing full extraction
+  // Most chunks are content deltas with no usage — return null immediately.
+  const c = chunk as Record<string, unknown>;
+  if (!c.type &&
+      c.usage === undefined &&
+      c.usageMetadata === undefined &&
+      c.response?.usage === undefined &&
+      c.response?.usageMetadata === undefined &&
+      c.message?.usage === undefined &&
+      c.done !== true) {
+    return null;
+  }
 
   // Claude/Antigravity streaming: message_start event carries INPUT tokens
   // FIX #74: This event was not handled — input_tokens were being dropped

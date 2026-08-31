@@ -391,6 +391,10 @@ function buildResponsesFunctionCallEvents(toolCall: ToolCall) {
 }
 
 function formatSSEDataEvents(events: unknown[]) {
+  // Fast-path: single event (common case) - avoid array allocation
+  if (events.length === 1) {
+    return `data: ${JSON.stringify(events[0])}\n\n`;
+  }
   return events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
 }
 
