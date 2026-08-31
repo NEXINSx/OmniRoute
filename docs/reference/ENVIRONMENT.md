@@ -1609,7 +1609,12 @@ Globale Defaults für den headless Browser und den ausgehenden Tool-Tunnel. Im D
 | `CHATGPT_WEB_CODEX_CDP_URL`          | _(unset)_                        | `open-sse/executors/chatgpt-web-codex.ts`        | Interner CDP-Endpunkt; Docker verwendet den Sidecar auf Port `9223`.        |
 | `CHATGPT_WEB_CODEX_TUNNEL_ID`        | _(unset)_                        | `open-sse/executors/chatgpt-web-codex.ts`        | Globale OpenAI-Tunnel-ID für lokale Codex-Tool-Runden.                      |
 | `CHATGPT_WEB_CODEX_RUNTIME_KEY`      | _(unset)_                        | `open-sse/executors/chatgpt-web-codex.ts`        | Globaler Tunnel Runtime-Key; niemals in Logs ausgeben.                      |
-| `CHATGPT_WEB_CODEX_CONNECTOR_NAME`   | _(unset)_                        | `open-sse/executors/chatgpt-web-codex.ts`        | Name des ChatGPT-Custom-Connectors für die MCP-Brücke.                      |
+| `CHATGPT_WEB_CODEX_CONNECTOR_NAME`   | `Codex Native2`                  | `open-sse/executors/chatgpt-web-codex.ts`        | Exakter Name des neu erstellten ChatGPT-Custom-Connectors für die MCP-Brücke. |
+| `CODEX_CHATGPT_WEB_HOME`             | `<DATA_DIR>/chatgpt-web-codex`   | `open-sse/vendor/codex-chatgpt-web/config.ts`    | Dediziertes Verzeichnis für Browser-, Broker- und Tunnelzustand.            |
+| `CODEX_CHATGPT_WEB_BROWSER_DIAGNOSTICS` | `0`                           | `open-sse/vendor/codex-chatgpt-web/adapters/chatgpt-web/browser-worker.ts` | Bei `1` werden Browser-Diagnosebilder an jedem Checkpoint erfasst. |
+| `CODEX_CHATGPT_WEB_LAUNCHER`         | _(unset)_                        | `open-sse/vendor/codex-chatgpt-web/config.ts`    | Optionaler absoluter Pfad zu einem dauerhaften Launcher-Binary.             |
+| `CODEX_CHATGPT_WEB_BUN`              | _(auto-detect)_                  | `open-sse/vendor/codex-chatgpt-web/config.ts`    | Optionaler absoluter Pfad zum Bun-Runtime-Binary.                           |
+| `CODEX_WEB_GPT_BUN`                  | _(unset)_                        | `open-sse/vendor/codex-chatgpt-web/config.ts`    | Legacy-Fallback für `CODEX_CHATGPT_WEB_BUN`; neue Setups verwenden den kanonischen Namen. |
 ---
 
 ## OmniConductor Bridge

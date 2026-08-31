@@ -1,7 +1,7 @@
 ---
 title: "Providers — ChatGPT Web (Codex)"
-version: 3.8.50
-lastUpdated: 2026-08-26
+version: 3.8.51
+lastUpdated: 2026-08-31
 ---
 
 # Providers — ChatGPT Web (Codex)
@@ -9,7 +9,7 @@ lastUpdated: 2026-08-26
 `chatgpt-web-codex` (alias `cgpt-codex`) bridges Codex Responses turns through an
 authenticated ChatGPT browser session. It is independent from the retired common
 `chatgpt-web` provider and uses the MIT-noticed implementation under
-`open-sse/vendor/codex-chatgpt-web/`.
+`open-sse/vendor/codex-chatgpt-web/`, refreshed from upstream v4.0.6.
 
 ## Common provider retirement
 
@@ -18,7 +18,7 @@ provenance of their pre-key/proof-of-work implementation could not be cleared. E
 requests to either ID, including slash-prefixed model IDs and persisted aliases, fail
 closed with HTTP `410` and code **PROVIDER_RETIRED** before any upstream request.
 
-Migration `163_retire_chatgpt_web.sql` tombstones matching provider connections and
+Migration `168_retire_chatgpt_web.sql` tombstones matching provider connections and
 invalidates their active session leases. It preserves connection history and API-key
 allowlists; it does not add replacement access to an allowlist. The Codex provider and
 its connections are not matched by this retirement.
@@ -29,18 +29,20 @@ its connections are not matched by this retirement.
 - Chrome or Chromium for npm, systemd, and PM2 installs;
 - with the Docker `web` profile, the internal Chromium service from
   `docker-compose.yml`;
-- an OpenAI tunnel and a ChatGPT custom connector for local Codex tools.
+- OpenAI `tunnel-client` v0.0.13 and a ChatGPT custom connector for local Codex tools.
 
-The tunnel is only needed for tool turns. The `pro` model is read-only and does not need
-a local tool connector.
+The tunnel is only needed for tool turns. Every listed route, including `pro`, can use the
+same turn-bound local tool capability when the tunnel and connector are configured.
 
 ## Dashboard setup
 
 1. Open the **ChatGPT Web (Codex)** provider and add a connection.
 2. Paste the full ChatGPT Cookie header, tunnel ID, runtime key, and custom connector
-   name.
+   name. New tool-capable setups must use a newly created connector named exactly
+   `Codex Native2`, with Authentication set to None and Permissions set to Allow all
+   actions.
 3. Run the connection check. OmniRoute opens a headless Temporary Chat and detects
-   whether `pro` is available for the account.
+   whether Sol and Pro are available for the account.
 4. Save the connection. OmniRoute replaces the pasted cookie with the verified
    Playwright storage state and stores it with the runtime key through the encrypted
    credential abstraction.
@@ -57,6 +59,8 @@ connector, and tool round-trip separately.
 
 The fixed model routes are:
 
+- `chatgpt-web-codex/luna` — GPT-5.6 Luna, low effort
+- `chatgpt-web-codex/think` — GPT-5.6 Luna, medium effort
 - `chatgpt-web-codex/instant`
 - `chatgpt-web-codex/medium`
 - `chatgpt-web-codex/high`
@@ -67,8 +71,15 @@ Add one of them to a combo like any other model. The Codex app sends the combo n
 `model` to the regular Responses endpoint, `/v1/responses`; there is no separate Codex
 endpoint or mode switch.
 
-`pro` does not run local tools. A forced tool makes that combo target incompatible. With
-optional tools, the turn runs read-only and reports the limitation as commentary.
+Free/Go accounts expose the Luna routes. Sol-capable accounts expose Instant through
+High, and Pro-capable accounts additionally expose Extra High and Pro. Each route has a
+fixed backend model and reasoning effort; a conflicting explicit Responses effort fails
+closed instead of silently changing the selected browser mode.
+
+Do not rename or reuse an older `Codex Native` or `OmniRoute Codex` connector. ChatGPT
+caches the public MCP contract by connector identity, while the refreshed bridge uses a
+new direct turn-token contract. The runtime rejects those legacy identities and requires
+a new `Codex Native2` connector.
 
 ## Security model
 

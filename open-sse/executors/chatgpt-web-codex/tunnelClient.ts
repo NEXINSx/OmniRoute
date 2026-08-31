@@ -1,5 +1,5 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -16,7 +16,8 @@ import { unzipSync } from "fflate";
 
 import { atomicWriteFile, getConfigDir } from "../../vendor/codex-chatgpt-web/config.ts";
 
-export const CHATGPT_WEB_CODEX_TUNNEL_VERSION = "0.0.10";
+export const CHATGPT_WEB_CODEX_TUNNEL_VERSION = "0.0.13";
+const MIGRATABLE_TUNNEL_VERSIONS = new Set(["0.0.10", "0.0.12"]);
 const RELEASE_BASE = `https://github.com/openai/tunnel-client/releases/download/v${CHATGPT_WEB_CODEX_TUNNEL_VERSION}`;
 const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
 
@@ -53,6 +54,14 @@ type SupervisorLease = {
 
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+export function tunnelClientInstallAction(installedVersion: string): "reuse" | "upgrade" {
+  if (installedVersion === CHATGPT_WEB_CODEX_TUNNEL_VERSION) return "reuse";
+  if (MIGRATABLE_TUNNEL_VERSIONS.has(installedVersion)) return "upgrade";
+  throw new Error(
+    `Installed tunnel-client version ${installedVersion} is not a trusted upgrade source`
+  );
 }
 
 export function tunnelPlatformAsset(platform = process.platform, arch = process.arch): string {
@@ -200,17 +209,34 @@ export function releaseTunnelSupervisorLease(): void {
 
 export async function ensureTunnelClientInstalled(): Promise<string> {
   const paths = tunnelClientPaths();
+  let previousInstallation: { binary: Uint8Array; manifestText: string } | undefined;
   if (existsSync(paths.binary) && existsSync(paths.manifest)) {
-    const manifest = JSON.parse(readFileSync(paths.manifest, "utf8")) as Partial<InstallManifest>;
-    const actual = sha256(readFileSync(paths.binary));
+    const manifestText = readFileSync(paths.manifest, "utf8");
+    const manifest = JSON.parse(manifestText) as Partial<InstallManifest>;
+    const installedBinary = new Uint8Array(readFileSync(paths.binary));
+    const actual = sha256(installedBinary);
     if (
       manifest.version === 1 &&
-      manifest.tunnelClientVersion === CHATGPT_WEB_CODEX_TUNNEL_VERSION &&
+      typeof manifest.tunnelClientVersion === "string" &&
       manifest.binarySha256 === actual
     ) {
-      return paths.binary;
+      const action = tunnelClientInstallAction(manifest.tunnelClientVersion);
+      const installedVersion = spawnSync(paths.binary, ["--version"], { encoding: "utf8" });
+      if (
+        installedVersion.status !== 0 ||
+        !`${installedVersion.stdout}\n${installedVersion.stderr}`.includes(
+          manifest.tunnelClientVersion
+        )
+      ) {
+        throw new Error(
+          `Existing tunnel-client did not report version ${manifest.tunnelClientVersion}`
+        );
+      }
+      if (action === "reuse") return paths.binary;
+      previousInstallation = { binary: installedBinary, manifestText };
+    } else {
+      throw new Error("Existing tunnel-client failed integrity validation");
     }
-    throw new Error("Existing tunnel-client failed integrity validation");
   }
 
   const asset = tunnelPlatformAsset();
@@ -226,8 +252,21 @@ export async function ensureTunnelClientInstalled(): Promise<string> {
   const executableName = process.platform === "win32" ? "tunnel-client.exe" : "tunnel-client";
   const entry = Object.entries(files).find(([name]) => basename(name) === executableName);
   if (!entry) throw new Error(`${asset} does not contain ${executableName}`);
-  atomicWriteFile(paths.binary, entry[1]);
-  if (process.platform !== "win32") chmodSync(paths.binary, 0o700);
+  const stagedBinary = `${paths.binary}.install-${process.pid}-${randomUUID()}`;
+  atomicWriteFile(stagedBinary, entry[1]);
+  let version: ReturnType<typeof spawnSync>;
+  try {
+    if (process.platform !== "win32") chmodSync(stagedBinary, 0o700);
+    version = spawnSync(stagedBinary, ["--version"], { encoding: "utf8" });
+    if (
+      version.status !== 0 ||
+      !`${version.stdout}\n${version.stderr}`.includes(CHATGPT_WEB_CODEX_TUNNEL_VERSION)
+    ) {
+      throw new Error("Installed tunnel-client did not report the pinned version");
+    }
+  } finally {
+    rmSync(stagedBinary, { force: true });
+  }
   const manifest: InstallManifest = {
     version: 1,
     tunnelClientVersion: CHATGPT_WEB_CODEX_TUNNEL_VERSION,
@@ -235,14 +274,17 @@ export async function ensureTunnelClientInstalled(): Promise<string> {
     archiveSha256,
     binarySha256: sha256(entry[1]),
   };
-  atomicWriteFile(paths.manifest, `${JSON.stringify(manifest, null, 2)}\n`);
-
-  const version = spawnSync(paths.binary, ["--version"], { encoding: "utf8" });
-  if (
-    version.status !== 0 ||
-    !`${version.stdout}\n${version.stderr}`.includes(CHATGPT_WEB_CODEX_TUNNEL_VERSION)
-  ) {
-    throw new Error("Installed tunnel-client did not report the pinned version");
+  try {
+    atomicWriteFile(paths.binary, entry[1]);
+    if (process.platform !== "win32") chmodSync(paths.binary, 0o700);
+    atomicWriteFile(paths.manifest, `${JSON.stringify(manifest, null, 2)}\n`);
+  } catch (error) {
+    if (previousInstallation) {
+      atomicWriteFile(paths.binary, previousInstallation.binary);
+      if (process.platform !== "win32") chmodSync(paths.binary, 0o700);
+      atomicWriteFile(paths.manifest, previousInstallation.manifestText);
+    }
+    throw error;
   }
   return paths.binary;
 }
@@ -354,27 +396,23 @@ export function parseTunnelRuntimeStatus(output: string, exitStatus = 0): Tunnel
   }
 }
 
+export function buildTunnelRuntimeStatusArgs(alias: string): string[] {
+  return ["runtimes", "status", alias, "--json"];
+}
+
+export function buildTunnelRuntimeStopArgs(alias: string): string[] {
+  return ["runtimes", "stop", alias, "--json"];
+}
+
 export async function getTunnelRuntimeStatus(
   config: Pick<TunnelRuntimeConfig, "alias" | "profile">
 ): Promise<TunnelRuntimeStatus> {
   const binary = await ensureTunnelClientInstalled();
-  const paths = tunnelClientPaths();
   const alias = config.alias ?? "omniroute-chatgpt-web-codex";
-  const profile = config.profile ?? "omniroute";
-  const result = spawnSync(
-    binary,
-    [
-      "runtimes",
-      "status",
-      alias,
-      "--profile",
-      profile,
-      "--profile-dir",
-      paths.profileDir,
-      "--json",
-    ],
-    { encoding: "utf8", timeout: 5_000 }
-  );
+  const result = spawnSync(binary, buildTunnelRuntimeStatusArgs(alias), {
+    encoding: "utf8",
+    timeout: 5_000,
+  });
   return parseTunnelRuntimeStatus(String(result.stdout || result.stderr || ""), result.status ?? 1);
 }
 
@@ -441,20 +479,10 @@ export function ensureTunnelRuntimeReady(
 export async function stopChatGptWebCodexTunnelRuntime(): Promise<void> {
   const paths = tunnelClientPaths();
   if (ownsSupervisorLease && existsSync(paths.binary)) {
-    spawnSync(
-      paths.binary,
-      [
-        "runtimes",
-        "stop",
-        "omniroute-chatgpt-web-codex",
-        "--profile",
-        "omniroute",
-        "--profile-dir",
-        paths.profileDir,
-        "--json",
-      ],
-      { encoding: "utf8", timeout: 10_000 }
-    );
+    spawnSync(paths.binary, buildTunnelRuntimeStopArgs("omniroute-chatgpt-web-codex"), {
+      encoding: "utf8",
+      timeout: 10_000,
+    });
   }
   connectedRuntimes.clear();
   for (const runtimeKeyFile of runtimeKeyFiles) rmSync(runtimeKeyFile, { force: true });

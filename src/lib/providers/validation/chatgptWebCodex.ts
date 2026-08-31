@@ -1,11 +1,14 @@
 import { randomBytes } from "node:crypto";
+import { rmSync } from "node:fs";
 
+import { CHATGPT_WEB_CODEX_CONNECTOR_NAME } from "@/shared/constants/chatgptWebCodex";
 import { inspectBrowserLoginCapabilities } from "@omniroute/open-sse/vendor/codex-chatgpt-web/browser-login.ts";
 import { decodeChatGptWebCodexSecrets } from "@omniroute/open-sse/executors/chatgpt-web-codex/credentials.ts";
 import { detectChromeExecutable } from "@omniroute/open-sse/executors/chatgpt-web-codex.ts";
 import {
   connectionRuntimePaths,
   ensureConnectionStorageState,
+  ensureConnectionStorageStateFromCredential,
 } from "@omniroute/open-sse/executors/chatgpt-web-codex/storageState.ts";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 
@@ -18,10 +21,11 @@ export async function validateChatGptWebCodexProvider({
 }) {
   try {
     const secrets = decodeChatGptWebCodexSecrets(String(apiKey || ""));
-    if (!secrets.cookie) {
+    if (!secrets.cookie && !secrets.storageState) {
       return {
         valid: false,
-        error: "Für die Browserprüfung ist ein frischer vollständiger ChatGPT-Cookie erforderlich.",
+        error:
+          "Für die Browserprüfung ist ein frischer ChatGPT-Cookie oder ein gespeicherter Browserzustand erforderlich.",
       };
     }
     const runtimeKey =
@@ -35,7 +39,7 @@ export async function validateChatGptWebCodexProvider({
     const connectorName =
       typeof providerSpecificData.connectorName === "string"
         ? providerSpecificData.connectorName.trim()
-        : process.env.CHATGPT_WEB_CODEX_CONNECTOR_NAME?.trim() || "";
+        : process.env.CHATGPT_WEB_CODEX_CONNECTOR_NAME?.trim() || CHATGPT_WEB_CODEX_CONNECTOR_NAME;
     if (!connectorName) {
       return {
         valid: false,
@@ -64,18 +68,27 @@ export async function validateChatGptWebCodexProvider({
     }
     const validationId = `validation-${randomBytes(12).toString("hex")}`;
     const paths = connectionRuntimePaths(validationId);
-    ensureConnectionStorageState(validationId, secrets.cookie);
-    const capabilities = await inspectBrowserLoginCapabilities({
-      mode: "browser-only",
-      appName: "OmniRoute Codex",
-      ...(chromeExecutablePath ? { chromeExecutablePath } : {}),
-      ...(cdpEndpoint ? { cdpEndpoint } : {}),
-      storageStatePath: paths.storageStatePath,
-      brokerSocketPath: paths.brokerSocketPath,
-      headed: false,
-      proAvailable: false,
-      autoApproveToolCalls: false,
-    });
+    const freshCookie = Boolean(secrets.cookie);
+    if (secrets.cookie) ensureConnectionStorageState(validationId, secrets.cookie);
+    else ensureConnectionStorageStateFromCredential(validationId, secrets);
+    let capabilities;
+    try {
+      capabilities = await inspectBrowserLoginCapabilities({
+        mode: "browser-only",
+        appName: connectorName,
+        ...(chromeExecutablePath ? { chromeExecutablePath } : {}),
+        ...(cdpEndpoint ? { cdpEndpoint } : {}),
+        storageStatePath: paths.storageStatePath,
+        brokerSocketPath: paths.brokerSocketPath,
+        headed: false,
+        proAvailable: false,
+        autoApproveToolCalls: false,
+      });
+    } catch (error) {
+      rmSync(paths.root, { recursive: true, force: true });
+      throw error;
+    }
+    if (!freshCookie) rmSync(paths.root, { recursive: true, force: true });
     return {
       valid: true,
       error: null,
@@ -85,21 +98,20 @@ export async function validateChatGptWebCodexProvider({
         storageState: "verified",
         login: "authenticated",
         temporaryChats: "ready",
+        solAvailable: capabilities.solAvailable,
         proAvailable: capabilities.proAvailable,
       },
       providerSpecificData: {
+        solAvailable: capabilities.solAvailable,
         proAvailable: capabilities.proAvailable,
         browserVerified: true,
+        connectorName,
         ...(chromeExecutablePath ? { chromeExecutablePath } : {}),
         ...(typeof providerSpecificData.tunnelId === "string" &&
         providerSpecificData.tunnelId.trim()
           ? { tunnelId: providerSpecificData.tunnelId.trim() }
           : {}),
-        ...(typeof providerSpecificData.connectorName === "string" &&
-        providerSpecificData.connectorName.trim()
-          ? { connectorName: providerSpecificData.connectorName.trim() }
-          : {}),
-        validationId,
+        ...(freshCookie ? { validationId } : {}),
       },
     };
   } catch (error) {

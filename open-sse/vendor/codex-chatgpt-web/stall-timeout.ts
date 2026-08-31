@@ -1,4 +1,4 @@
-/* Adapted from miuuyy/codex-chatgpt-web commit 55592fca0ba19a27f1b769cec8fff61ff340a785 (MIT). */
+/* Adapted from miuuyy/codex-chatgpt-web commit 09877fa21ffdbf20979623ef501046fc02a750d7 (MIT). */
 /**
  * Bridge upstream stall budget: seconds of silence (no adapter events) before the
  * Responses bridge emits `response.incomplete` / `upstream_stall_timeout`.

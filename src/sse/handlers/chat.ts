@@ -66,6 +66,7 @@ import { createHookContext, runHooks, initPreRequestRegistry } from "@/lib/middl
 import { rejectPeerRequest } from "@/shared/resilience/peerRouting";
 import { isRuntimeProviderRetirementError } from "@/shared/constants/providerRetirement";
 import { isCommonChatGptWebRetirementError } from "@/shared/constants/chatgptWebRetirement";
+import { isChatGptWebCodexModel } from "@/shared/constants/chatgptWebCodex";
 import { deleteHandoff, getHandoff } from "@/lib/db/contextHandoffs";
 import { getComboByName, updateCombo } from "@/lib/db/combos";
 import { isModelAllowedForKey } from "@/lib/db/apiKeys";
@@ -658,6 +659,7 @@ async function handleChatImplementation(
   );
   if (
     previousResponseIdMode !== "preserve" &&
+    !isChatGptWebCodexModel(modelStr) &&
     sourceFormat === FORMATS.OPENAI_RESPONSES &&
     typeof (body as { previous_response_id?: unknown }).previous_response_id === "string"
   ) {

@@ -1,5 +1,5 @@
-/* Adapted from miuuyy/codex-chatgpt-web commit 55592fca0ba19a27f1b769cec8fff61ff340a785 (MIT). */
-import { chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
+/* Adapted from miuuyy/codex-chatgpt-web commit 09877fa21ffdbf20979623ef501046fc02a750d7 (MIT). */
+import { chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { atomicWriteFile, getConfigDir } from "../config";
 
@@ -18,28 +18,16 @@ const SNAPSHOT_TOTAL_MAX_BYTES = 24 * 1024 * 1024;
 interface StoredResponseState {
   createdAt: number;
   items: unknown[];
+  /** Connection+thread+turn that recorded this id; missing on legacy snapshots. */
   namespace?: string;
   /** Approximate in-memory size, computed locally at insert time (never trusted from disk). */
   sizeBytes?: number;
 }
 
+export type ResponseStateOptions = { force?: boolean; namespace?: string };
+
 const states = new Map<string, StoredResponseState>();
 let storedResponseBytes = 0;
-let byteCapOverride: number | null = null;
-
-function byteCap(): number {
-  return byteCapOverride ?? MAX_STORED_RESPONSE_BYTES;
-}
-
-/** Test-only: lower/restore the in-memory byte cap (null restores the default). */
-export function setResponseStateByteCapForTests(bytes: number | null): void {
-  byteCapOverride = bytes;
-}
-
-/** Test-only: current in-memory byte accounting (proves evictions release their bytes). */
-export function getStoredResponseBytesForTests(): number {
-  return storedResponseBytes;
-}
 
 /** The ONLY size computation: approximate entry weight from its items payload. */
 function measuredEntry(entry: Omit<StoredResponseState, "sizeBytes">): StoredResponseState {
@@ -70,7 +58,8 @@ function deleteEntry(id: string): void {
 }
 // Expansion provenance must stay proxy-private: a WeakMap distinguishes replayed history from the
 // newly appended input suffix without adding an unknown field that native passthrough could send
-// upstream. The parser uses this boundary to acknowledge historical compaction markers exactly once.
+// upstream. Consumers use the prefix length to bind trusted history and rolling checkpoints to the
+// exact replayed portion of this request.
 const replayedInputPrefixLengths = new WeakMap<object, number>();
 let loaded = false;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -109,6 +98,9 @@ function ensureLoaded(): void {
       setEntry(id, {
         createdAt: rec.createdAt,
         items: rec.items,
+        ...(typeof rec.namespace === "string" && rec.namespace.trim()
+          ? { namespace: rec.namespace.trim() }
+          : {}),
       });
     }
     pruneResponses();
@@ -187,23 +179,39 @@ function pruneResponses(at = now()): void {
     deleteEntry(oldest);
   }
   // Byte high-water eviction, oldest-first (Map preserves insertion order).
-  while (storedResponseBytes > byteCap() && states.size > 1) {
+  while (storedResponseBytes > MAX_STORED_RESPONSE_BYTES && states.size > 1) {
     const oldest = states.keys().next().value;
     if (!oldest) break;
     deleteEntry(oldest);
   }
 }
 
-export function expandPreviousResponseInput(body: unknown, namespace = "default"): unknown {
+function namespaceMatches(state: StoredResponseState | undefined, namespace?: string): boolean {
+  if (!state) return false;
+  if (!namespace || !state.namespace) return true;
+  return state.namespace === namespace;
+}
+
+function lookupStoredResponse(id: string, namespace?: string): StoredResponseState | undefined {
+  ensureLoaded();
+  pruneResponses();
+  const cached = states.get(id);
+  if (namespaceMatches(cached, namespace)) return cached;
+  loaded = false;
+  ensureLoaded();
+  pruneResponses();
+  const reloaded = states.get(id);
+  return namespaceMatches(reloaded, namespace) ? reloaded : undefined;
+}
+
+export function expandPreviousResponseInput(body: unknown, namespace?: string): unknown {
   if (!body || typeof body !== "object" || Array.isArray(body)) return body;
   const request = body as Record<string, unknown>;
   const previousId =
     typeof request.previous_response_id === "string" ? request.previous_response_id : undefined;
   if (!previousId) return body;
-  ensureLoaded();
-  pruneResponses();
-  const previous = states.get(previousId);
-  if (!previous || (previous.namespace ?? "default") !== namespace) return body;
+  const previous = lookupStoredResponse(previousId, namespace);
+  if (!previous) return body;
   const expanded = {
     ...request,
     input: [...previous.items, ...inputItems(request.input)],
@@ -225,7 +233,7 @@ export function previousResponseReplayPrefixLength(body: unknown): number {
 export function rememberResponseState(
   requestBody: unknown,
   response: { id?: unknown; output?: unknown; status?: unknown; incomplete_details?: unknown },
-  opts?: { force?: boolean; namespace?: string }
+  opts?: ResponseStateOptions
 ): void {
   if (!requestBody || typeof requestBody !== "object" || Array.isArray(requestBody)) return;
   const request = requestBody as Record<string, unknown>;
@@ -247,31 +255,27 @@ export function rememberResponseState(
       return;
   } else if (response.status !== undefined && response.status !== "completed") return;
   ensureLoaded();
+  const namespace = typeof opts?.namespace === "string" ? opts.namespace.trim() : "";
   setEntry(response.id, {
     createdAt: now(),
     items: [...inputItems(request.input), ...response.output],
-    namespace: opts?.namespace ?? "default",
+    ...(namespace ? { namespace } : {}),
   });
   pruneResponses();
-  schedulePersist();
+  // Forced ChatGPT Web Codex continuations chain on the next HTTP request within
+  // milliseconds. Debouncing that write left other Next.js isolates (and the next
+  // hop) looking at an empty snapshot and 409ing a valid previous_response_id.
+  if (opts?.force) persistNow(snapshotPath());
+  else schedulePersist();
 }
 
-/** Memory-only reset (simulates a process restart: the snapshot file survives). */
-export function clearResponseStateMemoryForTests(): void {
+/** Clear in-memory continuation state without touching disk. Test-only. */
+export function resetResponseStateForTests(): void {
+  for (const id of [...states.keys()]) deleteEntry(id);
   if (persistTimer) {
     clearTimeout(persistTimer);
     persistTimer = null;
   }
-  states.clear();
-  storedResponseBytes = 0;
-  loaded = false;
-}
-
-export function clearResponseStateForTests(): void {
-  clearResponseStateMemoryForTests();
-  try {
-    unlinkSync(snapshotPath());
-  } catch {
-    /* no snapshot on disk */
-  }
+  pendingPersistPath = null;
+  loaded = true;
 }
