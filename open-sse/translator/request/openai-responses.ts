@@ -768,6 +768,15 @@ export function openaiResponsesToOpenAIRequest(
     }
   }
 
+  // #12141: When translated Chat tools is empty/absent, strip neutral tool_choice
+  // ("auto" / "none") so strict Chat endpoints (e.g. vLLM) do not reject with 400
+  // ("When using tool_choice, tools must be set"). Contradictory choices like "required"
+  // or forced functions are preserved so the upstream error remains visible.
+  const finalChatTools = Array.isArray(result.tools) ? result.tools : [];
+  if (finalChatTools.length === 0 && (result.tool_choice === "auto" || result.tool_choice === "none")) {
+    delete result.tool_choice;
+  }
+
   // Cleanup Responses API specific fields
   // Note: prompt_cache_key is intentionally preserved for OpenAI destinations — it is
   // used by Codex as a cache-affinity signal and stripping it unconditionally broke
