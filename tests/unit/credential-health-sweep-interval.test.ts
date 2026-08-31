@@ -20,13 +20,13 @@ function withEnv(value: string | undefined, fn: () => void) {
   }
 }
 
-test("default resilience settings include a 5-minute credential health check cadence", () => {
-  assert.equal(DEFAULT_RESILIENCE_SETTINGS.credentialHealthCheck.intervalMinutes, 5);
+test("default resilience settings include a 60-minute credential health check cadence", () => {
+  assert.equal(DEFAULT_RESILIENCE_SETTINGS.credentialHealthCheck.intervalMinutes, 60);
 });
 
 test("resolveResilienceSettings returns the default interval when nothing is stored", () => {
   const resolved = resolveResilienceSettings({});
-  assert.equal(resolved.credentialHealthCheck.intervalMinutes, 5);
+  assert.equal(resolved.credentialHealthCheck.intervalMinutes, 60);
 });
 
 test("mergeResilienceSettings stores an operator interval and preserves other sections", () => {
@@ -45,9 +45,9 @@ test("mergeResilienceSettings clamps the interval into the 0-1440 band", () => {
   assert.equal(high.credentialHealthCheck.intervalMinutes, 1440);
 });
 
-test("sweep interval: no operator setting and no env → built-in 5 min default", () => {
+test("sweep interval: no operator setting and no env → built-in 60 min default", () => {
   withEnv(undefined, () => {
-    assert.equal(resolveCredentialHealthSweepInterval({}), 300_000);
+    assert.equal(resolveCredentialHealthSweepInterval({}), 60 * 60_000);
   });
 });
 
@@ -87,6 +87,6 @@ test("sweep interval: non-numeric stored interval falls back to env/default", ()
     const settings = {
       resilienceSettings: { credentialHealthCheck: { intervalMinutes: "abc" } },
     };
-    assert.equal(resolveCredentialHealthSweepInterval(settings), 300_000);
+    assert.equal(resolveCredentialHealthSweepInterval(settings), 60 * 60_000);
   });
 });
