@@ -73,6 +73,7 @@ export const USAGE_FETCHER_PROVIDERS = [
   "cnl",
   // AgentRouter (New-API) console balance (GET /api/user/self)
   "agentrouter",
+  "kilocode",
 ] as const;
 
 export type UsageFetcherProvider = (typeof USAGE_FETCHER_PROVIDERS)[number];
