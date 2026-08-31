@@ -17,7 +17,7 @@
  * Phase C1 — Quota Share Redesign.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Modal } from "@/shared/components";
 import useEmailPrivacyStore from "@/store/emailPrivacyStore";
@@ -250,26 +250,35 @@ export default function PoolWizard({
 
   // ── Load dimensions when primary connection changes ───────────────────────
 
-  useEffect(() => {
+  // State adjustment during render keyed on the primary connection id, mirroring the
+  // old effect's deps (react-hooks/set-state-in-effect).
+  const [prevPrimaryConnectionId, setPrevPrimaryConnectionId] = useState(primaryConnectionId);
+  if (primaryConnectionId !== prevPrimaryConnectionId) {
+    setPrevPrimaryConnectionId(primaryConnectionId);
     if (!primaryConnectionId) {
       setEditDimensions([]);
-      setDimensionsEdited(false);
-      return;
-    }
-    const existingPlan = plans[primaryConnectionId];
-    if (existingPlan && existingPlan.dimensions.length > 0) {
-      setEditDimensions([...existingPlan.dimensions]);
     } else {
-      const catalogPlan = selectedConn ? getKnownPlan(selectedConn.provider) : null;
-      setEditDimensions(catalogPlan ? [...catalogPlan.dimensions] : []);
+      const existingPlan = plans[primaryConnectionId];
+      if (existingPlan && existingPlan.dimensions.length > 0) {
+        setEditDimensions([...existingPlan.dimensions]);
+      } else {
+        const catalogPlan = selectedConn ? getKnownPlan(selectedConn.provider) : null;
+        setEditDimensions(catalogPlan ? [...catalogPlan.dimensions] : []);
+      }
     }
     setDimensionsEdited(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryConnectionId]);
+  }
 
   // ── Reset wizard on open/close ────────────────────────────────────────────
 
-  useEffect(() => {
+  // State adjustment during render keyed on the (open, editPool) pair, mirroring the
+  // old effect's deps (react-hooks/set-state-in-effect).
+  const [prevWizardKey, setPrevWizardKey] = useState<{ open: boolean; editPool?: QuotaPool }>({
+    open,
+    editPool,
+  });
+  if (prevWizardKey.open !== open || prevWizardKey.editPool !== editPool) {
+    setPrevWizardKey({ open, editPool });
     if (!open) {
       // Closing: always reset to defaults.
       setStep(1);
@@ -311,20 +320,20 @@ export default function PoolWizard({
       setStep(1);
     }
     // When open && !editPool (create mode): the existing create-reset on close handles defaults.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editPool, initialGroupId]);
+  }
 
   // Keep the group <select> on a real, selectable option: if the inherited page
   // filter was "all" (or an unknown id), snap to the first real group once groups
   // load. Prevents persisting groupId="all" (which renders under no group → B1).
-  useEffect(() => {
-    if (!open || editPool) return;
-    if (groups.length === 0) return;
-    if (groupId === "all" || !groups.some((g) => g.id === groupId)) {
-      setGroupId(groups[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editPool, groups]);
+  // Self-extinguishing state adjustment during render (react-hooks/set-state-in-effect).
+  if (
+    open &&
+    !editPool &&
+    groups.length > 0 &&
+    (groupId === "all" || !groups.some((g) => g.id === groupId))
+  ) {
+    setGroupId(groups[0].id);
+  }
 
   // ── Step 2 — dimension editors ────────────────────────────────────────────
 

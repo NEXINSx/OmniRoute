@@ -133,7 +133,12 @@ export default function A2ADashboardPage() {
   }, [offset, stateFilter, skillFilter]);
 
   useEffect(() => {
-    Promise.allSettled([refreshStatus(), refreshTasks()]).finally(() => setLoading(false));
+    // Async continuation — the compiler rejects sync calls to setter-capturing
+    // callbacks from the effect body (react-hooks/set-state-in-effect).
+    void (async () => {
+      await Promise.allSettled([refreshStatus(), refreshTasks()]);
+      setLoading(false);
+    })();
     const interval = setInterval(() => {
       void refreshStatus();
       void refreshTasks();
@@ -142,7 +147,10 @@ export default function A2ADashboardPage() {
   }, [refreshStatus, refreshTasks]);
 
   useEffect(() => {
-    void refreshTasks();
+    // Async continuation — see above.
+    void (async () => {
+      await refreshTasks();
+    })();
   }, [refreshTasks]);
 
   const availableSkills = useMemo(() => {

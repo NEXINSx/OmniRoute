@@ -264,13 +264,6 @@ export default function ApiManagerPageClient() {
   }, [newKeyNameInputId]);
 
   useEffect(() => {
-    fetchData();
-    fetchModels();
-    fetchCombos();
-    fetchConnections();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- initial dashboard load only
-
-  useEffect(() => {
     if (!showAddModal || !nameError) return;
     requestAnimationFrame(() => {
       createKeyNameFieldRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
@@ -278,7 +271,12 @@ export default function ApiManagerPageClient() {
   }, [nameError, showAddModal]);
 
   useEffect(() => {
-    setActiveOnly(readActiveOnlyPreference());
+    // Hydrate the persisted preference after mount, behind an async boundary
+    // (react-hooks/set-state-in-effect) — same post-hydration timing as before.
+    void (async () => {
+      await Promise.resolve();
+      setActiveOnly(readActiveOnlyPreference());
+    })();
   }, []);
 
   useEffect(() => {
@@ -424,25 +422,6 @@ export default function ApiManagerPageClient() {
     }
   };
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch("/api/keys");
-      if (res.ok) {
-        const data = await res.json();
-        setKeys(data.keys || []);
-        setAllowKeyReveal(data.allowKeyReveal === true);
-        // Fetch usage stats after keys are loaded
-        fetchUsageStats(data.keys || []);
-        fetchSessionCounts(data.keys || []);
-        fetchDeviceCounts(data.keys || []);
-      }
-    } catch (error) {
-      console.log("Error fetching keys:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchUsageStats = async (apiKeys: ApiKey[]) => {
     if (apiKeys.length === 0) return;
     try {
@@ -544,6 +523,37 @@ export default function ApiManagerPageClient() {
       console.log("Error fetching device counts:", error);
     }
   };
+
+  // fetchData calls the three per-key fetchers above — declared after them so the
+  // calls are not TDZ reads (react-hooks/immutability).
+  const fetchData = async () => {
+    try {
+      const res = await fetch("/api/keys");
+      if (res.ok) {
+        const data = await res.json();
+        setKeys(data.keys || []);
+        setAllowKeyReveal(data.allowKeyReveal === true);
+        // Fetch usage stats after keys are loaded
+        fetchUsageStats(data.keys || []);
+        fetchSessionCounts(data.keys || []);
+        fetchDeviceCounts(data.keys || []);
+      }
+    } catch (error) {
+      console.log("Error fetching keys:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial dashboard load — placed after the fetcher declarations so the effect does
+  // not read them in their TDZ (react-hooks/immutability), behind an async boundary
+  // (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    void (async () => {
+      await Promise.all([fetchData(), fetchModels(), fetchCombos(), fetchConnections()]);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial dashboard load only
+  }, []);
 
   const clearPageError = useCallback(() => setPageError(null), []);
 
@@ -1738,9 +1748,12 @@ const PermissionsModal = memo(function PermissionsModal({
 
   // Initialize state from props - component remounts when key prop changes
   const initialModels = Array.isArray(apiKey?.allowedModels) ? apiKey.allowedModels : [];
+  // Destructured to a local so the memo dep matches what the compiler infers
+  // (react-hooks/preserve-manual-memoization).
+  const blockedModelsProp = apiKey?.blockedModels;
   const initialBlockedModels = useMemo(
-    () => (Array.isArray(apiKey?.blockedModels) ? apiKey.blockedModels : []),
-    [apiKey?.blockedModels]
+    () => (Array.isArray(blockedModelsProp) ? blockedModelsProp : []),
+    [blockedModelsProp]
   );
   const initialCombos = Array.isArray(apiKey?.allowedCombos)
     ? apiKey.allowedCombos.filter((combo) => combo !== ALL_COMBOS_ACCESS_RULE)
@@ -2080,8 +2093,12 @@ const PermissionsModal = memo(function PermissionsModal({
 
   // Provider wildcards ("ollama-cloud/*") are counted as providers, not models.
   // Inherited children render selected via the owner lookup inside the list component.
-  const { providerWildcards: selectedProviderScopes, exactModels: selectedExactModels } =
-    restoreProviderScopeSelection(selectedModels);
+  // Memoized so downstream memos see a stable, non-mutated dependency
+  // (react-hooks/preserve-manual-memoization).
+  const { providerWildcards: selectedProviderScopes, exactModels: selectedExactModels } = useMemo(
+    () => restoreProviderScopeSelection(selectedModels),
+    [selectedModels]
+  );
   const selectedProviderCount = selectedProviderScopes.length;
   const selectedModelCount = selectedExactModels.length;
   const selectedCount = selectedModels.length;

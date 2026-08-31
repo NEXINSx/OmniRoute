@@ -889,15 +889,6 @@
   "src/app/(dashboard)/dashboard/api-manager/ApiManagerPageClient.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/immutability": {
-      "count": 4
-    },
-    "react-hooks/preserve-manual-memoization": {
-      "count": 2
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/app/(dashboard)/dashboard/audit/A2aAuditTab.tsx": {
@@ -983,20 +974,9 @@
       "count": 2
     }
   },
-  "src/app/(dashboard)/dashboard/combos/ComboControlCenterClient.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/combos/page.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 6
-    },
-    "react-hooks/immutability": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 8
     }
   },
   "src/app/(dashboard)/dashboard/conductor/ConductorPageClient.tsx": {
@@ -1019,11 +999,6 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/costs/components/ApiKeyUsageLimitCard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/costs/costExplorerUtils.ts": {
     "no-restricted-syntax": {
       "count": 1
@@ -1037,52 +1012,9 @@
   "src/app/(dashboard)/dashboard/costs/quota-share/components/PoolWizard.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 3
-    }
-  },
-  "src/app/(dashboard)/dashboard/costs/quota-share/hooks/usePoolUsage.ts": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/costs/quota-share/hooks/usePools.ts": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/costs/useApiKeyUsageLimits.ts": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/app/(dashboard)/dashboard/discovery/DiscoveryPageClient.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/endpoint/EndpointPageClient.tsx": {
-    "react-hooks/immutability": {
-      "count": 3
-    }
-  },
-  "src/app/(dashboard)/dashboard/endpoint/components/A2ADashboard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
-  "src/app/(dashboard)/dashboard/endpoint/components/MCPDashboard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/endpoint/components/NotionSourceCard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/endpoint/components/ObsidianSourceCard.tsx": {
     "react-hooks/set-state-in-effect": {
       "count": 1
     }
@@ -1176,14 +1108,6 @@
   "src/app/(dashboard)/dashboard/plugins/page.tsx": {
     "react-hooks/set-state-in-effect": {
       "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/provider-stats/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    },
-    "react-hooks/static-components": {
-      "count": 7
     }
   },
   "src/app/(dashboard)/dashboard/providers/[id]/ProviderDetailPageClient.tsx": {

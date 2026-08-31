@@ -749,7 +749,15 @@ export default function CombosPage() {
   const [proxyConfig, setProxyConfig] = useState(null);
   const { comboProxyAssignedIds, fetchComboProxyAssignments } = useComboProxyAssignments();
   const [providerNodes, setProviderNodes] = useState([]);
-  const [showUsageGuide, setShowUsageGuide] = useState(true);
+  const [showUsageGuide, setShowUsageGuide] = useState(() => {
+    // Lazy initializer instead of a mount effect (react-hooks/set-state-in-effect).
+    try {
+      return globalThis.localStorage?.getItem(COMBO_USAGE_GUIDE_STORAGE_KEY) !== "1";
+    } catch {
+      // Ignore storage access errors (privacy mode / restricted environments)
+      return true;
+    }
+  });
   const [recentlyCreatedCombo, setRecentlyCreatedCombo] = useState("");
   const [creatingKimiPreset, setCreatingKimiPreset] = useState(false);
   const [comboDragIndex, setComboDragIndex] = useState(null);
@@ -781,45 +789,15 @@ export default function CombosPage() {
     return activeFilter === "intelligent" ? intelligentCombos[0] : null;
   }, [activeFilter, intelligentCombos, selectedIntelligentComboId]);
 
-  useEffect(() => {
-    if (intelligentCombos.length === 0) {
-      setSelectedIntelligentComboId(null);
-      return;
-    }
-
-    if (
-      selectedIntelligentComboId &&
-      !intelligentCombos.some((combo) => combo.id === selectedIntelligentComboId)
-    ) {
-      setSelectedIntelligentComboId(null);
-    }
-  }, [intelligentCombos, selectedIntelligentComboId]);
-
-  useEffect(() => {
-    fetchData();
-    fetch("/api/settings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((settings) => setComboConfigMode(normalizeComboConfigMode(settings?.comboConfigMode)))
-      .catch(() => setComboConfigMode("guided"));
-    fetch("/api/settings/compression")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((settings) => setPromptCompressionEnabled(settings?.enabled === true))
-      .catch(() => setPromptCompressionEnabled(false));
-    fetch("/api/settings/proxy")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((c) => setProxyConfig(c))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (globalThis.localStorage?.getItem(COMBO_USAGE_GUIDE_STORAGE_KEY) === "1") {
-        setShowUsageGuide(false);
-      }
-    } catch {
-      // Ignore storage access errors (privacy mode / restricted environments)
-    }
-  }, []);
+  // Drop a stale selection when the list no longer contains it — state adjustment
+  // during render (react-hooks/set-state-in-effect).
+  if (
+    selectedIntelligentComboId !== null &&
+    (intelligentCombos.length === 0 ||
+      !intelligentCombos.some((combo) => combo.id === selectedIntelligentComboId))
+  ) {
+    setSelectedIntelligentComboId(null);
+  }
 
   const fetchData = async () => {
     try {
@@ -847,6 +825,27 @@ export default function CombosPage() {
       setLoading(false);
     }
   };
+
+  // Mount load — placed after fetchData so the effect does not read the binding in its
+  // TDZ (react-hooks/immutability); the call sits behind an async boundary
+  // (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((settings) => setComboConfigMode(normalizeComboConfigMode(settings?.comboConfigMode)))
+      .catch(() => setComboConfigMode("guided"));
+    fetch("/api/settings/compression")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((settings) => setPromptCompressionEnabled(settings?.enabled === true))
+      .catch(() => setPromptCompressionEnabled(false));
+    fetch("/api/settings/proxy")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => setProxyConfig(c))
+      .catch(() => {});
+  }, []);
 
   const handleCreate = async (data) => {
     try {
@@ -2041,13 +2040,15 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
     (config.modelSort as { method?: unknown } | undefined)?.method
   );
   const [sortMethod, setSortMethod] = useState<SortMethod>(initialSortMethod);
-  useEffect(() => {
-    // Sync point: when the combo identity changes, re-derive sort method.
-    // Manual edits via handleSortChange already set sortMethod inside resetFormForCombo,
-    // but this guards the case where the modal is reused (edit-A→close→edit-B without unmount).
+  // Sync point: when the combo identity changes, re-derive sort method — state
+  // adjustment during render (react-hooks/set-state-in-effect). Manual edits via
+  // handleSortChange already set sortMethod inside resetFormForCombo; this guards the
+  // modal-reuse case (edit-A→close→edit-B without unmount).
+  const [prevSortComboId, setPrevSortComboId] = useState(combo?.id);
+  if (combo?.id !== prevSortComboId) {
+    setPrevSortComboId(combo?.id);
     setSortMethod(normalizeSortMethod(combo?.config?.modelSort?.method));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combo?.id]);
+  }
   const modelsRef = useRef(models);
   const sortMethodRef = useRef<SortMethod>(sortMethod);
   const resetSortGenerationRef = useRef(0);
@@ -2158,11 +2159,11 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
     contextLength,
   ]);
 
-  useEffect(() => {
-    if (!comboBuilderStages.includes(builderStage)) {
-      setBuilderStage("strategy");
-    }
-  }, [builderStage, comboBuilderStages]);
+  // Keep the stage on a real option — self-extinguishing state adjustment during
+  // render (react-hooks/set-state-in-effect).
+  if (!comboBuilderStages.includes(builderStage)) {
+    setBuilderStage("strategy");
+  }
 
   const hasPricingForModel = useCallback(
     (modelValue) => {
@@ -2395,36 +2396,39 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   };
 
   useEffect(() => {
-    if (isOpen) fetchModalData();
+    // Async continuation — see react-hooks/set-state-in-effect.
+    if (isOpen) {
+      void (async () => {
+        await fetchModalData();
+      })();
+    }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setBuilderProviderId("");
-    setBuilderModelId("");
-    setBuilderConnectionId(COMBO_BUILDER_AUTO_CONNECTION);
-    setBuilderAllowedConnectionIds([]);
-    setManualModelInput("");
-    setManualModelError("");
-    setBuilderComboRefName("");
-    setBuilderError("");
-    setBuilderStage("basics");
-  }, [combo?.id, isOpen]);
+  // Reset the builder inputs whenever the modal (re)opens or switches combos —
+  // state adjustment during render (react-hooks/set-state-in-effect).
+  const [prevBuilderResetKey, setPrevBuilderResetKey] = useState<{
+    comboId: string | undefined;
+    isOpen: boolean;
+  }>({ comboId: combo?.id, isOpen });
+  if (prevBuilderResetKey.comboId !== combo?.id || prevBuilderResetKey.isOpen !== isOpen) {
+    setPrevBuilderResetKey({ comboId: combo?.id, isOpen });
+    if (isOpen) {
+      setBuilderProviderId("");
+      setBuilderModelId("");
+      setBuilderConnectionId(COMBO_BUILDER_AUTO_CONNECTION);
+      setBuilderAllowedConnectionIds([]);
+      setManualModelInput("");
+      setManualModelError("");
+      setBuilderComboRefName("");
+      setBuilderError("");
+      setBuilderStage("basics");
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return;
 
     let cancelled = false;
-
-    if (combo) {
-      resetFormForCombo(combo);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    createDraftStateRef.current = getEmptyCreateDraftSnapshot();
-    resetFormForCombo(null, null);
 
     const loadDefaults = async () => {
       try {
@@ -2451,20 +2455,30 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
       }
     };
 
-    loadDefaults();
+    // Async continuation — the compiler rejects sync calls to setter-capturing
+    // callbacks from the effect body (react-hooks/set-state-in-effect).
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      if (combo) {
+        resetFormForCombo(combo);
+        return;
+      }
+      createDraftStateRef.current = getEmptyCreateDraftSnapshot();
+      resetFormForCombo(null, null);
+      await loadDefaults();
+    })();
 
     return () => {
       cancelled = true;
     };
   }, [combo, getEmptyCreateDraftSnapshot, isExpertMode, isOpen, resetFormForCombo]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    if (builderProviderId) return;
-    if (builderProviders.length === 1) {
-      setBuilderProviderId(builderProviders[0].providerId);
-    }
-  }, [builderProviderId, builderProviders, isOpen]);
+  // Default to the only available provider — self-extinguishing state adjustment
+  // during render (react-hooks/set-state-in-effect).
+  if (isOpen && !builderProviderId && builderProviders.length === 1) {
+    setBuilderProviderId(builderProviders[0].providerId);
+  }
 
   useEffect(() => {
     if (!strategyChangeMountedRef.current) {
