@@ -25,6 +25,7 @@ import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 import { getExecutor } from "@omniroute/open-sse/executors/index.ts";
 import type { BaseExecutor } from "@omniroute/open-sse/executors/base";
 import { getCodexUsage } from "@omniroute/open-sse/services/usage/codex.ts";
+import { throttleQuotaFetch } from "@omniroute/open-sse/services/quotaFetchThrottle.ts";
 import { getSettings } from "@/lib/db/settings";
 import { getProviderConnections, updateProviderConnection } from "@/lib/db/providers";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
@@ -64,6 +65,12 @@ export interface QuotaAutoPingDeps {
     connection: QuotaAutoPingConnection
   ) => Promise<{ connection: QuotaAutoPingConnection }>;
   getCodexUsage: (accessToken?: string, providerSpecificData?: JsonRecord) => Promise<JsonRecord>;
+  /**
+   * #11904: the #6009/#6058 gate that spaces genuine upstream quota fetches. Every
+   * other Codex quota read is behind it; this scheduler's read has to be too, since
+   * it runs unattended once a minute per connection.
+   */
+  throttleQuotaFetch: () => Promise<void>;
   getExecutor: (provider: string) => Promise<BaseExecutor>;
   canExecuteProvider: (provider: string) => boolean;
   isConnectionUnavailableToAuxiliaryActivity: (connectionId: string) => Promise<boolean>;
@@ -87,6 +94,7 @@ export function createDefaultQuotaAutoPingDeps(): QuotaAutoPingDeps {
     refreshAndUpdateCredentials: async (connection) =>
       refreshAndUpdateCredentials(connection as never),
     getCodexUsage,
+    throttleQuotaFetch,
     getExecutor,
     canExecuteProvider: (provider) => getCircuitBreaker(provider).canExecute(),
     isConnectionUnavailableToAuxiliaryActivity,
@@ -341,6 +349,10 @@ async function pingConnection(
   const current = await refreshConnectionForPing(connection, provider, deps, state, key, nowMs);
   if (!current) return;
 
+  // Pace this the same way every other quota fetcher does. Placed after the skip
+  // checks above so a connection that never reaches the network does not consume a
+  // slot and delay the ones that do.
+  await deps.throttleQuotaFetch();
   const usage = await deps.getCodexUsage(current.accessToken, current.providerSpecificData);
   const quotas = (usage.quotas as JsonRecord) || {};
   const quota = quotas[providerConfig.quotaKey] as JsonRecord | undefined;
