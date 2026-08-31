@@ -7,6 +7,7 @@ import {
 } from "../../src/lib/db/contextHandoffs.ts";
 import { estimateTokens } from "./contextManager.ts";
 import { stripMarkdownCodeFence } from "../utils/aiSdkCompat.ts";
+import { isFeatureFlagEnabled } from "../../src/shared/utils/featureFlags.ts";
 
 export const HANDOFF_WARNING_THRESHOLD = 0.85;
 export const HANDOFF_EXHAUSTION_THRESHOLD = 0.95;
@@ -139,7 +140,9 @@ export function resolveUniversalHandoffConfig(
     triggerRaw === "always" || triggerRaw === "on-error" ? triggerRaw : "on-switch";
 
   return {
-    enabled: getBool("enabled", DEFAULT_UNIVERSAL_HANDOFF_CONFIG.enabled),
+    enabled:
+      isFeatureFlagEnabled("UNIVERSAL_CONTEXT_HANDOFF_ENABLED") &&
+      getBool("enabled", DEFAULT_UNIVERSAL_HANDOFF_CONFIG.enabled),
     trigger,
     providerAllowlist: getStringArray(
       "providerAllowlist",

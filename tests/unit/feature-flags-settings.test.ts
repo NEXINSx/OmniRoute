@@ -37,7 +37,8 @@ const {
 // bumping it from 51 to 52. NO_THINKING_ALIAS_ENABLED (master switch for the
 // no-think/<provider>/<model> gateway aliases) then bumped it from 52 to 53.
 // OMNIROUTE_DISABLE_THINKING_LEVEL_VARIANTS bumped it from 53 to 54.
-const EXPECTED_FEATURE_FLAG_COUNT = 54;
+// UNIVERSAL_CONTEXT_HANDOFF_ENABLED bumped it from 54 to 55.
+const EXPECTED_FEATURE_FLAG_COUNT = 55;
 
 // ──────────────────────────────────────────────────────
 // Test group 1 — Flag definitions registry
