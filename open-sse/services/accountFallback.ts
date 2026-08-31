@@ -600,9 +600,7 @@ export function shouldDeferAntigravityQuotaStateToCaller(
   hasCallerOwner: boolean
 ): boolean {
   const canonicalProvider = getCanonicalLockProvider(provider);
-  return (
-    hasCallerOwner && (canonicalProvider === "antigravity" || canonicalProvider === "agy")
-  );
+  return hasCallerOwner && (canonicalProvider === "antigravity" || canonicalProvider === "agy");
 }
 
 export async function recordCoreOwnedAntigravityQuotaState({
@@ -623,15 +621,7 @@ export async function recordCoreOwnedAntigravityQuotaState({
   profileOverride?: ProviderProfile | null;
 }) {
   const profile = profileOverride ?? (await getRuntimeProviderProfile(provider));
-  const fallback = checkFallbackError(
-    status,
-    errorText,
-    0,
-    model,
-    provider,
-    headers,
-    profile
-  );
+  const fallback = checkFallbackError(status, errorText, 0, model, provider, headers, profile);
   const lockout = recordModelLockoutFailure(
     provider,
     connectionId,
@@ -647,9 +637,7 @@ export async function recordCoreOwnedAntigravityQuotaState({
           : (fallback.quotaResetHintMs ?? null),
       maxCooldownMs: profile.maxCooldownMs,
       scope: "exact",
-      exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(
-        fallback.retryHintSource
-      ),
+      exactCooldownIsUpstreamReset: retryHintBypassesMaxCooldownMs(fallback.retryHintSource),
     }
   );
   return { cooldownMs: lockout.cooldownMs, failureCount: lockout.failureCount };
@@ -1693,6 +1681,18 @@ export function checkFallbackError(
     };
   }
 
+  const previousResponseBindingMiss =
+    structuredError?.code === "invalid_previous_response_binding" ||
+    (status === 409 && /previous_response_id does not belong/i.test(String(errorText || "")));
+  if (previousResponseBindingMiss) {
+    return {
+      shouldFallback: false,
+      cooldownMs: 0,
+      reason: "invalid_previous_response_binding",
+      skipProviderBreaker: true,
+    };
+  }
+
   const svc = serviceSupervisorCooldown(status, headers);
   if (svc) return svc;
   const rg = rot.gateFor(status, rotation?.account);
@@ -1753,10 +1753,7 @@ export function checkFallbackError(
       if (waitMs > 0) return { retryAfterMs: waitMs, provenance: "header" };
     }
 
-    const detailedJsonHint = parseDetailedRetryHintFromJsonBody(
-      errorStr,
-      MAX_PROVIDER_COOLDOWN_MS
-    );
+    const detailedJsonHint = parseDetailedRetryHintFromJsonBody(errorStr, MAX_PROVIDER_COOLDOWN_MS);
     if (detailedJsonHint) {
       return {
         retryAfterMs: detailedJsonHint.retryAfterMs,
