@@ -901,14 +901,19 @@ async function buildUnifiedModelsResponseCore(
             targetModel.modelId,
             capabilityResolutionSnapshot.synced
           );
+          // Report the target's RAW synced modality evidence (rather than the
+          // shared helper's synthesized `["text","image"]`, #12046) so an auto
+          // row can only advertise image input a target actually declares.
+          // The vision VERDICT stays canonical: `resolveVisionCapability`
+          // applies the operator's supportsVision override (#9195) and the
+          // documented text-only denylist (#4071) before it ever reads
+          // `attachment`, and deliberately promotes `attachment:false`
+          // alongside image modalities (#8250). Overwriting it with the raw
+          // flag here would bypass all three.
           return {
             ...metadata,
             inputModalities: synced ? parseJsonStringArray(synced.modalities_input) : undefined,
             outputModalities: synced ? parseJsonStringArray(synced.modalities_output) : undefined,
-            capabilities: {
-              ...metadata.capabilities,
-              ...(typeof synced?.attachment === "boolean" ? { vision: synced.attachment } : {}),
-            },
           };
         });
         const hasUnknownAutoTarget = autoTargetMetadata.some((m) => m === null);

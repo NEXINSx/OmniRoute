@@ -269,10 +269,17 @@ test("#11947 missing input evidence omits vision while preserving independent ou
   assert.deepEqual(row.output_modalities, ["text"]);
 });
 
+// A genuinely heterogeneous pool under PROJECT semantics: the verdict that makes
+// the pool mixed must come from a path `resolveVisionCapability` actually
+// demotes, not from a raw `attachment` flag the resolver would have promoted.
+// `mimo-v2.5-pro` is denylisted by KNOWN_TEXT_ONLY_DESPITE_SYNC (#4071), so its
+// resolved verdict is false even though its synced row claims attachment:true
+// with image modalities. Pairing it with a genuinely vision-capable target is
+// the only shape that exercises unanimity rather than the raw flag.
 test("#11947 mixed vision verdicts suppress image input but keep common output evidence", async () => {
   await seedOpenAiModels([
     {
-      id: "mixed-vision-yes-11947",
+      id: "gpt-4o",
       capability: capabilityEntry({
         attachment: true,
         modalities_input: JSON.stringify(["text", "image"]),
@@ -280,9 +287,9 @@ test("#11947 mixed vision verdicts suppress image input but keep common output e
       }),
     },
     {
-      id: "mixed-vision-no-11947",
+      id: "mimo-v2.5-pro",
       capability: capabilityEntry({
-        attachment: false,
+        attachment: true,
         modalities_input: JSON.stringify(["text", "image"]),
         modalities_output: JSON.stringify(["text"]),
       }),
@@ -293,6 +300,110 @@ test("#11947 mixed vision verdicts suppress image input but keep common output e
   const row = requireRow(await fetchAutoRows(), "auto/chat");
   assert.equal("vision" in (row.capabilities ?? {}), false);
   assert.equal("input_modalities" in row, false);
+  assert.deepEqual(row.output_modalities, ["text"]);
+});
+
+// #4071 cross-surface invariant: a wrong synced `attachment:true` must never let
+// an image request reach a blind model. The resolver demotes the denylisted id
+// BEFORE it reads `synced.attachment`, so advertising vision here would route
+// image traffic to a text-only target. Every auto/* row is checked because the
+// denylisted model participates in many pools.
+test("#11947 denylisted text-only targets never advertise vision from a wrong synced flag", async () => {
+  await seedOpenAiModels([
+    {
+      id: "mimo-v2.5-pro",
+      capability: capabilityEntry({
+        attachment: true,
+        modalities_input: JSON.stringify(["text", "image"]),
+        modalities_output: JSON.stringify(["text"]),
+      }),
+    },
+  ]);
+  await assertEffectivePoolIsNonEmpty(["auto/chat"]);
+
+  const rows = await fetchAutoRows();
+  assert.ok(rows.size > 0, "sanity: at least one auto/* entry listed");
+  for (const [id, row] of rows) {
+    assert.notEqual(
+      row.capabilities?.vision,
+      true,
+      `${id} must not advertise vision for a KNOWN_TEXT_ONLY_DESPITE_SYNC target`
+    );
+  }
+});
+
+// #9195: the operator's dashboard "Vision capable" toggle is stored as an
+// explicit false and is the authoritative verdict for that model. The resolver
+// applies it before any synced evidence, so a contradictory synced
+// `attachment:true` must not resurrect vision on the auto row.
+test("#11947 operator vision override outranks contradictory synced attachment evidence", async () => {
+  await seedOpenAiModels([
+    {
+      id: "operator-blind-11947",
+      capability: capabilityEntry({
+        attachment: true,
+        modalities_input: JSON.stringify(["text", "image"]),
+        modalities_output: JSON.stringify(["text"]),
+      }),
+    },
+  ]);
+  await modelsDb.addCustomModel(
+    "openai",
+    "operator-blind-11947",
+    "operator-blind-11947",
+    "manual",
+    "chat-completions",
+    ["chat"],
+    undefined,
+    {},
+    false
+  );
+  v1ModelsCatalog.__resetCatalogBuilderRunsForTest();
+  assert.equal(
+    modelsDb.getCustomModelVisionOverride("openai", "operator-blind-11947"),
+    false,
+    "setup precondition: the operator override must be persisted as explicit false"
+  );
+  await assertEffectivePoolIsNonEmpty(["auto/chat"]);
+
+  const rows = await fetchAutoRows();
+  for (const [id, row] of rows) {
+    assert.notEqual(
+      row.capabilities?.vision,
+      true,
+      `${id} must not advertise vision against an operator supportsVision:false override`
+    );
+  }
+});
+
+// #8250: models.dev ships `attachment:false` alongside image modalities for
+// genuinely multimodal models (documented for Kimi K3). The project's decision
+// is that the richer modality signal wins, so this pool is UNANIMOUSLY
+// vision-capable and both the flag and the truthful input evidence must survive.
+test("#11947 unanimous attachment:false-with-image pools keep vision and truthful input", async () => {
+  await seedOpenAiModels([
+    {
+      id: "kimi-shape-a-11947",
+      capability: capabilityEntry({
+        attachment: false,
+        modalities_input: JSON.stringify(["text", "image"]),
+        modalities_output: JSON.stringify(["text"]),
+      }),
+    },
+    {
+      id: "kimi-shape-b-11947",
+      capability: capabilityEntry({
+        attachment: false,
+        modalities_input: JSON.stringify(["text", "image"]),
+        modalities_output: JSON.stringify(["text"]),
+      }),
+    },
+  ]);
+  await assertEffectivePoolIsNonEmpty(["auto/chat"]);
+
+  const row = requireRow(await fetchAutoRows(), "auto/chat");
+  assert.deepEqual(row.capabilities, { ...BASELINE_CAPABILITIES, vision: true });
+  assert.deepEqual(row.input_modalities, ["text", "image"]);
   assert.deepEqual(row.output_modalities, ["text"]);
 });
 
