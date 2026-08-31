@@ -89,7 +89,16 @@ export async function getComboVisionBridgeDecision(
         hasModelStep = true;
         const targetModel = s.model;
         if (typeof targetModel === "string") {
-          const caps = getResolvedModelCapabilities(targetModel);
+          const provider =
+            typeof s.providerId === "string"
+              ? s.providerId
+              : typeof s.provider === "string"
+                ? s.provider
+                : null;
+          const caps = getResolvedModelCapabilities({
+            provider,
+            model: targetModel,
+          });
           if (caps.supportsVision === true) {
             hasVisionCapableStep = true;
           } else {

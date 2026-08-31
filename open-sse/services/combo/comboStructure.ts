@@ -529,7 +529,10 @@ function hasKnownCompatibleContextLimit(
   requirements: RequestCompatibilityRequirements
 ): boolean {
   if (requirements.requiredContextTokens <= 0) return false;
-  const capabilities = getResolvedModelCapabilities(target.modelStr);
+  const capabilities = getResolvedModelCapabilities({
+    provider: target.providerId || target.provider || null,
+    model: target.modelStr,
+  });
   return evaluateContextLimit(capabilities, requirements, target.modelStr) === true;
 }
 
@@ -546,7 +549,10 @@ export function isVisionIncompatibleTarget(
   requirements: RequestCompatibilityRequirements
 ): boolean {
   if (!requirements.requiresVision) return false;
-  const capabilities = getResolvedModelCapabilities(target.modelStr);
+  const capabilities = getResolvedModelCapabilities({
+    provider: target.providerId || target.provider || null,
+    model: target.modelStr,
+  });
   return capabilities.supportsVision !== true;
 }
 
@@ -571,7 +577,10 @@ function getTargetCompatibilityFailures(
   target: ResolvedComboTarget,
   requirements: RequestCompatibilityRequirements
 ): string[] {
-  const capabilities = getResolvedModelCapabilities(target.modelStr);
+  const capabilities = getResolvedModelCapabilities({
+    provider: target.providerId || target.provider || null,
+    model: target.modelStr,
+  });
   const failures: string[] = [];
 
   if (
