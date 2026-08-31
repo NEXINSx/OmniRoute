@@ -3,11 +3,15 @@
  *
  * Each model's `supportedGenerationMethods` is mapped to OmniRoute endpoints:
  *   - generateContent / generateAnswer → "chat"
- *   - predictLongRunning               → "video"   (Veo video generation)
+ *   - predict                          → "images"  (Imagen image generation)
+ *   - predictLongRunning               → "videos"  (Veo video generation)
  *   - embedContent                     → "embeddings"
  *   - bidiGenerateContent              → "audio"   (Live real-time audio)
  *
- * Model-id heuristics ensure Veo models remain in the video bucket.
+ * Model-id heuristics refine the long-running bucket because Google exposes both
+ * Imagen and Veo via long-running methods on the same endpoint:
+ *   - id contains "veo"    → ensure "videos"
+ *   - id contains "imagen" → force "images" (never "videos")
  *
  * Note: `gemini-*-image` models (e.g. gemini-3-pro-image) generate images via the
  * regular `generateContent` path, so they stay "chat" (image output is a chat
@@ -21,7 +25,8 @@
 const METHOD_TO_ENDPOINT: Record<string, string> = {
   generateContent: "chat",
   embedContent: "embeddings",
-  predictLongRunning: "video",
+  predict: "images",
+  predictLongRunning: "videos",
   bidiGenerateContent: "audio",
   generateAnswer: "chat",
 };
@@ -63,9 +68,14 @@ export function parseGeminiModelsList(data: any): GeminiDiscoveryModel[] {
       const id = ((m.name as string) || (m.id as string) || "").replace(/^models\//, "");
       const lowerId = id.toLowerCase();
 
-      // Keep Veo models in the video bucket even when the method list is incomplete.
+      // Google exposes Imagen (image) and Veo (video) via long-running methods; the
+      // method alone can't always distinguish them, so refine by model id.
       if (lowerId.includes("veo")) {
-        endpoints.add("video");
+        endpoints.add("videos");
+      }
+      if (lowerId.includes("imagen")) {
+        endpoints.delete("videos");
+        endpoints.add("images");
       }
 
       if (endpoints.size === 0) endpoints.add("chat");

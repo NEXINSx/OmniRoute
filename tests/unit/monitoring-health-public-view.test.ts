@@ -46,3 +46,27 @@ test("management session sees the full health payload", async () => {
     "a management caller must still receive the detailed payload"
   );
 });
+
+/**
+ * The local CLI reaches this PUBLIC-classified route with the machine
+ * token, which `runAuthzPipeline` converts into the trusted subject stamp below
+ * (the raw header is always stripped). The full payload — `version` in
+ * particular — is what check:pack-boot asserts on the packed tarball, so pin the
+ * stamped contract here.
+ */
+test("a stamped local-CLI caller receives the full payload including version", async () => {
+  const pkgVersion = JSON.parse(
+    fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")
+  ).version;
+  const res = await route.GET(
+    new Request("http://localhost/api/monitoring/health", {
+      headers: {
+        "x-omniroute-auth-kind": "management_key",
+        "x-omniroute-auth-label": "local-cli-token",
+      },
+    }) as never
+  );
+  const body = (await res.json()) as Record<string, unknown>;
+  assert.equal(res.status, 200);
+  assert.equal(body.version, pkgVersion);
+});

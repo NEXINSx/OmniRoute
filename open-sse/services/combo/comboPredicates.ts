@@ -482,6 +482,73 @@ export function getConnectionStatusQuotaCutoffReason(
   return undefined;
 }
 
+/**
+ * Pre-dispatch skip for a combo target whose connection is already on a
+ * persisted cooldown. Combo previously only learned that from AUTH after a
+ * real upstream call, so a burst could burn max_concurrent slots against a
+ * connection that SQLite already marked unavailable until a future reset.
+ *
+ * Honours a future rateLimitedUntil regardless of testStatus, the terminal
+ * statuses that must never be dispatched, and a bare `unavailable` status even
+ * when no timestamp was written alongside it.
+ */
+export function getPersistedConnectionCooldownSkipReason(
+  target: { modelStr: string; connectionId?: string | null },
+  connection: Record<string, unknown> | null | undefined,
+  allowRateLimitedConnection = false
+): string | null {
+  if (allowRateLimitedConnection) return null;
+  if (!target.connectionId || !connection) return null;
+  if (hasFutureRateLimitUntil(connection.rateLimitedUntil)) {
+    return `Skipping ${target.modelStr} — connection ${target.connectionId} has persisted cooldown until ${String(connection.rateLimitedUntil)}`;
+  }
+  const status = normalizeConnectionStatus(connection.testStatus);
+  if (QUOTA_BLOCKING_CONNECTION_STATUSES.has(status)) {
+    return `Skipping ${target.modelStr} — connection ${target.connectionId} status=${status}`;
+  }
+  // `unavailable` with no (or an already-expired) rateLimitedUntil still means AUTH
+  // took this connection out of rotation — markAccountUnavailable() writes the status
+  // before, and sometimes without, a timestamp ("Using zai account …" then a real
+  // upstream 429). Without this branch the pre-skip only fired once the timestamp had
+  // landed, so a burst still dispatched against a connection AUTH had already retired.
+  // Lazy recovery is unaffected: clearAccountError() resets the status on first success.
+  if (status === "unavailable") {
+    return `Skipping ${target.modelStr} — connection ${target.connectionId} status=unavailable`;
+  }
+  return null;
+}
+
+/**
+ * Async wrapper around `getPersistedConnectionCooldownSkipReason` for the combo
+ * dispatchers, which must re-check the persisted cooldown before EVERY upstream
+ * attempt — not just once before the retry loop.
+ *
+ * The retry path is exactly where the stale-read risk lives: a sibling request in
+ * the same burst can write `rate_limited_until` while this attempt is sleeping out
+ * its retry delay, so the caller passes a cache-bypassing fetcher for retry > 0
+ * (the readCache TTL is 5s, long enough to serve a "no cooldown" snapshot written
+ * before the 429 landed).
+ *
+ * Kept dependency-free — the fetcher is injected, so this module stays pure and
+ * unit-testable without a DB.
+ */
+export async function resolvePersistedConnectionCooldownSkipReason(
+  target: { modelStr: string; connectionId?: string | null },
+  fetchConnection: (id: string) => Promise<Record<string, unknown> | null | undefined>,
+  allowRateLimitedConnection = false
+): Promise<string | null> {
+  if (allowRateLimitedConnection) return null;
+  if (!target.connectionId) return null;
+  let connection: Record<string, unknown> | null | undefined;
+  try {
+    connection = await fetchConnection(target.connectionId);
+  } catch {
+    // A DB read failure must never block dispatch — fall through to the upstream call.
+    return null;
+  }
+  return getPersistedConnectionCooldownSkipReason(target, connection, allowRateLimitedConnection);
+}
+
 /** @param {string} errorText */
 export function isContextOverflow400(errorText: string | null | undefined): boolean {
   const text = String(errorText || "");

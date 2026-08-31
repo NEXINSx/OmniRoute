@@ -1155,7 +1155,12 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
       // Keyed by index, not insertion order — readers that need call order for
       // parallel calls closed out of order should sort by this key rather than
       // relying on Map iteration order.
+      // Responses→Claude uses this same shared map for Claude block lifecycle
+      // state. Preserve those fields when adding the completed-call summary;
+      // replacing the entry makes the arguments chunk look like a new unnamed
+      // tool and emits a duplicate empty content_block_start.
       state.toolCalls.set(currentIndex, {
+        ...state.toolCalls.get(currentIndex),
         id: callId,
         index: currentIndex,
         type: "function",

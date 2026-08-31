@@ -5577,6 +5577,32 @@ paths:
         "200":
           description: Circuit breakers reset
 
+  /api/health:
+    get:
+      tags: [System]
+      summary: Liveness probe
+      description: >-
+        Unauthenticated liveness probe. Returns `{ status, timestamp }` and nothing
+        else — version, uptime and memory stay behind the authenticated
+        `GET /api/monitoring/health`. Sent with
+        `Cache-Control: no-store, no-cache, must-revalidate`.
+      security: []
+      responses:
+        "200":
+          description: Service is alive.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  timestamp:
+                    type: string
+                    format: date-time
+
   /api/monitoring/health:
     get:
       tags: [System]
@@ -7391,6 +7417,145 @@ paths:
           description: English translation of the audio.
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/voices:
+    get:
+      tags: [Audio]
+      summary: List ElevenLabs voices
+      description: >-
+        Proxies `GET https://api.elevenlabs.io/v1/voices` using the stored
+        `elevenlabs` provider credentials (the caller never sends `xi-api-key`).
+        The incoming query string is forwarded unchanged.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: ElevenLabs voice list, relayed verbatim.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/speech-to-text:
+    post:
+      tags: [Audio]
+      summary: ElevenLabs speech-to-text
+      description: >-
+        Streams the request body to `POST https://api.elevenlabs.io/v1/speech-to-text`
+        using the stored `elevenlabs` provider credentials. `content-type` and
+        `accept` are forwarded; the upstream body is relayed unchanged.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Transcription payload, relayed verbatim from ElevenLabs.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/text-to-speech/{voiceId}:
+    post:
+      tags: [Audio]
+      summary: ElevenLabs text-to-speech
+      description: >-
+        Streams the request body to
+        `POST https://api.elevenlabs.io/v1/text-to-speech/{voiceId}` using the stored
+        `elevenlabs` provider credentials. `voiceId` must match `^[A-Za-z0-9_-]+$`
+        or the request is rejected with 400 before any upstream call.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: voiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]+$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+      responses:
+        "200":
+          description: Audio stream, relayed verbatim from ElevenLabs.
+        "400":
+          description: Invalid ElevenLabs voice ID.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/explain/routing:
+    get:
+      tags: [Telemetry]
+      summary: Routing explainability snapshot
+      description: >-
+        Returns the most recent routing events (bounded in-memory ring buffer) plus
+        the per-provider/model quality snapshot from `open-sse/services/routing`.
+        Routing metadata only — never prompts, bodies, headers or credentials.
+        Auth mirrors `/api/v1/combos`: a valid Bearer API key or a dashboard
+        session; with `REQUIRE_API_KEY=false` anonymous reads are allowed.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Events/quality rows to return; clamped to 1–500 (default 50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+      responses:
+        "200":
+          description: Routing explain payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    enum: [routing_explain]
+                  sinks:
+                    type: array
+                    items:
+                      type: string
+                  otelEnabled:
+                    type: boolean
+                  events:
+                    type: array
+                    items:
+                      type: object
+                  quality:
+                    type: array
+                    items:
+                      type: object
+                  otel:
+                    type: object
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":

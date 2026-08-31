@@ -423,6 +423,7 @@ export const updateSettingsSchema = z.object({
   modalityBridgeAudioTimeout: z.number().int().min(1000).max(300000).optional(),
   modalityBridgeAudioMaxClips: z.number().int().min(1).max(10).optional(),
   modalityBridgeVideoEnabled: z.boolean().optional(),
+  modalityBridgeVideoAnalysisMode: z.enum(["full", "focused"]).optional(),
   modalityBridgeVideoModel: z.string().max(200).optional(),
   modalityBridgeVideoFrameCount: z.number().int().min(1).max(16).optional(),
   modalityBridgeVideoSamplingPolicy: z.enum(["uniform", "scene_aware", "segment_aware"]).optional(),

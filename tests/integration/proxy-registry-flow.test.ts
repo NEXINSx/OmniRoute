@@ -176,6 +176,11 @@ test("integration: proxy registry full flow works and enforces safe delete", asy
     provider: "openai",
   });
 
+  // #11182 made SQLite persistence a background batch (1s timer / 100-entry
+  // threshold); the health aggregate reads the table, so drain the queue first
+  // instead of racing the timer.
+  proxyLogger.flushProxyLogsSync();
+
   const healthRes = await proxyHealthRoute.GET(
     new Request("http://localhost/api/settings/proxies/health?hours=24")
   );

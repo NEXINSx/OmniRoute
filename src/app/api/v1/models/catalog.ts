@@ -69,6 +69,7 @@ import {
 import { createModelCapabilityResolutionSnapshot } from "@/lib/modelCapabilityResolutionSnapshot";
 import { getModelsDevPricing, getSyncedCapability } from "@/lib/modelsDevSync";
 import { getModelSpec } from "@/shared/constants/modelSpecs";
+import { classifyModelSupportedEndpoints } from "@/shared/constants/modelSupportedEndpoints";
 import { getModelsCatalogPrefixMode } from "@/shared/utils/featureFlags";
 import { buildReservedPrefixes, selectCompatibleNodeForPrefix } from "@/lib/providerNodePrefixes";
 import { applyCatalogPostFilters, finalizeCatalogResponse } from "./catalogResponse";
@@ -132,7 +133,11 @@ export { getCustomVisionCapabilityFields };
 // lives in ./catalogCache. Re-exported here because the existing tests import the
 // hooks from this module, and CATALOG_STALE_WHILE_REVALIDATE_MS is part of the
 // documented behavior of this endpoint.
-import { CATALOG_CACHE_TTL_MS_DEFAULT, resolveCachedCatalogResponse } from "./catalogCache";
+import {
+  CATALOG_CACHE_TTL_MS_DEFAULT,
+  resolveCachedCatalogResponse,
+  type BackgroundRefreshScheduler,
+} from "./catalogCache";
 
 export {
   CATALOG_STALE_WHILE_REVALIDATE_MS,
@@ -143,7 +148,19 @@ export {
   __flushCatalogBackgroundRefreshForTest,
   __forceCatalogInFlightRejectionForTest,
 } from "./catalogCache";
-export type { CachedCatalog } from "./catalogCache";
+export type { CachedCatalog, BackgroundRefreshScheduler } from "./catalogCache";
+
+/**
+ * Per-call options for {@link getUnifiedModelsResponse}.
+ *
+ * Restored in #11551: `/v1/models` passes Next's `after()` so the stale-while-
+ * revalidate rebuild is deferred until after the response flush. #9199 had removed
+ * the injection point while the route kept passing it, so the argument was silently
+ * dropped and the refresh ran on a plain `setTimeout`.
+ */
+export type CatalogResponseOptions = {
+  scheduleBackgroundRefresh?: BackgroundRefreshScheduler;
+};
 
 const BUILTIN_AUTO_YIELD_INTERVAL = 2;
 
@@ -157,7 +174,8 @@ function yieldCatalogBuildTurn(): Promise<void> {
  */
 export async function getUnifiedModelsResponse(
   request: Request,
-  corsHeaders: Record<string, string> = {}
+  corsHeaders: Record<string, string> = {},
+  options: CatalogResponseOptions = {}
 ) {
   const diagnosticHeaders = getCatalogDiagnosticsHeaders({ request });
 
@@ -199,6 +217,10 @@ export async function getUnifiedModelsResponse(
         hideAutoCombos:
           settingsForAuth?.hideAutoCombos === true || settingsForAuth?.autoRoutingEnabled === false,
         hideNoThinkVariants: settingsForAuth?.hideNoThinkVariants === true,
+        // #11551: the route injects Next's `after()` here so the SWR background
+        // rebuild starts only once the stale response has been flushed. Without a
+        // scheduler the cache falls back to defaultBackgroundRefreshScheduler.
+        scheduleBackgroundRefresh: options.scheduleBackgroundRefresh,
       }
     );
   } catch (err) {
@@ -1152,18 +1174,15 @@ async function buildUnifiedModelsResponseCore(
           const aliasId = `${alias}/${displayModelId}`;
           const endpoints = Array.isArray(sm.supportedEndpoints) ? sm.supportedEndpoints : ["chat"];
           const apiFormat = typeof sm.apiFormat === "string" ? sm.apiFormat : "chat-completions";
-          let modelType: string | undefined;
-          if (endpoints.includes("embeddings")) modelType = "embedding";
-          else if (endpoints.includes("rerank")) modelType = "rerank";
-          else if (endpoints.includes("images")) modelType = "image";
-          else if (endpoints.includes("audio")) modelType = "audio";
+          const classification = classifyModelSupportedEndpoints(endpoints);
+          const modelType = classification.type;
           // Same owned_by the alias/canonical entries below will carry — computed once
           // so the effort_tiers exclusion (codex/glm/kimi) and the entries agree.
           const syncedOwnedBy = resolvePublicOwnerId(providerId, canonicalProviderId);
           const syncedFields = {
             ...(modelType ? { type: modelType } : {}),
             ...(apiFormat !== "chat-completions" ? { api_format: apiFormat } : {}),
-            ...(modelType === "audio" ? { subtype: "transcription" } : {}),
+            ...(classification.subtype ? { subtype: classification.subtype } : {}),
             ...(sm.inputTokenLimit ? { context_length: sm.inputTokenLimit } : {}),
             ...(typeof sm.outputTokenLimit === "number"
               ? { max_output_tokens: sm.outputTokenLimit }
@@ -1604,11 +1623,8 @@ async function buildUnifiedModelsResponseCore(
             : ["chat"];
           const apiFormat =
             typeof model.apiFormat === "string" ? model.apiFormat : "chat-completions";
-          let modelType: string | undefined;
-          if (endpoints.includes("embeddings")) modelType = "embedding";
-          else if (endpoints.includes("rerank")) modelType = "rerank";
-          else if (endpoints.includes("images")) modelType = "image";
-          else if (endpoints.includes("audio")) modelType = "audio";
+          const classification = classifyModelSupportedEndpoints(endpoints);
+          const modelType = classification.type;
           if (
             modelType &&
             hasEquivalentSpecialtyModel(canonicalProviderId, modelId, modelType, aliasId)
@@ -1631,6 +1647,7 @@ async function buildUnifiedModelsResponseCore(
               parent: null,
               custom: true,
               ...(modelType ? { type: modelType } : {}),
+              ...(classification.subtype ? { subtype: classification.subtype } : {}),
               ...(apiFormat !== "chat-completions" ? { api_format: apiFormat } : {}),
               ...(endpoints.length > 1 || !endpoints.includes("chat")
                 ? { supported_endpoints: endpoints }

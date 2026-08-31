@@ -955,7 +955,7 @@
   },
   "src/app/(dashboard)/dashboard/combos/page.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 9
+      "count": 6
     }
   },
   "src/app/(dashboard)/dashboard/costs/CostOverviewTab.tsx": {
@@ -2370,16 +2370,6 @@
   "src/lib/guardrails/promptInjection.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    }
-  },
-  "src/lib/guardrails/videoBridgeContactSheet.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/lib/guardrails/videoBridgeRuntime.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
     }
   },
   "src/lib/guardrails/visionBridgeHelpers.ts": {
@@ -4130,7 +4120,7 @@
   },
   "tests/unit/cli-oneproxy-commands.test.ts": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 14
+      "count": 13
     },
     "@typescript-eslint/no-unused-vars": {
       "count": 1

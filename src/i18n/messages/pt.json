@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Intercetar tráfego do agente do IDE",
     "trafficInspector": "Inspetor de Tráfego",
-    "trafficInspectorSubtitle": "Monitorizar chamadas de LLM + depurar qualquer tráfego HTTPS",
+    "trafficInspectorSubtitle": "Inspecione o tráfego de pedidos e respostas das suas aplicações",
     "cliCode": "Código da CLI",
     "cliCodeSubtitle": "Ferramentas de código a apontar para o OmniRoute",
     "cliAgents": "Agentes de CLI",

@@ -82,11 +82,11 @@ test("parseGeminiModelsList maps embedContent and bidiGenerateContent", () => {
   ]);
 });
 
-test("parseGeminiModelsList maps Veo predictLongRunning models to the video endpoint", () => {
+test("parseGeminiModelsList maps Veo predictLongRunning models to the videos endpoint", () => {
   const models = parseGeminiModelsList(SAMPLE);
   const veo = models.find((m) => m.id === "veo-3.0-generate-001");
   assert.ok(veo, "veo-3.0-generate-001 should be present");
-  assert.deepEqual(veo!.supportedEndpoints, ["video"]);
+  assert.deepEqual(veo!.supportedEndpoints, ["videos"]);
 });
 
 test("parseGeminiModelsList defaults to chat and tolerates empty/missing input", () => {

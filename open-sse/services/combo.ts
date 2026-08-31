@@ -210,12 +210,16 @@ import {
   normalizeConnectionStatus,
   hasFutureRateLimitUntil,
   getConnectionStatusQuotaCutoffReason,
+  getPersistedConnectionCooldownSkipReason,
+  resolvePersistedConnectionCooldownSkipReason,
   isContextOverflow400,
   isParamValidation400,
   isModelScoped400,
 } from "./combo/comboPredicates.ts";
 export {
   getConnectionStatusQuotaCutoffReason,
+  getPersistedConnectionCooldownSkipReason,
+  resolvePersistedConnectionCooldownSkipReason,
   isContextOverflow400,
   isParamValidation400,
   isModelScoped400,
@@ -320,6 +324,26 @@ export {
  * peekStickyConnectionId guards against clearing an unrelated pin when the
  * failing target isn't actually the currently sticky-bound connection.
  */
+/**
+ * Connection read for the pre-dispatch persisted-cooldown gate.
+ *
+ * `fresh: false` (first attempt) uses the shared 5s readCache — the row was just
+ * read by the surrounding target resolution, so a second uncached hit is pure cost.
+ * `fresh: true` (every retry) goes straight to SQLite: during a burst a sibling
+ * request routinely writes `rate_limited_until` while this attempt is sleeping out
+ * its retry delay, so the cached snapshot would still say "no cooldown" — which is
+ * exactly how a retry ended up dispatching into a real upstream 429 on a connection
+ * the engine had already marked unavailable.
+ */
+async function readConnectionForCooldownGate(
+  connectionId: string,
+  fresh: boolean
+): Promise<Record<string, unknown> | null | undefined> {
+  if (!fresh) return getCachedProviderConnectionById(connectionId);
+  const { getProviderConnectionById } = await import("@/lib/db/providers");
+  return (await getProviderConnectionById(connectionId)) as Record<string, unknown> | null;
+}
+
 export function releaseStickyPinOnFailure(
   messageHash: string | null | undefined,
   failedConnectionId: string | null | undefined
@@ -1214,6 +1238,23 @@ async function handleComboChatInner({
             }
           : { ...target, modelAbortSignal: abortControllers.get(i)!.signal };
 
+        // Persist the connection cooldown before dispatch. AUTH only learns
+        // unavailable during credential lookup, so a burst would otherwise
+        // burn max_concurrent slots on real upstream calls against a row
+        // SQLite already locked until the reset.
+        if (target.connectionId && !allowRateLimitedConnection) {
+          const persistedSkip = await resolvePersistedConnectionCooldownSkipReason(
+            target,
+            (id) => readConnectionForCooldownGate(id, false),
+            allowRateLimitedConnection
+          );
+          if (persistedSkip) {
+            log.info("COMBO", persistedSkip);
+            if (i > 0) fallbackCount++;
+            return null;
+          }
+        }
+
         // #1731 / #1731v2: skip targets already known-exhausted this request (shared predicate).
         const exhaustedSkip = getExhaustedTargetSkipReason(
           target,
@@ -1470,6 +1511,21 @@ async function handleComboChatInner({
             if (signal?.aborted) {
               log.info("COMBO", `Client disconnected during retry delay — aborting`);
               return { ok: false, response: errorResponse(499, "Client disconnected") };
+            }
+
+            // Retry re-check: a sibling attempt (or attempt 1) may have persisted
+            // a quota cooldown while this attempt was sleeping out its retry delay
+            // ("Trying model 1/7: zai/glm-5.3 (retry 1)" after "already marked
+            // unavailable until …"). Reads fresh, not cached: see readConnectionForCooldownGate.
+            const persistedRetrySkip = await resolvePersistedConnectionCooldownSkipReason(
+              target,
+              (id) => readConnectionForCooldownGate(id, true),
+              allowRateLimitedConnection
+            );
+            if (persistedRetrySkip) {
+              log.info("COMBO", persistedRetrySkip);
+              if (i > 0) fallbackCount++;
+              return null;
             }
           }
 

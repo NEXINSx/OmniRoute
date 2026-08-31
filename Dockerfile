@@ -183,10 +183,23 @@ ENV NODE_OPTIONS="--max-old-space-size=${OMNIROUTE_BUILD_MEMORY_MB}"
 # workers for page-data collection (31 on a 32-core builder); on memory-tight
 # hosts 31 workers + webpack's multi-GB heap blow past RAM and a worker dies
 # with SIGSEGV at teardown ("worker exited with code: null and signal: SIGSEGV"),
-# silently leaving no standalone bundle. Next derives the default worker count
-# from CIRCLE_NODE_TOTAL (workers = N-1), so N=8 → 7 workers: fast enough while
-# fitting comfortably in RAM on any host. (#10060)
-ENV CIRCLE_NODE_TOTAL=8
+# silently leaving no standalone bundle. Next derives the worker count from
+# CIRCLE_NODE_TOTAL (workers = N-1). (#10060)
+#
+# Lowered 8 → 3 (7 workers → 2). Every page-data worker inherits NODE_OPTIONS
+# above, so the ceiling is per PROCESS, not per build: 7 workers on a 16 GB
+# GitHub runner (ubuntu-24.04 / ubuntu-24.04-arm, 4 vCPU) exhausted the host and
+# buildkit failed the whole step with `ResourceExhausted: ... cannot allocate
+# memory`. The compile phase always finished ("✓ Compiled successfully in
+# 4.2min"); the kernel killed the build right after "Collecting page data using
+# 7 workers". It was intermittent for a while and went 100% on 2026-08-22, which
+# is what a threshold being crossed by ordinary codebase growth looks like.
+# tests/unit/docker-build-memory-budget.test.ts does the arithmetic and fails if
+# either knob is raised past what a 16 GB runner holds. 2 workers also stops
+# oversubscribing the runner's 4 vCPU, which 7 did. Override for a big builder:
+# `--build-arg OMNIROUTE_BUILD_WORKERS=8`.
+ARG OMNIROUTE_BUILD_WORKERS=3
+ENV CIRCLE_NODE_TOTAL=${OMNIROUTE_BUILD_WORKERS}
 
 COPY . ./
 RUN --mount=type=cache,id=s/92ca8a61-c1ba-421f-a389-d48ac7258c2d-next-cache,target=/app/.build/next/cache \

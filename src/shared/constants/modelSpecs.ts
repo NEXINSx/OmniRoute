@@ -70,6 +70,7 @@ const AUTHORITATIVE_CONTEXT_WINDOW_MODEL_IDS = new Set([
   "glm-5.3",
   "glm-5.3-high",
   "glm-5.3-low",
+  "glm-5.3-max",
   "glm-5.2",
   "glm-5.2-high",
   "glm-5.2-max",
@@ -567,6 +568,13 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     supportsTools: true,
   },
   "glm-5.3-low": {
+    maxOutputTokens: 131072,
+    contextWindow: 1000000,
+    thinkingBudgetCap: 38912,
+    supportsThinking: true,
+    supportsTools: true,
+  },
+  "glm-5.3-max": {
     maxOutputTokens: 131072,
     contextWindow: 1000000,
     thinkingBudgetCap: 38912,

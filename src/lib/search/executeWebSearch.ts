@@ -183,6 +183,30 @@ export async function executeWebSearch(
     credentials = await resolveSearchCredentials(providerConfig.id);
 
     if (!credentials) {
+      // A CONFIGURED provider always wins over a free `fallbackOnly` one (issue #11524):
+      // sweep every regular provider for real credentials BEFORE considering the
+      // last-resort ones. Running the fallbackOnly loop first made `duckduckgo-free`
+      // (costPerQuery 0, no credentials required) win unconditionally, so an operator's
+      // paid search connection was silently ignored whenever the cheapest auto-selected
+      // provider happened to have no credentials.
+      const sortedIds = Object.values(SEARCH_PROVIDERS)
+        .filter((provider) => !provider.fallbackOnly && supportsSearchType(provider, searchType))
+        .sort((a, b) => a.costPerQuery - b.costPerQuery)
+        .map((provider) => provider.id);
+
+      for (const providerId of sortedIds) {
+        if (providerId === providerConfig.id) continue;
+        const altConfig = getSearchProvider(providerId);
+        const altCreds = await resolveSearchCredentials(providerId);
+        if (altConfig && altCreds) {
+          providerConfig = altConfig;
+          credentials = altCreds;
+          break;
+        }
+      }
+    }
+
+    if (!credentials) {
       const fallbackProviders = Object.values(SEARCH_PROVIDERS)
         .filter((provider) => provider.fallbackOnly && supportsSearchType(provider, searchType))
         .sort((a, b) => a.costPerQuery - b.costPerQuery);
@@ -196,24 +220,6 @@ export async function executeWebSearch(
         const fallbackCredentials = await resolveSearchCredentials(fallbackProvider.id);
         if (fallbackCredentials) {
           credentials = fallbackCredentials;
-          break;
-        }
-      }
-    }
-
-    if (!credentials) {
-      const sortedIds = Object.values(SEARCH_PROVIDERS)
-        .filter((provider) => supportsSearchType(provider, searchType))
-        .sort((a, b) => a.costPerQuery - b.costPerQuery)
-        .map((provider) => provider.id);
-
-      for (const providerId of sortedIds) {
-        if (providerId === providerConfig.id) continue;
-        const altConfig = getSearchProvider(providerId);
-        const altCreds = await resolveSearchCredentials(providerId);
-        if (altConfig && altCreds) {
-          providerConfig = altConfig;
-          credentials = altCreds;
           break;
         }
       }

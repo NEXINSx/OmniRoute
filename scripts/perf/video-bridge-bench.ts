@@ -10,8 +10,10 @@
  *    scene_aware vs segment_aware for growing scene-candidate counts. The
  *    ffmpeg scene-detection pass is shared by both aware policies and is
  *    I/O-bound, so the incremental policy cost is exactly this selection step.
- * 3. Contact sheet: composes synthetic JPEG frames into the timestamped grid
- *    and compares payload bytes + model calls against individual frames.
+ * 3. Contact sheet: composes synthetic JPEG frames into the visually timestamped
+ *    grid and compares payload bytes + structural call counts. This microbenchmark
+ *    does not measure real-model tokens, latency, or quality; use
+ *    video-bridge-contact-sheet-eval.ts before considering promotion.
  */
 import { performance } from "node:perf_hooks";
 
@@ -118,6 +120,9 @@ async function syntheticJpegFrame(index: number, width = 512, height = 288): Pro
 
 async function benchContactSheet(): Promise<void> {
   console.log("\n== Contact sheet vs individual frames (synthetic 512x288 JPEG) ==");
+  console.log(
+    "STRUCTURAL ONLY: real-model tokens/latency/quality are unmeasured; promotion remains HOLD."
+  );
   console.log("frames | sheet_ms sheet_KiB individual_KiB model_calls(sheet/individual)");
   for (const frameCount of [1, 4, 8, 16]) {
     const frames = await Promise.all(

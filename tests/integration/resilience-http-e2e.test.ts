@@ -555,12 +555,15 @@ test("resilience API only exposes configuration, not runtime breaker state", asy
   const { response, json } = await getJson(`${app.baseUrl}/api/resilience`);
 
   assert.equal(response.status, 200);
+  // Exact key set — this is the whole point of the test: configuration only.
+  // `providerQuotaOverrides` joined the projection in #9871.
   assert.deepEqual(Object.keys(json).sort(), [
     "comboCooldownWait",
     "connectionCooldown",
     "legacy",
     "providerBreaker",
     "providerCooldown",
+    "providerQuotaOverrides",
     "quotaShareConcurrencyLimit",
     "requestQueue",
     "waitForCooldown",

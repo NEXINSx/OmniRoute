@@ -685,7 +685,50 @@ jobs:
       - run: npm run build:cli
       - name: Assert dist/server.js exists
         run: test -f dist/server.js || (echo "dist/server.js missing — build:cli did not assemble correctly" && exit 1)
+      # `build:cli` monta dist/ mas NAO grava dist/BUILD_SHA — so `build:release` faz
+      # isso, chamando write-build-sha.mjs. O guard de proveniencia do #10427, dentro
+      # de check:pack-artifact, rejeita um artefato sem SHA (e rejeita mesmo com
+      # OMNIROUTE_ALLOW_CANARY_BUILD=1: o que nao da para identificar nao da para
+      # vouchear). Sem este passo o par build+validate deste job e estruturalmente
+      # incompativel e falha 100% das vezes.
+      - name: Stamp dist/BUILD_SHA for the provenance guard (#10427)
+        # O SHA TEM de vir do head da PR, nao de `git rev-parse HEAD`. Este workflow
+        # roda em `pull_request`, entao o checkout e o MERGE COMMIT efemero que o
+        # GitHub cria — um commit que nao existe em branch nenhuma e portanto nunca e
+        # ancestral da release. O guard de proveniencia (#10427) rejeita exatamente
+        # isso, e com razao: um artefato carimbado com o merge commit nao pode ser
+        # rastreado ate codigo que passou pelos gates.
+        env:
+          OMNIROUTE_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          export OMNIROUTE_BUILD_SHA="${OMNIROUTE_BUILD_SHA:0:7}"
+          node scripts/build/write-build-sha.mjs
+      # O guard de proveniencia checa ancestralidade contra `origin/main` por padrao.
+      # Esse e o ref certo na PUBLICACAO (npm-publish.yml roda em main), mas em
+      # `pull_request` e estruturalmente impossivel: enquanto a PR esta aberta o head
+      # dela NUNCA e ancestral de main — e o checkout raso nem traz `origin/main` para
+      # o grafo local, entao a sonda responde `false` de qualquer jeito. Resultado: o
+      # gate falhava 100% das vezes em PR. Pre-merge o unico invariante checavel e "o
+      # stamp corresponde a branch sob teste", entao apontamos o ref para o head da PR.
+      # Usamos `refs/pull/<N>/head` e nao `head.ref` porque aquele existe no PROPRIO
+      # origin mesmo quando a PR vem de um fork; `head.ref` so existe no repo do autor.
+      - name: Resolve the provenance ref for the pack gate (#10427)
+        id: provenance-ref
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -n "$PR_NUMBER" ]; then
+            git fetch --no-tags --depth=50 origin \
+              "+refs/pull/$PR_NUMBER/head:refs/remotes/origin/pr-head"
+            echo "ref=origin/pr-head" >> "$GITHUB_OUTPUT"
+          else
+            git fetch --no-tags --depth=50 origin \
+              "+refs/heads/$GITHUB_REF_NAME:refs/remotes/origin/$GITHUB_REF_NAME"
+            echo "ref=origin/$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          fi
       - run: npm run check:pack-artifact
+        env:
+          OMNIROUTE_RELEASE_REF: ${{ steps.provenance-ref.outputs.ref }}
       # WS1.2 (#7065 class): pack the real tarball, install it into a clean prefix and
       # BOOT it to a healthy /api/monitoring/health — the gate that structure checks
       # cannot provide (3 releases shipped boot-crashing tarballs with green lists).
@@ -792,9 +835,23 @@ jobs:
       # D3 (plano mestre): a coverage é coletada NESTE mesmo run (c8/NODE_V8_COVERAGE propaga
       # aos filhos através do npm) — elimina a matrix Coverage Shard ×8, que re-executava a
       # suíte inteira só para medir o gate. Padrão usado pelo CI do próprio nodejs/node.
+      # Heap: os shards rodam sob instrumentacao de cobertura do V8, que retem muito
+      # mais memoria que a suite crua. Com o teto antigo de 4096 MB os shards passaram
+      # a abortar com SIGABRT (exit 134, "Ineffective mark-compacts near heap limit")
+      # ao redor de 4086 MB conforme o catalogo de providers cresceu no ciclo v3.8.50 —
+      # todos os testes passavam e o processo morria no fim, o que le como falha de
+      # teste sem ser. O teto vive em `test:unit:ci:shard` (package.json) e agora
+      # acompanha os 8192 MB ja usados pelas variantes nao-shardadas; os runners
+      # GitHub-hosted tem 16 GB.
       - name: Unit tests (shard ${{ matrix.shard }}/8) with V8 coverage
         env:
           TEST_SHARD: ${{ matrix.shard }}/8
+          # NODE_OPTIONS (nao so o flag em test:unit:ci:shard) porque quem estoura o
+          # heap e o processo `c8` que embrulha a suite — ele agrega ~577 MB de JSON
+          # de cobertura bruta. Subir o teto so no node filho deixa o pai no default
+          # do V8 (~4 GB) e o OOM continua igual, em ~4083 MB. Mesmo padrao ja usado
+          # pelo job de merge de cobertura mais abaixo.
+          NODE_OPTIONS: --max-old-space-size=8192
         run: |
           rm -rf coverage-shard coverage-shard-report
           npx c8 \

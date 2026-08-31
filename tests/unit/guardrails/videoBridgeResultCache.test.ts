@@ -445,6 +445,7 @@ test("a corrupt result-cache payload is discarded and recomputed", async () => {
       value: 42 as unknown as string,
       producerModel: "openai/gpt-4o-mini",
       metadata: {
+        analysisMode: "full",
         cacheVersion: "v4",
         dedupCandidateFrameCount: 16,
         dedupPolicyVersion: "grayscale-16x16-mean-cells-v2",
@@ -460,6 +461,7 @@ test("a corrupt result-cache payload is discarded and recomputed", async () => {
         framesRequested: 1,
         framesExtracted: 1,
         framesUsed: 1,
+        focusHintFingerprint: null,
         cacheBytes: 2,
         modelUsed: "openai/gpt-4o-mini",
       },
@@ -507,6 +509,7 @@ test("a corrupt result-cache payload is discarded and recomputed", async () => {
 test("invalid numeric result-cache metadata is deleted and recomputed", async (t) => {
   const cachedValue = "[Video description: cached numeric metadata]";
   const validMetadata = (): Record<string, unknown> => ({
+    analysisMode: "full",
     cacheVersion: "v4",
     dedupCandidateFrameCount: 16,
     dedupPolicyVersion: "grayscale-16x16-mean-cells-v2",
@@ -523,6 +526,7 @@ test("invalid numeric result-cache metadata is deleted and recomputed", async (t
     framesExtracted: 6,
     framesUsed: 5,
     dedupDropped: 1,
+    focusHintFingerprint: null,
     cacheBytes: Buffer.byteLength(cachedValue, "utf8"),
     modelUsed: "openai/gpt-4o-mini",
   });

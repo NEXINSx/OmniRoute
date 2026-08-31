@@ -11,18 +11,33 @@ function makeCmd(output = "json") {
 }
 
 test("oneproxy status chama omniroute_oneproxy_stats via MCP", async () => {
-  const calls: any[] = [];
+  // #10960 rewrote this test around the shared stream mock but left it asserting
+  // `calls.length >= 0` — always true — while the mock it installed was
+  // immediately overwritten by a passthrough to the real fetch. Restored to
+  // assert what the test name claims: the JSON-RPC tools/call carries the
+  // omniroute_oneproxy_stats tool name and its result reaches the caller.
+  // Scope note: like the pre-#10960 version, this drives mcpCallTool directly
+  // rather than the `oneproxy status` commander action, so it pins the MCP
+  // client contract, not the subcommand wiring (covered by the import test below).
+  const toolCalls: Array<Record<string, unknown>> = [];
   const origFetch = globalThis.fetch;
-  globalThis.fetch = makeMcpStreamFetch({ toolResult: { poolSize: 10, activeProxies: 8 } });
-  globalThis.fetch = (async (url: string, init?: any) => {
-    calls.push({ url: String(url), init });
-    return origFetch(url, init);
+  const streamFetch = makeMcpStreamFetch({ toolResult: { poolSize: 10, activeProxies: 8 } });
+  globalThis.fetch = (async (url: string | URL, init?: any) => {
+    const parsed = init?.body ? JSON.parse(init.body) : {};
+    if (parsed.method === "tools/call") toolCalls.push(parsed.params ?? {});
+    return streamFetch(url as string, init);
   }) as any;
 
-  await import("../../bin/cli/commands/oneproxy.mjs");
-  // ensure module registers; just assert stream mock shape
-  globalThis.fetch = origFetch;
-  assert.ok(calls.length >= 0);
+  try {
+    const { mcpCallTool } = await import("../../bin/cli/mcpClient.mjs");
+    const result = await mcpCallTool("omniroute_oneproxy_stats", {});
+    assert.deepEqual(result, { poolSize: 10, activeProxies: 8 });
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+
+  assert.equal(toolCalls.length, 1, "exactly one tools/call must reach the MCP endpoint");
+  assert.equal(toolCalls[0].name, "omniroute_oneproxy_stats");
 });
 
 test("oneproxy stats passa provider e period para MCP", async () => {
