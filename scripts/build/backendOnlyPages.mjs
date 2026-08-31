@@ -86,6 +86,11 @@ export function isBackendOnlyBuild(env = process.env) {
   return env.OMNIROUTE_BUILD_BACKEND_ONLY === "1" || env.OMNIROUTE_BUILD_PROFILE === "backend";
 }
 
+/** True when the build is intended only for contributor feedback, not packaging. */
+export function isContributorBuild(env = process.env) {
+  return env.OMNIROUTE_BUILD_PROFILE === "contributor";
+}
+
 function walkFiles(dir, out = []) {
   let entries = [];
   try {

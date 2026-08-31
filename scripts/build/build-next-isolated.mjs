@@ -13,6 +13,7 @@ import {
 } from "./assembleStandalone.mjs";
 import {
   isBackendOnlyBuild,
+  isContributorBuild,
   stubDashboardPages,
   restoreDashboardPages,
 } from "./backendOnlyPages.mjs";
@@ -302,7 +303,7 @@ export async function main() {
 
     const result = await runNextBuild();
     const standaloneDir = path.join(distDir, "standalone");
-    if (result.code === 0 && (await exists(standaloneDir))) {
+    if (result.code === 0 && (await exists(standaloneDir)) && !isContributorBuild()) {
       try {
         await fs.cp(path.join(projectRoot, "docs"), path.join(standaloneDir, "docs"), {
           recursive: true,
@@ -369,6 +370,10 @@ export async function main() {
       } catch (assembleErr) {
         console.warn("[build-next-isolated] Non-fatal error assembling standalone:", assembleErr);
       }
+    } else if (result.code === 0 && isContributorBuild()) {
+      console.log(
+        "[build-next-isolated] Contributor profile: skipped standalone packaging (compile-only validation)"
+      );
     }
     process.exitCode = result.code;
   } catch (error) {
