@@ -41,6 +41,23 @@ interface ResetCreditRequestState {
   tr: TranslateUsage;
 }
 
+// Module-level so the ref-store mutation stays outside any hook body — the
+// immutability rule bars in-callback writes to `state.idempotencyKeysRef.current`.
+function resetIdempotencyKeys(keys: React.MutableRefObject<Record<string, string>>): void {
+  keys.current = {};
+}
+
+function ensureIdempotencyKey(
+  keys: React.MutableRefObject<Record<string, string>>,
+  selectionToken: string
+): string {
+  const existing = keys.current[selectionToken];
+  if (existing) return existing;
+  const created = createIdempotencyKey();
+  keys.current[selectionToken] = created;
+  return created;
+}
+
 function createIdempotencyKey(): string {
   return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
@@ -112,9 +129,7 @@ function useRedeemCodexResetCredit(state: ResetCreditRequestState) {
     async (selectionToken: string) => {
       const picker = state.resetCreditPicker;
       if (!picker || state.redeemingResetCreditId || !selectionToken) return;
-      const idempotencyKey =
-        state.idempotencyKeysRef.current[selectionToken] ??
-        (state.idempotencyKeysRef.current[selectionToken] = createIdempotencyKey());
+      const idempotencyKey = ensureIdempotencyKey(state.idempotencyKeysRef, selectionToken);
       state.setRedeemingResetCreditId(picker.connectionId);
       state.setErrors((prev) => ({ ...prev, [picker.connectionId]: null }));
       try {
@@ -145,7 +160,7 @@ function useRedeemCodexResetCredit(state: ResetCreditRequestState) {
           [picker.connectionId]: new Date().toISOString(),
         }));
         state.setResetCreditPicker(null);
-        state.idempotencyKeysRef.current = {};
+        resetIdempotencyKeys(state.idempotencyKeysRef);
         notify.success(state.tr("resetCreditRedeemed", "Reset redeemed"));
       } catch (error) {
         const message = getRequestErrorMessage(

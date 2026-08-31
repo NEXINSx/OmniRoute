@@ -95,7 +95,9 @@ export function RadarCatalogTable({ entries, refreshCatalog, onError }: RadarCat
   }, [onError, t]);
 
   useEffect(() => {
-    void loadState();
+    void (async () => {
+      await loadState();
+    })();
   }, [loadState]);
 
   const stateByKey = useMemo(

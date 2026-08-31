@@ -49,7 +49,9 @@ export default function SessionsTab() {
   }, []);
 
   useEffect(() => {
-    loadSessions();
+    void (async () => {
+      await loadSessions();
+    })();
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);
   }, [loadSessions]);

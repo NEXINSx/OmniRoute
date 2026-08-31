@@ -161,7 +161,9 @@ export default function ProviderQuotaWidget({
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const refreshingAllRef = useRef(false);
-  const lastRefreshAllAtRef = useRef(Date.now());
+  // State (not a ref): the countdown renders it, and refs cannot be read during
+  // render nor initialized with Date.now() (purity rule).
+  const [lastRefreshAllAt, setLastRefreshAllAt] = useState(() => Date.now());
   const autoRefreshIntervalMs = autoRefreshInterval > 0 ? autoRefreshInterval * 1000 : 0;
   const [autoRefreshClock, setAutoRefreshClock] = useState(() => Date.now());
 
@@ -188,14 +190,16 @@ export default function ProviderQuotaWidget({
   }, []);
 
   useEffect(() => {
-    void loadData();
+    void (async () => {
+      await loadData();
+    })();
   }, [loadData]);
 
   const refreshAll = useCallback(async () => {
     if (refreshingAllRef.current) return;
     refreshingAllRef.current = true;
     const now = Date.now();
-    lastRefreshAllAtRef.current = now;
+    setLastRefreshAllAt(now);
     setAutoRefreshClock(now);
     setRefreshingAll(true);
     try {
@@ -235,10 +239,12 @@ export default function ProviderQuotaWidget({
     if (document.visibilityState !== "visible") return;
     if (refreshingAllRef.current) return;
 
-    if (autoRefreshClock - lastRefreshAllAtRef.current >= autoRefreshIntervalMs) {
-      void refreshAll();
+    if (autoRefreshClock - lastRefreshAllAt >= autoRefreshIntervalMs) {
+      void (async () => {
+        await refreshAll();
+      })();
     }
-  }, [autoRefreshClock, autoRefreshIntervalMs, refreshAll]);
+  }, [autoRefreshClock, lastRefreshAllAt, autoRefreshIntervalMs, refreshAll]);
 
   const providerGroups = useMemo(() => {
     const groups = new Map<string, Connection[]>();
@@ -286,10 +292,7 @@ export default function ProviderQuotaWidget({
             ? tr("refreshing", "Refreshing")
             : autoRefreshIntervalMs > 0
               ? `${tr("autoRefreshing", "Auto-refreshing")} ${formatAutoRefreshCountdown(
-                  Math.max(
-                    0,
-                    autoRefreshIntervalMs - (autoRefreshClock - lastRefreshAllAtRef.current)
-                  )
+                  Math.max(0, autoRefreshIntervalMs - (autoRefreshClock - lastRefreshAllAt))
                 )}`
               : tr("forceRefresh", "Refresh now")}
         </button>

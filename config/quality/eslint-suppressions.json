@@ -829,12 +829,6 @@
   "src/app/(dashboard)/dashboard/HomePageClient.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    },
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 2
     }
   },
   "src/app/(dashboard)/dashboard/a2a/page.tsx": {
@@ -850,60 +844,14 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/activity/ActivityFeedClient.tsx": {
-    "react-hooks/purity": {
-      "count": 1
-    },
-    "react-hooks/refs": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/analytics/CacheHealthTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/analytics/ComboHealthTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/analytics/CompressionAnalyticsTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/analytics/ProviderUtilizationTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/analytics/RouteExplainabilityTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
   "src/app/(dashboard)/dashboard/api-manager/ApiManagerPageClient.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/audit/A2aAuditTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/audit/ComplianceTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/audit/McpAuditTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
     }
   },
   "src/app/(dashboard)/dashboard/batch/components/wizard/CostEstimateStep.tsx": {
@@ -922,24 +870,6 @@
     }
   },
   "src/app/(dashboard)/dashboard/batch/files/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/cache/components/CacheEntriesTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/cache/components/ReasoningCacheTab.tsx": {
-    "react-hooks/purity": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/cache/page.tsx": {
     "react-hooks/set-state-in-effect": {
       "count": 1
     }
@@ -1060,31 +990,6 @@
       "count": 2
     }
   },
-  "src/app/(dashboard)/dashboard/memory/components/EditMemoryModal.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/memory/components/QdrantConfigCard.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/memory/components/tabs/MemoriesTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/memory/hooks/useEngineStatus.ts": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/memory/hooks/useMemorySettings.ts": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
   "src/app/(dashboard)/dashboard/onboarding/page.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -1182,29 +1087,6 @@
   },
   "src/app/(dashboard)/dashboard/providers/utils/buildCurl.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/radar/RadarCatalogTable.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/radar/intel/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/dashboard/radar/page.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
-  "src/app/(dashboard)/dashboard/radar/setup/page.tsx": {
-    "react-hooks/preserve-manual-memoization": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1376,11 +1258,6 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/usage/components/EvalsTab.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 2
-    }
-  },
   "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/ProviderLimitCard.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
@@ -1391,11 +1268,6 @@
       "count": 1
     }
   },
-  "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/useCodexResetCreditRedemption.ts": {
-    "react-hooks/immutability": {
-      "count": 2
-    }
-  },
   "src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
@@ -1404,16 +1276,10 @@
   "src/app/(dashboard)/dashboard/usage/components/RateLimitStatus.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
-      "count": 1
     }
   },
   "src/app/(dashboard)/dashboard/usage/components/SessionsTab.tsx": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    },
-    "react-hooks/set-state-in-effect": {
       "count": 1
     }
   },
@@ -1433,17 +1299,6 @@
     }
   },
   "src/app/(dashboard)/dashboard/webhooks/components/WebhookDeliveriesPanel.tsx": {
-    "react-hooks/set-state-in-effect": {
-      "count": 1
-    }
-  },
-  "src/app/(dashboard)/home/ProviderQuotaWidget.tsx": {
-    "react-hooks/purity": {
-      "count": 1
-    },
-    "react-hooks/refs": {
-      "count": 1
-    },
     "react-hooks/set-state-in-effect": {
       "count": 1
     }
@@ -2298,9 +2153,6 @@
   "src/shared/components/RequestLoggerV2.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
-    },
-    "react-hooks/exhaustive-deps": {
-      "count": 6
     }
   },
   "src/shared/components/RequestTimeline.tsx": {

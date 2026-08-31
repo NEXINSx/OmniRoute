@@ -201,7 +201,9 @@ export default function RadarPage() {
   }, [fetchCatalog, fetchReferrals]);
 
   useEffect(() => {
-    fetchSettings();
+    void (async () => {
+      await fetchSettings();
+    })();
   }, [fetchSettings]);
 
   // Sync (defined before handleActivate which depends on it)
@@ -242,7 +244,9 @@ export default function RadarPage() {
     if (loading || syncing || optIn !== true || autoSyncFiredRef.current) return;
     if (!shouldAutoSyncOnOpen(meta?.fetchedAt ?? null, Date.now())) return;
     autoSyncFiredRef.current = true;
-    void handleSync();
+    void (async () => {
+      await handleSync();
+    })();
   }, [loading, syncing, optIn, meta, handleSync]);
 
   // Activate opt-in

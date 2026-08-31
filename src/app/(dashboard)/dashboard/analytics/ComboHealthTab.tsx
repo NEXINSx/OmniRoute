@@ -852,7 +852,9 @@ export default function ComboHealthTab() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchData(controller, false);
+    void (async () => {
+      await fetchData(controller, false);
+    })();
     return () => controller.abort();
   }, [fetchData]);
 
