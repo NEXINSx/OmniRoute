@@ -1,14 +1,7 @@
 import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS } from "@/shared/constants/models";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
-import {
-  getCachedRawProviderConnections,
-  getCombos,
-  getAllCustomModels,
-  getSettings,
-  getCachedProviderNodes,
-  getModelAliases,
-  getHiddenModelsByProvider,
-} from "@/lib/localDb";
+import { getCombos } from "@/lib/db/combos";
+import { getSettings } from "@/lib/db/settings";
 import { getUserDatabaseSettings } from "@/lib/db/databaseSettings";
 import { createLazyConnectionView } from "@/lib/db/providers/lazyConnectionView";
 import { extractAliasBackedModels } from "./aliasBackedModels";
@@ -49,9 +42,16 @@ import {
   getSyncedAvailableModelsByConnection,
   SYNCED_AVAILABLE_MODELS_MALFORMED,
   type SyncedAvailableModel,
+  getAllCustomModels,
+  getModelAliases,
+  getHiddenModelsByProvider,
 } from "@/lib/db/models";
 import { getAllActiveSyncedModels } from "@/lib/db/models/activeSyncedCatalog";
-import { getModelCatalogCacheVersion } from "@/lib/db/readCache";
+import {
+  getModelCatalogCacheVersion,
+  getCachedRawProviderConnections,
+  getCachedProviderNodes,
+} from "@/lib/db/readCache";
 import { getCompatibleFallbackModels } from "@/lib/providers/managedAvailableModels";
 import {
   providerUsesCuratedModelsOnly,
@@ -123,6 +123,7 @@ import {
 import { incrementCcDiscoveryHitCount } from "@/lib/db/ccDiscoveryMetrics";
 import { isUnifiedChatSourceModelSelectable } from "./catalogModelPolicy";
 import { isFreeModel } from "@/shared/utils/freeModels";
+import { isModelExposureAllowed } from "@/shared/utils/modelExposureList";
 import { isCodexDiscoveryModelExcluded } from "@/shared/services/codexDiscoveryPolicy";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
@@ -356,6 +357,13 @@ async function buildUnifiedModelsResponseCore(
       // already returned above.
       return true;
     };
+    // #11481: opt-in explicit model exposure allow/deny list — same call sites
+    // as shouldHidePaid above (mirrored into the auto/* combo candidate pool
+    // via open-sse/services/autoCombo/modelExposureFilter.ts, per #6512's
+    // catalog-only-filter-leaks-into-combo-routing lesson). Independent of
+    // hidePaidModels — operator curation, not a cost signal.
+    const shouldHideByExposure = (providerKey: string, modelId: string): boolean =>
+      !isModelExposureAllowed(aliasToProviderId[providerKey] || providerKey, modelId, settings);
 
     // Get active provider connections
     let connections = [];
@@ -544,29 +552,11 @@ async function buildUnifiedModelsResponseCore(
     const getProviderPrefixes = (providerId: string, rawProvider: string) =>
       getProviderPrefixesFromMaps(aliasMaps, providerId, rawProvider);
 
-    const getComboTargetMemoKey = (target: ComboCatalogTarget) =>
-      JSON.stringify([
-        target.providerId ?? target.provider,
-        target.modelStr,
-        target.connectionId,
-        target.allowedConnectionIds,
-      ]);
-    const comboTargetModelIdMemo = new Map<
-      string,
-      { providerId: string; modelId: string } | null
-    >();
     const getComboTargetModelId = (target: ComboCatalogTarget) => {
-      const cacheKey = getComboTargetMemoKey(target);
-      if (comboTargetModelIdMemo.has(cacheKey)) return comboTargetModelIdMemo.get(cacheKey)!;
       const resolved = getComboTargetModelIdFromMaps(aliasMaps, target);
-      const nodeId = resolved ? providerNodeIdByPrefix[resolved.providerId] : undefined;
-      const targetModel = resolved
-        ? nodeId
-          ? { ...resolved, providerId: nodeId }
-          : resolved
-        : null;
-      comboTargetModelIdMemo.set(cacheKey, targetModel);
-      return targetModel;
+      if (!resolved) return null;
+      const nodeId = providerNodeIdByPrefix[resolved.providerId];
+      return nodeId ? { ...resolved, providerId: nodeId } : resolved;
     };
 
     const resolvedComboTargets = combos.flatMap(
@@ -598,7 +588,7 @@ async function buildUnifiedModelsResponseCore(
       })
     );
 
-    const resolveComboTargetCatalogMetadata = (
+    const getComboTargetCatalogMetadata = (
       target: ComboCatalogTarget
     ): ComboTargetCatalogMetadata | null => {
       const targetModel = getComboTargetModelId(target);
@@ -752,95 +742,6 @@ async function buildUnifiedModelsResponseCore(
         capabilities,
       };
     };
-    const comboTargetCatalogMetadataMemo = new Map<string, ComboTargetCatalogMetadata | null>();
-    const getComboTargetCatalogMetadata = (
-      target: ComboCatalogTarget
-    ): ComboTargetCatalogMetadata | null => {
-      const cacheKey = getComboTargetMemoKey(target);
-      if (comboTargetCatalogMetadataMemo.has(cacheKey)) {
-        return comboTargetCatalogMetadataMemo.get(cacheKey)!;
-      }
-      const metadata = resolveComboTargetCatalogMetadata(target);
-      comboTargetCatalogMetadataMemo.set(cacheKey, metadata);
-      return metadata;
-    };
-
-    const buildBuiltinAutoModalityMetadata = (
-      targets: Array<{
-        model: string;
-        providerId: string;
-        connectionId?: string | null;
-        allowedConnectionIds?: string[] | null;
-      }>
-    ) => {
-      const emptyMetadata = { inputModalities: [], outputModalities: [], vision: false };
-      if (targets.length === 0) return emptyMetadata;
-
-      const targetMetadata = targets.map((target) => {
-        const comboTarget = {
-          modelStr: target.model,
-          providerId: target.providerId,
-          connectionId: target.connectionId,
-          ...(target.allowedConnectionIds
-            ? { allowedConnectionIds: target.allowedConnectionIds }
-            : {}),
-        };
-        const metadata = getComboTargetCatalogMetadata(comboTarget);
-        const targetModel = getComboTargetModelId(comboTarget);
-        if (!metadata || !targetModel) return null;
-
-        const synced = getSyncedCapability(
-          targetModel.providerId,
-          targetModel.modelId,
-          capabilityResolutionSnapshot.synced
-        );
-        if (!synced) return metadata;
-
-        const inputModalities = parseJsonStringArray(synced.modalities_input);
-        const outputModalities = parseJsonStringArray(synced.modalities_output);
-        const syncedVision =
-          typeof synced.attachment === "boolean" ? synced.attachment : metadata.capabilities.vision;
-        return {
-          ...metadata,
-          inputModalities,
-          outputModalities,
-          capabilities: {
-            ...metadata.capabilities,
-            ...(typeof syncedVision === "boolean" ? { vision: syncedVision } : {}),
-          },
-        };
-      });
-      // #11947: built-in autos must fail closed when any effective target is unknown;
-      // persisted combos intentionally aggregate their known subset instead.
-      if (targetMetadata.some((metadata) => metadata === null)) return emptyMetadata;
-
-      const knownMetadata = targetMetadata.filter(
-        (metadata): metadata is ComboTargetCatalogMetadata => metadata !== null
-      );
-      let inputModalities = knownMetadata.every(
-        (metadata) => Array.isArray(metadata.inputModalities) && metadata.inputModalities.length > 0
-      )
-        ? intersectStringArrays(knownMetadata.map((metadata) => metadata.inputModalities || []))
-        : [];
-      const outputModalities = knownMetadata.every(
-        (metadata) =>
-          Array.isArray(metadata.outputModalities) && metadata.outputModalities.length > 0
-      )
-        ? intersectStringArrays(knownMetadata.map((metadata) => metadata.outputModalities || []))
-        : [];
-      const unanimousVision = knownMetadata.every(
-        (metadata) => metadata.capabilities.vision === true
-      );
-      if (inputModalities.includes("image") && !unanimousVision) {
-        inputModalities = [];
-      }
-
-      return {
-        inputModalities,
-        outputModalities,
-        vision: unanimousVision && inputModalities.includes("image"),
-      };
-    };
 
     const buildComboCatalogMetadata = (
       combo: Parameters<typeof resolveNestedComboTargets>[0],
@@ -981,25 +882,77 @@ async function buildUnifiedModelsResponseCore(
         const virtualCombo = await createBuiltinAutoCombo(autoId, suffix, preparedAutoInputs);
         const contextLength = virtualCombo.advertisedContextLength || 128000;
         const maxOutputTokens = virtualCombo.advertisedMaxOutputTokens || 8192;
-        const modalityMetadata = buildBuiltinAutoModalityMetadata(virtualCombo.models);
+
+        // #11947: derive modalities and vision from the effective target pool so
+        // OpenAI-compatible clients can detect vision support for auto/* combos.
+        const autoTargets: ComboCatalogTarget[] = virtualCombo.models.map((m) => ({
+          modelStr: m.model,
+          providerId: m.providerId,
+          connectionId: m.connectionId,
+          ...(m.allowedConnectionIds ? { allowedConnectionIds: m.allowedConnectionIds } : {}),
+        }));
+        const autoTargetMetadata = autoTargets.map((target) => {
+          const metadata = getComboTargetCatalogMetadata(target);
+          const targetModel = getComboTargetModelId(target);
+          if (!metadata || !targetModel) return null;
+
+          const synced = getSyncedCapability(
+            targetModel.providerId,
+            targetModel.modelId,
+            capabilityResolutionSnapshot.synced
+          );
+          return {
+            ...metadata,
+            inputModalities: synced ? parseJsonStringArray(synced.modalities_input) : undefined,
+            outputModalities: synced ? parseJsonStringArray(synced.modalities_output) : undefined,
+            capabilities: {
+              ...metadata.capabilities,
+              ...(typeof synced?.attachment === "boolean" ? { vision: synced.attachment } : {}),
+            },
+          };
+        });
+        const hasUnknownAutoTarget = autoTargetMetadata.some((m) => m === null);
+        const knownAutoMeta = hasUnknownAutoTarget
+          ? []
+          : autoTargetMetadata.filter((m): m is ComboTargetCatalogMetadata => m !== null);
+        let autoInputModalities =
+          knownAutoMeta.length > 0 &&
+          knownAutoMeta.every(
+            (m) => Array.isArray(m.inputModalities) && m.inputModalities.length > 0
+          )
+            ? intersectStringArrays(knownAutoMeta.map((m) => m.inputModalities || []))
+            : [];
+        const autoOutputModalities =
+          knownAutoMeta.length > 0 &&
+          knownAutoMeta.every(
+            (m) => Array.isArray(m.outputModalities) && m.outputModalities.length > 0
+          )
+            ? intersectStringArrays(knownAutoMeta.map((m) => m.outputModalities || []))
+            : [];
+        const autoCapabilities: Record<string, boolean | string[]> = {
+          tool_calling: true,
+          reasoning: true,
+          thinking: true,
+          temperature: true,
+        };
+        if (knownAutoMeta.length > 0) {
+          const allVision = knownAutoMeta.every((m) => m.capabilities.vision === true);
+          if (autoInputModalities.includes("image") && !allVision) {
+            autoInputModalities = [];
+          }
+          if (allVision && autoInputModalities.includes("image")) {
+            autoCapabilities.vision = true;
+          }
+        }
+
         models.push({
           ...baseAutoEntry,
           context_length: contextLength,
           max_input_tokens: contextLength,
           max_output_tokens: maxOutputTokens,
-          capabilities: {
-            tool_calling: true,
-            reasoning: true,
-            thinking: true,
-            temperature: true,
-            ...(modalityMetadata.vision ? { vision: true } : {}),
-          },
-          ...(modalityMetadata.inputModalities.length > 0
-            ? { input_modalities: modalityMetadata.inputModalities }
-            : {}),
-          ...(modalityMetadata.outputModalities.length > 0
-            ? { output_modalities: modalityMetadata.outputModalities }
-            : {}),
+          ...(autoInputModalities.length > 0 ? { input_modalities: autoInputModalities } : {}),
+          ...(autoOutputModalities.length > 0 ? { output_modalities: autoOutputModalities } : {}),
+          capabilities: autoCapabilities,
         });
       } catch (err) {
         console.log(`[catalog] Could not materialize built-in auto model ${autoId}:`, err);
@@ -1145,6 +1098,7 @@ async function buildUnifiedModelsResponseCore(
         if (isExcludedByProviderConnections(canonicalProviderId, model.id)) continue;
         if (shouldHidePaid(canonicalProviderId, model.id, (model as { pricing?: unknown }).pricing))
           continue;
+        if (shouldHideByExposure(canonicalProviderId, model.id)) continue;
 
         const visionFields =
           getVisionCapabilityFields(aliasId) || getVisionCapabilityFields(model.id);
@@ -1304,6 +1258,7 @@ async function buildUnifiedModelsResponseCore(
           // are hidden when hidePaid is on.
           if (shouldHidePaid(canonicalProviderId, sm.id, (sm as { pricing?: unknown }).pricing))
             continue;
+          if (shouldHideByExposure(canonicalProviderId, sm.id)) continue;
 
           const registryEntry = REGISTRY[providerId];
           const displayModelId =
@@ -1708,6 +1663,7 @@ async function buildUnifiedModelsResponseCore(
             )
           )
             continue;
+          if (shouldHideByExposure(canonicalProviderId, modelId)) continue;
           // noAuth providers have no connection rows; keep auth providers gated. (#2798/#3200)
           const isNoAuthProvider = isNoAuthProviderKey(canonicalProviderId, providerId, alias);
           if (
@@ -1885,6 +1841,7 @@ async function buildUnifiedModelsResponseCore(
         // point at providerKey/modelId with no pricing, so shouldHidePaid()
         // decides via the FREE_MODEL_IDS_BY_PROVIDER catalog tier.
         if (shouldHidePaid(canonicalProviderId, modelId)) continue;
+        if (shouldHideByExposure(canonicalProviderId, modelId)) continue;
 
         const aliasId = `${alias}/${modelId}`;
         const rawPrefixedId = `${providerKey}/${modelId}`;
@@ -1960,6 +1917,7 @@ async function buildUnifiedModelsResponseCore(
         // FREE_MODEL_IDS_BY_PROVIDER catalog tier.
         if (shouldHidePaid(canonicalProviderId, modelId, (model as { pricing?: unknown }).pricing))
           continue;
+        if (shouldHideByExposure(canonicalProviderId, modelId)) continue;
         if (!hasEligibleConnectionForModel([conn], modelId)) continue;
 
         const aliasId = `${alias}/${modelId}`;

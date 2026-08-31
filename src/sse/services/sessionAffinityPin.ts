@@ -575,3 +575,28 @@ export function resolveForcedConnectionForCredentialPool(
 
   return forced;
 }
+
+/**
+ * A forced connection (combo step `connectionId` / `x-omniroute-connection`) is an
+ * operator instruction, not a suggestion. resolveForcedConnectionForCredentialPool()
+ * above returns null for two very different reasons: (a) intentional pin-release
+ * cases it already handles correctly (the forced id was excluded after a failed
+ * attempt, is cooling down, or is quota-blocked — those must keep degrading to
+ * normal sibling fallback), and (b) the forced id simply not being present in the
+ * pool at all (e.g. an operator deactivated that connection). Only (b) must be
+ * treated as a hard failure instead of falling through to dynamic sibling
+ * selection across the rest of the provider's connections — this predicate
+ * identifies exactly (b), checked *before* resolveForcedConnectionForCredentialPool
+ * runs, so the two cases are never conflated.
+ */
+export function isForcedConnectionMissingFromPool(
+  forcedConnectionId: string | null,
+  excludedConnectionIds: ReadonlySet<string>,
+  connections: AffinityPinConnection[]
+): boolean {
+  return (
+    forcedConnectionId !== null &&
+    !excludedConnectionIds.has(forcedConnectionId) &&
+    !connections.some((conn) => conn.id === forcedConnectionId)
+  );
+}

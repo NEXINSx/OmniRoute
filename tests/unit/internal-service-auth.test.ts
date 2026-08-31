@@ -61,6 +61,6 @@ test("internal service token file is read without exposing it to process env", (
       [INTERNAL_SERVICE_AUTH_HEADER]: "file-backed-token-0123456789",
     });
   } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
+    fs.rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

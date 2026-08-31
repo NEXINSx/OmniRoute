@@ -223,7 +223,7 @@ export function clearPayloadRulesConfigOverride() {
 // silently reverting to the (usually empty) file config.
 async function loadPayloadRulesFromSettings(): Promise<PayloadRulesConfig | null> {
   try {
-    const { getCachedSettings } = await import("@/lib/localDb");
+    const { getCachedSettings } = await import("@/lib/db/readCache");
     const settings = (await getCachedSettings()) as { payloadRules?: unknown };
     const raw = settings?.payloadRules;
     if (raw === null || raw === undefined) return null;

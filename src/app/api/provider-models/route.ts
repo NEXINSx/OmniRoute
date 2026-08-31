@@ -11,7 +11,7 @@ import {
   mergeModelCompatOverride,
   getHiddenModelsByProvider,
   type ModelCompatPatch,
-} from "@/lib/localDb";
+} from "@/lib/db/models";
 import {
   getModelContextOverrideRecord,
   setModelContextOverride,

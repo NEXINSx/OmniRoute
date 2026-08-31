@@ -109,8 +109,11 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       # Single ESLint inventory (JSON) — quality-gate reuses the artifact instead of
       # a second cold full-tree pass for eslintWarnings ratchet counts.
       - name: ESLint (JSON report)
@@ -209,8 +212,11 @@ jobs:
             .eslintcache
             .eslintcache-complexity
           key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.mjs', 'eslint.complexity-ratchets.config.mjs', 'config/quality/eslint-suppressions.json', 'package-lock.json') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          # No restore-keys fallback on purpose (#11600, P-II.1 of the v3.8.50 postmortem): a
+          # cache built under a different suppressions file / lint config / lockfile reports
+          # stale per-file verdicts, which is exactly how 215 pre-existing errors stayed
+          # invisible for a whole cycle. Exact key or a cold full lint (~13 min) — never a
+          # partial cache from another configuration.
       # Coverage mergeada (coverage-summary.json) p/ o ratchet de cobertura.
       # continue-on-error: o artifact pode não existir se a job test-coverage foi
       # SKIPPED (shard flaky). Nesse caso collect-metrics pula coverage.* (ausente sem
@@ -621,9 +627,9 @@ jobs:
     # 13:50Z the kernel OOM-killed main's build while a PR build ran beside it
     # (five Build jobs had been queued by a burst of PRs). Two lanes: main keeps
     # its own so a release is never queued behind PR traffic; PR builds serialize
-    # among themselves. GitHub keeps one running + one pending per group and
-    # CANCELS older pendings — a cancelled PR build is re-runnable; a dead main
-    # build costs the publish its artefact and a 40-minute rebuild that OOMs.
+    # among themselves. docker-publish.yml's amd64 leg joins `heavy-build-main`
+    # so a :next image build waits beside this artefact instead of becoming the
+    # third heavy (#11976). GitHub keeps one running + one pending per group.
     concurrency:
       group: heavy-build-${{ github.ref == 'refs/heads/main' && 'main' || 'pr' }}
       cancel-in-progress: false
@@ -979,7 +985,11 @@ jobs:
     # 10min was sized before #7114 added the lcov reporter (Codecov/Sonar need it);
     # merging 8 shard JSONs + text+json+lcov now takes ~10-12min — three consecutive
     # release-tip runs died at exactly 10m as job-timeout "cancelled" (2026-07-15/16).
-    timeout-minutes: 20
+    # 30, not 20 (2026-08-29): the informational Codecov upload below hung for the rest of
+    # the budget on two consecutive main runs (33207760653, 33215115341); the job ended
+    # `cancelled` and dragged the whole run's conclusion to `cancelled` although every
+    # blocking job was green. The upload step now has its own ceiling; this is headroom.
+    timeout-minutes: 30
     needs: test-unit
     if: ${{ !cancelled() && needs.test-unit.result == 'success' && !contains(github.event.pull_request.labels.*.name, 'hotfix') }}
     env:
@@ -1058,6 +1068,10 @@ jobs:
       # (if-no-files-found: warn) — Sonar consumes the same file.
       - name: Upload coverage to Codecov (informational)
         if: always()
+        # Informational means informational: its own ceiling and continue-on-error, so a
+        # stalled upload can neither eat the job's budget nor turn a green job cancelled.
+        timeout-minutes: 5
+        continue-on-error: true
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: coverage/lcov.info

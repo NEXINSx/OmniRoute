@@ -18,10 +18,10 @@
  */
 
 import { testSingleConnection } from "@/app/api/providers/[id]/test/route";
-import { getProviderConnections } from "@/lib/localDb";
+import { getProviderConnections } from "@/lib/db/providers";
+import { getCachedSettings } from "@/lib/db/readCache";
 import {
   setCredentialHealth,
-  removeCredentialHealth,
   initCredentialCache,
 } from "@/lib/credentialHealth/cache";
 import {
@@ -85,24 +85,78 @@ function isCredentialHealthCheckDisabled(): boolean {
   return val ? TRUE_ENV_VALUES.has(val.trim().toLowerCase()) : false;
 }
 
+/**
+ * Resolve the effective global sweep cadence (ms) for connections WITHOUT a
+ * per-connection override. Operator settings win over the env var; the env var
+ * wins over the built-in default. Zero (settings) disables the sweep entirely.
+ *
+ * Returns the interval in ms, or 0 when the operator disabled the sweep.
+ */
+export function resolveCredentialHealthSweepInterval(
+  settings: Record<string, unknown> | null | undefined
+): number {
+  const record =
+    settings && typeof settings === "object" && !Array.isArray(settings)
+      ? (settings as Record<string, unknown>)
+      : null;
+  const resilienceRecord =
+    record &&
+    record.resilienceSettings &&
+    typeof record.resilienceSettings === "object" &&
+    !Array.isArray(record.resilienceSettings)
+      ? (record.resilienceSettings as Record<string, unknown>)
+      : null;
+  const healthRecord =
+    resilienceRecord &&
+    resilienceRecord.credentialHealthCheck &&
+    typeof resilienceRecord.credentialHealthCheck === "object" &&
+    !Array.isArray(resilienceRecord.credentialHealthCheck)
+      ? (resilienceRecord.credentialHealthCheck as Record<string, unknown>)
+      : null;
+
+  // Operator setting (DB) wins whenever the section exists — including an
+  // explicit 0, which disables the sweep entirely.
+  if (healthRecord && healthRecord.intervalMinutes !== undefined) {
+    const minutes = Number(healthRecord.intervalMinutes);
+    if (Number.isFinite(minutes)) {
+      if (minutes <= 0) return 0;
+      return Math.min(Math.trunc(minutes), 1440) * 60_000;
+    }
+  }
+
+  const envVal = process.env.CREDENTIAL_HEALTH_CHECK_INTERVAL;
+  if (envVal) {
+    const parsed = parseInt(envVal, 10);
+    if (!isNaN(parsed) && parsed >= 10_000) return parsed;
+  }
+  return 3_600_000; // default 60 min
+}
+
+/**
+ * Built-in env/default fallback used before the first operator settings read,
+ * and by the log line at scheduler start.
+ */
 function getSweepInterval(): number {
   const envVal = process.env.CREDENTIAL_HEALTH_CHECK_INTERVAL;
   if (envVal) {
     const parsed = parseInt(envVal, 10);
     if (!isNaN(parsed) && parsed >= 10_000) return parsed;
   }
-  return 300_000; // default 5 min
+  return 3_600_000; // default 60 min
 }
 
 /**
  * Resolve the per-connection sweep interval (ms).
  * - `healthCheckInterval > 0` → minutes × 60 000 (per-connection override)
  * - `healthCheckInterval <= 0` → null (never test this connection — opt-out)
- * - absent → global env interval (getSweepInterval())
+ * - absent → global sweep cadence (operator resilience setting, else env, else default)
  */
-function getConnIntervalMs(conn: { healthCheckInterval?: number | null }): number | null {
+function getConnIntervalMs(
+  conn: { healthCheckInterval?: number | null },
+  globalIntervalMs = 300_000
+): number | null {
   const minutes = conn.healthCheckInterval;
-  if (minutes === null || minutes === undefined) return getSweepInterval();
+  if (minutes === null || minutes === undefined) return globalIntervalMs;
   if (minutes <= 0) return null;
   return minutes * 60_000;
 }
@@ -260,6 +314,16 @@ export async function sweep(): Promise<void> {
   state.sweepInProgress = true;
 
   try {
+    // Operator-configured global cadence (resilienceSettings). 0 disables the
+    // sweep for every connection without a per-connection override.
+    let globalIntervalMs: number;
+    try {
+      const settings = (await getCachedSettings()) as Record<string, unknown> | null;
+      globalIntervalMs = resolveCredentialHealthSweepInterval(settings);
+    } catch {
+      globalIntervalMs = resolveCredentialHealthSweepInterval(null);
+    }
+
     // Get active provider connections only (API-key + OAuth). Disabled
     // connections are excluded from routing and must not consume health-check
     // concurrency or delay the scheduler with avoidable upstream timeouts.
@@ -297,7 +361,7 @@ export async function sweep(): Promise<void> {
     const now = Date.now();
 
     const dueConnections = connections.filter((conn) => {
-      const intervalMs = getConnIntervalMs(conn);
+      const intervalMs = getConnIntervalMs(conn, globalIntervalMs);
       // Per-connection opt-out: never tested.
       if (intervalMs === null) return false;
       const state_ = getSchedulerState();
@@ -323,13 +387,25 @@ export async function sweep(): Promise<void> {
 
     for (const batch of batches) {
       await Promise.allSettled(
-        batch.map((conn) => testConnection(conn.id, conn.provider, getConnIntervalMs(conn)))
+        batch.map((conn) =>
+          testConnection(conn.id, conn.provider, getConnIntervalMs(conn, globalIntervalMs))
+        )
       );
     }
+    // Remember the cadence this cycle ran at so scheduleSweep can re-arm with
+    // the operator's configured interval instead of the built-in default.
+    lastGlobalIntervalMs = globalIntervalMs;
   } finally {
     state.sweepInProgress = false;
     scheduleSweep();
   }
+}
+
+let lastGlobalIntervalMs: number | null = null;
+
+/** Test-only: reset scheduler state derived from operator settings. */
+export function __test_resetCredentialHealthScheduler(): void {
+  lastGlobalIntervalMs = null;
 }
 
 function scheduleSweep(): void {
@@ -339,8 +415,9 @@ function scheduleSweep(): void {
 
   // Use a stable sweep interval — per-connection retry timing is now managed
   // independently via perConnTiming, so one failed connection should not delay
-  // the global sweep for all connections.
-  const interval = getSweepInterval();
+  // the global sweep for all connections. Prefer the operator-configured
+  // cadence observed during the last sweep; fall back to env/default.
+  const interval = lastGlobalIntervalMs ?? getSweepInterval();
 
   state.sweepTimer = setTimeout(sweep, interval);
 }

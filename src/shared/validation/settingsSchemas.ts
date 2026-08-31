@@ -138,6 +138,16 @@ export const updateSettingsSchema = z.object({
   // curated `tos` verdict is "avoid" (proxy/self-hosted use conflicts with the
   // provider's own terms) — a contractual concern, not an economic one.
   excludeTosAvoid: z.boolean().optional(),
+  // #11481: Opt-in explicit model exposure allow/deny list for `/v1/models` AND
+  // the `auto/*` combo candidate pool (mirror in
+  // open-sse/services/autoCombo/modelExposureFilter.ts — #6512 already proved a
+  // catalog-only filter still leaks into combo routing). Entries are exact
+  // "provider/model" (or bare "model") ids, or a glob pattern via the shared
+  // globToRegex matcher (src/shared/utils/modelExposureList.ts). Independent of
+  // hidePaidModels — this is operator curation, not a cost signal. Default
+  // empty arrays = no-op (Hard Rule #20 spirit).
+  modelVisibilityAllowlist: z.array(z.string().max(200)).max(500).optional(),
+  modelVisibilityDenylist: z.array(z.string().max(200)).max(500).optional(),
   // Subscription-first routing tuning (`auto/subscription`, `auto/thrifty`).
   // TUNING ONLY — there is deliberately no `enabled` flag: both ids are opt-in
   // by being requested, and a toggle able to switch them off would leave
@@ -270,7 +280,7 @@ export const updateSettingsSchema = z.object({
   stickyRoundRobinLimit: z.number().int().min(0).max(1000).optional(),
   /** 9router parity: global combo expansion strategy (fallback vs round-robin). */
   comboStrategy: z.enum(["fallback", "round-robin"]).optional(),
-  comboStickyRoundRobinLimit: z.number().int().min(1).max(100).nullable().optional(),
+  comboStickyRoundRobinLimit: z.number().int().min(1).max(1000).nullable().optional(),
   providerStrategies: z
     .record(
       z.string().trim().min(1),
@@ -454,6 +464,10 @@ export const updateSettingsSchema = z.object({
     .min(VIDEO_BRIDGE_TIMEOUT_MIN_MS)
     .max(VIDEO_BRIDGE_TIMEOUT_MAX_MS)
     .optional(),
+  // Operator half of the FU-06 dual opt-in (#11654) for server-orchestrated
+  // Audio Bridge STT over Video Bridge audio extraction — defaults false
+  // (Hard Rule #20). A request-side opt-in is required in addition to this.
+  modalityBridgeVideoAudioTranscriptionEnabled: z.boolean().optional(),
   modalityBridgeCacheEnabled: z.boolean().optional(),
   modalityBridgeCacheTtlMinutes: z.number().int().min(1).max(1440).optional(),
   modalityBridgeCacheMaxEntries: z.number().int().min(10).max(5000).optional(),

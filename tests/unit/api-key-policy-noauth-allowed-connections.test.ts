@@ -26,7 +26,7 @@ const RESTRICTED_CONNECTION_UUID = "00000000-0000-4000-8000-000000000001";
 test.after(() => {
   coreDb.resetDbInstance();
   try {
-    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   } catch {}
 });
 

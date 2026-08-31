@@ -23,6 +23,16 @@ const log = logger("PLUGIN_LOADER");
 const DEFAULT_HOOK_TIMEOUT = 10_000;
 const SIGKILL_GRACE_MS = 3_000;
 
+// One-way notification hooks: no return value is consumed and they fire per-request
+// (onStreamComplete fires once per completed stream). A timeout on one of these only
+// DROPS the pending call — it must never kill the child process, because the
+// kill-on-timeout path below has no respawn: one slow delivery (e.g. a plugin posting
+// usage to a slow remote sink) would reject every in-flight hook call and leave the
+// plugin dead-but-shown-active until a manual deactivate/activate. Blocking hooks
+// (onRequest/onResponse/onError) and the rarely-fired lifecycle hooks keep the
+// kill-on-timeout isolation semantics.
+const NOTIFICATION_HOOKS: ReadonlySet<string> = new Set(["onStreamComplete"]);
+
 // #8395: stdout/stderr forwarding hygiene — cap how much of a plugin's own console
 // output we relay per stream, so a runaway/misbehaving plugin can't flood memory or
 // the log sink. Mirrors the per-plugin rate-limit hygiene already used for hooks
@@ -44,6 +54,12 @@ export interface LoadedPlugin {
   manifest: PluginManifestWithDefaults;
   plugin: Plugin;
   cleanup: () => void;
+}
+
+export interface LoadPluginOptions {
+  /** Per-call IPC hook timeout in ms. Defaults to DEFAULT_HOOK_TIMEOUT (10s); injectable
+   *  so tests can exercise the timeout paths without waiting out the production value. */
+  hookTimeoutMs?: number;
 }
 
 /**
@@ -140,8 +156,10 @@ process.on("message", async (msg) => {
  */
 export async function loadPlugin(
   entryPoint: string,
-  manifest: PluginManifestWithDefaults
+  manifest: PluginManifestWithDefaults,
+  options: LoadPluginOptions = {}
 ): Promise<LoadedPlugin> {
+  const hookTimeoutMs = options.hookTimeoutMs ?? DEFAULT_HOOK_TIMEOUT;
   // Integrity check: if the manifest declares an integrity field, verify the entry point.
   // Missing integrity is OK for backward compatibility; mismatched integrity is a fatal error.
   const integrityField = (manifest as unknown as Record<string, unknown>).integrity;
@@ -253,16 +271,26 @@ export async function loadPlugin(
     removeHostScript(hostScriptPath);
   });
 
-  // Call a hook in the child process with timeout + SIGTERM + SIGKILL escalation
-  const callHook = (
-    hook: string,
-    payload: unknown,
-    timeout = DEFAULT_HOOK_TIMEOUT
-  ): Promise<unknown> => {
+  // Call a hook in the child process with a timeout. Blocking/lifecycle hooks escalate
+  // SIGTERM → SIGKILL on timeout; NOTIFICATION_HOOKS only drop the pending call.
+  const callHook = (hook: string, payload: unknown, timeout = hookTimeoutMs): Promise<unknown> => {
     return new Promise((resolve, reject) => {
       const id = String(++callCounter);
       const timer = setTimeout(() => {
         pendingCalls.delete(id);
+        if (NOTIFICATION_HOOKS.has(hook)) {
+          // Fire-and-forget notification: drop this delivery, keep the process. A late
+          // "result" reply for this id is safely ignored by the message handler (the
+          // pending entry is gone and ids are monotonic, never reused), so it cannot
+          // reject unhandled or mis-match a later call.
+          log.warn("plugin.notification_hook_timeout_dropped", {
+            name: manifest.name,
+            hook,
+            timeout,
+          });
+          resolve(undefined);
+          return;
+        }
         child.kill("SIGTERM");
         // Escalate to SIGKILL if plugin ignores SIGTERM
         const killTimer = setTimeout(() => {
@@ -330,15 +358,20 @@ export async function loadPlugin(
     };
     registeredHooks.push("onError");
   }
-  // ── Lifecycle hooks (fire-and-forget, errors logged but don't block) ──
+  // ── Lifecycle + notification hooks (fire-and-forget, errors logged but don't block) ──
+  // onStreamComplete is wired here too: like the lifecycle hooks it is a one-way
+  // notification (no return value is consumed), so the same fire-and-forget IPC wrapper
+  // applies. Without this branch the event fires into an empty registry and is dropped
+  // for every disk-installed plugin (#11825).
   const lifecycleHooks: Array<{
-    key: "onInstall" | "onActivate" | "onDeactivate" | "onUninstall";
+    key: "onInstall" | "onActivate" | "onDeactivate" | "onUninstall" | "onStreamComplete";
     manifestFlag: boolean;
   }> = [
     { key: "onInstall", manifestFlag: manifest.hooks.onInstall },
     { key: "onActivate", manifestFlag: manifest.hooks.onActivate },
     { key: "onDeactivate", manifestFlag: manifest.hooks.onDeactivate },
     { key: "onUninstall", manifestFlag: manifest.hooks.onUninstall },
+    { key: "onStreamComplete", manifestFlag: manifest.hooks.onStreamComplete },
   ];
 
   for (const { key, manifestFlag } of lifecycleHooks) {

@@ -113,7 +113,8 @@ function feedPayload(tier: "community" | "live") {
 function resetState() {
   core.resetDbInstance();
   try {
-    if (fs.existsSync(TEST_DATA_DIR)) fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+    if (fs.existsSync(TEST_DATA_DIR))
+      fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   } catch {
     // ignore
   }

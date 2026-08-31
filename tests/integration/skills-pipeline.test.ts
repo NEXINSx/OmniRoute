@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME } from "../../open-sse/services/webSearchFallback.ts";
-import { decodeSkillToolName } from "../../src/lib/skills/injection.ts";
+import { decodeSkillToolName, encodeSkillToolName } from "../../src/lib/skills/injection.ts";
 
 import { createChatPipelineHarness } from "./_chatPipelineHarness.ts";
 
@@ -454,8 +454,8 @@ test("responses input context participates in AUTO skill injection", async () =>
     .map((tool) => decodeSkillToolName(tool?.function?.name ?? ""))
     .filter((name) => typeof name === "string" && name.length > 0);
 
-  assert.ok(names.includes(encodeSkillToolName("issueSearch", "1.0.0")));
-  assert.ok(!names.includes(encodeSkillToolName("calendarPlanner", "1.0.0")));
+  assert.ok(names.includes("issueSearch@1.0.0"));
+  assert.ok(!names.includes("calendarPlanner@1.0.0"));
 });
 
 test("handleToolCallExecution() processes a tool call correctly", async () => {
@@ -787,10 +787,7 @@ test("builtin and custom skills coexist in the injected tool list", async () => 
     .sort();
 
   assert.equal(response.status, 200);
-  assert.deepEqual(toolNames, [
-    encodeSkillToolName("lookupWeather", "1.0.0"),
-    encodeSkillToolName("webSearch", "1.0.0"),
-  ]);
+  assert.deepEqual(toolNames, ["lookupWeather@1.0.0", "webSearch@1.0.0"]);
 });
 
 test("web_search fallback converts built-in tools for unsupported providers and executes search", async () => {
@@ -931,6 +928,155 @@ test("web_search fallback preserves Responses API output by appending function_c
   assert.equal(output.results[0].title, "Responses Search Result");
 });
 
+test("web_search fallback emits a native web_search_call output item with sources in the responses pipeline", async () => {
+  await seedConnection("openai", { apiKey: "sk-openai-web-search-call" });
+  await seedConnection("serper-search", { apiKey: "serper-search-key" });
+  const apiKey = await seedApiKey();
+
+  globalThis.fetch = async (url, _init = {}) => {
+    const urlStr = String(url);
+    if (urlStr.includes("google.serper.dev/search")) {
+      return new Response(
+        JSON.stringify({
+          organic: [
+            {
+              title: "Web Search Call Result",
+              link: "https://example.com/web-search-call",
+              snippet: "Result surfaced by the native web_search_call item",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    return buildOpenAIToolCallResponse({
+      toolName: OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME,
+      toolCallId: "call_responses_web_search_call",
+      argumentsObject: {
+        query: "latest omniroute release",
+        // Pin the seeded serper-search connection so the mock stays deterministic.
+        provider: "serper-search",
+      },
+    });
+  };
+
+  const response = await handleChat(
+    buildRequest({
+      url: "http://localhost/v1/responses",
+      authKey: apiKey.key,
+      body: {
+        model: "openai/gpt-4o-mini",
+        stream: false,
+        input: [
+          {
+            type: "message",
+            role: "user",
+            content: [
+              { type: "input_text", text: "Search the web for the latest OmniRoute release" },
+            ],
+          },
+        ],
+        tools: [{ type: "web_search_preview", search_context_size: "low" }],
+      },
+    })
+  );
+  const json = (await response.json()) as {
+    output: Array<Record<string, unknown>>;
+  };
+  const webSearchCall = json.output.find((item) => item.type === "web_search_call");
+  const functionCallOutput = json.output.find((item) => item.type === "function_call_output");
+  const webSearchAction = webSearchCall?.action as
+    { type?: string; query?: string; sources?: Array<Record<string, unknown>> } | undefined;
+
+  assert.equal(response.status, 200);
+  assert.ok(webSearchCall, "should append a native web_search_call output item");
+  assert.equal(webSearchCall.status, "completed");
+  assert.equal(webSearchAction?.type, "web_search");
+  assert.equal(webSearchAction?.query, "latest omniroute release");
+  assert.ok(Array.isArray(webSearchAction?.sources), "sources should be an array");
+  assert.equal(webSearchAction?.sources?.[0]?.title, "Web Search Call Result");
+  assert.equal(webSearchAction?.sources?.[0]?.url, "https://example.com/web-search-call");
+  assert.equal(
+    webSearchAction?.sources?.[0]?.caption,
+    "Result surfaced by the native web_search_call item"
+  );
+  // Existing function-call round-trip is preserved for backward compatibility.
+  assert.ok(functionCallOutput, "should still append function_call_output");
+});
+
+test("web_search fallback executes stream:true responses requests non-streaming and emits web_search_call", async () => {
+  await seedConnection("openai", { apiKey: "sk-openai-web-search-stream" });
+  await seedConnection("serper-search", { apiKey: "serper-search-key" });
+  const apiKey = await seedApiKey();
+
+  const upstreamBodies = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const urlStr = String(url);
+    const body = init.body ? JSON.parse(String(init.body)) : null;
+    if (urlStr.includes("google.serper.dev/search")) {
+      return new Response(
+        JSON.stringify({
+          organic: [
+            {
+              title: "Streaming Response Result",
+              link: "https://example.com/streaming-result",
+              snippet: "Result from the forced non-streaming path",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    upstreamBodies.push(body);
+    return buildOpenAIToolCallResponse({
+      toolName: OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME,
+      toolCallId: "call_responses_stream_search",
+      argumentsObject: {
+        query: "streaming fallback probe",
+        provider: "serper-search",
+      },
+    });
+  };
+
+  const response = await handleChat(
+    buildRequest({
+      url: "http://localhost/v1/responses",
+      authKey: apiKey.key,
+      body: {
+        model: "openai/gpt-4o-mini",
+        stream: true,
+        input: [
+          {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "Search the web for a streaming result" }],
+          },
+        ],
+        tools: [{ type: "web_search_preview", search_context_size: "low" }],
+      },
+    })
+  );
+  const json = (await response.json()) as {
+    output: Array<Record<string, unknown>>;
+  };
+  const webSearchCall = json.output.find((item) => item.type === "web_search_call");
+  const functionCall = json.output.find((item) => item.type === "function_call");
+  const functionCallOutput = json.output.find((item) => item.type === "function_call_output");
+
+  assert.equal(response.status, 200);
+  // The upstream must have been called non-streaming so interception can run.
+  assert.equal(upstreamBodies.length, 1);
+  assert.equal(upstreamBodies[0].stream, false);
+  assert.ok(webSearchCall, "should return a web_search_call item for a stream:true request");
+  const webSearchAction = webSearchCall?.action as
+    { query?: string; sources?: Array<Record<string, unknown>> } | undefined;
+  assert.equal(webSearchAction?.query, "streaming fallback probe");
+  assert.equal(webSearchAction?.sources?.[0]?.title, "Streaming Response Result");
+  assert.ok(functionCall, "should include the original function_call item");
+  assert.ok(functionCallOutput, "should include the function_call_output item");
+});
+
 test("web_search fallback auto-selects a configured paid provider over duckduckgo-free in responses pipeline", async () => {
   await seedConnection("openai", { apiKey: "sk-openai-skill-enable" });
   // Seed a paid provider that is NOT the cheapest non-fallback web provider.
@@ -983,7 +1129,9 @@ test("web_search fallback auto-selects a configured paid provider over duckduckg
           {
             type: "message",
             role: "user",
-            content: [{ type: "input_text", text: "Search the web for the latest OmniRoute roadmap" }],
+            content: [
+              { type: "input_text", text: "Search the web for the latest OmniRoute roadmap" },
+            ],
           },
         ],
         tools: [{ type: "web_search_preview", search_context_size: "low" }],

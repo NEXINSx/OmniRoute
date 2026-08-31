@@ -117,7 +117,10 @@ export function installProcessCrashGuard(log) {
   if (crashGuardInstalled) return;
   crashGuardInstalled = true;
 
-  const logger = log ?? console;
+  // `console` is an object, not a callable: `log ?? console` followed by
+  // `logger("warn", ...)` throws TypeError and kills the process on the very
+  // abort the guard exists to swallow. Default to console.warn as a function.
+  const logger = typeof log === "function" ? log : console.warn.bind(console);
 
   process.on("uncaughtException", (err, origin) => {
     if (shouldSwallowUncaught(err, origin)) {

@@ -152,7 +152,7 @@ test.after(() => {
     db.close();
   } catch {}
 
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("chatCore sanitization normalizes max_output_tokens into max_tokens", async () => {
@@ -282,6 +282,112 @@ test("chatCore sanitization preserves max_output_tokens for openai-responses tar
     false,
     "max_completion_tokens should be converted to max_output_tokens"
   );
+});
+
+test("chatCore preserves Chat max_tokens as max_output_tokens for Perplexity Agent Anthropic models", async () => {
+  const { call, result } = await invokeChatCore({
+    endpoint: "/v1/chat/completions",
+    provider: "perplexity-agent",
+    model: "anthropic/claude-opus-4-5",
+    body: {
+      model: "anthropic/claude-opus-4-5",
+      max_tokens: 32,
+      messages: [{ role: "user", content: "Reply with OK only." }],
+    },
+    responseFactory: () =>
+      new Response(
+        JSON.stringify({
+          id: "resp_pplx_agent",
+          object: "response",
+          status: "completed",
+          model: "anthropic/claude-opus-4-5",
+          output: [
+            { type: "message", role: "assistant", content: [{ type: "output_text", text: "OK" }] },
+          ],
+          usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(call.url, "https://api.perplexity.ai/v1/responses");
+  assert.equal(call.body.model, "anthropic/claude-opus-4-5");
+  assert.equal(call.body.max_output_tokens, 32);
+  assert.equal("max_tokens" in call.body, false);
+  assert.equal("max_completion_tokens" in call.body, false);
+});
+
+test("chatCore defaults max_output_tokens for Perplexity Agent Anthropic chat requests", async () => {
+  const { call, result } = await invokeChatCore({
+    endpoint: "/v1/chat/completions",
+    provider: "perplexity-agent",
+    model: "anthropic/claude-opus-4-5",
+    body: {
+      model: "anthropic/claude-opus-4-5",
+      messages: [{ role: "user", content: "hi" }],
+    },
+    responseFactory: () =>
+      new Response(
+        JSON.stringify({
+          id: "resp_pplx_agent_default_tokens",
+          object: "response",
+          status: "completed",
+          model: "anthropic/claude-opus-4-5",
+          output: [
+            {
+              type: "message",
+              role: "assistant",
+              content: [{ type: "output_text", text: "Hello!" }],
+            },
+          ],
+          usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(call.url, "https://api.perplexity.ai/v1/responses");
+  assert.equal(call.body.max_output_tokens, 4096);
+  assert.equal("max_tokens" in call.body, false);
+  assert.equal("max_completion_tokens" in call.body, false);
+});
+
+test("chatCore defaults max_output_tokens for Perplexity Agent Kimi chat requests", async () => {
+  const { call, result } = await invokeChatCore({
+    endpoint: "/v1/chat/completions",
+    provider: "perplexity-agent",
+    model: "perplexity/kimi-k3",
+    body: {
+      model: "perplexity/kimi-k3",
+      messages: [{ role: "user", content: "hi" }],
+    },
+    responseFactory: () =>
+      new Response(
+        JSON.stringify({
+          id: "resp_pplx_agent_kimi_default_tokens",
+          object: "response",
+          status: "completed",
+          model: "perplexity/kimi-k3",
+          output: [
+            {
+              type: "message",
+              role: "assistant",
+              content: [{ type: "output_text", text: "Hello!" }],
+            },
+          ],
+          usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(call.url, "https://api.perplexity.ai/v1/responses");
+  assert.equal(call.body.max_output_tokens, 4096);
+  assert.equal("max_tokens" in call.body, false);
+  assert.equal("max_completion_tokens" in call.body, false);
 });
 
 test("chatCore sanitization strips empty message names and filters empty tool names", async () => {

@@ -77,6 +77,7 @@ import {
   buildSubscriptionQuotaFallback,
   buildWeeklyQuotaFallback,
   buildSessionQuotaFallback,
+  SUBSCRIPTION_QUOTA_COOLDOWN_MS,
 } from "./quotaTextCooldowns.ts";
 import { parseDayGranularityResetMs, shouldPreserveQuotaSignals } from "./quotaResetParsing.ts";
 import { evictLockoutOverflow } from "./accountFallback/lockoutEviction.ts";
@@ -249,6 +250,59 @@ export const OAUTH_INVALID_TOKEN_SIGNALS = [
   "invalid credentials",
 ];
 
+// A model that upstream has permanently retired — Gemini's deprecated-model 404
+// ("This model models/gemini-2.5-flash is no longer available to new users...")
+// and Fireworks/OpenAI-compatible "end of life" 410s ("has reached its end of
+// life ... and is no longer available") — will 404/410 on EVERY future request;
+// no cooldown short enough to retry soon is ever correct. Without this check
+// these fall through to the generic "all other errors" branch at the bottom of
+// checkFallbackError, which only applies a short (seconds-to-minutes) transient
+// cooldown, so combo/auto-routing keeps re-selecting the dead model roughly
+// every cooldown window, forever — wasted upstream calls that, at volume, look
+// like abusive traffic to the provider (observed: a Gemini free-tier key
+// retried `gemini-2.5-flash`/`gemini-2.5-flash-lite` every ~15-45 minutes for a
+// full day). Matched independent of MODEL_ACCESS_DENIED_PATTERNS below because
+// those only fire for status 400; this needs to catch the far more common
+// 404/410 status a retired model actually returns.
+export const MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS = [
+  /\bno longer available\b/i,
+  /\bno longer supported\b/i,
+  /\bhas reached (?:its |the )?end.?of.?life\b/i,
+  /\bmodel[\s\S]{0,40}?\b(?:deprecated|retired|discontinued|decommissioned)\b/i,
+  /\b(?:deprecated|retired|discontinued|decommissioned)[\s\S]{0,40}?\bmodel\b/i,
+];
+
+// A provider that has permanently retired its API base_url — the old endpoint
+// keeps returning 410/404 on EVERY future request until the connection's
+// base_url is updated by an operator; no cooldown short enough to retry soon
+// is ever correct. Without this check these fall through to the generic
+// "all other errors" branch, which only applies a short (seconds-to-minutes)
+// transient cooldown, so combo/auto-routing keeps re-selecting the dead
+// endpoint roughly every cooldown window, forever — wasted upstream calls
+// that, at volume, look like abusive traffic (observed: freeaiapikey's moved
+// endpoint retried every ~1 minute for a full day: "This API endpoint has
+// moved. Please update your base_url to https://api.freeaiapikey.com/v1 —
+// the old endpoint on freeaiapikey.com no longer works.").
+export const ENDPOINT_PERMANENTLY_MOVED_PATTERNS = [
+  /\bendpoint has moved\b/i,
+  /\bno longer works\b/i,
+  /\bupdate your base.?url\b/i,
+];
+
+// A billing/account suspension that requires manual operator action (unpaid
+// invoice, spending limit) — text varies per provider/account name, e.g.
+// Fireworks: "Account hummern is suspended, possibly due to reaching the
+// monthly spending limit or failure to pay past invoices." This does not
+// match ACCOUNT_DEACTIVATED_SIGNALS' fixed "your account has been suspended"
+// substring, and several providers surface it on a status (412) that
+// checkFallbackError does not otherwise classify — so it fell through to the
+// generic transient-error branch and got retried every few minutes, all day,
+// against an account that cannot succeed until billing is fixed.
+export const ACCOUNT_SUSPENDED_BILLING_PATTERNS = [
+  /\bsuspended\b[\s\S]{0,120}?\b(?:spending limit|billing|invoice|payment)\b/i,
+  /\b(?:spending limit|billing|invoice|payment)\b[\s\S]{0,120}?\bsuspended\b/i,
+];
+
 // Context overflow patterns — the prompt exceeds the model's maximum context length.
 // Different providers phrase this differently. Used to decide whether a 400 error
 // should trigger combo fallback (a different model may have a larger context window).
@@ -419,6 +473,34 @@ export function isAccountDeactivated(errorText: string): boolean {
 export function isCreditsExhausted(errorText: string): boolean {
   const lower = String(errorText || "").toLowerCase();
   return CREDITS_EXHAUSTED_SIGNALS.some((sig) => lower.includes(sig));
+}
+
+/**
+ * Returns true if the response body indicates the requested model has been
+ * permanently retired by the provider (see MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS).
+ */
+export function isModelPermanentlyUnavailable(errorText: string): boolean {
+  const text = String(errorText || "");
+  return MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Returns true if response body indicates the provider's API endpoint/base_url
+ * has permanently moved (see ENDPOINT_PERMANENTLY_MOVED_PATTERNS).
+ */
+export function isEndpointPermanentlyMoved(errorText: string): boolean {
+  const text = String(errorText || "");
+  return ENDPOINT_PERMANENTLY_MOVED_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Returns true if response body indicates the account is suspended for a
+ * billing reason (unpaid invoice, spending limit) — see
+ * ACCOUNT_SUSPENDED_BILLING_PATTERNS.
+ */
+export function isAccountSuspendedForBilling(errorText: string): boolean {
+  const text = String(errorText || "");
+  return ACCOUNT_SUSPENDED_BILLING_PATTERNS.some((p) => p.test(text));
 }
 
 /**
@@ -1479,7 +1561,7 @@ export function classifyError(
   if (status === HTTP_STATUS.UNAUTHORIZED || status === HTTP_STATUS.FORBIDDEN) {
     return RateLimitReason.AUTH_ERROR;
   }
-  if (status === HTTP_STATUS.PAYMENT_REQUIRED) {
+  if (status === HTTP_STATUS.PAYMENT_REQUIRED || status === HTTP_STATUS.PLAN_LIMIT_EXCEEDED) {
     return RateLimitReason.QUOTA_EXHAUSTED;
   }
   if (status === HTTP_STATUS.RATE_LIMITED) {
@@ -1755,6 +1837,56 @@ export function checkFallbackError(
       };
     }
 
+    // A retired model (Gemini deprecated-model 404, Fireworks/etc. end-of-life 410)
+    // will fail identically on every future request — lock it for a long, fixed
+    // window instead of falling through to the generic transient-error branch's
+    // short backoff, which would otherwise keep re-selecting a permanently dead
+    // model roughly every cooldown window, all day, hammering the provider with
+    // guaranteed-to-fail requests (see MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS).
+    // `quotaResetHintMs` flows into combo.ts's per-request model-lockout as an
+    // upstream-verified reset, so it is honored in full and not clamped to the
+    // normal ~20min model-lockout ceiling.
+    if (
+      (status === HTTP_STATUS.NOT_FOUND || status === HTTP_STATUS.GONE) &&
+      isModelPermanentlyUnavailable(errorStr)
+    ) {
+      const cooldownMs = 24 * 60 * 60 * 1000; // 24h
+      return {
+        shouldFallback: true,
+        cooldownMs,
+        reason: "not_found",
+        quotaResetHintMs: cooldownMs,
+      };
+    }
+
+    // The provider's API endpoint/base_url has permanently moved — every future
+    // request against the stale base_url fails identically, so lock it for a
+    // long, fixed window instead of the generic transient-error branch's short
+    // backoff (see ENDPOINT_PERMANENTLY_MOVED_PATTERNS).
+    if (isEndpointPermanentlyMoved(errorStr)) {
+      const cooldownMs = 24 * 60 * 60 * 1000; // 24h
+      return {
+        shouldFallback: true,
+        cooldownMs,
+        reason: "not_found",
+        quotaResetHintMs: cooldownMs,
+      };
+    }
+
+    // The account is suspended for a billing reason (unpaid invoice, spending
+    // limit) that varies per provider/account name and can arrive on a status
+    // checkFallbackError does not otherwise classify (e.g. Fireworks 412) —
+    // treat it like a credits-exhausted account so it stops being retried
+    // every few minutes until billing is fixed (see ACCOUNT_SUSPENDED_BILLING_PATTERNS).
+    if (isAccountSuspendedForBilling(errorStr)) {
+      return {
+        shouldFallback: true,
+        cooldownMs: COOLDOWN_MS.paymentRequired ?? 3600 * 1000, // 1h cooldown
+        reason: RateLimitReason.QUOTA_EXHAUSTED,
+        creditsExhausted: true,
+      };
+    }
+
     // Gemini-specific check — MUST run before isCreditsExhausted/
     // isDailyQuotaExhausted/the generic text classifier below: Gemini's free-
     // tier 429 boilerplate literally says "You exceeded your current quota,
@@ -1998,6 +2130,24 @@ export function checkFallbackError(
 
   if (status === HTTP_STATUS.NOT_ACCEPTABLE || retryableStatuses.has(status)) {
     return buildRetryableFallback(RateLimitReason.SERVER_ERROR);
+  }
+
+  // 432 -- plan limit reached (e.g. Tavily, Context7, and search upstreams)
+  if (status === HTTP_STATUS.PLAN_LIMIT_EXCEEDED) {
+    const subResult = buildSubscriptionQuotaFallback(
+      errorStr,
+      () => getUpstreamRetryHint()?.retryAfterMs ?? null,
+      parseRetryFromErrorText,
+      provider
+    );
+    if (subResult) return subResult;
+    const cooldownMs = getUpstreamRetryHint()?.retryAfterMs ?? SUBSCRIPTION_QUOTA_COOLDOWN_MS;
+    return {
+      shouldFallback: true,
+      cooldownMs,
+      baseCooldownMs: cooldownMs,
+      reason: RateLimitReason.QUOTA_EXHAUSTED,
+    };
   }
 
   // 400 — context overflow / malformed request / model access denied

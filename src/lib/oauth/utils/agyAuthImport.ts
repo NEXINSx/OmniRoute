@@ -2,7 +2,7 @@ import {
   getProviderConnections,
   createProviderConnection,
   updateProviderConnection,
-} from "@/lib/localDb";
+} from "@/lib/db/providers";
 import { AGY_CONFIG } from "@/lib/oauth/constants/oauth";
 import {
   getAntigravityContentHeaders,

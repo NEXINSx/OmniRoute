@@ -107,9 +107,9 @@ X-OmniRoute-Lease-Owner: vlo_<43-base64url-characters>
 {"action":"acquire","model":"glm/glm-4.6"}
 ```
 
-Successful lifecycle responses expose timestamps, `state`, and the exact positive `generation`,
-but never the selected connection or credentials. Renew and release supply the generation in the
-JSON body:
+Successful acquire, renew, and release responses expose timestamps, `state`, and the exact positive
+`generation`, but never the selected connection or credentials. Renew and release supply the
+generation in the JSON body:
 
 ```json
 { "action": "renew", "generation": 1 }
@@ -118,6 +118,44 @@ JSON body:
 ```json
 { "action": "release", "generation": 1, "reason": "OWNER_EXIT" }
 ```
+
+An active lease owner can explicitly request privacy-safe display metadata for its current binding:
+
+```json
+{ "action": "status", "generation": 1 }
+```
+
+```json
+{
+  "state": "ACTIVE",
+  "generation": 1,
+  "acquiredAt": "2026-08-28T12:00:00.000Z",
+  "renewedAt": "2026-08-28T12:00:30.000Z",
+  "expiresAt": "2026-08-28T12:02:30.000Z",
+  "connection": {
+    "displayName": "Primary Codex",
+    "provider": "codex"
+  }
+}
+```
+
+This opt-in status action is fenced by the opaque owner, authenticated managed API key, and exact
+active generation in one database transaction. `displayName` is only the trimmed configured
+connection name; it is `null` when no safe configured name exists. OmniRoute never substitutes an
+email or generated account identity. The provider value is a non-sensitive display label and never
+a generated compatible-provider identifier. Credentials, tokens, cookies, raw connection or API
+key ids, owner hashes, fencing secrets, and internal routing data are excluded.
+
+Wrong-key, wrong-owner, stale-generation, missing, expired, released, and invalidated lookups all
+return the same `409 LEASE_FENCE_STALE` error without connection metadata. A client that received the capacity-wait response has no active binding to inspect. When routing transitions an active lease,
+the same generation remains valid and status atomically returns the new binding, never the old one.
+Existing clients remain unchanged because acquire, renew, release, and waiting responses retain
+their previous shapes.
+
+This server contract does not change stock OpenAI Codex `/status`. Stock Codex currently reports its
+model provider and built-in authentication/account state but does not render arbitrary custom
+provider account metadata; a later client integration must call this action and decide how to
+display `connection.displayName`.
 
 Every managed inference request then supplies both control headers:
 

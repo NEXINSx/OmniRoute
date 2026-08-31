@@ -39,6 +39,7 @@ export const SETUP_MODULES = {
   cline: { module: "./setup-cline.mjs", exportName: "runSetupClineCommand" },
   continue: { module: "./setup-continue.mjs", exportName: "runSetupContinueCommand" },
   kilo: { module: "./setup-kilo.mjs", exportName: "runSetupKiloCommand" },
+  "5dive": { module: "./setup-5dive.mjs", exportName: "runSetup5diveCommand" },
 };
 
 /**

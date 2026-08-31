@@ -72,7 +72,7 @@ test.afterEach(() => {
 test.after(() => {
   globalThis.fetch = originalFetch;
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("Command Code provider catalog has pinned models and alias lookup", () => {
@@ -232,7 +232,9 @@ test("Command Code executor passes the upstream OpenAI SSE stream through untouc
     });
   };
 
-  const { response } = await (await getExecutor("command-code")).execute({
+  const { response } = await (
+    await getExecutor("command-code")
+  ).execute({
     model: "gpt-5.4",
     stream: true,
     credentials: { apiKey: "cc_test_key" },
@@ -268,7 +270,9 @@ test("Command Code executor passes the upstream OpenAI JSON through untouched (n
     });
   };
 
-  const { response } = await (await getExecutor("command-code")).execute({
+  const { response } = await (
+    await getExecutor("command-code")
+  ).execute({
     model: "gpt-5.4-mini",
     stream: false,
     credentials: { apiKey: "cc_test_key" },
@@ -280,8 +284,11 @@ test("Command Code executor passes the upstream OpenAI JSON through untouched (n
 });
 
 test("Command Code executor surfaces upstream errors", async () => {
-  globalThis.fetch = async () => new Response("bad key", { status: 401, statusText: "Unauthorized" });
-  const upstreamFailure = await (await getExecutor("command-code")).execute({
+  globalThis.fetch = async () =>
+    new Response("bad key", { status: 401, statusText: "Unauthorized" });
+  const upstreamFailure = await (
+    await getExecutor("command-code")
+  ).execute({
     model: "gpt-5.4-mini",
     stream: false,
     credentials: { apiKey: "cc_test_key" },
@@ -352,7 +359,9 @@ test("Command Code stream preserves the upstream OpenAI usage chunk (passthrough
   globalThis.fetch = async () =>
     new Response(sse, { status: 200, headers: { "Content-Type": "text/event-stream" } });
 
-  const { response } = await (await getExecutor("command-code")).execute({
+  const { response } = await (
+    await getExecutor("command-code")
+  ).execute({
     model: "gpt-5.4-mini",
     stream: true,
     credentials: { apiKey: "cc_test_key" },
@@ -409,7 +418,9 @@ test("Command Code executor falls back to /alpha/generate on 403 (e.g. Go plan w
     return new Response("Not found", { status: 404 });
   };
 
-  const { response, url, headers } = await (await getExecutor("command-code")).execute({
+  const { response, url, headers } = await (
+    await getExecutor("command-code")
+  ).execute({
     model: "deepseek/deepseek-v4-flash",
     stream: true,
     credentials: { apiKey: "cc_go_plan_key" },
@@ -456,7 +467,9 @@ test("Command Code executor falls back to /alpha/generate on 403 (Go plan) for n
     return new Response("Not found", { status: 404 });
   };
 
-  const { response } = await (await getExecutor("command-code")).execute({
+  const { response } = await (
+    await getExecutor("command-code")
+  ).execute({
     model: "gpt-5.4",
     stream: false,
     credentials: { apiKey: "cc_go_plan_key" },
@@ -484,7 +497,9 @@ test("Command Code executor surfaces fallback error when both /provider/v1 and /
     return new Response("error", { status: 500 });
   };
 
-  const result = await (await getExecutor("command-code")).execute({
+  const result = await (
+    await getExecutor("command-code")
+  ).execute({
     model: "gpt-5.4",
     stream: false,
     credentials: { apiKey: "cc_key" },

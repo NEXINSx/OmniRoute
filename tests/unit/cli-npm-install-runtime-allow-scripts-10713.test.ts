@@ -34,7 +34,7 @@ test("issue #10713: npmInstallRuntime requests --allow-scripts for its own fully
     process.env.PATH = originalPath;
     if (originalDataDir === undefined) delete process.env.DATA_DIR;
     else process.env.DATA_DIR = originalDataDir;
-    rmSync(fakeBinDir, { recursive: true, force: true });
-    rmSync(fakeDataDir, { recursive: true, force: true });
+    rmSync(fakeBinDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    rmSync(fakeDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

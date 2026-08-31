@@ -6,6 +6,7 @@ import {
   getProviderPluginManifestEntryFromRegistry,
 } from "../../open-sse/config/providerPluginManifest.ts";
 import type { RegistryEntry } from "../../open-sse/config/providers/shared.ts";
+import { USAGE_FETCHER_PROVIDERS } from "../../open-sse/services/usage/fetcherProviders.ts";
 
 const registryFixture: Record<string, RegistryEntry> = {
   openai: {
@@ -118,4 +119,66 @@ test("manifest does not export OAuth client secrets or dynamic functions", () =>
     assert.equal("extraHeaders" in provider, false);
     assert.equal("requestDefaults" in provider, false);
   }
+});
+
+test("manifest advertises usage-fetch for providers with a wired usage fetcher (#11722)", () => {
+  const claude = getProviderPluginManifestEntryFromRegistry(registryFixture, "claude");
+
+  assert.ok(claude);
+  assert.ok(
+    (USAGE_FETCHER_PROVIDERS as readonly string[]).includes("claude"),
+    "fixture guard: claude must stay in USAGE_FETCHER_PROVIDERS for this test to mean anything"
+  );
+  assert.ok(
+    claude.capabilities.includes("usage-fetch"),
+    "claude has a wired usage fetcher, so the manifest must advertise usage-fetch"
+  );
+});
+
+test("manifest omits usage-fetch for providers without a usage fetcher (#11722)", () => {
+  for (const providerId of ["openai", "anthropic", "claude-web"]) {
+    const entry = getProviderPluginManifestEntryFromRegistry(registryFixture, providerId);
+
+    assert.ok(entry, `fixture guard: ${providerId} must resolve`);
+    assert.equal(
+      (USAGE_FETCHER_PROVIDERS as readonly string[]).includes(entry.id),
+      false,
+      `fixture guard: ${entry.id} must stay out of USAGE_FETCHER_PROVIDERS`
+    );
+    assert.equal(
+      entry.capabilities.includes("usage-fetch"),
+      false,
+      `${entry.id} has no wired usage fetcher, so usage-fetch must not be advertised`
+    );
+  }
+});
+
+test("usage-fetch matches the fetcher list by alias too (#11722)", () => {
+  // USAGE_FETCHER_PROVIDERS is keyed by the strings `getUsageForProvider` accepts, which
+  // mixes canonical ids ("hyperagent") with aliases ("ha"). Resolve on both, the same way
+  // getProviderPluginManifestEntryFromRegistry already resolves a lookup.
+  const aliasOnlyFixture: Record<string, RegistryEntry> = {
+    "hyperagent-eu": {
+      id: "hyperagent-eu",
+      alias: "ha",
+      format: "openai",
+      executor: "default",
+      baseUrl: "https://eu.hyperagent.example/v1/chat/completions",
+      authType: "apikey",
+      authHeader: "bearer",
+      models: [{ id: "ha-1", name: "HyperAgent 1" }],
+    },
+  };
+
+  assert.equal(
+    (USAGE_FETCHER_PROVIDERS as readonly string[]).includes("hyperagent-eu"),
+    false,
+    "fixture guard: the id must NOT be in the list, only the alias"
+  );
+  assert.ok((USAGE_FETCHER_PROVIDERS as readonly string[]).includes("ha"));
+
+  const entry = getProviderPluginManifestEntryFromRegistry(aliasOnlyFixture, "hyperagent-eu");
+
+  assert.ok(entry);
+  assert.ok(entry.capabilities.includes("usage-fetch"));
 });

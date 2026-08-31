@@ -752,7 +752,8 @@ test("handleImageGeneration sends Antigravity image requests with native image_g
         model: "antigravity/gemini-3.1-flash-image-preview",
         prompt: "painted beach",
         size: "1024x1024",
-        aspect_ratio: "not-a-ratio",
+        aspect_ratio: "3:4",
+        image_size: "2K",
       },
       credentials: { accessToken: "ag-token", projectId: "project-123" },
       log: null,
@@ -777,7 +778,7 @@ test("handleImageGeneration sends Antigravity image requests with native image_g
       contents: [{ role: "user", parts: [{ text: "painted beach" }] }],
       generationConfig: {
         candidateCount: 1,
-        imageConfig: { aspectRatio: "1:1" },
+        imageConfig: { aspectRatio: "3:4", imageSize: "2K" },
       },
     });
     assert.deepEqual(result.data.data, [
@@ -2022,6 +2023,32 @@ test("handleImageGeneration (codex) forwards size and maps GPT-Image quality to 
       log: null,
     });
     assert.deepEqual(captured.tools, [{ type: "image_generation", output_format: "png" }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("handleImageGeneration (codex) skips imported free-plan accounts and marks them retryable", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("free-plan image request should not reach upstream");
+  };
+
+  try {
+    const result = await handleImageGeneration({
+      body: { model: "codex/gpt-5.6-terra", prompt: "kitten" },
+      credentials: {
+        accessToken: "codex-token",
+        providerSpecificData: { chatgptPlanType: "free" },
+      },
+      log: null,
+    });
+    assert.equal(result.success, false);
+    assert.equal(result.status, 403);
+    assert.equal(result.retryable, true);
+    assert.equal(fetchCalls, 0);
   } finally {
     globalThis.fetch = originalFetch;
   }

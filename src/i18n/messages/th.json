@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "ใช้โดย {count, plural, one {# ชุด} other {# ชุด}}",
     "batchFilePreview": "ตัวอย่าง",
     "batchFilePreviewTruncated": "แสดง {shown} บรรทัดแรก ({total} บรรทัดรวม)",
-    "batchFileDownloadFull": "ดาวน์โหลดไฟล์ทั้งหมด",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "ดาวน์โหลดไฟล์ทั้งหมด"
   },
   "disabled": "ปิดใช้งาน",
   "featureFlagOmnirouteEmergencyFallbackDescription": "กำหนดเส้นทางคำขอที่งบประมาณหมดไปยังผู้ให้บริการ/โมเดลสำรองฟรีในกรณีฉุกเฉิน",
@@ -1023,6 +1023,8 @@
     "logs": "บันทึก",
     "webhooks": "เว็บฮุค",
     "webhooksSubtitle": "รับการแจ้งเตือนเหตุการณ์",
+    "logExport": "ส่งออกบันทึก",
+    "logExportSubtitle": "ส่งบันทึกการเรียกใช้ออกไปภายนอก",
     "combosSubtitle": "ผู้ให้บริการกลุ่มสำหรับการเฟลโอเวอร์",
     "batchSubtitle": "ประมวลผลคำขอหลายรายการ",
     "contextCavemanSubtitle": "การบีบอัดแบบทันที",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "ดักจับทราฟฟิกของ IDE agent",
     "trafficInspector": "ตัวตรวจสอบทราฟฟิก",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "โค้ด CLI",
     "cliCodeSubtitle": "เครื่องมือโค้ดที่ชี้ไปยัง OmniRoute",
     "cliAgents": "เอเจนต์ CLI",
@@ -1300,8 +1303,7 @@
       "open": "เปิด",
       "close": "ปิด"
     },
-    "noResults": "ไม่มีผลลัพธ์",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "ไม่มีผลลัพธ์"
   },
   "webhooks": {
     "title": "เว็บฮุค",
@@ -1808,6 +1810,11 @@
     "updateStarted": "เริ่มการอัพเดต...",
     "reloadingPageAutomatically": "กำลังโหลดหน้าซ้ำโดยอัตโนมัติ...",
     "providerTopology": "โทโพโลยีของผู้ให้บริการ",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "ดาวน์โหลด DMG (macOS)",
     "downloadDmgDescription": "มีเวอร์ชันใหม่ของแอปเดสก์ท็อป OmniRoute พร้อมใช้งาน กรุณาดาวน์โหลดและติดตั้งตัวติดตั้ง macOS DMG เพื่อทำการอัปเดต (ปัจจุบัน: v{version}).",
     "downloadExe": "ดาวน์โหลด EXE (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "หมายเหตุการปล่อย",
     "readMore": "อ่านเพิ่มเติม",
     "noAuthLabel": "ไม่มีการตรวจสอบสิทธิ์",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "ข้ามการตัดโควตาของผู้ให้บริการ",
     "bypassProviderQuotaDescription": "อนุญาตให้คีย์นี้ละเว้นนโยบายการตัดยอดของผู้ให้บริการ/บัญชีต้นทางระหว่างการกำหนดเส้นทาง โควตา USD ของคีย์ API ยังคงมีผลบังคับใช้",
     "quotaPill": "โควตา",
-    "quotaModeOnly": "เฉพาะ qtSd"
+    "quotaModeOnly": "เฉพาะ qtSd",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "บันทึกการตรวจสอบ",
@@ -2922,8 +2932,10 @@
       "interpreter": "CLI เอเจนต์เขียนโค้ดอัตโนมัติ Open Interpreter",
       "omp": "เอเจนต์เขียนโค้ดบนเทอร์มินัล Oh My Pi",
       "letta": "เอเจนต์ Letta CLI พร้อมหน่วยความจำถาวรและการใช้เครื่องมือ",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "เทอร์มินัล Warp AI ที่รองรับผู้ให้บริการแบบกำหนดเอง",
       "agent-deck": "ตัวประสานงานหลายเอเจนต์ Agent Deck",
+      "5dive": "5dive — ฟลีตเอเจนต์เขียนโค้ดที่โฮสต์เอง; โปรไฟล์ auth เดียวชี้ทั้งหมดไปที่ OmniRoute",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "จุดสิ้นสุด API",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "จุดสิ้นสุดที่มีอยู่",
     "cloudProxy": "พร็อกซีคลาวด์",
     "disableConfirm": "คุณแน่ใจหรือไม่ว่าต้องการปิดใช้งานพร็อกซีระบบคลาวด์",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "สร้างการรวมภายในที่",
     "notionIntegrationToken": "โทเค็นการรวมภายใน Notion",
     "notionNotConnected": "ไม่ได้เชื่อมต่อ",
-    "notionTokenConfigured": "กำหนดค่าโทเค็นแล้ว เครื่องมือ Notion สามารถใช้งานได้ผ่าน MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "กำหนดค่าโทเค็นแล้ว เครื่องมือ Notion สามารถใช้งานได้ผ่าน MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4644,13 @@
     "retry": "ลองอีกครั้ง",
     "allOperational": "ใช้งานได้ทุกระบบ",
     "issuesDetected": "ตรวจพบปัญหาของระบบ",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "อัปเดต {time}",
     "latency": "เวลาแฝง",
     "latencyP50": "หน้า 50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} ปัญหา",
     "score": "คะแนน",
     "lastRequest": "คำขอล่าสุด",
-    "lastError": "ข้อผิดพลาดล่าสุด",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "ข้อผิดพลาดล่าสุด"
   },
   "telemetry": {
     "title": "ระบบโทรมาตร",
@@ -4954,7 +4966,9 @@
     "multiProvider": "ผู้ให้บริการหลายราย",
     "usageTracking": "การติดตามการใช้งาน",
     "securityDesc": "ตั้งรหัสผ่านเพื่อปกป้องแดชบอร์ดของคุณ หรือข้ามไปก่อน",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "เชื่อมต่อผู้ให้บริการ AI รายแรกของคุณ คุณสามารถเพิ่มมากขึ้นในภายหลัง",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "คีย์ API (จำเป็น)",
     "customUrlOptional": "URL ที่กำหนดเอง (ไม่บังคับ)",
     "testDesc": "มาตรวจสอบการเชื่อมต่อผู้ให้บริการของคุณใช้งานได้",
@@ -5011,9 +5025,7 @@
         "skipped": "กำหนดค่าเรียบร้อยแล้ว",
         "failed": "ล้มเหลว"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "ผู้ให้บริการ",
@@ -6254,7 +6266,7 @@
       "galadriel": "เชื่อมต่อ Galadriel ด้วยคีย์ API",
       "predibase": "เครดิตทดลองใช้ฟรี $25 (มีอายุ 30 วัน)",
       "chenzk": "เกตเวย์ที่เข้ากันได้กับ OpenAI พร้อมแคตตาล็อกโมเดลแบบสดที่ chenzk.top",
-      "magnific": "สร้างรูปภาพด้วย Mystic API ของ Freepik",
+      "magnific": "สร้างรูปภาพด้วย Mystic API ของ Magnific",
       "freetheai": "เกตเวย์ฟรีที่เข้ากันได้กับ OpenAI พร้อมการรองรับโมเดลแบบ passthrough",
       "g4f-gemini": "เกตเวย์ g4f.space ระยะไกลไปยัง Gemini การเข้าถึงแบบไม่ระบุตัวตนต้องใช้เครดิต proof-of-work จาก g4f.dev/chat หรือคีย์ API สมาชิกจาก g4f.dev/members.html โดยขีดจำกัดอาจเปลี่ยนแปลงได้",
       "g4f-groq": "เกตเวย์ g4f.space ระยะไกลไปยัง Groq การเข้าถึงแบบไม่ระบุตัวตนต้องใช้เครดิต proof-of-work จาก g4f.dev/chat หรือคีย์ API สมาชิกจาก g4f.dev/members.html โดยขีดจำกัดอาจเปลี่ยนแปลงได้",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "คัดลอกข้อมูลรับรองที่จำเป็นจากโดเมนของผู้ให้บริการเอง สำหรับคุกกี้ ให้คัดลอกเฉพาะค่าส่วนหัวของคุกกี้และละเว้น Cookie:",
     "webSessionGuideStep3Manual": "เส้นทางแบบแมนนวล: เปิดเครื่องมือพัฒนาเบราว์เซอร์ (F12 → Network), รีเฟรชหน้า, เปิดคำขอที่ได้รับการตรวจสอบสิทธิ์, และคัดลอกค่า Cookie header จาก Request Headers — ไม่รวมคำนำหน้า Cookie:",
     "webSessionGuideStep4": "วางที่นี่และตรวจสอบการเชื่อมต่อ หากหยุดทำงาน ให้ลงชื่อเข้าใช้อีกครั้งและแทนที่ด้วยค่าใหม่",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "ปฏิบัติต่อสิ่งนี้เหมือนเป็นรหัสผ่าน: มันอาจเข้าถึงบัญชีเว็บที่คุณลงชื่อเข้าใช้จนกว่ามันจะหมดอายุหรือถูกเพิกถอน",
     "webNoAuthGuideTitle": "ไม่จำเป็นต้องมีหนังสือรับรอง",
     "webNoAuthGuideBody": "{provider} ไม่จำเป็นต้องมีคีย์ API หรือคุกกี้ บันทึกการเชื่อมต่อเพื่อใช้จุดสิ้นสุดเว็บฟรี",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "การตั้งค่า endpoint ของโมเดลที่บันทึกไว้",
     "searchByModelAria": "ค้นหาตามรุ่น",
     "selectSupportedEndpoint": "เลือกจุดสิ้นสุดที่รองรับอย่างน้อยหนึ่งจุด",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "การตั้งค่า",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "ซ่อนบันทึกการตรวจสุขภาพ",
     "hideHealthLogsDesc": "เมื่อเปิด ให้ระงับข้อความ [HealthCheck] ในคอนโซลเซิร์ฟเวอร์",
     "themeAccent": "สีธีม",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "เวลารอคิวสูงสุด",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "เลเยอร์นี้ควบคุมเฉพาะการเข้าคิวและการเว้นจังหวะเท่านั้น ไม่เก็บคูลดาวน์หรือเบรกเกอร์วงจรเปิด",
     "resilienceAutoEnableApiKeyProvidersDesc": "เปิดใช้งานการป้องกันคิวตามค่าเริ่มต้นสำหรับการเชื่อมต่อคีย์ API ที่ใช้งานอยู่",
     "resilienceMaxQueueWait": "เวลารอคิวสูงสุด",
+    "resilienceMaxExecutionWait": "หมดเวลาการดำเนินการ (ขีดจำกัดสำรองของอัตราคำขอ)",
     "resilienceConnectionCooldownScope": "การเชื่อมต่อส่วนบุคคล",
     "resilienceConnectionCooldownTrigger": "เมื่อการเชื่อมต่อส่งคืนความล้มเหลวอัปสตรีมชั่วคราว",
     "resilienceConnectionCooldownEffect": "ข้ามการเชื่อมต่อนั้นชั่วคราว และเพิ่มแบ็คออฟหากเกิดความล้มเหลวซ้ำๆ",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "สะพานวิดีโอ",
     "modalityBridgeVideoDesc": "สุ่มตัวอย่างเฟรมวิดีโอ อธิบายด้วยโมเดลการมองเห็น แล้วดำเนินการต่อด้วยโมเดลข้อความที่เลือก",
     "modalityBridgeVideoRuntimeReady": "รันไทม์พร้อมใช้งาน",
+    "modalityBridgeVideoRuntimeChecking": "กำลังตรวจสอบรันไทม์…",
     "modalityBridgeVideoRuntimeUnavailable": "รันไทม์ไม่พร้อมใช้งาน",
     "modalityBridgeVideoRuntimeInstall": "ติดตั้ง FFmpeg และ ffprobe ใน PATH ของเซิร์ฟเวอร์เพื่อเปิดใช้การแยกวิดีโอ",
     "modalityBridgeVideoEnabled": "เปิดใช้สะพานวิดีโอ",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12077,9 +12113,9 @@
       "acp": {
         "title": "เอเจนต์ ACP",
         "phrase": "CLI ที่ OmniRoute สร้างขึ้นเป็นแบ็กเอนด์การประมวลผล (โฟลว์ย้อนกลับ)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "ไคลเอนต์ → OmniRoute → สร้าง CLI (stdio/ACP) → การตอบกลับ",
-        "seeOther": "ดู →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "ดู →"
       }
     },
     "comparison": {
@@ -12843,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "อนุญาตการเชื่อมต่อหลายรายการสำหรับแต่ละโหนดความเข้ากันได้"
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "ลบรายการเอาต์พุตช่วงแสดงความคิดเห็นภายในออกจากสตรีมส่งผ่าน Responses API ก่อนส่งต่อไปยังไคลเอนต์ ปิดใช้งานแฟล็กนี้เพื่อรับความคิดเห็นต้นทางแบบดิบ"
       },
@@ -12908,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "เปิดใช้งานการเข้าถึงเครือข่ายใน skills sandbox"
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13390,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "ความยืดหยุ่นของการเชื่อมต่อ",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "สถานะ",
       "provider": "ผู้ให้บริการ",
@@ -13484,16 +13527,10 @@
         "modelLockouts": "การล็อกเอาต์โมเดล",
         "count": "จำนวนการเชื่อมต่อ"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "ปฏิเสธคำขอก่อนการส่งเมื่อโมเดลเป้าหมายขาดความสามารถที่จำเป็น (วิสัยทัศน์, เครื่องมือ, ผลลัพธ์ที่มีโครงสร้าง, หน้าต่างบริบท) ป้องกันคำขอจากผู้ให้บริการเดียวที่ข้ามตัวกรองความเข้ากันได้ของเลเยอร์รวม",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "ไม่พบหน้า",
@@ -13929,7 +13966,6 @@
     "structuredOutputMismatch": "ผู้ให้บริการไม่รองรับการส่งออกแบบมีโครงสร้าง",
     "contextWindowMismatch": "คำขอเกินขอบเขตบริบทของผู้ให้บริการ"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",

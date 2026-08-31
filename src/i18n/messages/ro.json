@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "Folosit de {count, plural, one {# lot} other {# loturi}}",
     "batchFilePreview": "Previzualizare",
     "batchFilePreviewTruncated": "Afișare primele {shown} linii ({total} linii totale)",
-    "batchFileDownloadFull": "Descarcă Fișierul Complet",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "Descarcă Fișierul Complet"
   },
   "disabled": "Dezactivat",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Redirecționează cererile cu buget epuizat către furnizorul/modelul de rezervă gratuit de urgență.",
@@ -1023,6 +1023,8 @@
     "logs": "Bușteni",
     "webhooks": "Webhook-uri",
     "webhooksSubtitle": "Primiți notificări despre evenimente",
+    "logExport": "Export jurnale",
+    "logExportSubtitle": "Trimite jurnalele de apeluri în exterior",
     "combosSubtitle": "Furnizori de grup pentru failover",
     "batchSubtitle": "Procesați cereri multiple",
     "contextCavemanSubtitle": "Compresie promptă",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "Interceptează traficul agentului IDE",
     "trafficInspector": "Inspector de trafic",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "Cod CLI",
     "cliCodeSubtitle": "Instrumente de cod care indică spre OmniRoute",
     "cliAgents": "Agenți CLI",
@@ -1300,8 +1303,7 @@
       "open": "deschide",
       "close": "închide"
     },
-    "noResults": "Niciun rezultat",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Niciun rezultat"
   },
   "webhooks": {
     "title": "Webhook-uri",
@@ -1808,6 +1810,11 @@
     "updateStarted": "Actualizarea a început...",
     "reloadingPageAutomatically": "Se reîncarcă pagina automat...",
     "providerTopology": "Topologia furnizorului",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Descarcă DMG (macOS)",
     "downloadDmgDescription": "O nouă versiune a aplicației desktop OmniRoute este disponibilă. Vă rugăm să descărcați și să instalați programul de instalare DMG pentru macOS pentru a actualiza (curent: v{version}).",
     "downloadExe": "Descarcă EXE (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "Note de Lansare",
     "readMore": "Citește mai mult",
     "noAuthLabel": "Fără Autentificare",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "Ocolește limitele de cotă ale furnizorului",
     "bypassProviderQuotaDescription": "Permite acestei chei să ignore politica de limitare a furnizorului/contului din amonte în timpul rutării. Cotele USD ale cheii API se aplică în continuare.",
     "quotaPill": "COTĂ",
-    "quotaModeOnly": "Doar qtSd"
+    "quotaModeOnly": "Doar qtSd",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Jurnal de audit",
@@ -2922,8 +2932,10 @@
       "interpreter": "CLI pentru agentul de programare autonom Open Interpreter",
       "omp": "Agent de programare pentru terminal Oh My Pi",
       "letta": "Agent CLI Letta cu memorie persistentă și utilizare de instrumente",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Terminal Warp AI cu suport pentru furnizori personalizați",
       "agent-deck": "Orchestrator multi-agent Agent Deck",
+      "5dive": "5dive — flotă auto-găzduită de agenți de codare; un profil de autentificare îi îndreaptă pe toți către OmniRoute",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "API Endpoint",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Puncte finale disponibile",
     "cloudProxy": "Cloud Proxy",
     "disableConfirm": "Sigur doriți să dezactivați proxy-ul cloud?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "Creează o integrare internă la",
     "notionIntegrationToken": "Token Intern de Integrare Notion",
     "notionNotConnected": "Neconectat",
-    "notionTokenConfigured": "Token configurat. Instrumentele Notion sunt disponibile prin MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Token configurat. Instrumentele Notion sunt disponibile prin MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4644,13 @@
     "retry": "Reîncercați",
     "allOperational": "Toate sistemele sunt operaționale",
     "issuesDetected": "Au fost detectate probleme de sistem",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Actualizat {time}",
     "latency": "Latența",
     "latencyP50": "p50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} probleme",
     "score": "Scor",
     "lastRequest": "Ultima solicitare",
-    "lastError": "Ultima eroare",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Ultima eroare"
   },
   "telemetry": {
     "title": "Telemetria sistemului",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Multi-furnizor",
     "usageTracking": "Urmărirea utilizării",
     "securityDesc": "Setați o parolă pentru a vă proteja tabloul de bord sau omiteți pentru moment.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Conectați-vă primul furnizor de AI. Puteți adăuga mai multe mai târziu.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "Cheie API (obligatorie)",
     "customUrlOptional": "Adresă URL personalizată (opțional)",
     "testDesc": "Să verificăm că conexiunea la furnizor funcționează.",
@@ -5011,9 +5025,7 @@
         "skipped": "deja configurat",
         "failed": "eșuat"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Furnizorii",
@@ -6254,7 +6266,7 @@
       "galadriel": "Conectați Galadriel cu o cheie API.",
       "predibase": "Credite de încercare gratuită de 25 $ (valabilitate 30 de zile)",
       "chenzk": "Gateway compatibil cu OpenAI cu un catalog live de modele la chenzk.top.",
-      "magnific": "Generați imagini cu API-ul Mystic de la Freepik.",
+      "magnific": "Generați imagini cu API-ul Mystic de la Magnific.",
       "freetheai": "Gateway gratuit compatibil cu OpenAI cu suport pentru modele passthrough.",
       "g4f-gemini": "Gateway g4f.space la distanță către Gemini. Accesul anonim necesită credite proof-of-work de la g4f.dev/chat sau o cheie API de membru de la g4f.dev/members.html; limitele variază.",
       "g4f-groq": "Gateway g4f.space la distanță către Groq. Accesul anonim necesită credite proof-of-work de la g4f.dev/chat sau o cheie API de membru de la g4f.dev/members.html; limitele variază.",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "Copiați acreditările necesare din domeniul propriu al furnizorului. Pentru cookie-uri, copiați numai valoarea antetului Cookie și omiteți Cookie:.",
     "webSessionGuideStep3Manual": "Calea manuală: deschideți instrumentele de dezvoltare ale browserului (F12 → Rețea), reîncărcați pagina, deschideți o cerere autentificată și copiați valoarea antetului Cookie din Anteturile cererii — omiteți prefixul Cookie:.",
     "webSessionGuideStep4": "Lipiți-l aici și verificați conexiunea. Dacă nu mai funcționează, conectați-vă din nou și înlocuiți-l cu o valoare nouă.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Tratați acest lucru ca pe o parolă: poate accesa contul dvs. web conectat până când expiră sau este revocat.",
     "webNoAuthGuideTitle": "Nu sunt necesare acreditări",
     "webNoAuthGuideBody": "{provider} nu are nevoie de o cheie API sau cookie. Salvați conexiunea pentru a utiliza punctul final web gratuit.",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "Setările punctului final al modelului salvat",
     "searchByModelAria": "Caută după model",
     "selectSupportedEndpoint": "Selectați cel puțin un punct final acceptat",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Setări",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Ascundeți jurnalele de verificare a stării de sănătate",
     "hideHealthLogsDesc": "Când este ACTIVAT, suprimați mesajele [HealthCheck] din consola serverului",
     "themeAccent": "Culoarea temei",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Timp maxim de așteptare la coadă",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "Acest strat controlează doar coada și ritmul. Nu stochează răcirile sau întreruptoarele de circuit deschise.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Activează protecția cozilor în mod implicit pentru conexiunile cheie API active.",
     "resilienceMaxQueueWait": "Timp maxim de așteptare la coadă",
+    "resilienceMaxExecutionWait": "Timeout de execuție (limită de siguranță pentru rata de cereri)",
     "resilienceConnectionCooldownScope": "Conexiune individuală",
     "resilienceConnectionCooldownTrigger": "Când o conexiune returnează o eroare tranzitorie în amonte",
     "resilienceConnectionCooldownEffect": "Omite temporar acea conexiune și crește backoff-ul pentru eșecuri repetate",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "Punte video",
     "modalityBridgeVideoDesc": "Eșantionați cadre video, descrieți-le cu un model vizual și continuați cu modelul text ales.",
     "modalityBridgeVideoRuntimeReady": "Mediul de execuție este pregătit",
+    "modalityBridgeVideoRuntimeChecking": "Se verifică mediul de execuție…",
     "modalityBridgeVideoRuntimeUnavailable": "Mediul de execuție nu este disponibil",
     "modalityBridgeVideoRuntimeInstall": "Instalați FFmpeg și ffprobe în PATH-ul serverului pentru a activa extragerea video.",
     "modalityBridgeVideoEnabled": "Activați Punte video",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12077,9 +12113,9 @@
       "acp": {
         "title": "Agenți ACP",
         "phrase": "CLI-uri pe care OmniRoute le lansează ca backend de execuție (flux invers)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Client → OmniRoute → lansare CLI (stdio/ACP) → răspuns",
-        "seeOther": "Vezi →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "Vezi →"
       }
     },
     "comparison": {
@@ -12843,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Permite conexiuni multiple pentru fiecare nod de compatibilitate."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Elimină elementele de ieșire din faza de comentarii interne din fluxurile passthrough ale Responses API înainte de a le redirecționa către clienți. Dezactivează acest flag pentru a primi comentariile brute din amonte."
       },
@@ -12908,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Activează accesul la rețea în sandbox-ul de abilități."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13390,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "Reziliența Conexiunii",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Stare",
       "provider": "Furnizor",
@@ -13484,16 +13527,10 @@
         "modelLockouts": "Blocaje Model",
         "count": "Număr de Conexiuni"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Respinge cererile înainte de expediere atunci când modelul țintă nu are capabilitățile necesare (viziune, instrumente, ieșire structurată, fereastră de context). Protejează cererile directe de un singur furnizor care ocolesc filtrul de compatibilitate al stratului combinat.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Pagina nu a fost găsită",
@@ -13929,7 +13966,6 @@
     "structuredOutputMismatch": "Furnizorul nu suportă ieșirea structurată",
     "contextWindowMismatch": "Cererea depășește fereastra de context a furnizorului"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",

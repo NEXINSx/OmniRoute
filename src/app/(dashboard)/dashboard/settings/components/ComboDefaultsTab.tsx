@@ -418,7 +418,7 @@ export default function ComboDefaultsTab() {
             <Input
               type="number"
               min="1"
-              max="10"
+              max="1000"
               value={comboDefaults.stickyRoundRobinLimit || 3}
               onChange={async (e) => {
                 const nextLimit = parseInt(e.target.value) || 3;

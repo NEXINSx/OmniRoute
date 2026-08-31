@@ -410,3 +410,137 @@ test("KIE direct image routing keeps the gpt4o-image endpoint and payload shape"
     globalThis.fetch = originalFetch;
   }
 });
+
+// #11296 — flux/kontext is catalogued with `isMarket: true`, but KIE does not
+// expose it through the Market catalog: it lives under a dedicated API tree
+// (POST /api/v1/flux/kontext/generate, GET /api/v1/flux/kontext/record-info).
+// Sending it through the Market createTask flow gets rejected with "model
+// name not supported" -- these tests lock in the dedicated-endpoint reroute
+// and guard against a future regression back to the Market flow.
+
+test("KIE flux/kontext routes to the dedicated Flux Kontext endpoint, never the Market createTask endpoint (#11296)", async () => {
+  const originalFetch = globalThis.fetch;
+  let createUrl = "";
+  let createBody: Record<string, unknown> | undefined;
+  let pollUrl = "";
+
+  globalThis.fetch = (async (url: unknown, options: { body?: unknown } = {}) => {
+    const stringUrl = String(url);
+
+    if (stringUrl === "https://api.kie.ai/api/v1/flux/kontext/generate") {
+      createUrl = stringUrl;
+      createBody = JSON.parse(String(options.body ?? "{}")) as Record<string, unknown>;
+      return new Response(JSON.stringify({ code: 200, data: { taskId: "kie-flux-kontext-1" } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    if (stringUrl.startsWith("https://api.kie.ai/api/v1/flux/kontext/record-info")) {
+      pollUrl = stringUrl;
+      return new Response(
+        JSON.stringify({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://example.com/kie-flux-kontext-image.png"],
+            }),
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }
+
+    // Any other URL (in particular the Market createTask/recordInfo endpoints)
+    // is the regression this test guards against.
+    throw new Error(`Unexpected URL: ${stringUrl}`);
+  }) as typeof globalThis.fetch;
+
+  try {
+    const result = await handleImageGeneration({
+      body: {
+        model: "kie/flux/kontext",
+        prompt: "a calm harbour at sunrise",
+        size: "1024x1024",
+        n: 1,
+      },
+      credentials: { apiKey: "test-kie-key" },
+      log: null,
+    });
+
+    assert.equal(result.success, true, "KIE flux/kontext generation should succeed");
+    assert.equal(createUrl, "https://api.kie.ai/api/v1/flux/kontext/generate");
+    assert.deepEqual(createBody, {
+      prompt: "a calm harbour at sunrise",
+      aspectRatio: "1:1",
+      model: "flux-kontext-pro",
+    });
+    assert.equal(new URL(pollUrl).searchParams.get("taskId"), "kie-flux-kontext-1");
+    assert.ok("data" in result, "successful KIE generation must return image data");
+    assert.equal(result.data.data[0].url, "https://example.com/kie-flux-kontext-image.png");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("KIE flux/kontext forwards an input image as 'inputImage' for edit calls (#11296)", async () => {
+  const originalFetch = globalThis.fetch;
+  let createBody: Record<string, unknown> | undefined;
+
+  globalThis.fetch = (async (url: unknown, options: { body?: unknown } = {}) => {
+    const stringUrl = String(url);
+
+    if (stringUrl === "https://api.kie.ai/api/v1/flux/kontext/generate") {
+      createBody = JSON.parse(String(options.body ?? "{}")) as Record<string, unknown>;
+      return new Response(JSON.stringify({ code: 200, data: { taskId: "kie-flux-kontext-2" } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    if (stringUrl.startsWith("https://api.kie.ai/api/v1/flux/kontext/record-info")) {
+      return new Response(
+        JSON.stringify({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://example.com/kie-flux-kontext-edit.png"],
+            }),
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }
+
+    throw new Error(`Unexpected URL: ${stringUrl}`);
+  }) as typeof globalThis.fetch;
+
+  try {
+    const result = await handleImageGeneration({
+      body: {
+        model: "kie/flux/kontext",
+        prompt: "add a lighthouse",
+        size: "1024x1024",
+        n: 1,
+        image: "https://example.com/source.png",
+      },
+      credentials: { apiKey: "test-kie-key" },
+      log: null,
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(createBody?.inputImage, "https://example.com/source.png");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("flux/kontext is not part of the KIE Market upstream id map (#11296)", () => {
+  assert.equal(
+    KIE_MARKET_UPSTREAM_MODEL_IDS.has("flux/kontext"),
+    false,
+    "flux/kontext is rerouted to a dedicated endpoint, not id-rewritten through the Market map"
+  );
+});

@@ -101,7 +101,7 @@ describe("Size threshold — checkKnownPath", () => {
   });
 
   after(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   it("should detect files >= 30 bytes via env var", async () => {
@@ -164,7 +164,7 @@ describe("Healthcheck — checkRunnable", () => {
   });
 
   after(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   it("should report runnable=true for a script that outputs version", async () => {

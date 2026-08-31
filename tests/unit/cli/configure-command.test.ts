@@ -20,6 +20,7 @@ test("configure picker exposes setup-backed CLI targets (manifest declaration or
     "cline",
     "continue",
     "kilo",
+    "5dive",
   ]);
 });
 

@@ -599,6 +599,7 @@ export async function createProviderConnection(data: JsonRecord) {
       _updateConnectionRow(db, existingId, encryptConnectionFields(persistence));
     })();
     backupDbFile("pre-write");
+    invalidateDbCache("connections");
     const returnedConnection = withNullableRateLimitOverrides(
       withNullableQuotaWindowThresholds(
         withNullableMaxConcurrent(cleanNulls(merged), merged),

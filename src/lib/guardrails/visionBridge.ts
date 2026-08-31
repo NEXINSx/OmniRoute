@@ -53,7 +53,7 @@ export async function getComboVisionBridgeDecision(
   model: string
 ): Promise<ComboVisionBridgeDecision> {
   try {
-    const { getComboByName } = await import("@/lib/localDb");
+    const { getComboByName } = await import("@/lib/db/combos");
     const { resolveComboForModel } = await import("@/lib/db/modelComboMappings");
 
     // 1. Try to find combo by exact name match

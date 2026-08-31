@@ -25,6 +25,7 @@ import {
   maskAccount,
   stableAccountSuffix,
   formatApiKeyLabel,
+  formatCachePercentage,
 } from "@/shared/utils/formatting";
 import { getProviderDisplayLabel } from "@/shared/utils/providerDisplayLabel";
 import useEmailPrivacyStore from "@/store/emailPrivacyStore";
@@ -1572,7 +1573,8 @@ const RequestLoggerV2 = forwardRef<RequestLoggerV2Handle, { initialSelectedId?: 
                                       className="text-sky-700 dark:text-sky-400"
                                       title={tCache("cachedTokensCol")}
                                     >
-                                      {log.tokens.cacheRead.toLocaleString()}
+                                      {log.tokens.cacheRead.toLocaleString()} (
+                                      {formatCachePercentage(log.tokens.in, log.tokens.cacheRead)}%)
                                     </span>
                                   </>
                                 )}

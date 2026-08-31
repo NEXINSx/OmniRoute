@@ -132,9 +132,9 @@ test(
       }, "first serve must not abort on a fresh setup DB that only has the 001 seed (#9934)");
 
       // Prove the fresh DB actually got migrated past 001 to the latest version.
-      const maxRow = db.prepare(
-        "SELECT MAX(CAST(version AS INTEGER)) AS maxV FROM _omniroute_migrations"
-      ).get();
+      const maxRow = db
+        .prepare("SELECT MAX(CAST(version AS INTEGER)) AS maxV FROM _omniroute_migrations")
+        .get();
       assert.ok(
         (maxRow?.maxV ?? 0) > 1,
         `expected migrations beyond 001 to run, got max=${maxRow?.maxV}`
@@ -142,7 +142,7 @@ test(
     } finally {
       if (originalDataDir === undefined) delete process.env.DATA_DIR;
       else process.env.DATA_DIR = originalDataDir;
-      fs.rmSync(dataDir, { recursive: true, force: true });
+      fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   }
 );

@@ -9,12 +9,8 @@
  */
 
 import { extractApiKey } from "@/sse/services/auth";
-import {
-  getApiKeyMetadata,
-  getComboByName,
-  isModelAllowedForKey,
-  getApiKeyById,
-} from "@/lib/localDb";
+import { getApiKeyMetadata, isModelAllowedForKey, getApiKeyById } from "@/lib/db/apiKeys";
+import { getComboByName } from "@/lib/db/combos";
 import { isDashboardSessionAuthenticated } from "./apiAuth";
 import { resolveComboForModel } from "@/lib/db/modelComboMappings";
 import { checkBudget } from "@/domain/costRules";

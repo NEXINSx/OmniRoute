@@ -1,15 +1,9 @@
 // Re-export from open-sse with localDb integration
-import {
-  getModelAliases,
-  getComboByName,
-  getComboById,
-  getComboByNameInsensitive,
-  getCachedProviderNodes,
-  getCustomModels,
-} from "@/lib/localDb";
+import { getModelAliases, getCustomModels } from "@/lib/db/models";
+import { getComboByName, getComboById, getComboByNameInsensitive } from "@/lib/db/combos";
+import { getCachedProviderNodes, getCachedSettings } from "@/lib/db/readCache";
 
 import { getSyncedAutoAliases } from "@/lib/providerModels/syncedAutoAliases.ts";
-import { getCachedSettings } from "@/lib/localDb";
 import { getActiveSyncedCatalog } from "@/lib/db/models/activeSyncedCatalog";
 import { getModelCompatOverrides } from "@/lib/db/models/compat";
 import { getNoAuthHydrationProviderIds } from "./noAuthProviderSiblings";
@@ -660,7 +654,7 @@ export async function getComboForModel(modelStr) {
 
   // 2. NEW — check model-combo mappings table (pattern match)
   try {
-    const { resolveComboForModel } = await import("@/lib/localDb");
+    const { resolveComboForModel } = await import("@/lib/db/modelComboMappings");
     const mapped = await resolveComboForModel(baseModelStr || modelStr);
     if (mapped && (mapped as any).models?.length > 0) {
       return mapped;

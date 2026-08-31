@@ -322,7 +322,7 @@ async function resetStorage() {
   resetBackgroundStats();
   globalThis.setTimeout = originalSetTimeout;
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -448,7 +448,7 @@ test.after(async () => {
   resetAccountSemaphores();
   await flushAsyncSideEffects();
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 test("chatCore times out upstream execution before provider response headers", async () => {
   // This test asserts pendingDetail.providerRequest — only attached when the

@@ -163,7 +163,7 @@ test("bumps small requests to third-party Claude-format replicas (agentrouter, Z
   );
 });
 
-test("does NOT bump Minimax (M3) — #3110 moved it from claude to openai format so images work, and the readiness bump is keyed off the registry's `format: \"claude\"` field", () => {
+test('does NOT bump Minimax (M3) — #3110 moved it from claude to openai format so images work, and the readiness bump is keyed off the registry\'s `format: "claude"` field', () => {
   // Minimax's replica quirk (long reasoning warm-up) hasn't changed, but this
   // policy intentionally keys off the translator format, not the provider
   // name — the registry is the single source of truth (see isClaudeFormatReasoningProvider
@@ -265,4 +265,75 @@ test("treats unknown provider names as non-Claude-format (no false positives)", 
 
   assert.equal(result.timeoutMs, 80_000);
   assert.ok(!result.reasons.includes("claude_format_heavy_reasoning"));
+});
+
+test("gives extended-thinking model aliases the reasoning readiness bump (#11922)", () => {
+  // #11922: kiro/claude-sonnet-5-thinking 504'd with
+  // "Stream produced no non-ping SSE event within 125000ms" — the 80s base plus
+  // the 45s very-large-history bump, capped there because nothing recognised the
+  // request as a reasoning target. Kiro serves Anthropic thinking models through
+  // its own CodeWhisperer translator, so `format: "kiro"` (not "claude") kept it
+  // out of the claude_format_heavy_reasoning bump, and the `-thinking` alias was
+  // never a reasoning signal the way `-high` is.
+  const result = resolveStreamReadinessTimeout({
+    baseTimeoutMs: 80_000,
+    provider: "kiro",
+    model: "claude-sonnet-5-thinking",
+    body: { messages: items(401) },
+  });
+
+  assert.equal(result.timeoutMs, 155_000);
+  assert.ok(result.reasons.includes("extended_thinking"));
+});
+
+test("extended-thinking bump is provider-agnostic and fires for small requests", () => {
+  const result = resolveStreamReadinessTimeout({
+    baseTimeoutMs: 80_000,
+    provider: "devin",
+    model: "claude-opus-4-6-thinking",
+    body: { messages: items(2) },
+  });
+
+  assert.equal(result.timeoutMs, 110_000);
+  assert.ok(result.reasons.includes("extended_thinking"));
+});
+
+test("does NOT stack extended-thinking with the Claude-format replica bump", () => {
+  // Both bumps model the same one-off reasoning warm-up. A claude-format replica
+  // serving a `-thinking` alias must get 30s once, not 60s twice.
+  const result = resolveStreamReadinessTimeout({
+    baseTimeoutMs: 80_000,
+    provider: "agentrouter",
+    model: "claude-sonnet-4-6-thinking",
+    body: { messages: items(2) },
+  });
+
+  assert.equal(result.timeoutMs, 110_000);
+  assert.ok(result.reasons.includes("extended_thinking"));
+  assert.ok(!result.reasons.includes("claude_format_heavy_reasoning"));
+});
+
+test("does NOT stack extended-thinking with the codex high-reasoning bump", () => {
+  const result = resolveStreamReadinessTimeout({
+    baseTimeoutMs: 80_000,
+    provider: "codex",
+    model: "gpt-5.5-thinking",
+    body: { messages: items(2), reasoning_effort: "high" },
+  });
+
+  assert.equal(result.timeoutMs, 110_000);
+  assert.ok(result.reasons.includes("codex_gpt_5_5_high_reasoning"));
+  assert.ok(!result.reasons.includes("extended_thinking"));
+});
+
+test("does not treat an unrelated id containing 'thinking' as an alias suffix", () => {
+  const result = resolveStreamReadinessTimeout({
+    baseTimeoutMs: 80_000,
+    provider: "openai",
+    model: "thinking-machines-lab-model",
+    body: { messages: items(2) },
+  });
+
+  assert.equal(result.timeoutMs, 80_000);
+  assert.ok(!result.reasons.includes("extended_thinking"));
 });

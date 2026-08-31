@@ -35,7 +35,7 @@ type LeaseState = {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("migration 168 retires every common ChatGPT Web id fail-closed and preserves audit history", async () => {

@@ -11,8 +11,26 @@
 import { saveCallLog } from "@/lib/usageDb";
 import { sanitizeErrorMessage } from "../../utils/error.ts";
 import { formatSearchProviderFailure } from "./providerFailure.ts";
+import { HTTP_STATUS } from "../../config/constants.ts";
+import { isSubscriptionQuotaText } from "../../services/quotaTextCooldowns.ts";
 import type { SearchProviderConfig } from "../../config/searchRegistry.ts";
 import type { SearchResult } from "../search.ts";
+
+const SEARCH_COOLDOWN_STATUSES = new Set([
+  HTTP_STATUS.PAYMENT_REQUIRED,
+  HTTP_STATUS.REQUEST_TIMEOUT,
+  HTTP_STATUS.RATE_LIMITED,
+  HTTP_STATUS.PLAN_LIMIT_EXCEEDED,
+  HTTP_STATUS.SERVER_ERROR,
+  HTTP_STATUS.BAD_GATEWAY,
+  HTTP_STATUS.SERVICE_UNAVAILABLE,
+  HTTP_STATUS.GATEWAY_TIMEOUT,
+]);
+
+export function shouldCoolDownSearchConnection(status: number, errorText: string): boolean {
+  if (SEARCH_COOLDOWN_STATUSES.has(status)) return true;
+  return isSubscriptionQuotaText(errorText.toLowerCase());
+}
 
 /** Resolved proxy binding for a single provider attempt. */
 export interface ResolvedSearchProxy {
@@ -195,6 +213,14 @@ export async function executeProviderFetch(
       const errorText = await response.text();
       if (log) {
         log.error("SEARCH", `${config.id} error ${response.status}: ${errorText.slice(0, 200)}`);
+      }
+      if (connectionId && shouldCoolDownSearchConnection(response.status, errorText)) {
+        try {
+          const { markAccountUnavailable } = await import("@/sse/services/auth.ts");
+          await markAccountUnavailable(connectionId, response.status, errorText, config.id, null);
+        } catch {
+          /* non-critical - background cooldown mark must not break search response */
+        }
       }
       logCall({
         status: response.status,

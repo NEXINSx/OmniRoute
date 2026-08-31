@@ -19,19 +19,18 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 process.env.API_KEY_SECRET = "test-secret-engine-status";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const localDb = { updateSettings };
 
 // Import route AFTER setting DATA_DIR
-const engineStatusRoute = await import(
-  "../../src/app/api/memory/engine-status/route.ts"
-);
+const engineStatusRoute = await import("../../src/app/api/memory/engine-status/route.ts");
 const { GET } = engineStatusRoute;
 
 // ── Helpers ──
 
 async function resetStorage() {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -44,7 +43,7 @@ test.beforeEach(async () => {
 
 test.after(async () => {
   await resetStorage();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // ── Tests ──
@@ -67,7 +66,11 @@ test("GET /api/memory/engine-status — 200 + valid MemoryEngineStatusSchema sha
   assert.strictEqual(body.keyword.backend, "FTS5", "keyword.backend should be FTS5");
 
   assert.ok(body.embedding, "should have embedding section");
-  assert.strictEqual(typeof body.embedding.available, "boolean", "embedding.available should be boolean");
+  assert.strictEqual(
+    typeof body.embedding.available,
+    "boolean",
+    "embedding.available should be boolean"
+  );
   assert.ok(typeof body.embedding.reason === "string", "embedding.reason should be a string");
   assert.ok(body.embedding.cacheStats, "should have cacheStats in embedding");
   assert.strictEqual(typeof body.embedding.cacheStats.hits, "number");
@@ -77,7 +80,7 @@ test("GET /api/memory/engine-status — 200 + valid MemoryEngineStatusSchema sha
   assert.ok(body.vectorStore, "should have vectorStore section");
   assert.ok(
     ["sqlite-vec", "qdrant", "none"].includes(body.vectorStore.backend),
-    `vectorStore.backend should be valid: ${body.vectorStore.backend}`,
+    `vectorStore.backend should be valid: ${body.vectorStore.backend}`
   );
   assert.strictEqual(typeof body.vectorStore.available, "boolean");
   assert.strictEqual(typeof body.vectorStore.rowCount, "number");

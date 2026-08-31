@@ -8,22 +8,18 @@ const TEST_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-batch-api
 process.env.DATA_DIR = TEST_DATA_DIR;
 process.env.API_KEY_SECRET = process.env.API_KEY_SECRET || "test-secret-123";
 
+const { createFile, getFileContent, getFile, listFiles, formatFileResponse, deleteFile } =
+  await import("@/lib/db/files");
 const {
-  createFile,
   createBatch,
   getBatch,
-  getFileContent,
   updateBatch,
-  createProviderConnection,
-  createApiKey,
-  getFile,
-  listFiles,
-  formatFileResponse,
-  deleteFile,
   getTerminalBatches,
   ensureBatchItemCheckpoints,
   markBatchItemResult,
-} = await import("../../src/lib/localDb.ts");
+} = await import("@/lib/db/batches");
+const { createProviderConnection } = await import("@/lib/db/providers");
+const { createApiKey } = await import("@/lib/db/apiKeys");
 const { getDbInstance } = await import("../../src/lib/db/core.ts");
 const {
   initBatchProcessor,
@@ -580,7 +576,7 @@ test("List batches pagination and response format", async () => {
   const batchIds = batchOrder.map((entry) => entry.id);
 
   // 2. Test listBatches logic (direct DB call)
-  const { listBatches } = await import("../../src/lib/localDb");
+  const { listBatches } = await import("@/lib/db/batches");
   const allBatches = listBatches(apiKey.id, 10);
   assert.strictEqual(allBatches.length, 5);
   assert.strictEqual(allBatches[0].id, batchIds[0]);

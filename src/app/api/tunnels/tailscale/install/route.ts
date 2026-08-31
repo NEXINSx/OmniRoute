@@ -32,14 +32,13 @@ export async function POST(request: Request) {
             status: await getTailscaleTunnelStatus(),
           });
         } catch (error) {
-          pushEvent(
-            "error",
-            toPublicSafeTunnelError(
+          pushEvent("error", {
+            ...toPublicSafeTunnelError(
               error,
               "Failed to install Tailscale.",
               "tunnels/tailscale/install POST"
-            )
-          );
+            ),
+          });
         } finally {
           controller.close();
         }

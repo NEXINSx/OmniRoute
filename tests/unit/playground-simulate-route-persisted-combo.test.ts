@@ -16,7 +16,7 @@ let persistedComboId: string;
 
 test.beforeEach(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   await providersDb.createProviderConnection({
     provider: "cc",
@@ -42,7 +42,7 @@ test.beforeEach(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 function request(body: unknown): Request {
@@ -76,9 +76,7 @@ test("simulates persisted combo model steps in order", async () => {
   // #11822 follow-up: combo-ref steps now get a specific warning naming the
   // referenced combo instead of folding into the generic "unsupported step"
   // count (that count is reserved for genuinely unrecognized step shapes).
-  assert.ok(
-    body.warnings.some((warning: string) => warning.includes('combo "nested combo"'))
-  );
+  assert.ok(body.warnings.some((warning: string) => warning.includes('combo "nested combo"')));
   assert.ok(body.warnings.every((warning: string) => !warning.includes("not configured")));
 });
 
@@ -104,7 +102,9 @@ test("surfaces a provider-wildcard step as an unresolved target with a specific 
     ]
   );
   assert.ok(
-    body.warnings.some((warning: string) => warning.includes("groq/llama-*") && warning.includes("wildcard"))
+    body.warnings.some(
+      (warning: string) => warning.includes("groq/llama-*") && warning.includes("wildcard")
+    )
   );
 });
 

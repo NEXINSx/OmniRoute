@@ -67,7 +67,7 @@ export async function applyStrategyOrdering(
 
   if (strategy === "lkgp") {
     try {
-      const { getLKGP } = await import("../../../src/lib/localDb");
+      const { getLKGP } = await import("@/lib/db/settings");
       const lkgpProvider = await getLKGP(combo.name, combo.id || combo.name);
 
       if (lkgpProvider) {

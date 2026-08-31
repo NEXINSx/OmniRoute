@@ -44,7 +44,10 @@ import type { RelayToken } from "@/lib/db/relayProxies";
 
 const JSON_CORS_HEADERS = { ...CORS_HEADERS, "Content-Type": "application/json" } as const;
 
-const injectionGuard = createInjectionGuard();
+// `logger: null` — this relay forwards to handleChat, where the guardrail registry
+// re-evaluates the request with the pino logger (#11936 dedupe). The bifrost sibling
+// route keeps the default logger: it skips handleChat entirely.
+const injectionGuard = createInjectionGuard({ logger: null });
 
 type RelayUsageStatus = "success" | "error";
 

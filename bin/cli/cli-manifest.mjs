@@ -93,6 +93,16 @@ export const CLI_TARGET_MANIFEST = Object.freeze({
     configure: true,
     runModel: null,
   }),
+  "5dive": Object.freeze({
+    // 5dive is a fleet manager, not a coding CLI: it points its own `claude`
+    // agents at an endpoint. `omniroute run 5dive` would have nothing to
+    // launch, so this is configure-only.
+    description: "5dive (agent fleet)",
+    aliases: Object.freeze(["fivedive", "5dive-cli"]),
+    run: false,
+    configure: true,
+    runModel: null, // travels as the profile's ANTHROPIC_DEFAULT_*_MODEL
+  }),
 });
 
 /**

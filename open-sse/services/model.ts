@@ -332,7 +332,7 @@ function getProviderIdFromConnection(connection: unknown) {
 
 async function getActiveProviderSet() {
   try {
-    const { getCachedProviderConnections } = await import("@/lib/localDb");
+    const { getCachedProviderConnections } = await import("@/lib/db/readCache");
     const conns = (await getCachedProviderConnections()) as unknown[];
     const providers = conns
       .map(getProviderIdFromConnection)
@@ -345,7 +345,7 @@ async function getActiveProviderSet() {
 
 async function getActiveSyncedProvidersForModel(modelId: string) {
   try {
-    const { getActiveProvidersWithSyncedModel } = await import("@/lib/localDb");
+    const { getActiveProvidersWithSyncedModel } = await import("@/lib/db/models");
     const providers = await getActiveProvidersWithSyncedModel(modelId);
     return providers
       .map(resolveProviderAlias)
@@ -403,7 +403,7 @@ function isTruthyEnv(value: string | undefined) {
 
 async function getPreferClaudeCodeForUnprefixedClaudeModels() {
   try {
-    const { getCachedSettings } = await import("@/lib/localDb");
+    const { getCachedSettings } = await import("@/lib/db/readCache");
     const settings = (await getCachedSettings()) as Record<string, unknown>;
     if (typeof settings.preferClaudeCodeForUnprefixedClaudeModels === "boolean") {
       return settings.preferClaudeCodeForUnprefixedClaudeModels;

@@ -45,6 +45,7 @@ import { refreshKimiCodingToken } from "./tokenRefresh/providers/kimiCoding.ts";
 import { refreshGitLabDuoToken } from "./tokenRefresh/providers/gitlabDuo.ts";
 import { refreshClaudeOAuthToken } from "./tokenRefresh/providers/claudeOAuth.ts";
 import { refreshGoogleToken } from "./tokenRefresh/providers/google.ts";
+import { selectGoogleRefreshClient } from "./tokenRefresh/googleClientBinding.ts";
 import { ensureAntigravityProjectAssigned } from "./antigravityProjectBootstrap.ts";
 import { persistDiscoveredAntigravityProjectId } from "./antigravityProjectPersist.ts";
 import { refreshCodexToken } from "./tokenRefresh/providers/codex.ts";
@@ -332,10 +333,19 @@ async function _getAccessTokenInternal(provider, credentials, log, proxyConfig: 
     case "gemini":
     case "antigravity":
     case "agy": {
+      // Google binds each refresh token to the client that issued it. When
+      // the operator overrides the client via env, connections authorized by
+      // the built-in desktop client must not be refreshed against the custom
+      // one (401 unauthorized_client, 2026-08-30 incident).
+      const refreshClient = selectGoogleRefreshClient(
+        provider,
+        credentials.providerSpecificData?.oauthClient,
+        PROVIDERS[provider]
+      );
       const result = await refreshGoogleToken(
         credentials.refreshToken,
-        PROVIDERS[provider].clientId,
-        PROVIDERS[provider].clientSecret,
+        refreshClient.clientId,
+        refreshClient.clientSecret,
         log,
         proxyConfig
       );

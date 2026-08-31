@@ -54,7 +54,7 @@ test.afterEach(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // --- Pure unit tests for the extracted admission check -------------------
@@ -181,6 +181,14 @@ test("#6593 DEFAULT_REQUEST_QUEUE_MAX_WAIT_MS is 15s absent RATE_LIMIT_MAX_WAIT_
   assert.equal(process.env.RATE_LIMIT_MAX_WAIT_MS, undefined);
   assert.equal(resilienceSettings.DEFAULT_REQUEST_QUEUE_MAX_WAIT_MS, 15000);
   assert.equal(resilienceSettings.DEFAULT_RESILIENCE_SETTINGS.requestQueue.maxWaitMs, 15000);
+});
+
+test("requestQueue.executionMaxWaitMs defaults to a 10-minute backstop, separate from maxWaitMs", () => {
+  assert.equal(resilienceSettings.DEFAULT_REQUEST_QUEUE_EXECUTION_MAX_WAIT_MS, 600000);
+  assert.equal(
+    resilienceSettings.DEFAULT_RESILIENCE_SETTINGS.requestQueue.executionMaxWaitMs,
+    600000
+  );
 });
 
 test("#6593 zai-web receives a provider-scoped 60s scheduling budget", () => {

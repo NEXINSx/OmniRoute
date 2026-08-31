@@ -11,6 +11,8 @@ import {
   FATAL_LOG_PATTERNS,
   LINUX_EXECUTABLE_NAMES,
   stopApp,
+  waitForDatabaseOpen,
+  DB_TOUCH_PATH,
 } from "../../scripts/dev/smoke-electron-packaged.mjs";
 import { tarPack } from "../../scripts/build/optionalPackStaging.mjs";
 
@@ -65,7 +67,7 @@ test("electron smoke pre-creates the USERPROFILE-derived Roaming userData tree o
       assert.ok(fs.existsSync(viaAppData), `expected pre-created APPDATA dir: ${viaAppData}`);
     }
   } finally {
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -85,7 +87,7 @@ test("electron smoke tarPack handles absolute Windows-style tarball paths", () =
     assert.ok(fs.existsSync(tarballPath), "tarball should exist after tarPack");
     assert.ok(fs.statSync(tarballPath).size > 0, "tarball should not be empty");
   } finally {
-    fs.rmSync(staging, { recursive: true, force: true });
+    fs.rmSync(staging, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -147,6 +149,46 @@ test("electron smoke flags a cold-restart fallback to the sql.js WASM driver", (
 test("electron smoke flags startup logs missing any driver selection line", () => {
   assert.throws(
     () => assertNativeDriverSelected("[electron] [server] listening on 20128"),
-    /no '\[DB\] Driver: \.\.\.' line/
+    /no database activity/
+  );
+});
+
+test("electron smoke waits for database-open evidence after touching a DB-backed endpoint", async () => {
+  assert.equal(DB_TOUCH_PATH, "/api/monitoring/health");
+  let logs = "[electron] [Server] [STARTUP] ready\n";
+  setTimeout(() => {
+    logs += "[electron] [Server] [DB] Added usage_history.combo_strategy column\n";
+  }, 60);
+  const seen = await waitForDatabaseOpen(() => logs, { timeoutMs: 2_000, pollMs: 20 });
+  assert.match(seen, /\[DB\] Added/);
+});
+
+test("electron smoke fails clearly when the database never opens", async () => {
+  await assert.rejects(
+    () =>
+      waitForDatabaseOpen(() => "[electron] [Server] [STARTUP] ready\n", {
+        timeoutMs: 120,
+        pollMs: 20,
+      }),
+    /logged no \[DB\]\/\[Migration\] startup line within 120ms/
+  );
+});
+
+test("electron smoke driver guard: native line, DB evidence and sql.js fallback", () => {
+  assert.doesNotThrow(() =>
+    assertNativeDriverSelected("[DB] Driver: better-sqlite3 | file: /tmp/x/storage.sqlite\n")
+  );
+  assert.doesNotThrow(() =>
+    assertNativeDriverSelected(
+      "[electron] [Server] [DB] Added call_logs.session_tag column\n[electron] [Server] [Migration] Applied: 046_database_settings\n"
+    )
+  );
+  assert.throws(
+    () => assertNativeDriverSelected("[DB] Driver: sql.js | file: /tmp/x/storage.sqlite\n"),
+    /sql\.js \(WASM\) driver/
+  );
+  assert.throws(
+    () => assertNativeDriverSelected("[STARTUP] nothing here\n"),
+    /no database activity/
   );
 });

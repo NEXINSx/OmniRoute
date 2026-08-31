@@ -121,7 +121,7 @@ test("--plan shell-quotes a hostile base before the gate command is evaluated", 
       await assert.rejects(access(marker), { code: "ENOENT" });
     }
   } finally {
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

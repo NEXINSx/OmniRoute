@@ -41,10 +41,7 @@ test("built-in allowlist includes operator free models and excludes paid blockli
  * the expiry, with packs this test owns and dates it controls — never the
  * freshness of the catalog that ships in the repo.
  */
-function withAllowlistPack(
-  pack: Record<string, unknown>,
-  assertions: () => void
-): void {
+function withAllowlistPack(pack: Record<string, unknown>, assertions: () => void): void {
   const dir = mkdtempSync(join(tmpdir(), "alibaba-allowlist-"));
   const packPath = join(dir, "allowlist.json");
   writeFileSync(packPath, JSON.stringify(pack), "utf8");
@@ -58,7 +55,7 @@ function withAllowlistPack(
     if (previousPath) process.env.ALIBABA_FREE_TIER_ALLOWLIST_PATH = previousPath;
     else delete process.env.ALIBABA_FREE_TIER_ALLOWLIST_PATH;
     resetAlibabaFreeTierAllowlistCache();
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 

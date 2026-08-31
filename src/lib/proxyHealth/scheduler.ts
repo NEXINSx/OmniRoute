@@ -22,7 +22,7 @@
  *                               same threshold, not independently tunable.
  */
 
-import { deleteProxyById, listProxies, updateProxy } from "@/lib/localDb";
+import { deleteProxyById, listProxies, updateProxy } from "@/lib/db/proxies";
 import { isProxyLogIncludeIps } from "@/lib/proxyLogger";
 import {
   getRecentEgressSharingSummary,

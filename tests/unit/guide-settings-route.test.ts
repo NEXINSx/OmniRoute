@@ -55,7 +55,9 @@ test.beforeEach(async () => {
 });
 
 test.afterEach(async () => {
-  await fs.rm(DUMMY_HOME, { recursive: true, force: true }).catch(() => {});
+  await fs
+    .rm(DUMMY_HOME, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+    .catch(() => {});
   if (originalXDG === undefined) delete process.env.XDG_CONFIG_HOME;
   else process.env.XDG_CONFIG_HOME = originalXDG;
   if (originalAppData === undefined) delete process.env.APPDATA;

@@ -31,6 +31,7 @@ import { buildFamilyCandidateFilter, type ModelFamily } from "./modelFamily";
 import { getHiddenModelsByProvider } from "@/models";
 import { getSyncedAvailableModelsByConnection, getCustomModels } from "@/lib/db/models";
 import { filterPaidOnlyCandidates } from "./paidModelFilter";
+import { filterModelExposureCandidates } from "./modelExposureFilter";
 import {
   filterSubscriptionOnlyCandidates,
   orderPoolByRung,
@@ -44,8 +45,8 @@ import { filterExcludedCandidates } from "./candidateOverrides";
 import { getExcludedConnectionIds } from "@/lib/db/autoCandidateOverrides";
 import {
   filterResilienceBlockedCandidates,
+  buildConnectionResilienceMap,
   SYNTHETIC_NOAUTH_CONNECTION_ID as RESILIENCE_NOAUTH_CONNECTION_ID,
-  type ConnectionResilienceView,
 } from "./resilienceCandidateFilter";
 import type { ChaosTuning } from "./chaosEngine";
 
@@ -584,7 +585,8 @@ export async function prepareVirtualAutoComboInputs(
   options: {
     includeResolvedCapabilities?: boolean;
     resolutionSnapshot?: ModelCapabilityResolutionSnapshot;
-  } = {}
+  } = {},
+  skip = false // #9133 — inspector opt-out, see filterResilienceBlockedCandidates
 ): Promise<PreparedVirtualAutoComboInputs> {
   const [rawConnections, rawDisabledNoAuthConnections, settings] = await Promise.all([
     getCachedProviderConnections({ isActive: true }) as Promise<VirtualFactoryConn[]>,
@@ -708,10 +710,10 @@ export async function prepareVirtualAutoComboInputs(
 
   // #7623: honor existing model lockouts + connection cooldown/terminal state so
   // auto/* never advertises models the dispatch path would immediately skip.
-  const connectionsById = new Map<string, ConnectionResilienceView>();
-  for (const conn of [...runtimeConnections, ...disabledNoAuthConnections]) {
-    connectionsById.set(conn.id, conn);
-  }
+  const connectionsById = buildConnectionResilienceMap([
+    ...runtimeConnections,
+    ...disabledNoAuthConnections,
+  ]);
 
   const connectedProviders = new Set(validConnections.map((conn) => conn.provider));
   const buildPreparedPool = (bypassNoAuthAllowlist: boolean) => {
@@ -727,13 +729,18 @@ export async function prepareVirtualAutoComboInputs(
       ),
     ];
 
-    const resilienceFilteredPool = filterResilienceBlockedCandidates(pool, connectionsById);
+    const resilienceFilteredPool = filterResilienceBlockedCandidates(pool, connectionsById, skip);
     if (resilienceFilteredPool !== pool) pool = resilienceFilteredPool;
 
     // #6512 (follow-up to #6328/#6495): when the operator opts into `hidePaidModels`,
     // exclude paid-only backends from EVERY `auto/*` candidate pool.
     const paidFilteredPool = filterPaidOnlyCandidates(pool, settings.hidePaidModels === true);
     if (paidFilteredPool !== pool) pool = paidFilteredPool;
+
+    // #11481: mandatory mirror of the /v1/models exposure allow/deny list —
+    // see src/shared/utils/modelExposureList.ts for why (#6512's lesson).
+    const exposureFilteredPool = filterModelExposureCandidates(pool, settings);
+    if (exposureFilteredPool !== pool) pool = exposureFilteredPool;
 
     // STRICT_ZERO_COST: opt-in, off by default (`settings.freeAccessPolicy !== "strict"`
     // leaves `pool` byte-identical, same contract as `hidePaidModels`). See

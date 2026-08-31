@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { getProviderConnections } from "@/lib/db/providers";
+import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
 import { getAllEmbeddingModels } from "@omniroute/open-sse/config/embeddingRegistry.ts";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 
@@ -28,7 +29,12 @@ export async function GET(request: NextRequest) {
         .filter(
           (connection) =>
             (typeof connection.apiKey === "string" && connection.apiKey.trim().length > 0) ||
-            connection.authType === "oauth"
+            connection.authType === "oauth" ||
+            // Local/self-hosted providers (ollama-local, lm-studio, etc.) and other
+            // no-key-required providers connect with no apiKey and authType "apikey"
+            // (see src/app/api/providers/route.ts) — they are still "configured" the
+            // moment the connection is active. See issue #11949.
+            providerAllowsOptionalApiKey(connection.provider)
         )
         .map((connection) => String(connection.provider || ""))
         .filter(Boolean)

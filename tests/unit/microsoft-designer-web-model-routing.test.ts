@@ -21,7 +21,7 @@ const { createProviderNodeSchema, updateProviderNodeSchema } =
 
 async function resetStorage(): Promise<void> {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -48,7 +48,7 @@ function assertRetiredError(error: unknown): boolean {
 test.beforeEach(resetStorage);
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("retired Designer IDs remain reserved after leaving the live provider registry", () => {

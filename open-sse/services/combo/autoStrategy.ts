@@ -39,6 +39,7 @@ import {
   calculateScore,
   computePoolMaxima,
   type ProviderCandidate,
+  type ScoringFactors,
   type ScoringWeights,
 } from "../autoCombo/scoring.ts";
 import type { RoutingHint } from "../manifestAdapter";
@@ -407,10 +408,19 @@ export function scoreAutoTargets(
       }
       return {
         target,
+        factors,
         score,
       };
     })
-    .filter((entry): entry is { target: ResolvedComboTarget; score: number } => entry !== null)
+    .filter(
+      (
+        entry
+      ): entry is {
+        target: ResolvedComboTarget;
+        factors: ScoringFactors;
+        score: number;
+      } => entry !== null
+    )
     .sort((a, b) => b.score - a.score);
 }
 

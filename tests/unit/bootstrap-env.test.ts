@@ -48,7 +48,7 @@ function withTempEnv(fn) {
     for (const [key, value] of Object.entries(originalEnv)) {
       process.env[key] = value;
     }
-    fs.rmSync(tempRoot, { recursive: true, force: true });
+    fs.rmSync(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 

@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% de desconto em tokens de entrada + saída",
     "batchConceptAsync24h": "Assíncrono com janela de conclusão de 24h",
     "batchConceptUseCases": "Melhor para classificação em massa, avaliações e embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Ficheiros de lote",
     "filesConceptSubtitle": "Ficheiros JSONL usados pelos lotes: pedidos de entrada, resultados e erros.",
     "filesConceptInput": "Entrada — o teu JSONL com um pedido por linha",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "Usado por {count, plural, one {# lote} other {# lotes}}",
     "batchFilePreview": "Pré-visualização",
     "batchFilePreviewTruncated": "A mostrar as primeiras {shown} linhas ({total} linhas no total)",
-    "batchFileDownloadFull": "Transferir Ficheiro Completo",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "Transferir Ficheiro Completo"
   },
   "disabled": "Desativado",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Encaminhar pedidos com orçamento esgotado para o fornecedor/modelo de contingência gratuito de emergência.",
@@ -1023,6 +1023,8 @@
     "logs": "Registros",
     "webhooks": "Webhooks",
     "webhooksSubtitle": "Seja notificado sobre eventos",
+    "logExport": "Exportação de registos",
+    "logExportSubtitle": "Enviar os registos de chamadas para fora",
     "combosSubtitle": "Provedores de grupo para failover",
     "batchSubtitle": "Processar várias solicitações",
     "contextCavemanSubtitle": "Compactação imediata",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "Intercetar tráfego do agente do IDE",
     "trafficInspector": "Inspetor de Tráfego",
     "trafficInspectorSubtitle": "Inspecione o tráfego de pedidos e respostas das suas aplicações",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "Código da CLI",
     "cliCodeSubtitle": "Ferramentas de código a apontar para o OmniRoute",
     "cliAgents": "Agentes de CLI",
@@ -1300,8 +1303,7 @@
       "open": "abrir",
       "close": "fechar"
     },
-    "noResults": "Sem resultados",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Sem resultados"
   },
   "webhooks": {
     "title": "Webhooks",
@@ -1808,6 +1810,11 @@
     "updateStarted": "Atualização iniciada...",
     "reloadingPageAutomatically": "Recarregando a página automaticamente...",
     "providerTopology": "Topologia do provedor",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Transferir DMG (macOS)",
     "downloadDmgDescription": "Uma nova versão da aplicação de desktop OmniRoute está disponível. Por favor, faça o download e instale o instalador DMG para macOS para atualizar (atual: v{version}).",
     "downloadExe": "Descarregar EXE (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "Notas de Lançamento",
     "readMore": "Leia Mais",
     "noAuthLabel": "Sem Autenticação",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "Contornar limites de quota do fornecedor",
     "bypassProviderQuotaDescription": "Permite que esta chave ignore a política de limite do fornecedor/conta a montante durante o encaminhamento. As quotas em USD da chave de API continuam a aplicar-se.",
     "quotaPill": "QUOTA",
-    "quotaModeOnly": "Apenas quota"
+    "quotaModeOnly": "Apenas quota",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Registro de auditoria",
@@ -2922,8 +2932,10 @@
       "interpreter": "CLI do agente de programação autónomo Open Interpreter",
       "omp": "Agente de programação de terminal Oh My Pi",
       "letta": "Agente CLI Letta com memória persistente e utilização de ferramentas",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Terminal Warp AI com suporte para fornecedor personalizado",
       "agent-deck": "Orquestrador multi-agente Agent Deck",
+      "5dive": "5dive — frota auto-alojada de agentes de codificação; um perfil de autenticação aponta todos para o OmniRoute",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "Ponto final da API",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Terminais disponíveis",
     "cloudProxy": "Proxy de nuvem",
     "disableConfirm": "Tem certeza de que deseja desativar o proxy na nuvem?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "Criar uma Integração Interna em",
     "notionIntegrationToken": "Token de Integração Interna do Notion",
     "notionNotConnected": "Não conectado",
-    "notionTokenConfigured": "Token configurado. As ferramentas Notion estão disponíveis através do MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Token configurado. As ferramentas Notion estão disponíveis através do MCP."
   },
   "endpoints": {
     "tabProxy": "Proxy de Endpoint",
@@ -4632,6 +4644,13 @@
     "retry": "Tentar novamente",
     "allOperational": "Todos os sistemas operacionais",
     "issuesDetected": "Problemas de sistema detectados",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "{time} atualizado",
     "latency": "Latência",
     "latencyP50": "p50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} problemas",
     "score": "Pontuação",
     "lastRequest": "Último pedido",
-    "lastError": "Último erro",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Último erro"
   },
   "telemetry": {
     "title": "Telemetria do Sistema",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Multi-Provedor",
     "usageTracking": "Rastreamento de uso",
     "securityDesc": "Defina uma senha para proteger seu painel ou pule por enquanto.",
+    "securityDescSkipWarning": "⚠️ Sem uma senha, não poderá adicionar fornecedores durante a configuração. Pode adicioná-los mais tarde no painel após definir uma senha.",
     "providerDesc": "Conecte seu primeiro provedor de IA. Você pode adicionar mais posteriormente.",
+    "providerRequiresPassword": "Precisa de definir uma senha primeiro para adicionar fornecedores. Volte ao passo de segurança e defina uma senha, ou adicione fornecedores mais tarde no painel.",
     "apiKeyRequired": "Chave API (obrigatória)",
     "customUrlOptional": "URL personalizado (opcional)",
     "testDesc": "Vamos verificar se a conexão do seu provedor funciona.",
@@ -5011,9 +5025,7 @@
         "skipped": "já configurado",
         "failed": "falhou"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Sem uma senha, não poderá adicionar fornecedores durante a configuração. Pode adicioná-los mais tarde no painel após definir uma senha.",
-    "providerRequiresPassword": "Precisa de definir uma senha primeiro para adicionar fornecedores. Volte ao passo de segurança e defina uma senha, ou adicione fornecedores mais tarde no painel."
+    }
   },
   "providers": {
     "title": "Provedores",
@@ -6254,7 +6266,7 @@
       "galadriel": "Ligue a Galadriel com uma chave de API.",
       "predibase": "$25 em créditos de avaliação gratuita (validade de 30 dias)",
       "chenzk": "Gateway compatível com a OpenAI com um catálogo de modelos em tempo real em chenzk.top.",
-      "magnific": "Gere imagens com a API Mystic da Freepik.",
+      "magnific": "Gere imagens com a API Mystic da Magnific.",
       "freetheai": "Gateway gratuito compatível com a OpenAI com suporte a modelos passthrough.",
       "g4f-gemini": "Gateway remoto do g4f.space para o Gemini. O acesso anónimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
       "g4f-groq": "Gateway remoto do g4f.space para o Groq. O acesso anónimo exige créditos de prova de trabalho do g4f.dev/chat ou uma chave de API de membro do g4f.dev/members.html; os limites variam.",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "Copie a credencial necessária do próprio domínio do provedor. Para cookies, copie apenas o valor do cabeçalho Cookie e omita Cookie:.",
     "webSessionGuideStep3Manual": "Caminho manual: abra as ferramentas de desenvolvedor do navegador (F12 → Rede), atualize a página, abra uma solicitação autenticada e copie o valor do cabeçalho Cookie dos Cabeçalhos da Solicitação — omita o prefixo Cookie:.",
     "webSessionGuideStep4": "Cole aqui e verifique a conexão. Se parar de funcionar, faça login novamente e substitua-o por um novo valor.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Trate isso como uma senha: ela poderá acessar sua conta da web conectada até que ela expire ou seja revogada.",
     "webNoAuthGuideTitle": "Nenhuma credencial necessária",
     "webNoAuthGuideBody": "{provider} não precisa de chave de API ou cookie. Salve a conexão para usar seu endpoint web gratuito.",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "Definições do ponto de extremidade do modelo guardado",
     "searchByModelAria": "Pesquisar por modelo",
     "selectSupportedEndpoint": "Selecione pelo menos um endpoint suportado",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Configurações",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Ocultar itens da barra lateral",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Ocultar registros de verificação de integridade",
     "hideHealthLogsDesc": "Quando ativado, suprime mensagens [HealthCheck] no console do servidor",
     "themeAccent": "Cor do tema",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Pedidos por minuto",
     "resilienceMinTimeBetweenRequests": "Tempo mínimo entre pedidos",
     "resilienceConcurrentRequests": "Pedidos concorrentes",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Tempo máximo de espera na fila",
     "resilienceBaseCooldown": "Arrefecimento base",
     "resilienceUseUpstreamRetryHints": "Usar dicas de tentativa upstream",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "Esta camada controla apenas o enfileiramento e o ritmo. Ele não armazena resfriamentos ou disjuntores abertos.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Ativa a proteção de fila por padrão para conexões de chave de API ativas.",
     "resilienceMaxQueueWait": "Tempo máximo de espera na fila",
+    "resilienceMaxExecutionWait": "Tempo limite de execução (mecanismo de segurança de rate-limit)",
     "resilienceConnectionCooldownScope": "Conexão individual",
     "resilienceConnectionCooldownTrigger": "Quando uma conexão retorna uma falha transitória de upstream",
     "resilienceConnectionCooldownEffect": "Ignora temporariamente essa conexão e aumenta a espera para falhas repetidas",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "Ponte de vídeo",
     "modalityBridgeVideoDesc": "Amostre fotogramas do vídeo, descreva-os com um modelo de visão e continue com o modelo de texto escolhido.",
     "modalityBridgeVideoRuntimeReady": "Runtime pronto",
+    "modalityBridgeVideoRuntimeChecking": "A verificar o runtime…",
     "modalityBridgeVideoRuntimeUnavailable": "Runtime indisponível",
     "modalityBridgeVideoRuntimeInstall": "Instale o FFmpeg e o ffprobe no PATH do servidor para ativar a extração de vídeo.",
     "modalityBridgeVideoEnabled": "Ativar Ponte de vídeo",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "Motor RTK",
@@ -12077,9 +12113,9 @@
       "acp": {
         "title": "Agentes ACP",
         "phrase": "CLIs que o OmniRoute inicia como backend de execução (fluxo inverso)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Cliente → OmniRoute → iniciar CLI (stdio/ACP) → resposta",
-        "seeOther": "Ver →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "Ver →"
       }
     },
     "comparison": {
@@ -12843,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Permitir múltiplas ligações para cada nó de compatibilidade."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Remover itens de saída internos da fase de comentário dos fluxos de passthrough da Responses API antes de os encaminhar para os clientes. Desative este sinalizador para receber comentários upstream em bruto."
       },
@@ -12908,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Ativar o acesso à rede na sandbox de competências."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13390,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "Resiliência de Ligação",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Estado",
       "provider": "Fornecedor",
@@ -13484,16 +13527,10 @@
         "modelLockouts": "Bloqueios de Modelo",
         "count": "Contagem de Ligações"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Rejeitar pedidos antes do envio quando o modelo de destino não tiver as capacidades necessárias (visão, ferramentas, saída estruturada, janela de contexto). Protege pedidos diretos de um único fornecedor que contornam o filtro de compatibilidade da camada combinada.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Página não encontrada",
@@ -13935,6 +13972,5 @@
     "cta": "Obter uma Chave de API",
     "partnerLinkNote": "Link de parceiro",
     "dismissAriaLabel": "Dispensar"
-  },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+  }
 }

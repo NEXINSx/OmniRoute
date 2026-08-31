@@ -14,7 +14,7 @@ const RETIRED_PROVIDER_IDS = ["raycast", "rc", "hailuo-web"] as const;
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("migration 166 disables GPL-derived connections fail-closed and preserves audit history", async () => {

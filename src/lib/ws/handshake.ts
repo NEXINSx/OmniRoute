@@ -1,5 +1,5 @@
 import { jwtVerify } from "jose";
-import { getSettings } from "@/lib/localDb";
+import { getSettings } from "@/lib/db/settings";
 import { validateApiKey } from "@/lib/db/apiKeys";
 
 export const DEFAULT_WS_PATH = "/v1/ws";

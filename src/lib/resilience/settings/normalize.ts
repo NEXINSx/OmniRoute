@@ -21,6 +21,7 @@ import type {
   QuotaPreflightSettings,
   StreamRecoverySettings,
   ProviderQuotaOverrideSettings,
+  CredentialHealthCheckSettings,
 } from "./types";
 
 export function asRecord(value: unknown): JsonRecord {
@@ -133,6 +134,11 @@ export function normalizeRequestQueueSettings(
     min: 1,
     max: 24 * 60 * 60 * 1000,
   });
+  const executionMaxWaitMs = toInteger(
+    record.executionMaxWaitMs,
+    fallback.executionMaxWaitMs,
+    { min: 1, max: 24 * 60 * 60 * 1000 }
+  );
   const maxQueueDepth = toInteger(record.maxQueueDepth, fallback.maxQueueDepth, {
     min: 0,
     max: 100_000,
@@ -148,6 +154,7 @@ export function normalizeRequestQueueSettings(
     concurrentRequests,
     globalConcurrentRequests,
     maxWaitMs,
+    executionMaxWaitMs,
     maxQueueDepth,
   };
 }
@@ -467,4 +474,17 @@ export function normalizeProviderQuotaOverrides(
     if (normalized) out[provider] = normalized;
   }
   return out;
+}
+
+export function normalizeCredentialHealthCheckSettings(
+  next: unknown,
+  fallback: CredentialHealthCheckSettings
+): CredentialHealthCheckSettings {
+  const record = asRecord(next);
+  return {
+    intervalMinutes: toInteger(record.intervalMinutes, fallback.intervalMinutes, {
+      min: 0,
+      max: 1440,
+    }),
+  };
 }

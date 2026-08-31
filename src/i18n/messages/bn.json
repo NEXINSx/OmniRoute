@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "ব্যবহৃত হয়েছে {count, plural, one {# ব্যাচ} other {# ব্যাচ}}",
     "batchFilePreview": "পূর্বদর্শন",
     "batchFilePreviewTruncated": "প্রথম {shown} লাইন দেখানো হচ্ছে ({total} মোট লাইন)",
-    "batchFileDownloadFull": "পূর্ণ ফাইল ডাউনলোড করুন",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "পূর্ণ ফাইল ডাউনলোড করুন"
   },
   "disabled": "নিষ্ক্রিয়",
   "featureFlagOmnirouteEmergencyFallbackDescription": "বাজেট শেষ হয়ে যাওয়া অনুরোধগুলো জরুরি ফ্রি ফলব্যাক প্রোভাইডার/মডেলে রুট করুন।",
@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "ওয়েবহুক",
     "webhooksSubtitle": "ইভেন্টের বিজ্ঞপ্তি পান",
+    "logExport": "লগ রপ্তানি",
+    "logExportSubtitle": "কল লগ বাইরে পাঠান",
     "combosSubtitle": "ব্যর্থতার জন্য গ্রুপ প্রদানকারী",
     "batchSubtitle": "একাধিক অনুরোধ প্রক্রিয়া",
     "contextCavemanSubtitle": "প্রম্পট কম্প্রেশন",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "IDE এজেন্ট ট্র্যাফিক ইন্টারসেপ্ট করুন",
     "trafficInspector": "ট্র্যাফিক ইন্সপেক্টর",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "CLI কোড",
     "cliCodeSubtitle": "OmniRoute-এর দিকে নির্দেশিত কোড টুল",
     "cliAgents": "CLI এজেন্ট",
@@ -1300,8 +1303,7 @@
       "open": "খুলুন",
       "close": "বন্ধ করুন"
     },
-    "noResults": "কোন ফলাফল নেই",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "কোন ফলাফল নেই"
   },
   "webhooks": {
     "title": "ওয়েবহুক",
@@ -1808,6 +1810,11 @@
     "updateStarted": "Update started...",
     "reloadingPageAutomatically": "স্বয়ংক্রিয়ভাবে পৃষ্ঠা পুনরায় লোড হচ্ছে...",
     "providerTopology": "প্রদানকারী টপোলজি",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "DMG ডাউনলোড করুন (macOS)",
     "downloadDmgDescription": "OmniRoute ডেস্কটপ অ্যাপের একটি নতুন সংস্করণ উপলব্ধ। আপডেট করতে দয়া করে macOS DMG ইনস্টলার ডাউনলোড এবং ইনস্টল করুন (বর্তমান: v{version})।",
     "downloadExe": "EXE ডাউনলোড করুন (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "রিলিজ নোটস",
     "readMore": "আরও পড়ুন",
     "noAuthLabel": "কোন প্রমাণীকরণ নেই",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "প্রোভাইডার কোটা কাটঅফ বাইপাস করুন",
     "bypassProviderQuotaDescription": "রাউটিংয়ের সময় এই কী-কে আপস্ট্রিম প্রোভাইডার/অ্যাকাউন্ট কাটঅফ নীতি উপেক্ষা করার অনুমতি দেয়। API কী USD কোটা এখনও প্রযোজ্য থাকবে।",
     "quotaPill": "কোটা",
-    "quotaModeOnly": "শুধুমাত্র qtSd"
+    "quotaModeOnly": "শুধুমাত্র qtSd",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Audit Log",
@@ -2922,8 +2932,10 @@
       "interpreter": "Open Interpreter স্বায়ত্তশাসিত কোডিং এজেন্ট CLI",
       "omp": "Oh My Pi টার্মিনাল কোডিং এজেন্ট",
       "letta": "পারসিস্টেন্ট মেমরি এবং টুল ব্যবহারের সুবিধা সহ Letta CLI এজেন্ট",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "কাস্টম প্রোভাইডার সাপোর্ট সহ Warp AI টার্মিনাল",
       "agent-deck": "Agent Deck মাল্টি-এজেন্ট অর্কেস্ট্রেটর",
+      "5dive": "5dive — নিজে হোস্ট করা কোডিং এজেন্টের বহর; একটি auth প্রোফাইল সবগুলোকে OmniRoute-এ নির্দেশ করে",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "API Endpoint",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Available Endpoints",
     "cloudProxy": "Cloud Proxy",
     "disableConfirm": "Are you sure you want to disable cloud proxy?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "একটি অভ্যন্তরীণ ইন্টিগ্রেশন তৈরি করুন at",
     "notionIntegrationToken": "নোটশন অভ্যন্তরীণ ইন্টিগ্রেশন টোকেন",
     "notionNotConnected": "সংযুক্ত নয়",
-    "notionTokenConfigured": "টোকেন কনফিগার করা হয়েছে। Notion টুলগুলি MCP এর মাধ্যমে উপলব্ধ।",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "টোকেন কনফিগার করা হয়েছে। Notion টুলগুলি MCP এর মাধ্যমে উপলব্ধ।"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4644,13 @@
     "retry": "Retry",
     "allOperational": "All systems operational",
     "issuesDetected": "System issues detected",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Updated {time}",
     "latency": "Latency",
     "latencyP50": "p50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} সমস্যা",
     "score": "স্কোর",
     "lastRequest": "সর্বশেষ অনুরোধ",
-    "lastError": "সর্বশেষ ত্রুটি",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "সর্বশেষ ত্রুটি"
   },
   "telemetry": {
     "title": "সিস্টেম টেলিমেট্রি",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Multi-Provider",
     "usageTracking": "Usage Tracking",
     "securityDesc": "Set a password to protect your dashboard, or skip for now.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Connect your first AI provider. You can add more later.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "API Key (required)",
     "customUrlOptional": "Custom URL (optional)",
     "testDesc": "Let's verify your provider connection works.",
@@ -5011,9 +5025,7 @@
         "skipped": "আগে থেকেই কনফিগার করা আছে",
         "failed": "ব্যর্থ"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Providers",
@@ -6254,7 +6266,7 @@
       "galadriel": "একটি API কী দিয়ে Galadriel সংযুক্ত করুন।",
       "predibase": "$25 ফ্রি ট্রায়াল ক্রেডিট (30 দিনের মেয়াদ)",
       "chenzk": "chenzk.top-এ লাইভ মডেল ক্যাটালগ সহ OpenAI-সামঞ্জস্যপূর্ণ গেটওয়ে।",
-      "magnific": "Freepik-এর Mystic API দিয়ে ছবি তৈরি করুন।",
+      "magnific": "Magnific-এর Mystic API দিয়ে ছবি তৈরি করুন।",
       "freetheai": "passthrough মডেল সমর্থন সহ বিনামূল্যের OpenAI-সামঞ্জস্যপূর্ণ গেটওয়ে।",
       "g4f-gemini": "Gemini-এর জন্য দূরবর্তী g4f.space গেটওয়ে। বেনামী ব্যবহারে g4f.dev/chat থেকে প্রুফ-অফ-ওয়ার্ক ক্রেডিট অথবা g4f.dev/members.html থেকে সদস্য API কী প্রয়োজন; সীমা পরিবর্তনশীল।",
       "g4f-groq": "Groq-এর জন্য দূরবর্তী g4f.space গেটওয়ে। বেনামী ব্যবহারে g4f.dev/chat থেকে প্রুফ-অফ-ওয়ার্ক ক্রেডিট অথবা g4f.dev/members.html থেকে সদস্য API কী প্রয়োজন; সীমা পরিবর্তনশীল।",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "প্রদানকারীর নিজস্ব ডোমেন থেকে প্রয়োজনীয় শংসাপত্রটি অনুলিপি করুন। কুকির জন্য, শুধুমাত্র কুকি হেডার মান কপি করুন এবং কুকি বাদ দিন:",
     "webSessionGuideStep3Manual": "ম্যানুয়াল পাথ: ব্রাউজারের ডেভেলপার টুলস খুলুন (F12 → নেটওয়ার্ক), পৃষ্ঠা রিফ্রেশ করুন, একটি প্রমাণীকৃত অনুরোধ খুলুন, এবং অনুরোধের হেডার থেকে কুকি হেডার মান কপি করুন — কুকি: প্রিফিক্সটি বাদ দিন।",
     "webSessionGuideStep4": "এটি এখানে পেস্ট করুন এবং সংযোগ পরীক্ষা করুন। যদি এটি কাজ করা বন্ধ করে দেয়, আবার সাইন ইন করুন এবং একটি নতুন মান দিয়ে প্রতিস্থাপন করুন।",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "এটিকে একটি পাসওয়ার্ডের মতো ব্যবহার করুন: এটি মেয়াদ শেষ না হওয়া বা প্রত্যাহার না হওয়া পর্যন্ত এটি আপনার সাইন-ইন করা ওয়েব অ্যাকাউন্ট অ্যাক্সেস করতে পারে৷",
     "webNoAuthGuideTitle": "কোন শংসাপত্র প্রয়োজন",
     "webNoAuthGuideBody": "{provider} এর একটি API কী বা কুকির প্রয়োজন নেই৷ এর বিনামূল্যের ওয়েব এন্ডপয়েন্ট ব্যবহার করতে সংযোগটি সংরক্ষণ করুন।",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "সংরক্ষিত মডেল এন্ডপয়েন্ট সেটিংস",
     "searchByModelAria": "মডেল দ্বারা অনুসন্ধান করুন",
     "selectSupportedEndpoint": "কমপক্ষে একটি সমর্থিত এন্ডপয়েন্ট নির্বাচন করুন",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Settings",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter without disabling any features",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when all of its entries are hidden",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Hide Health Check Logs",
     "hideHealthLogsDesc": "When ON, suppress [HealthCheck] messages in server console",
     "themeAccent": "Theme color",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "সর্বোচ্চ সারি অপেক্ষার সময়",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "এই স্তরটি শুধুমাত্র সারিবদ্ধ এবং পেসিং নিয়ন্ত্রণ করে। এটি কুলডাউন বা খোলা সার্কিট ব্রেকার সংরক্ষণ করে না।",
     "resilienceAutoEnableApiKeyProvidersDesc": "সক্রিয় API কী সংযোগের জন্য ডিফল্টরূপে সারি সুরক্ষা সক্ষম করে৷",
     "resilienceMaxQueueWait": "সর্বোচ্চ সারি অপেক্ষার সময়",
+    "resilienceMaxExecutionWait": "এক্সিকিউশন টাইমআউট (রেট-লিমিট ব্যাকস্টপ)",
     "resilienceConnectionCooldownScope": "স্বতন্ত্র সংযোগ",
     "resilienceConnectionCooldownTrigger": "যখন একটি সংযোগ একটি ক্ষণস্থায়ী আপস্ট্রিম ব্যর্থতা প্রদান করে",
     "resilienceConnectionCooldownEffect": "সাময়িকভাবে সেই সংযোগটি এড়িয়ে যায় এবং বারবার ব্যর্থতার জন্য ব্যাকঅফ বাড়ায়",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "ভিডিও ব্রিজ",
     "modalityBridgeVideoDesc": "ভিডিও ফ্রেমের নমুনা নিন, ভিশন মডেল দিয়ে সেগুলো বর্ণনা করুন এবং নির্বাচিত টেক্সট মডেল দিয়ে চালিয়ে যান।",
     "modalityBridgeVideoRuntimeReady": "রানটাইম প্রস্তুত",
+    "modalityBridgeVideoRuntimeChecking": "রানটাইম পরীক্ষা করা হচ্ছে…",
     "modalityBridgeVideoRuntimeUnavailable": "রানটাইম উপলভ্য নয়",
     "modalityBridgeVideoRuntimeInstall": "ভিডিও এক্সট্র্যাকশন চালু করতে সার্ভারের PATH-এ FFmpeg ও ffprobe ইনস্টল করুন।",
     "modalityBridgeVideoEnabled": "ভিডিও ব্রিজ চালু করুন",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12077,9 +12113,9 @@
       "acp": {
         "title": "ACP এজেন্ট",
         "phrase": "CLI যা OmniRoute এক্সিকিউশন ব্যাকএন্ড হিসেবে স্পন করে (রিভার্স ফ্লো)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "ক্লায়েন্ট → OmniRoute → spawn CLI (stdio/ACP) → রেসপন্স",
-        "seeOther": "দেখুন →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "দেখুন →"
       }
     },
     "comparison": {
@@ -12843,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "প্রতিটি সামঞ্জস্যপূর্ণ নোডের জন্য একাধিক সংযোগের অনুমতি দিন।"
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "ক্লায়েন্টদের কাছে ফরোয়ার্ড করার আগে Responses API পাসথ্রু স্ট্রিম থেকে অভ্যন্তরীণ কমেন্টারি-ফেজ আউটপুট আইটেমগুলি সরান। র আপস্ট্রিম কমেন্টারি পেতে এই ফ্ল্যাগটি নিষ্ক্রিয় করুন।"
       },
@@ -12908,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "স্কিল স্যান্ডবক্সে নেটওয়ার্ক অ্যাক্সেস সক্ষম করুন।"
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13390,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "সংযোগ স্থিতিস্থাপকতা",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "স্ট্যাটাস",
       "provider": "প্রদানকারী",
@@ -13484,16 +13527,10 @@
         "modelLockouts": "মডেল লকআউট",
         "count": "সংযোগ সংখ্যা"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "লক্ষ্য মডেলের প্রয়োজনীয় সক্ষমতা (দৃষ্টি, সরঞ্জাম, কাঠামোবদ্ধ আউটপুট, প্রসঙ্গ উইন্ডো) অনুপস্থিত থাকলে প্রেরণের আগে অনুরোধগুলি প্রত্যাখ্যান করুন। এটি কম্বো-লেয়ার সামঞ্জস্য ফিল্টারকে বাইপাস করা সরাসরি একক-প্রদানকারী অনুরোধগুলি রক্ষা করে।",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "পৃষ্ঠা পাওয়া যায়নি",
@@ -13929,7 +13966,6 @@
     "structuredOutputMismatch": "প্রোভাইডার স্ট্রাকচারড আউটপুট সমর্থন করে না",
     "contextWindowMismatch": "অনুরোধটি প্রদানকারীর প্রসঙ্গ উইন্ডো অতিক্রম করেছে"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",

@@ -4,7 +4,7 @@ vi.mock("../../../../shared/utils/apiAuth", () => ({
   isAuthenticated: vi.fn(),
 }));
 
-vi.mock("../../../../lib/localDb", () => ({
+vi.mock("@/lib/db/settings", () => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
 }));
@@ -19,7 +19,7 @@ vi.mock("../../../../lib/memory/settings", async () => {
 
 import { GET, PUT } from "../memory/route";
 import { isAuthenticated } from "../../../../shared/utils/apiAuth";
-import { getSettings, updateSettings } from "../../../../lib/localDb";
+import { getSettings, updateSettings } from "@/lib/db/settings";
 import { invalidateMemorySettingsCache } from "../../../../lib/memory/settings";
 
 function createRequest(method: "GET" | "PUT", body?: unknown) {

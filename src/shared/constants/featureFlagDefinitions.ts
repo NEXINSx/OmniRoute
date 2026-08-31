@@ -497,6 +497,30 @@ export const FEATURE_FLAG_DEFINITIONS: FeatureFlagDefinition[] = [
     warningLevel: "info",
   },
   {
+    key: "NO_THINKING_ALIAS_ENABLED",
+    label: "No-Thinking Model Aliases",
+    description:
+      "Master switch for the no-think/<provider>/<model> gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
+    descriptionI18nKey: "featureFlagNoThinkingAliasEnabledDescription",
+    category: "runtime",
+    defaultValue: "true",
+    type: "boolean",
+    requiresRestart: false,
+    warningLevel: "info",
+  },
+  {
+    key: "OMNIROUTE_DISABLE_THINKING_LEVEL_VARIANTS",
+    label: "Disable Thinking Level Variants",
+    description:
+      "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog.",
+    descriptionI18nKey: "featureFlagOmnirouteDisableThinkingLevelVariantsDescription",
+    category: "runtime",
+    defaultValue: "false",
+    type: "boolean",
+    requiresRestart: false,
+    warningLevel: "info",
+  },
+  {
     key: "OMNIROUTE_CHAT_VIRTUAL_LANES",
     label: "Adaptive Virtual Admission Lanes",
     description:

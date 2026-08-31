@@ -870,6 +870,45 @@ OPENAI_API_KEY: "{{apiKey}}"`,
       { step: 4, title: "Select Model", type: "modelSelector" },
     ],
   },
+
+  /** ★ 5dive agent fleets (diegosouzapw/OmniRoute#11578) — 2026-08-28 */
+  "5dive": {
+    id: "5dive",
+    name: "5dive",
+    icon: "hub",
+    color: "#7C3AED",
+    description:
+      "5dive — self-hosted fleet of long-running coding agents; one auth profile points every claude seat at OmniRoute",
+    docsUrl: "https://5dive.ai",
+    configType: "custom",
+    category: "agent",
+    vendor: "OSS (5dive-ai)",
+    acpSpawnable: false,
+    baseUrlSupport: "full",
+    defaultCommand: "5dive",
+    settingsFile: "/var/lib/5dive/auth-profiles/<profile>/combined.env",
+    guideSteps: [
+      {
+        step: 1,
+        title: "Run this on the fleet host",
+        desc: "5dive's verbs act on local systemd units; there is no remote mode",
+      },
+      { step: 2, title: "API Key", type: "apiKeySelector" },
+      { step: 3, title: "Base URL", value: "{{baseUrl}}", copyable: true },
+      { step: 4, title: "Select Model", type: "modelSelector" },
+      {
+        step: 5,
+        title: "Write the profile",
+        desc: "sudo omniroute configure 5dive --model <id> --auth-profile omniroute",
+      },
+    ],
+    notes: [
+      {
+        type: "warning",
+        text: "Writing a 5dive auth profile is root-only, and each agent's own runtime model pin outranks the profile's model default — pass --agent <name> to pin the seats too.",
+      },
+    ],
+  },
 };
 
 // ─── Registry helpers ────────────────────────────────────────────────────────

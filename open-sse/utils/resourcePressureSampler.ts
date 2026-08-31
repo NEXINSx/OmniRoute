@@ -180,6 +180,22 @@ function parsePsiNumber(line: string, name: string): number | null {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function parseMemoryStatFileBytes(text: string | null): number | null {
+  if (!text) return null;
+  for (const line of text.split("\n")) {
+    const [key, rawValue] = line.trim().split(/\s+/, 2);
+    if (key !== "file" || rawValue == null) continue;
+    // sanitizeMemoryBytes rejects every falsy magnitude INCLUDING zero, but a
+    // zero file cache is a valid reading (workingSetBytes falls back to the
+    // raw ratio for it). The zero short-circuit below is coupled to that
+    // contract on purpose; if sanitizeMemoryBytes ever accepts zero, this
+    // branch becomes dead but harmless.
+    if (rawValue === "0") return 0;
+    return sanitizeMemoryBytes(rawValue);
+  }
+  return null;
+}
+
 function parsePsi(text: string | null): ResourceSignals["psi"] {
   if (!text) return null;
   const result: NonNullable<ResourceSignals["psi"]> = {
@@ -226,14 +242,25 @@ export async function sampleResourceSignals(
   }
 
   const cgroupDirectory = await resolveCgroupDirectory(readText);
-  const cgroupContents = cgroupDirectory
+  const cgroupReads = cgroupDirectory
     ? await Promise.all([
         readText(path.join(cgroupDirectory, "memory.current")),
         readText(path.join(cgroupDirectory, "memory.max")),
         readText(path.join(cgroupDirectory, "memory.high")),
         readText(path.join(cgroupDirectory, "memory.events")),
+        readText(path.join(cgroupDirectory, "memory.stat")),
       ])
-    : [null, null, null, null];
+    : null;
+  // Named bindings instead of positional indices: the read order above is
+  // easy to shuffle on edit, and a silent index shift would corrupt the
+  // current/max/high/stat mapping.
+  const cgroupFiles = {
+    current: cgroupReads?.[0] ?? null,
+    max: cgroupReads?.[1] ?? null,
+    high: cgroupReads?.[2] ?? null,
+    events: cgroupReads?.[3] ?? null,
+    stat: cgroupReads?.[4] ?? null,
+  };
   const psi = await readText("/proc/pressure/memory").catch(() => null);
 
   return {
@@ -247,10 +274,11 @@ export async function sampleResourceSignals(
       constrainedBytes: safeNumber(deps.constrainedMemory ?? (() => process.constrainedMemory?.())),
     },
     cgroup: {
-      currentBytes: sanitizeMemoryBytes(cgroupContents[0]),
-      maxBytes: sanitizeMemoryBytes(cgroupContents[1]),
-      highBytes: sanitizeMemoryBytes(cgroupContents[2]),
-      events: parseMemoryEvents(cgroupContents[3]),
+      currentBytes: sanitizeMemoryBytes(cgroupFiles.current),
+      maxBytes: sanitizeMemoryBytes(cgroupFiles.max),
+      highBytes: sanitizeMemoryBytes(cgroupFiles.high),
+      fileBytes: parseMemoryStatFileBytes(cgroupFiles.stat),
+      events: parseMemoryEvents(cgroupFiles.events),
     },
     psi: parsePsi(psi),
   };

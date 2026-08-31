@@ -56,7 +56,10 @@ process.env.DISABLE_SQLITE_AUTO_BACKUP = "true";
 process.env.INITIAL_PASSWORD = "provider-journey-bootstrap";
 
 const core = await import("../../src/lib/db/core.ts");
-const localDb = await import("../../src/lib/localDb.ts");
+const { updateSettings } = await import("@/lib/db/settings");
+const { updateProviderConnection } = await import("@/lib/db/providers");
+const { getCachedProviderNodes } = await import("@/lib/db/readCache");
+const localDb = { updateSettings, updateProviderConnection, getCachedProviderNodes };
 const modelsDb = await import("../../src/lib/db/models.ts");
 const providerNodesRoute = await import("../../src/app/api/provider-nodes/route.ts");
 const providersRoute = await import("../../src/app/api/providers/route.ts");
@@ -118,7 +121,7 @@ async function fetchCatalog(
 
 test.before(async () => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   // requireLogin + requireAuthForModels ON so the API-key surface is gated.
   await localDb.updateSettings({ requireLogin: true, requireAuthForModels: true, password: "" });
@@ -127,7 +130,7 @@ test.before(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test.describe("provider journey — in-process contract (#8330)", () => {

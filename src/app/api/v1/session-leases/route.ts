@@ -5,9 +5,11 @@ import { isCommonChatGptWebRetirementError } from "@/shared/constants/chatgptWeb
 import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
 import { CORS_HEADERS, handleCorsOptions } from "@/shared/utils/cors";
 import {
+  getExclusiveConnectionLeaseStatus,
   releaseExclusiveConnectionLease,
   renewExclusiveConnectionLease,
 } from "@/lib/db/exclusiveConnectionLeases";
+import { getProviderDisplayName } from "@/lib/display/names";
 import {
   extractApiKey,
   getProviderCredentialsWithQuotaPreflight,
@@ -29,6 +31,7 @@ const action = <T extends string>(name: T, shape: z.ZodRawShape) =>
 const generation = z.number().int().positive().safe();
 const actionSchema = z.discriminatedUnion("action", [
   action("acquire", { model: z.string().trim().min(1).max(512) }),
+  action("status", { generation }),
   action("renew", { generation }),
   z.object({
     action: z.literal("release"),
@@ -95,6 +98,18 @@ export async function POST(request: Request): Promise<Response> {
         generation: parsed.data.generation,
         apiKeyId: policy.apiKeyInfo.id,
       };
+      if (parsed.data.action === "status") {
+        const status = getExclusiveConnectionLeaseStatus(input);
+        return status
+          ? json(200, {
+              ...lifecycle(status.lease),
+              connection: {
+                displayName: status.connectionName,
+                provider: getProviderDisplayName(status.provider),
+              },
+            })
+          : error(409, "LEASE_FENCE_STALE", "The lease generation is stale");
+      }
       const result =
         parsed.data.action === "renew"
           ? renewExclusiveConnectionLease(input)

@@ -213,6 +213,25 @@ export function normalizeModelName(rawName: string): string {
 // ─── Core: Fetch ─────────────────────────────────────────
 
 /**
+ * How many consecutive per-category fetch failures to let through to
+ * `console.warn` before going quiet again. Timeouts against the Arena API
+ * repeat every sync cycle (see `startPeriodicSync()`), so logging every
+ * single one turns into log spam within a few hours (#11500). Mirrors the
+ * once-per-label dedup pattern used by `warnEmptyAutoPoolOnce()`
+ * (`open-sse/services/autoCombo/virtualFactory.ts`), except here the streak
+ * resets on the next successful fetch so a genuinely new outage warns again.
+ */
+const ARENA_ELO_FETCH_WARN_STREAK_INTERVAL = 10;
+
+/** Consecutive fetch-failure count per leaderboard category, since the last success. */
+const categoryFetchFailureStreak = new Map<string, number>();
+
+/** Test-only: reset the per-category fetch-failure streak dedup state. */
+export function resetArenaEloFetchFailureStreaksForTests(): void {
+  categoryFetchFailureStreak.clear();
+}
+
+/**
  * Fetch leaderboards from the Arena AI API for all configured categories.
  *
  * Fetches "text" and "code" leaderboards concurrently and returns
@@ -244,9 +263,18 @@ export async function fetchArenaLeaderboards(): Promise<ArenaLeaderboardMap> {
           `Arena API returned invalid JSON for "${category}" (${text.slice(0, 100)}...)`
         );
       }
+      // Recovered: let the next failure streak warn from scratch again.
+      categoryFetchFailureStreak.delete(category);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[ARENA_ELO_SYNC] Failed to fetch "${category}" leaderboard: ${message}`);
+      const streak = (categoryFetchFailureStreak.get(category) ?? 0) + 1;
+      categoryFetchFailureStreak.set(category, streak);
+      if (streak === 1 || streak % ARENA_ELO_FETCH_WARN_STREAK_INTERVAL === 0) {
+        console.warn(
+          `[ARENA_ELO_SYNC] Failed to fetch "${category}" leaderboard: ${message}` +
+            (streak > 1 ? ` (${streak} consecutive failures; further warnings rate-limited)` : "")
+        );
+      }
       errors.push(message);
     }
   });

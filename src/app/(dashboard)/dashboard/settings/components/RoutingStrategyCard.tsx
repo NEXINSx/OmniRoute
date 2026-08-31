@@ -124,7 +124,7 @@ function AccountRoundRobinSection({ t, busy, settings, setSettings, run }: Secti
           <Input
             type="number"
             min={1}
-            max={10}
+            max={1000}
             disabled={busy}
             className="w-16 sm:w-20 text-center shrink-0"
             value={settings.stickyRoundRobinLimit ?? 3}
@@ -132,7 +132,7 @@ function AccountRoundRobinSection({ t, busy, settings, setSettings, run }: Secti
             onBlur={() =>
               run(async () => {
                 const limit = Math.min(
-                  10,
+                  1000,
                   Math.max(1, parseInt(String(settings.stickyRoundRobinLimit), 10) || 3)
                 );
                 const updated = await patchSettings({ stickyRoundRobinLimit: limit });
@@ -182,7 +182,7 @@ function ComboRoundRobinSection({ t, busy, settings, setSettings, run }: Section
           <Input
             type="number"
             min={1}
-            max={100}
+            max={1000}
             disabled={busy}
             className="w-20 text-center"
             value={settings.comboStickyRoundRobinLimit ?? 1}
@@ -192,7 +192,7 @@ function ComboRoundRobinSection({ t, busy, settings, setSettings, run }: Section
             onBlur={() =>
               run(async () => {
                 const limit = Math.min(
-                  100,
+                  1000,
                   Math.max(1, parseInt(String(settings.comboStickyRoundRobinLimit), 10) || 1)
                 );
                 const updated = await patchSettings({ comboStickyRoundRobinLimit: limit });

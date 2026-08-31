@@ -17,7 +17,8 @@
  */
 
 import { getUsageForProvider } from "@omniroute/open-sse/services/usage.ts";
-import { getCachedProviderConnectionById, resolveProxyForConnection } from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { resolveProxyForConnection } from "@/lib/db/settings";
 import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
 import { safePercentage } from "@/shared/utils/formatting";
 import {

@@ -28,7 +28,7 @@ function resetRegistryState() {
 async function resetStorage() {
   resetRegistryState();
   coreDb.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -60,7 +60,7 @@ test.beforeEach(async () => {
 test.after(() => {
   resetRegistryState();
   coreDb.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("injectSkills renders enabled tools in provider-specific shapes", async () => {
@@ -101,6 +101,45 @@ test("injectSkills renders enabled tools in provider-specific shapes", async () 
     },
   ]);
   assert.deepEqual(fallbackTools, [openaiTools[0]]);
+});
+
+// Regression for #11856: builtin skills may declare input schemas in
+// shorthand ("content": "string"). Strict schema validators (Zhipu GLM via
+// opencode-go, upstream error [1210] "Invalid API parameter") reject the
+// shorthand as malformed JSON Schema, so normalization must expand string
+// values into { type: value } in every provider shape.
+test("injectSkills expands shorthand property types into valid JSON Schemas", async () => {
+  await skillRegistry.register({
+    name: "generation",
+    version: "1.0.0",
+    description: "generate content",
+    schema: { input: { content: "string", maxTokens: "number" }, output: {} },
+    handler: "generation-handler",
+    enabled: true,
+    apiKeyId: "key-a",
+  });
+
+  type ToolShape = {
+    function?: { parameters: { properties: Record<string, unknown> } };
+    input_schema?: { properties: Record<string, unknown> };
+    parameters?: { properties: Record<string, unknown> };
+  };
+  for (const provider of ["openai", "anthropic", "google", "other"] as const) {
+    const tools = injectSkills({ provider, apiKeyId: "key-a" });
+    assert.equal(tools.length, 1);
+    const tool = tools[0] as ToolShape;
+    const parameters = tool.function?.parameters ?? tool.input_schema ?? tool.parameters;
+    const props = parameters.properties as Record<string, unknown>;
+    assert.deepEqual(props.content, { type: "string" });
+    assert.deepEqual(props.maxTokens, { type: "number" });
+    for (const [key, value] of Object.entries(props)) {
+      assert.equal(
+        typeof value,
+        "object",
+        `${provider}: property ${key} must be a schema object, got ${JSON.stringify(value)}`
+      );
+    }
+  }
 });
 
 test("injectSkills includes global skills without leaking another API key's skills", async () => {

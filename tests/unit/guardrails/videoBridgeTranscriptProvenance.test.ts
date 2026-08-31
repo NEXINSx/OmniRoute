@@ -18,7 +18,14 @@ async function jpegFrame(color: string, timestampSeconds: number): Promise<Video
   return { dataUri: `data:image/jpeg;base64,${bytes.toString("base64")}`, timestampSeconds };
 }
 
-test("accepts only provenance-bearing transcript cues and deduplicates exact repeats", () => {
+// #11652: the untrusted (default, no `trustedSource` option) path is the
+// ONLY entry point request-body JSON can reach. A caller cannot verify their
+// own claim of "audio-bridge"/"embedded" provenance, so both self-asserted
+// values are reclassified to "client" — only a server-owned adapter passing
+// `trustedSource` explicitly (a seam request JSON cannot reach) can produce
+// them. This intentionally changes the pre-#11652 behavior, which accepted
+// a caller-declared "audio-bridge" source verbatim.
+test("accepts only provenance-bearing transcript cues, reclassifies forged provenance, and deduplicates exact repeats", () => {
   const cues = normalizeVideoTranscript(
     {
       cues: [
@@ -32,7 +39,7 @@ test("accepts only provenance-bearing transcript cues and deduplicates exact rep
 
   assert.deepEqual(cues, [
     { text: "hello", startSeconds: 1, endSeconds: 3, source: "client", confidence: 0.8 },
-    { text: "world", startSeconds: 3, endSeconds: 5, source: "audio-bridge", confidence: 1 },
+    { text: "world", startSeconds: 3, endSeconds: 5, source: "client", confidence: 1 },
   ]);
 });
 
@@ -62,7 +69,12 @@ test("rejects untrusted sources, malformed cues, and out-of-range timestamps", (
   );
 });
 
-test("keeps transcript provenance attached to the described video output", async () => {
+// #11652: `part.transcript` is the generic, fully caller-controlled field —
+// a cue declaring source: "audio-bridge" there is forged provenance (that
+// label is reserved for the dedicated audioTranscript fusion field) and is
+// reclassified to "client". Pre-#11652 this asserted the forged label was
+// preserved verbatim; that was the exact bug this ticket closes.
+test("keeps transcript metadata attached and reclassifies a forged source on the described video output", async () => {
   const frames: VideoCaptionFrame[] = [
     { dataUri: "data:image/jpeg;base64,AA==", timestampSeconds: 2 },
     { dataUri: "data:image/jpeg;base64,AA==", timestampSeconds: 8 },
@@ -86,7 +98,8 @@ test("keeps transcript provenance attached to the described video output", async
   );
 
   assert.equal(described.transcriptCues?.length, 1);
-  assert.match(described.description, /transcript\[source=audio-bridge;confidence=0\.90/);
+  assert.equal(described.transcriptCues?.[0]?.source, "client");
+  assert.match(described.description, /transcript\[source=client;confidence=0\.90/);
   assert.match(described.description, /spoken words/);
 });
 
@@ -247,11 +260,16 @@ test("deduplicates an exact cue shared by provided and fused transcript tracks",
   assert.equal(described.description.split("shared audio cue").length - 1, 1);
 });
 
-test("preserves client and embedded provenance from the fused transcript track", async () => {
-  const sharedCues = [
-    { confidence: 0.8, end: 2, source: "client" as const, start: 1, text: "client cue" },
-    { confidence: 0.9, end: 4, source: "embedded" as const, start: 3, text: "embedded cue" },
-  ];
+// #11652: pre-#11652 this test proved a caller-declared "embedded" source
+// survived verbatim from `part.transcript` — exactly the forgery this ticket
+// closes. Rewritten to prove the new contract instead: the generic
+// `transcript` field always reclassifies a declared "embedded"/"audio-bridge"
+// source to "client" (no way to verify the claim), the dedicated
+// `audioTranscript` fusion field always forces "audio-bridge" regardless of
+// what the caller declared there, and cues that end up overlapping in time
+// with identical text across the two channels are reconciled into one cue
+// that keeps every contributing source instead of silently dropping one.
+test("labels transcript cues by channel and reconciles overlapping cross-channel duplicates with contributing-source metadata", async () => {
   const described = await describeVideoPart(
     {
       container: "messages",
@@ -259,8 +277,15 @@ test("preserves client and embedded provenance from the fused transcript track",
       partIndex: 0,
       ref: "data:video/mp4;base64,AA==",
       shape: "data_uri_string",
-      transcript: { cues: sharedCues },
-      audioTranscript: { cues: sharedCues },
+      transcript: {
+        cues: [
+          { confidence: 0.8, end: 2, source: "client" as const, start: 1, text: "client-only cue" },
+          { confidence: 0.7, end: 4, source: "embedded" as const, start: 3, text: "shared cue" },
+        ],
+      },
+      audioTranscript: {
+        cues: [{ confidence: 0.9, end: 4, source: "client" as const, start: 3, text: "shared cue" }],
+      },
     },
     { frameCount: 1, timeoutMs: 1000 },
     async () => "visual cue",
@@ -272,12 +297,16 @@ test("preserves client and embedded provenance from the fused transcript track",
     }
   );
 
-  assert.deepEqual(
-    described.transcriptCues?.map((cue) => cue.source),
-    ["client", "embedded"]
-  );
-  assert.equal(described.description.split("client cue").length - 1, 1);
-  assert.equal(described.description.split("embedded cue").length - 1, 1);
+  const cues = described.transcriptCues ?? [];
+  const clientOnly = cues.find((cue) => cue.text === "client-only cue");
+  const shared = cues.find((cue) => cue.text === "shared cue");
+
+  assert.equal(cues.length, 2);
+  assert.equal(clientOnly?.source, "client");
+  assert.equal(clientOnly?.contributingSources, undefined);
+  assert.equal(shared?.source, "audio-bridge");
+  assert.deepEqual(shared?.contributingSources, ["client", "audio-bridge"]);
+  assert.equal(described.description.split("shared cue").length - 1, 1);
 });
 
 test("keeps each successful caption attached to its source-frame timestamp", async (t) => {

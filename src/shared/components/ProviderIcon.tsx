@@ -438,10 +438,8 @@ const ProviderIcon = memo(function ProviderIcon({
           style={{
             objectFit: "contain",
             flex: "none",
-            width: "auto",
-            height: "auto",
-            maxWidth: size,
-            maxHeight: size,
+            width: size,
+            height: size,
           }}
           onError={() => setFailedAssets((current) => ({ ...current, [themedKey]: true }))}
         />
@@ -454,10 +452,8 @@ const ProviderIcon = memo(function ProviderIcon({
   // intrinsic aspect ratio (some wordmarks are much wider than tall), and next/image's
   // dev-mode check warns whenever the layout size differs from the square
   // width/height attributes — a false positive for non-square logos rendered
-  // at fixed icon sizes. We keep `width/height` attributes for layout reserve
-  // but let the intrinsic ratio win on both axes (`width/height: "auto"`) so
-  // wide logos render at their true aspect ratio instead of
-  // being letterboxed into a 1:1 box.
+  // at fixed icon sizes. Explicit CSS dimensions keep the flex item from
+  // collapsing to 0×0; object-fit preserves each logo's intrinsic ratio.
   if (hasSvg && !svgFailed) {
     return (
       <span
@@ -473,10 +469,8 @@ const ProviderIcon = memo(function ProviderIcon({
           style={{
             objectFit: "contain",
             flex: "none",
-            width: "auto",
-            height: "auto",
-            maxWidth: size,
-            maxHeight: size,
+            width: size,
+            height: size,
           }}
           onError={() => setFailedAssets((current) => ({ ...current, [svgKey]: true }))}
         />

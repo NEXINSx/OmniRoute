@@ -16,6 +16,8 @@ const CATALOG_RELEVANT_FEATURE_FLAGS = new Set([
   "MODEL_CATALOG_INCLUDE_NAMES",
   "MODELS_CATALOG_PREFIX_MODE",
   "EXPOSE_CC_DISCOVERY_ALIASES",
+  "NO_THINKING_ALIAS_ENABLED",
+  "OMNIROUTE_DISABLE_THINKING_LEVEL_VARIANTS",
 ]);
 
 /**
@@ -60,14 +62,14 @@ export function setFeatureFlagOverride(key: string, value: string): void {
     !definition.enumValues.includes(value)
   ) {
     throw new Error(
-      `Invalid value "${value}" for enum flag ${key}. Allowed: ${definition.enumValues.join(", ")}`,
+      `Invalid value "${value}" for enum flag ${key}. Allowed: ${definition.enumValues.join(", ")}`
     );
   }
   const db = getDbInstance();
   db.prepare("INSERT OR REPLACE INTO key_value (namespace, key, value) VALUES (?, ?, ?)").run(
     NAMESPACE,
     key,
-    value,
+    value
   );
   if (CATALOG_RELEVANT_FEATURE_FLAGS.has(key)) {
     finishModelCatalogWriteWithoutBackup();
@@ -91,10 +93,14 @@ export function removeFeatureFlagOverride(key: string): void {
  */
 export function clearAllFeatureFlagOverrides(): void {
   const db = getDbInstance();
+  // Placeholders are derived from the set size — a hardcoded `IN (?, ?, ?)` breaks
+  // (parameter-count mismatch) the moment a flag is added to the set above.
+  const catalogFlags = Array.from(CATALOG_RELEVANT_FEATURE_FLAGS);
+  const placeholders = catalogFlags.map(() => "?").join(", ");
   const hadRelevantOverride = Boolean(
     db
-      .prepare("SELECT 1 FROM key_value WHERE namespace = ? AND key IN (?, ?, ?) LIMIT 1")
-      .get(NAMESPACE, ...Array.from(CATALOG_RELEVANT_FEATURE_FLAGS)),
+      .prepare(`SELECT 1 FROM key_value WHERE namespace = ? AND key IN (${placeholders}) LIMIT 1`)
+      .get(NAMESPACE, ...catalogFlags)
   );
   db.prepare("DELETE FROM key_value WHERE namespace = ?").run(NAMESPACE);
   if (hadRelevantOverride) {

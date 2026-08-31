@@ -16,6 +16,18 @@ import {
   type VideoSamplingMetadata,
   type VideoSamplingPolicy,
 } from "./videoBridgeRuntime";
+import {
+  buildNormalizedVideoTranscript,
+  reconcileVideoTranscriptCues,
+  type NormalizeVideoTranscriptOptions,
+  type VideoTranscriptCue,
+} from "./videoBridgeTranscriptContract";
+
+export type {
+  NormalizeVideoTranscriptOptions,
+  VideoTranscriptCue,
+  VideoTranscriptSource,
+} from "./videoBridgeTranscriptContract";
 
 export const VIDEO_BRIDGE_MAX_BYTES = 50 * 1024 * 1024;
 // Inline base64 shares the public 50 MiB JSON admission budget with model,
@@ -91,92 +103,18 @@ export interface VideoPart {
   contactSheet?: boolean;
 }
 
-export type VideoTranscriptSource = "audio-bridge" | "client" | "embedded";
-
-export interface VideoTranscriptCue {
-  confidence: number;
-  endSeconds: number;
-  source: VideoTranscriptSource;
-  startSeconds: number;
-  text: string;
-}
-
-const VIDEO_TRANSCRIPT_SOURCES: ReadonlySet<VideoTranscriptSource> = new Set([
-  "audio-bridge",
-  "client",
-  "embedded",
-]);
-
-/** Validate optional transcript metadata without ever invoking a transcription provider. */
+/**
+ * Validate optional transcript metadata without ever invoking a transcription
+ * provider. Delegates the full contract (budgets, the provenance trust
+ * boundary, reconciliation, and focus scoping) to videoBridgeTranscriptContract.ts
+ * — see that module for the security rationale.
+ */
 export function normalizeVideoTranscript(
   value: unknown,
-  durationSeconds: number
+  durationSeconds: number,
+  options?: NormalizeVideoTranscriptOptions
 ): VideoTranscriptCue[] {
-  if (value === undefined || value === null) return [];
-  const rawCues = Array.isArray(value)
-    ? value
-    : value && typeof value === "object" && Array.isArray((value as Record<string, unknown>).cues)
-      ? (value as Record<string, unknown>).cues
-      : null;
-  if (!rawCues) throw new Error("Invalid video transcript: expected a cues array");
-  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
-    throw new Error("Invalid video transcript duration");
-  }
-  const seen = new Set<string>();
-  const normalized: VideoTranscriptCue[] = [];
-  for (const cue of rawCues) {
-    if (!cue || typeof cue !== "object") throw new Error("Invalid video transcript cue");
-    const record = cue as Record<string, unknown>;
-    const text = typeof record.text === "string" ? record.text.trim() : "";
-    const source = record.source;
-    const startSeconds =
-      typeof record.startSeconds === "number"
-        ? record.startSeconds
-        : typeof record.start === "number"
-          ? record.start
-          : Number.NaN;
-    const endSeconds =
-      typeof record.endSeconds === "number"
-        ? record.endSeconds
-        : typeof record.end === "number"
-          ? record.end
-          : Number.NaN;
-    const confidence = record.confidence === undefined ? 1 : record.confidence;
-    if (
-      !text ||
-      typeof source !== "string" ||
-      !VIDEO_TRANSCRIPT_SOURCES.has(source as VideoTranscriptSource)
-    ) {
-      throw new Error("Invalid video transcript source or provenance");
-    }
-    if (
-      !Number.isFinite(startSeconds) ||
-      !Number.isFinite(endSeconds) ||
-      !Number.isFinite(confidence) ||
-      confidence < 0 ||
-      confidence > 1 ||
-      startSeconds < 0 ||
-      endSeconds > durationSeconds ||
-      endSeconds <= startSeconds
-    ) {
-      throw new Error("Invalid video transcript timestamp or confidence range");
-    }
-    const normalizedCue = {
-      confidence,
-      endSeconds,
-      source: source as VideoTranscriptSource,
-      startSeconds,
-      text,
-    } satisfies VideoTranscriptCue;
-    const key = JSON.stringify(normalizedCue);
-    if (!seen.has(key)) {
-      seen.add(key);
-      normalized.push(normalizedCue);
-    }
-  }
-  return normalized.sort(
-    (left, right) => left.startSeconds - right.startSeconds || left.endSeconds - right.endSeconds
-  );
+  return buildNormalizedVideoTranscript(value, durationSeconds, options);
 }
 
 const REPLACEABLE_VIDEO_SHAPES: ReadonlySet<MediaPart["shape"]> = new Set([
@@ -551,31 +489,6 @@ function formatTranscriptCue(cue: VideoTranscriptCue): string {
   return `transcript[source=${cue.source};confidence=${cue.confidence.toFixed(2)};interval=${formatVideoTimestamp(cue.startSeconds)}-${formatVideoTimestamp(cue.endSeconds)}] ${cue.text}`;
 }
 
-function deduplicateVideoTranscriptCues(cues: readonly VideoTranscriptCue[]): VideoTranscriptCue[] {
-  const seen = new Set<string>();
-  return cues
-    .filter((cue) => {
-      const key = JSON.stringify([
-        cue.source,
-        cue.confidence,
-        cue.startSeconds,
-        cue.endSeconds,
-        cue.text,
-      ]);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .sort(
-      (left, right) =>
-        left.startSeconds - right.startSeconds ||
-        left.endSeconds - right.endSeconds ||
-        left.source.localeCompare(right.source) ||
-        left.text.localeCompare(right.text) ||
-        left.confidence - right.confidence
-    );
-}
-
 export async function describeVideoPart(
   part: VideoPart,
   options: DescribeVideoOptions,
@@ -644,7 +557,8 @@ export async function describeVideoPart(
       : null;
     const separatelyRenderedTranscriptCues = normalizeVideoTranscript(
       part.transcript,
-      extracted.durationSeconds
+      extracted.durationSeconds,
+      { focusWindow }
     );
     let transcriptCues = [...separatelyRenderedTranscriptCues];
     let appendedTranscriptCues = separatelyRenderedTranscriptCues;
@@ -698,7 +612,14 @@ export async function describeVideoPart(
         audio: async () => {
           normalizedFusionTranscriptCues = normalizeVideoTranscript(
             part.audioTranscript,
-            extracted.durationSeconds
+            extracted.durationSeconds,
+            // Structural trust seam: whatever the caller supplies in the
+            // dedicated audioTranscript field is always labeled "audio-bridge"
+            // by this fusion channel, regardless of any per-cue `source` the
+            // caller declared. This is not an authenticity claim about the
+            // caller's own transcription — only that it arrived through the
+            // audio-bridge fusion field rather than the generic transcript.
+            { trustedSource: "audio-bridge", focusWindow }
           );
           return {
             observations: normalizedFusionTranscriptCues.map((cue) => ({
@@ -726,7 +647,7 @@ export async function describeVideoPart(
         ...(fused.failures ? { failures: fused.failures } : {}),
       };
       const fusedAudioCues = fused.audioAvailable ? normalizedFusionTranscriptCues : [];
-      transcriptCues = deduplicateVideoTranscriptCues([...transcriptCues, ...fusedAudioCues]);
+      transcriptCues = reconcileVideoTranscriptCues([...transcriptCues, ...fusedAudioCues]);
       const fusedVideoTimeline = fused.observations.flatMap((observation) =>
         observation.source === "video"
           ? [

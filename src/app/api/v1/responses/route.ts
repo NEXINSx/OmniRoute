@@ -32,7 +32,9 @@ import { OPENAI_RESPONSES_IN_PROGRESS_FRAME } from "@omniroute/open-sse/utils/ss
 // The translators are always initialized via the open-sse side (chatCore),
 // so /v1/responses just delegates to handleChat which handles everything.
 
-const injectionGuard = createInjectionGuard();
+// `logger: null` — the guardrail registry re-evaluates this request inside
+// handleChat with the pino logger (#11936 dedupe).
+const injectionGuard = createInjectionGuard({ logger: null });
 
 export async function OPTIONS() {
   return new Response(null, {

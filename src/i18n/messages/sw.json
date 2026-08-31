@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "Inatumika na {count, plural, one {# kundi} other {# makundi}}",
     "batchFilePreview": "Muonekano",
     "batchFilePreviewTruncated": "Kuonyesha mistari ya kwanza {shown} ({total} jumla ya mistari)",
-    "batchFileDownloadFull": "Pakua Faili Kamili",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "Pakua Faili Kamili"
   },
   "disabled": "Imezimwa",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Elekeza maombi yaliyomaliza bajeti kwenye mtoa huduma/muundo wa dharura wa akiba usiolipiwa.",
@@ -1023,6 +1023,8 @@
     "logs": "Logs",
     "webhooks": "Viboko vya mtandao",
     "webhooksSubtitle": "Pata arifa kuhusu matukio",
+    "logExport": "Kusafirisha kumbukumbu",
+    "logExportSubtitle": "Tuma kumbukumbu za miito nje",
     "combosSubtitle": "Watoa huduma wa kikundi kwa kushindwa",
     "batchSubtitle": "Shughulikia maombi mengi",
     "contextCavemanSubtitle": "Ukandamizaji wa haraka",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "Nasa trafiki ya wakala wa IDE",
     "trafficInspector": "Kikaguzi cha Trafiki",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "Msimbo wa CLI",
     "cliCodeSubtitle": "Zana za msimbo zinazoelekeza kwenye OmniRoute",
     "cliAgents": "Mawakala wa CLI",
@@ -1300,8 +1303,7 @@
       "open": "fungua",
       "close": "funga"
     },
-    "noResults": "Hakuna matokeo",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Hakuna matokeo"
   },
   "webhooks": {
     "title": "Viboko vya mtandao",
@@ -1808,6 +1810,11 @@
     "updateStarted": "Update started...",
     "reloadingPageAutomatically": "Inapakia upya ukurasa kiotomatiki...",
     "providerTopology": "Topolojia ya mtoaji",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "Pakua DMG (macOS)",
     "downloadDmgDescription": "Toleo jipya la programu ya desktop ya OmniRoute linapatikana. Tafadhali pakua na sakinisha msanidi wa DMG wa macOS ili kusasisha (sasa: v{version}).",
     "downloadExe": "Pakua EXE (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "Maelezo ya Kutolewa",
     "readMore": "Soma Zaidi",
     "noAuthLabel": "Hakuna Auth",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "Pita vizuizi vya kiwango cha mtoa huduma",
     "bypassProviderQuotaDescription": "Inaruhusu ufunguo huu kupuuza sera ya kuzuia ya mtoa huduma/akaunti ya juu wakati wa kuelekeza. Viwango vya USD vya ufunguo wa API bado vinatumika.",
     "quotaPill": "KIWANGO",
-    "quotaModeOnly": "qtSd-only"
+    "quotaModeOnly": "qtSd-only",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Audit Log",
@@ -2922,8 +2932,10 @@
       "interpreter": "CLI ya wakala anayejitegemea wa uandishi wa kodi wa Open Interpreter",
       "omp": "Wakala wa uandishi wa kodi wa terminal wa Oh My Pi",
       "letta": "Wakala wa Letta CLI mwenye kumbukumbu ya kudumu na matumizi ya zana",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Terminal ya Warp AI yenye usaidizi wa mtoa huduma maalum",
       "agent-deck": "Mratibu wa mawakala wengi wa Agent Deck",
+      "5dive": "5dive — kundi la mawakala wa uandishi wa msimbo unaojipangisha; wasifu mmoja wa auth huwaelekeza wote kwa OmniRoute",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "API Endpoint",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Available Endpoints",
     "cloudProxy": "Cloud Proxy",
     "disableConfirm": "Are you sure you want to disable cloud proxy?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "Unda Uunganisho wa Ndani katika",
     "notionIntegrationToken": "Token ya Msingi wa Ndani wa Notion",
     "notionNotConnected": "Haujaunganishwa",
-    "notionTokenConfigured": "Token imewekwa. Zana za Notion zinapatikana kupitia MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Token imewekwa. Zana za Notion zinapatikana kupitia MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4644,13 @@
     "retry": "Retry",
     "allOperational": "All systems operational",
     "issuesDetected": "System issues detected",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Updated {time}",
     "latency": "Latency",
     "latencyP50": "p50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} masuala",
     "score": "Alama",
     "lastRequest": "Ombi la mwisho",
-    "lastError": "Hitilafu ya mwisho",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Hitilafu ya mwisho"
   },
   "telemetry": {
     "title": "Mfumo wa Telemetry",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Multi-Provider",
     "usageTracking": "Usage Tracking",
     "securityDesc": "Set a password to protect your dashboard, or skip for now.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Connect your first AI provider. You can add more later.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "API Key (required)",
     "customUrlOptional": "Custom URL (optional)",
     "testDesc": "Let's verify your provider connection works.",
@@ -5011,9 +5025,7 @@
         "skipped": "tayari imewekwa",
         "failed": "imefeli"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Providers",
@@ -6254,7 +6266,7 @@
       "galadriel": "Unganisha Galadriel kwa ufunguo wa API.",
       "predibase": "Salio la majaribio ya bure la $25 (uhalali wa siku 30)",
       "chenzk": "Lango linalooana na OpenAI lenye orodha ya miundo ya moja kwa moja kwenye chenzk.top.",
-      "magnific": "Zalisha picha kwa kutumia Mystic API ya Freepik.",
+      "magnific": "Zalisha picha kwa kutumia Mystic API ya Magnific.",
       "freetheai": "Lango la bure linalooana na OpenAI lenye usaidizi wa miundo ya passthrough.",
       "g4f-gemini": "Lango la mbali la g4f.space kwenda Gemini. Ufikiaji bila utambulisho unahitaji salio la uthibitisho wa kazi kutoka g4f.dev/chat au ufunguo wa API wa mwanachama kutoka g4f.dev/members.html; vikomo hubadilika.",
       "g4f-groq": "Lango la mbali la g4f.space kwenda Groq. Ufikiaji bila utambulisho unahitaji salio la uthibitisho wa kazi kutoka g4f.dev/chat au ufunguo wa API wa mwanachama kutoka g4f.dev/members.html; vikomo hubadilika.",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "Nakili kitambulisho kinachohitajika kutoka kwa kikoa cha mtoaji mwenyewe. Kwa vidakuzi, nakili tu thamani ya kichwa cha Kuki na uache Cookie:.",
     "webSessionGuideStep3Manual": "Njia ya mwongozo: fungua zana za maendeleo za kivinjari (F12 → Mtandao), refresh ukurasa, fungua ombi lililoidhinishwa, na nakili thamani ya kichwa cha Cookie kutoka kwa Vichwa vya Ombi — acha kipande cha Cookie: bila.",
     "webSessionGuideStep4": "Ibandike hapa na uangalie muunganisho. Ikiacha kufanya kazi, ingia tena na uibadilishe kwa thamani mpya.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Lichukulie hili kama nenosiri: linaweza kufikia akaunti yako ya wavuti uliyoingia hadi itakapoisha au kubatilishwa.",
     "webNoAuthGuideTitle": "Hakuna kitambulisho kinachohitajika",
     "webNoAuthGuideBody": "{provider} haihitaji ufunguo wa API au kidakuzi. Hifadhi muunganisho ili utumie mwisho wake wa wavuti bila malipo.",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "Mipangilio ya mwisho wa mfano uliohifadhiwa",
     "searchByModelAria": "Tafuta kwa mfano",
     "selectSupportedEndpoint": "Chagua angalau kiunganishi kimoja kinachoungwa mkono",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Settings",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter without disabling any features",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when all of its entries are hidden",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Hide Health Check Logs",
     "hideHealthLogsDesc": "When ON, suppress [HealthCheck] messages in server console",
     "themeAccent": "Theme color",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Muda wa juu zaidi wa kusubiri kwenye foleni",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "Safu hii inadhibiti tu kupanga foleni na mwendo. Haihifadhi baridi au vivunja mzunguko wazi.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Huwasha ulinzi wa foleni kwa chaguo-msingi kwa miunganisho ya vitufe vya API inayotumika.",
     "resilienceMaxQueueWait": "Muda wa juu zaidi wa kusubiri kwenye foleni",
+    "resilienceMaxExecutionWait": "Muda wa kukatika wa utekelezaji (kikomo cha akiba cha kiwango)",
     "resilienceConnectionCooldownScope": "Muunganisho wa mtu binafsi",
     "resilienceConnectionCooldownTrigger": "Muunganisho unaporudisha hitilafu ya muda ya juu ya mkondo",
     "resilienceConnectionCooldownEffect": "Huruka muunganisho huo kwa muda na huongeza urejesho kwa kushindwa mara kwa mara",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "Daraja la video",
     "modalityBridgeVideoDesc": "Chukua sampuli za fremu za video, zieleze kwa modeli ya kuona, kisha uendelee na modeli ya maandishi iliyochaguliwa.",
     "modalityBridgeVideoRuntimeReady": "Mazingira ya utekelezaji yako tayari",
+    "modalityBridgeVideoRuntimeChecking": "Inakagua mazingira ya utekelezaji…",
     "modalityBridgeVideoRuntimeUnavailable": "Mazingira ya utekelezaji hayapatikani",
     "modalityBridgeVideoRuntimeInstall": "Sakinisha FFmpeg na ffprobe kwenye PATH ya seva ili kuwezesha uchimbaji wa video.",
     "modalityBridgeVideoEnabled": "Washa Daraja la video",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12077,9 +12113,9 @@
       "acp": {
         "title": "Mawakala wa ACP",
         "phrase": "CLI ambazo OmniRoute huzianzisha kama mfumo wa nyuma wa utekelezaji (mtiririko wa kinyume)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Mteja → OmniRoute → anzisha CLI (stdio/ACP) → jibu",
-        "seeOther": "Ona →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "Ona →"
       }
     },
     "comparison": {
@@ -12843,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Ruhusu miunganisho mingi kwa kila nodi ya utangamano."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Ondoa vipengele vya pato la awamu ya maoni ya ndani kutoka kwenye mikondo ya kupita ya Responses API kabla ya kuvituma kwa wateja. Zima alama hii ili kupokea maoni ghafi ya mkondo wa juu."
       },
@@ -12908,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Wezesha ufikiaji wa mtandao katika sandbox ya ujuzi."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13390,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "Uimara wa Muunganisho",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Hali",
       "provider": "Mtoa Huduma",
@@ -13484,16 +13527,10 @@
         "modelLockouts": "Kufuli za Mfano",
         "count": "Idadi ya Miunganisho"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "kataa maombi kabla ya kutuma wakati mfano wa lengo hauna uwezo unaohitajika (maono, zana, matokeo yaliyoandikwa, dirisha la muktadha). Inalinda maombi ya moja kwa moja kutoka kwa mtoa huduma mmoja ambayo yanapita chujio cha ulinganifu wa safu ya mchanganyiko.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Ukurasa haukupatikana",
@@ -13929,7 +13966,6 @@
     "structuredOutputMismatch": "Mtoa huduma haitoi matokeo yaliyoandikwa kwa muundo",
     "contextWindowMismatch": "Omba inazidi dirisha la muktadha wa mtoa huduma"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",

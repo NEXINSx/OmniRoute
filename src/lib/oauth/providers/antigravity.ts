@@ -7,8 +7,22 @@ import {
   getAntigravityOAuthUserAgent,
 } from "@omniroute/open-sse/services/antigravityHeaders.ts";
 import { extractCodeAssistOnboardTierId } from "@omniroute/open-sse/services/codeAssistSubscription.ts";
+import {
+  BUILTIN_ANTIGRAVITY_CLIENT,
+  type GoogleOauthClientMarker,
+} from "@omniroute/open-sse/services/tokenRefresh/googleClientBinding.ts";
 
 const POSTEXCHANGE_TIMEOUT_MS = 8_000;
+
+/**
+ * True when the OAuth config carries operator-provided credentials instead
+ * of the embedded desktop client. `ANTIGRAVITY_CONFIG.clientId` resolves
+ * env overrides (ANTIGRAVITY_OAUTH_CLIENT_ID) at module load; compare by
+ * value against the embedded default client ID.
+ */
+function isCustomAntigravityClient(config: AntigravityOAuthConfig): boolean {
+  return config.clientId !== BUILTIN_ANTIGRAVITY_CLIENT.clientId;
+}
 
 type AntigravityOAuthConfig = typeof ANTIGRAVITY_CONFIG;
 type AntigravityTokenPayload = {
@@ -31,6 +45,8 @@ type AntigravityPostExchange = {
   tierId: string;
   userInfo: { email?: string };
   projectDiscoveryOutcome?: AntigravityProjectDiscoveryOutcome;
+  /** Literal issuer of the connection's refresh token: "builtin" or "custom:<clientId>". */
+  oauthClient?: GoogleOauthClientMarker;
 };
 
 async function fetchFirstOk(endpoints: string[], init: RequestInit, timeoutMs?: number) {
@@ -120,7 +136,7 @@ async function onboardAntigravityUser(
   config: AntigravityOAuthConfig,
   headers: Record<string, string>,
   tierId: string,
-  metadata: Record<string, string>
+  metadata: ReturnType<typeof getAntigravityLoadCodeAssistMetadata>
 ): Promise<void> {
   // Bounded onboarding: cap retries (was 10) and jitter the delay so a stuck
   // loop cannot look like scripted automation to the upstream (ban-safety).
@@ -247,6 +263,11 @@ function mapAntigravityTokens(
       clientProfile,
       projectId: extra?.projectId,
       tier: extra?.tierId,
+      // Which OAuth client issued this connection's refresh token. The token
+      // refresh must present the same client Google saw at authorize time;
+      // switching the operator's custom client via env afterwards must not
+      // retroactively move existing connections (401 unauthorized_client).
+      oauthClient: extra?.oauthClient,
       // The Antigravity backend ships new models frequently (e.g. Gemini 3.7
       // Flash tiers appeared upstream weeks before the pinned catalog knew
       // them). Default new connections into the 24h model auto-sync (#488) so
@@ -267,7 +288,19 @@ export function createAntigravityOAuthProvider(
     buildAuthUrl: buildAntigravityAuthUrl,
     exchangeToken: (runtimeConfig, code, redirectUri) =>
       exchangeAntigravityToken(runtimeConfig, clientProfile, code, redirectUri),
-    postExchange: (tokens) => postExchangeAntigravity(config, clientProfile, tokens),
+    postExchange: (tokens) =>
+      postExchangeAntigravity(config, clientProfile, tokens).then((extra) => ({
+        ...extra,
+        // Record the LITERAL client id that issued the refresh token we
+        // just received (custom:<id> / builtin), so refreshes keep
+        // presenting that same client even after the operator rotates the
+        // env-level custom client later on. Compare by value against the
+        // embedded default: `config` may be the very same object as
+        // ANTIGRAVITY_CONFIG when no runtime override exists.
+        oauthClient: isCustomAntigravityClient(config)
+          ? `custom:${config.clientId}`
+          : "builtin",
+      })),
     mapTokens: (tokens, extra) => mapAntigravityTokens(clientProfile, tokens, extra),
   };
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
-import { getBatch } from "@/lib/localDb";
+import { getBatch } from "@/lib/db/batches";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {

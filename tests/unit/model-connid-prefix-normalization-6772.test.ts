@@ -50,7 +50,7 @@ test.before(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("#6772 baseline: bare alias form `custpfx6772/vova/gpt-5.5` resolves to the raw model id", async () => {

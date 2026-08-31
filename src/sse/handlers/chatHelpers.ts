@@ -1,4 +1,8 @@
-import { getModelInfo, getComboForModel, getModelInfoOrRetirementResponse } from "../services/model";
+import {
+  getModelInfo,
+  getComboForModel,
+  getModelInfoOrRetirementResponse,
+} from "../services/model";
 import { clearAccountError, markAccountUnavailable } from "../services/auth";
 import { connectionHasExtraKeys } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import { createBuiltinAutoCombo } from "@omniroute/open-sse/services/autoCombo/builtinCatalog.ts";
@@ -26,7 +30,7 @@ import {
   isTlsFingerprintActive,
   type AppliedProxySink,
 } from "@omniroute/open-sse/utils/proxyFetch.ts";
-import { resolveProxyForConnection } from "@/lib/localDb";
+import { resolveProxyForConnection } from "@/lib/db/settings";
 import { hasBlockingProxyAssignment } from "@/lib/db/proxies";
 import {
   CircuitBreakerOpenError,

@@ -130,6 +130,7 @@ import { isFreeModel } from "@/shared/utils/freeModels";
 import {
   applySessionAffinityPin,
   formatSessionKeyForLog,
+  isForcedConnectionMissingFromPool,
   resolveForcedConnectionForCredentialPool,
   resolveSessionAffinityTtlMs,
   selectSessionAffinityConnection,
@@ -1342,21 +1343,39 @@ export async function getProviderCredentials(
         }) ?? forcedConnectionId;
     }
 
-    forcedConnectionId = resolveForcedConnectionForCredentialPool({
-      forcedConnectionId,
-      excludedConnectionIds,
-      connections,
-      allowRateLimitedConnections,
-      bypassQuotaPolicy,
-      isQuotaExhausted: (connectionId) =>
-        isQuotaExhaustedForRequest(connectionId, provider, requestedModel),
-      isQuotaPolicyBlocked: (connection) =>
-        evaluateQuotaLimitPolicy(provider, connection as ProviderConnectionView, requestedModel)
-          .blocked,
-    });
+    // A forced connection (combo step `connectionId` / `x-omniroute-connection`) is an
+    // operator instruction, not a suggestion. resolveForcedConnectionForCredentialPool()
+    // legitimately returns null for several *intentional* pin-release cases (forced ID
+    // already in excludedConnectionIds after a failed attempt, cooldown, quota exhaustion,
+    // quota-policy block) — those must keep degrading to normal sibling fallback, unchanged.
+    // The bug is narrower: the forced connection was requested, was NOT intentionally
+    // excluded, and simply is not present in the current active/allowed pool at all (e.g.
+    // an operator deactivated it). Detect exactly that case *before* calling the resolver,
+    // so it never gets folded in with the intentional-release cases above.
+    if (isForcedConnectionMissingFromPool(forcedConnectionId, excludedConnectionIds, connections)) {
+      // Route through the existing "target has no eligible credentials" recoverable path
+      // (the connections.length === 0 branch just below) instead of falling through to the
+      // full active pool. That path already returns null/CONNECTION_INELIGIBLE, which the
+      // chat handler turns into a 404 for combo requests so the combo loop advances to its
+      // next target — the same mechanism a whole disabled provider already relies on.
+      connections = [];
+    } else {
+      forcedConnectionId = resolveForcedConnectionForCredentialPool({
+        forcedConnectionId,
+        excludedConnectionIds,
+        connections,
+        allowRateLimitedConnections,
+        bypassQuotaPolicy,
+        isQuotaExhausted: (connectionId) =>
+          isQuotaExhaustedForRequest(connectionId, provider, requestedModel),
+        isQuotaPolicyBlocked: (connection) =>
+          evaluateQuotaLimitPolicy(provider, connection as ProviderConnectionView, requestedModel)
+            .blocked,
+      });
 
-    if (forcedConnectionId) {
-      connections = connections.filter((conn) => conn.id === forcedConnectionId);
+      if (forcedConnectionId) {
+        connections = connections.filter((conn) => conn.id === forcedConnectionId);
+      }
     }
     const activeConnectionsCount = connections.length;
     const rawConnectionsCount = connectionsRaw.length;
@@ -1412,7 +1431,7 @@ export async function getProviderCredentials(
             retryAfterHuman: formatRetryAfter(earliest),
           };
         }
-        log.warn("AUTH", `${provider} | ${allConnections.length} accounts found but none active`);
+        log.debug("AUTH", `${provider} | ${allConnections.length} accounts found but none active`);
         allConnections.forEach((c) => {
           log.debug(
             "AUTH",
@@ -1463,7 +1482,7 @@ export async function getProviderCredentials(
         return geminiEnvCredentials;
       }
       invalidateManagedLease(options, "CONNECTION_INELIGIBLE");
-      log.warn("AUTH", `No credentials for ${provider}`);
+      log.debug("AUTH", `No credentials for ${provider}`);
       return null;
     }
 

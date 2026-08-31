@@ -180,7 +180,7 @@ test("provider asset provenance gate rejects a new physical asset without a mani
       /missing from manifest: public\/providers\/surprise\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -199,7 +199,7 @@ test("provider asset provenance gate rejects a symlink that could evade physical
       /non-regular provider asset entry is not allowed: public\/providers\/unregistered-link\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -222,7 +222,7 @@ test("provider asset provenance gate rejects a stale SHA-256", () => {
       /sha256 mismatch: public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -246,7 +246,7 @@ test("provider asset provenance gate validates magic MIME instead of trusting th
       /mediaType mismatch: public\/providers\/misleading\.png \(manifest image\/png, actual image\/jpeg\)/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -270,7 +270,7 @@ test("provider asset provenance gate does not accept a truncated JPEG prefix", (
       /mediaType mismatch: public\/providers\/truncated\.jpg \(manifest image\/jpeg, actual unknown\)/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -286,7 +286,7 @@ test("provider asset provenance gate recognizes an SVG with an XML doctype", () 
 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -308,7 +308,7 @@ test("provider asset provenance gate scans adversarial SVG comment chains within
       /mediaType mismatch: public\/providers\/adversarial\.svg \(manifest image\/svg\+xml, actual unknown\)/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -331,7 +331,7 @@ test("provider asset provenance gate rejects a status that implies legal clearan
       /invalid provenanceStatus for public\/providers\/registered\.svg: licensed/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -353,7 +353,7 @@ test("provider asset provenance gate requires an alias record for duplicate cont
       new RegExp(`duplicate content missing alias record: sha256:${sha256(SVG)}`)
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -376,7 +376,7 @@ test("provider asset provenance gate requires immutable source evidence for prov
       /proven asset requires immutable source evidence: public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -408,7 +408,7 @@ test("provider asset provenance gate rejects malformed pinned-source integrity",
       /proven asset requires immutable source evidence: public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -431,7 +431,7 @@ test("provider asset provenance gate rejects an unstructured upstream license cl
       /invalid upstreamLicenseClaim for public\/providers\/registered\.svg/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -464,7 +464,7 @@ test("provider asset provenance gate allows probable and unresolved records and 
       /2\/2 registered; proven=0 probable=1 unresolved=1; duplicate-groups=1/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -484,7 +484,7 @@ test("provider asset provenance gate rejects a stale expected asset count", () =
       /expectedAssetCount mismatch: manifest 225, records 1, physical 1/
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -509,7 +509,7 @@ test("provider asset provenance gate rejects a missing or non-commit auditedComm
       assert.ok(`${result.stdout}\n${result.stderr}`.includes(expectedError));
     }
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -537,7 +537,7 @@ test("provider asset provenance gate binds auditedCommit to the physical provide
       /auditedCommit provider snapshot (?:is missing|differs): public\/providers\//
     );
   } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
+    rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

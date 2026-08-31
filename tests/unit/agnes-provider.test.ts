@@ -24,7 +24,7 @@ const dbCore = await import("../../src/lib/db/core.ts");
 
 test.after(() => {
   dbCore.closeDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 const AGNES_CHAT_URL = "https://apihub.agnes-ai.com/v1/chat/completions";

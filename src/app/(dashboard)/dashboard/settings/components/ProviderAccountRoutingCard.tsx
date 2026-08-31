@@ -21,7 +21,7 @@ const STRATEGY_OPTIONS = ACCOUNT_FALLBACK_STRATEGY_VALUES.filter((v) =>
 
 function clampProviderStickyLimit(raw: string): number {
   const val = parseInt(raw, 10);
-  return Math.min(10, Math.max(1, Number.isNaN(val) ? 3 : val));
+  return Math.min(1000, Math.max(1, Number.isNaN(val) ? 3 : val));
 }
 
 /** Loads/saves the per-provider account-routing override. Extracted out of the
@@ -124,7 +124,7 @@ export default function ProviderAccountRoutingCard({ providerKey, connectionCoun
             label={t("stickyLimit")}
             type="number"
             min={1}
-            max={10}
+            max={1000}
             disabled={busy}
             value={stickyLimit || "3"}
             onChange={(e) => setStickyLimit(e.target.value)}

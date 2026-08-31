@@ -188,8 +188,9 @@ describe("useProviderModels upstream auto-fetch", () => {
     );
     mounted.unmount();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/providers/connection-1/sync-models?mode=sync", {
-      method: "POST",
-    });
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/providers/connection-inactive/sync-models?mode=sync",
+      expect.anything()
+    );
   });
 });

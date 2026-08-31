@@ -111,7 +111,11 @@ function shouldBlock(detections: Detection[], threshold: "low" | "medium" | "hig
 }
 
 function getLogger(options: PromptInjectionGuardrailOptions, context: GuardrailContext) {
-  return options.logger || context.log || console;
+  // `logger: null` is an explicit opt-out (chat-family routes are re-evaluated by the
+  // guardrail registry with the request's pino logger — #11936 dedupe). An omitted
+  // logger defers to the context log so middleware-only routes keep their trace.
+  if (options.logger !== undefined) return options.logger;
+  return context.log ?? null;
 }
 
 function emitGuardrailLog(

@@ -805,6 +805,13 @@
     "batchConceptBenefit50pct": "50% discount on input + output tokens",
     "batchConceptAsync24h": "Async with a 24h completion window",
     "batchConceptUseCases": "Best for bulk classification, evaluations, and embeddings",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output",
     "filesConceptTitle": "Batch files",
     "filesConceptSubtitle": "JSONL files used by batches: input requests, results, and errors.",
     "filesConceptInput": "Input — your JSONL with one request per line",
@@ -974,14 +981,7 @@
     "batchFileUsedByCount": "Ginagamit ng {count, plural, one {# batch} other {# batches}}",
     "batchFilePreview": "I-preview",
     "batchFilePreviewTruncated": "Ipinapakita ang unang {shown} linya ({total} kabuuang linya)",
-    "batchFileDownloadFull": "I-download ang Buong File",
-    "batchHeaderSubtitle": "Run many requests as one job",
-    "batchStep1": "1 · Upload JSONL",
-    "batchStep1Desc": "Add requests",
-    "batchStep2": "2 · Create batch",
-    "batchStep2Desc": "Run job",
-    "batchStep3": "3 · Get results",
-    "batchStep3Desc": "Download output"
+    "batchFileDownloadFull": "I-download ang Buong File"
   },
   "disabled": "Naka-disable",
   "featureFlagOmnirouteEmergencyFallbackDescription": "I-route ang mga request na naubusan ng budget sa emergency free fallback provider/model.",
@@ -1023,6 +1023,8 @@
     "logs": "Mga log",
     "webhooks": "Mga Webhook",
     "webhooksSubtitle": "Maabisuhan ng mga kaganapan",
+    "logExport": "Pag-export ng log",
+    "logExportSubtitle": "Ipadala ang mga log ng tawag sa labas",
     "combosSubtitle": "Mga provider ng grupo para sa failover",
     "batchSubtitle": "Iproseso ang maraming kahilingan",
     "contextCavemanSubtitle": "Maagap na compression",
@@ -1267,6 +1269,7 @@
     "agentBridgeSubtitle": "I-intercept ang traffic ng IDE agent",
     "trafficInspector": "Traffic Inspector",
     "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Mga code tool na nakaturo sa OmniRoute",
     "cliAgents": "Mga CLI Agent",
@@ -1300,8 +1303,7 @@
       "open": "buksan",
       "close": "isara"
     },
-    "noResults": "Walang resulta",
-    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
+    "noResults": "Walang resulta"
   },
   "webhooks": {
     "title": "Mga Webhook",
@@ -1808,6 +1810,11 @@
     "updateStarted": "Nagsimula ang pag-update...",
     "reloadingPageAutomatically": "Awtomatikong nire-reload ang page...",
     "providerTopology": "Topology ng Provider",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
     "downloadDmg": "I-download ang DMG (macOS)",
     "downloadDmgDescription": "Isang bagong bersyon ng OmniRoute desktop app ang available. Mangyaring i-download at i-install ang macOS DMG installer upang mag-update (kasalukuyan: v{version}).",
     "downloadExe": "I-download ang EXE (Windows)",
@@ -1865,11 +1872,6 @@
     "releaseNotes": "Mga Tala ng Paglabas",
     "readMore": "Magbasa Pa Nang Higit",
     "noAuthLabel": "Walang Awtorisasyon",
-    "recentRequests": "Recent Requests",
-    "recentRequestsEmpty": "No requests yet.",
-    "recentRequestsModel": "Model",
-    "recentRequestsTokens": "In / Out",
-    "recentRequestsWhen": "When",
     "readinessEyebrow": "Get ready to route",
     "readinessTitle": "Send your first request",
     "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
@@ -2399,7 +2401,15 @@
     "bypassProviderQuota": "I-bypass ang mga cutoff ng quota ng provider",
     "bypassProviderQuotaDescription": "Pinapayagan ang key na ito na balewalain ang patakaran sa cutoff ng upstream provider/account habang nagruruta. Nalalapat pa rin ang mga quota sa USD ng API key.",
     "quotaPill": "QUOTA",
-    "quotaModeOnly": "qtSd-only"
+    "quotaModeOnly": "qtSd-only",
+    "exclusiveLease": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeTitle": "__MISSING__:Exclusive Lease",
+    "exclusiveLeaseNoticeDesc": "__MISSING__:This API key has exclusive lease permissions for dedicated connection routing.",
+    "allConnections": "__MISSING__:All connections",
+    "onlySelectedConnections": "__MISSING__:Only selected connections",
+    "selectAtLeastOneConnection": "__MISSING__:Select at least one connection or choose All connections.",
+    "allConnectionsDesc": "__MISSING__:This key can use any active connection.",
+    "restrictedToConnections": "__MISSING__:Restricted to {count, plural, one {# connection} other {# connections}}."
   },
   "auditLog": {
     "title": "Log ng Audit",
@@ -2922,8 +2932,10 @@
       "interpreter": "Open Interpreter autonomous coding agent CLI",
       "omp": "Oh My Pi terminal coding agent",
       "letta": "Letta CLI agent na may persistent memory at paggamit ng tool",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
       "warp": "Warp AI terminal na may suporta sa custom provider",
       "agent-deck": "Agent Deck multi-agent orchestrator",
+      "5dive": "5dive — self-hosted fleet ng coding agents; isang auth profile ang nagtuturo sa kanilang lahat sa OmniRoute",
       "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
@@ -3849,6 +3861,9 @@
   },
   "endpoint": {
     "title": "Endpoint ng API",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols",
     "available": "Magagamit na Mga Endpoint",
     "cloudProxy": "Cloud Proxy",
     "disableConfirm": "Sigurado ka bang gusto mong i-disable ang cloud proxy?",
@@ -4156,10 +4171,7 @@
     "notionIntegrationHelp": "Gumawa ng Panloob na Pagsasama sa",
     "notionIntegrationToken": "Notion Internal Integration Token",
     "notionNotConnected": "Hindi nakakonekta",
-    "notionTokenConfigured": "Naka-configure ang token. Ang mga tool ng Notion ay available sa pamamagitan ng MCP.",
-    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
-    "testEndpoint": "Test endpoint →",
-    "advancedProtocols": "Advanced protocols"
+    "notionTokenConfigured": "Naka-configure ang token. Ang mga tool ng Notion ay available sa pamamagitan ng MCP."
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4632,6 +4644,13 @@
     "retry": "Subukan muli",
     "allOperational": "Ang lahat ng mga sistema ay gumagana",
     "issuesDetected": "May nakitang mga isyu sa system",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show",
     "updatedAt": "Na-update {time}",
     "latency": "Latency",
     "latencyP50": "p50",
@@ -4742,14 +4761,7 @@
     "issueCount": "{count} isyu",
     "score": "Iskor",
     "lastRequest": "Huling kahilingan",
-    "lastError": "Huling error",
-    "healthVerdictReady": "OmniRoute is ready",
-    "healthVerdictActionRequired": "Action required to restore full operation",
-    "healthVerdictCoolingDown": "Cooling down after recent changes",
-    "healthSubtitle": "System health check",
-    "advancedDiagnosticsTitle": "Advanced diagnostics",
-    "hide": "Hide",
-    "show": "Show"
+    "lastError": "Huling error"
   },
   "telemetry": {
     "title": "System Telemetry",
@@ -4954,7 +4966,9 @@
     "multiProvider": "Multi-Provider",
     "usageTracking": "Pagsubaybay sa Paggamit",
     "securityDesc": "Magtakda ng password para protektahan ang iyong dashboard, o laktawan muna.",
+    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
     "providerDesc": "Ikonekta ang iyong unang AI provider. Maaari kang magdagdag ng higit pa sa ibang pagkakataon.",
+    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard.",
     "apiKeyRequired": "API Key (kinakailangan)",
     "customUrlOptional": "Custom na URL (opsyonal)",
     "testDesc": "I-verify natin na gumagana ang iyong koneksyon sa provider.",
@@ -5011,9 +5025,7 @@
         "skipped": "naka-configure na",
         "failed": "nabigo"
       }
-    },
-    "securityDescSkipWarning": "⚠️ Without a password, you won't be able to add providers during setup. You can add them later from the dashboard after setting a password.",
-    "providerRequiresPassword": "You need to set a password first to add providers. Please go back to the security step and set a password, or add providers later from the dashboard."
+    }
   },
   "providers": {
     "title": "Mga provider",
@@ -6254,7 +6266,7 @@
       "galadriel": "Ikonekta ang Galadriel gamit ang isang API key.",
       "predibase": "$25 na libreng trial credits (30-araw na validity)",
       "chenzk": "OpenAI-compatible na gateway na may live model catalog sa chenzk.top.",
-      "magnific": "Bumuo ng mga larawan gamit ang Mystic API ng Freepik.",
+      "magnific": "Bumuo ng mga larawan gamit ang Mystic API ng Magnific.",
       "freetheai": "Libreng OpenAI-compatible na gateway na may suporta sa passthrough model.",
       "g4f-gemini": "Remote na g4f.space gateway papunta sa Gemini. Ang anonymous access ay nangangailangan ng proof-of-work credits mula sa g4f.dev/chat o member API key mula sa g4f.dev/members.html; nagbabago ang mga limitasyon.",
       "g4f-groq": "Remote na g4f.space gateway papunta sa Groq. Ang anonymous access ay nangangailangan ng proof-of-work credits mula sa g4f.dev/chat o member API key mula sa g4f.dev/members.html; nagbabago ang mga limitasyon.",
@@ -6302,6 +6314,20 @@
     "webSessionGuideStep3": "Kopyahin ang kinakailangang kredensyal mula sa sariling domain ng provider. Para sa cookies, kopyahin lang ang value ng Cookie header at alisin ang Cookie:.",
     "webSessionGuideStep3Manual": "Manwal na landas: buksan ang mga developer tools ng browser (F12 → Network), i-refresh ang pahina, buksan ang isang authenticated na request, at kopyahin ang halaga ng Cookie header mula sa Request Headers — alisin ang prefix na Cookie:.",
     "webSessionGuideStep4": "I-paste ito dito at suriin ang koneksyon. Kung huminto ito sa paggana, mag-sign in muli at palitan ito ng bagong halaga.",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file.",
     "webSessionSecurityHint": "Tratuhin ito bilang isang password: maaari nitong i-access ang iyong naka-sign-in na web account hanggang sa mag-expire o mabawi ito.",
     "webNoAuthGuideTitle": "Walang kinakailangang kredensyal",
     "webNoAuthGuideBody": "Hindi kailangan ng {provider} ng API key o cookie. I-save ang koneksyon upang magamit ang libreng web endpoint nito.",
@@ -6416,21 +6442,7 @@
     "savedModelEndpointSettings": "Naka-save na mga setting ng endpoint ng modelo",
     "searchByModelAria": "Maghanap ayon sa modelo",
     "selectSupportedEndpoint": "Pumili ng hindi bababa sa isang sinusuportahang endpoint",
-    "antigravityClientProfileHarness": "Harness / CLI",
-    "harImportButtonLabel": "Import .har file",
-    "harImportButtonBusy": "Importing…",
-    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
-    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
-    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
-    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
-    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
-    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
-    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
-    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
-    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
-    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
-    "harImportErrorReadFailed": "Couldn't read that file.",
-    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
+    "antigravityClientProfileHarness": "Harness / CLI"
   },
   "settings": {
     "title": "Mga setting",
@@ -6710,6 +6722,18 @@
     "sidebarVisibility": "Hide sidebar items",
     "sidebarVisibilityDesc": "Hide any sidebar navigation entry to reduce visual clutter.",
     "sidebarVisibilityHint": "Any sidebar section is hidden automatically when a...",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
     "hideHealthLogs": "Itago ang Health Check Logs",
     "hideHealthLogsDesc": "Kapag NAKA-ON, sugpuin ang mga mensahe ng [HealthCheck] sa server console",
     "themeAccent": "Kulay ng tema",
@@ -7538,6 +7562,8 @@
     "resilienceRequestsPerMinute": "Requests per minute",
     "resilienceMinTimeBetweenRequests": "Minimum time between requests",
     "resilienceConcurrentRequests": "Concurrent requests",
+    "resilienceConnectionScopeConcurrentRequests": "__MISSING__:Concurrent requests per connection/quota scope",
+    "resilienceGlobalConcurrentRequests": "__MISSING__:Global concurrent upstream requests (0 = disabled)",
     "resilienceMaxQueueWaitTime": "Pinakamataas na oras ng paghihintay sa pila",
     "resilienceBaseCooldown": "Base cooldown",
     "resilienceUseUpstreamRetryHints": "Use upstream retry hints",
@@ -8004,6 +8030,7 @@
     "resilienceRequestQueueDesc": "Kinokontrol lang ng layer na ito ang queuing at pacing. Hindi ito nag-iimbak ng mga cooldown o bukas na mga circuit breaker.",
     "resilienceAutoEnableApiKeyProvidersDesc": "Pinapagana ang proteksyon ng queue bilang default para sa mga aktibong koneksyon sa API key.",
     "resilienceMaxQueueWait": "Pinakamataas na oras ng paghihintay sa pila",
+    "resilienceMaxExecutionWait": "Timeout ng pagpapatakbo (rate-limit na backstop)",
     "resilienceConnectionCooldownScope": "Indibidwal na koneksyon",
     "resilienceConnectionCooldownTrigger": "Kapag ang isang koneksyon ay nagbalik ng isang lumilipas na upstream failure",
     "resilienceConnectionCooldownEffect": "Pansamantalang nilalaktawan ang koneksyon na iyon at pinapataas ang backoff para sa mga paulit-ulit na pagkabigo",
@@ -8186,6 +8213,7 @@
     "modalityBridgeVideoTitle": "Tulay ng Video",
     "modalityBridgeVideoDesc": "Kumuha ng mga sample na frame ng video, ilarawan ang mga ito gamit ang vision model, at magpatuloy sa napiling text model.",
     "modalityBridgeVideoRuntimeReady": "Handa ang runtime",
+    "modalityBridgeVideoRuntimeChecking": "Sinusuri ang runtime…",
     "modalityBridgeVideoRuntimeUnavailable": "Hindi available ang runtime",
     "modalityBridgeVideoRuntimeInstall": "I-install ang FFmpeg at ffprobe sa PATH ng server para paganahin ang pagkuha ng video.",
     "modalityBridgeVideoEnabled": "Paganahin ang Tulay ng Video",
@@ -8289,7 +8317,15 @@
     "presetAdmin": "Admin",
     "presetAdminDesc": "Monitoring & audit",
     "settingsSidebarTitle": "Sidebar Customization",
-    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable.",
+    "quotaPreflightTitle": "Quota Preflight Cutoff",
+    "quotaPreflightSubtitle": "Skip accounts that are out of quota before sending the request upstream",
+    "quotaPreflightEnable": "Enable quota preflight",
+    "quotaPreflightEnableDesc": "Before each request, check the account's remaining quota (5h / weekly / monthly windows). Accounts at or below the cutoff are skipped without an upstream call. Per-window cutoffs set on the Provider Quota page always win over the default here.",
+    "quotaPreflightCutoff": "Global cutoff (min remaining %)",
+    "quotaPreflightCutoffDesc": "Stop using an account when its remaining quota drops to this percent or below, for every window without its own cutoff. Matches the remaining-% bars on the Provider Quota page.",
+    "quotaPreflightWindowsHint": "Windows with their own per-window or per-provider cutoff (set in the Cutoff modal on the Provider Quota page) are unaffected by this default.",
+    "quotaPreflightLoadFailed": "Unable to load quota preflight settings."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12077,9 +12113,9 @@
       "acp": {
         "title": "ACP Agents",
         "phrase": "Mga CLI na ini-spawn ng OmniRoute bilang execution backend (reverse flow)",
+        "warning": "Most users can ignore this — use only when an integration requires it.",
         "flow": "Client → OmniRoute → spawn CLI (stdio/ACP) → response",
-        "seeOther": "Tingnan →",
-        "warning": "Most users can ignore this — use only when an integration requires it."
+        "seeOther": "Tingnan →"
       }
     },
     "comparison": {
@@ -12843,6 +12879,10 @@
       "ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE": {
         "description": "Payagan ang maraming koneksyon para sa bawat compatibility node."
       },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
+      },
       "RESPONSES_PASSTHROUGH_DROP_COMMENTARY": {
         "description": "Alisin ang mga panloob na output item ng commentary-phase mula sa mga passthrough stream ng Responses API bago ipasa ang mga ito sa mga client. I-disable ang flag na ito upang makatanggap ng raw upstream commentary."
       },
@@ -12908,10 +12948,6 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "I-enable ang access sa network sa skills sandbox."
-      },
-      "DISABLE_CONTEXT_WINDOW_CHECKS": {
-        "label": "Disable Context Window Checks",
-        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13390,6 +13426,13 @@
   },
   "resilienceConnections": {
     "title": "Katatagan ng Koneksyon",
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
+    },
     "table": {
       "status": "Katayuan",
       "provider": "Provider",
@@ -13484,16 +13527,10 @@
         "modelLockouts": "Mga Lockout ng Modelo",
         "count": "Bilang ng Koneksyon"
       }
-    },
-    "reassuranceTitle": "Your connections recover automatically",
-    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
-    "plainStates": {
-      "healthy": "Requests can be sent",
-      "coolingDown": "Trying again soon",
-      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Tanggihan ang mga kahilingan bago ang pagpapadala kapag ang target na modelo ay kulang sa mga kinakailangang kakayahan (paningin, mga tool, nakabalangkas na output, bintana ng konteksto). Pinoprotektahan ang mga direktang kahilingan mula sa isang tagapagbigay na lumalampas sa filter ng pagiging tugma ng combo-layer.",
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "publicSystem": {
     "notFound": {
       "title": "Hindi matagpuan ang pahina",
@@ -13929,7 +13966,6 @@
     "structuredOutputMismatch": "Hindi sinusuportahan ng provider ang nakabalangkas na output",
     "contextWindowMismatch": "Lumampas ang kahilingan sa konteksto ng tagapagbigay"
   },
-  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
   "cheaperInferenceSponsorBanner": {
     "title": "Cheaper Inference is an OmniRoute Open Source Friend",
     "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",

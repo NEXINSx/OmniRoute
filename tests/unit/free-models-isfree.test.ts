@@ -9,8 +9,13 @@ describe("isFreeModel isFree opt-in", () => {
     assert.equal(isFreeModel("local", { id: "my-model", isFree: true }), true);
   });
   it("isFree:false/null/undefined/1/'true' → not free (strict ===true)", () => {
-    for (const v of [false, null, undefined, 1, "true" as any]) {
-      assert.equal(isFreeModel("any", { id: "x", isFree: v as any }), false, `isFree=${String(v)} should be false`);
+    const junk: unknown[] = [false, null, undefined, 1, "true"];
+    for (const v of junk) {
+      assert.equal(
+        isFreeModel("any", { id: "x", isFree: v as boolean }),
+        false,
+        `isFree=${String(v)} should be false`
+      );
     }
   });
   it("providerHasFreeModels unchanged by custom isFree", () => {

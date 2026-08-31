@@ -11,7 +11,7 @@ process.env.DISABLE_SQLITE_AUTO_BACKUP = "true";
 const { handleImageGeneration } = await import("../../open-sse/handlers/imageGeneration.ts");
 
 test.after(() => {
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("image handler blocks exact retired providers before any upstream fetch", async () => {

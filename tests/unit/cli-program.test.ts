@@ -124,7 +124,7 @@ test("program registers 'update' command", () => {
   assert.ok(cmd, "update command exists");
 });
 
-test("nodes endpoint commands reserve --base-url for the global server target", () => {
+test("nodes endpoint commands expose --endpoint and the legacy --base-url alias", () => {
   const program = createProgram();
   const nodes = program.commands.find((c) => c.name() === "nodes");
   assert.ok(nodes, "nodes command exists");
@@ -136,10 +136,9 @@ test("nodes endpoint commands reserve --base-url for the global server target", 
       command.options.some((option) => option.long === "--endpoint"),
       `nodes ${commandName} exposes --endpoint for the provider-node URL`
     );
-    assert.equal(
+    assert.ok(
       command.options.some((option) => option.long === "--base-url"),
-      false,
-      `nodes ${commandName} does not shadow the global --base-url option`
+      `nodes ${commandName} preserves the legacy --base-url alias`
     );
     command.parseOptions([
       ...(commandName === "update" ? ["node-1"] : []),

@@ -49,13 +49,15 @@ export function socksConnectorWithFamily(
   const isDisabled = connectTimeout === 0;
   // SOCKS lib: 0 throws (isValidTimeoutValue: value>0) and undefined → DEFAULT_TIMEOUT 30s;
   // undici: 0 disables (core/util.js: if (!opts.timeout) return noop), undefined → 10s. Divergence intentional.
-  const handshakeTimeout = isDisabled ? undefined : (connectTimeout ?? resolveSocksHandshakeTimeoutMs());
+  const handshakeTimeout = isDisabled
+    ? undefined
+    : (connectTimeout ?? resolveSocksHandshakeTimeoutMs());
   const tlsTimeout = connectTimeout;
   // Sequential budget: both phases bounded by the same connectTimeout → wall-time up to 60s for https
   // (vs 30s direct). Shared-deadline alternative rejected as unjustified complexity.
   const build = _buildConnectorForTest ?? buildConnector;
   const undiciConnect = build(
-    tlsTimeout !== undefined ? ({ ...tlsOpts, timeout: tlsTimeout } as any) : tlsOpts
+    tlsTimeout !== undefined ? { ...tlsOpts, timeout: tlsTimeout } : tlsOpts
   );
   const socketOptions = buildSocksFamilySocketOptions(family);
   return async (options, callback) => {
@@ -69,7 +71,7 @@ export function socksConnectorWithFamily(
       const r = await SocksClient.createConnection({
         command: "connect",
         proxy,
-        timeout: handshakeTimeout as any,
+        timeout: handshakeTimeout,
         destination: { host: hostname, port: resolvePort(protocol, port) },
         existing_socket: httpSocket as never,
         socket_options: socketOptions as never,
@@ -97,6 +99,6 @@ export function createSocksDispatcherWithFamily(
   };
   return new Agent({
     ...rest,
-    connect: socksConnectorWithFamily(proxy, family, connect as any, connectTimeout as any),
+    connect: socksConnectorWithFamily(proxy, family, connect, connectTimeout),
   });
 }

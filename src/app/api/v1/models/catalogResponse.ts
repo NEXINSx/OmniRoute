@@ -33,7 +33,11 @@ import {
   type CatalogEnrichmentSnapshot,
 } from "@/lib/modelMetadataRegistry";
 import { createModelCapabilityResolutionSnapshot } from "@/lib/modelCapabilityResolutionSnapshot";
-import { isModelCatalogNamesEnabled } from "@/shared/utils/featureFlags";
+import {
+  isModelCatalogNamesEnabled,
+  isNoThinkingAliasEnabled,
+  isDisableThinkingLevelVariantsEnabled,
+} from "@/shared/utils/featureFlags";
 import { extractApiKey } from "@/sse/services/auth";
 import { maybeOmitCatalogModelName } from "./catalogHelpers";
 import { isCodexModelCatalogClient } from "./catalogRequest";
@@ -85,11 +89,16 @@ export async function applyCatalogPostFilters(
   // Advertise no-thinking gateway variants (Fase 8.1). Derived from the already
   // key-filtered list, so a variant only appears when its real model is permitted.
   // #9418: skip when hideNoThinkVariants is on — the ids are still routable when
-  // sent explicitly, just not advertised in the catalog.
+  // sent explicitly, just not advertised in the catalog. The NO_THINKING_ALIAS_ENABLED
+  // feature flag is the stronger switch: it also stops the ids from routing (see
+  // src/sse/handlers/chat.ts), so nothing is advertised when it is off. Resolved once
+  // here and injected, keeping the open-sse helper I/O-free (one flag read per catalog
+  // build, not one per model).
   if (!ctx.hideNoThinkVariants) {
     finalModels = appendNoThinkingVariants(
       finalModels,
-      ctx.prefixMode === "canonical" ? ctx.aliasToProviderId : undefined
+      ctx.prefixMode === "canonical" ? ctx.aliasToProviderId : undefined,
+      { featureEnabled: isNoThinkingAliasEnabled() }
     );
   }
 
@@ -151,7 +160,9 @@ export async function applyCatalogPostFilters(
   // #7694: advertise `<provider>/<model>-<tier>` variants for synced models that
   // captured `reasoning.supported_efforts` at sync time (capabilities.effort_tiers).
   // Derived from the already key-filtered list; skips codex/kimi (own suffix mechanism).
-  finalModels = appendSyncedEffortVariants(finalModels);
+  if (!isDisableThinkingLevelVariantsEnabled()) {
+    finalModels = appendSyncedEffortVariants(finalModels);
+  }
 
   await yieldTurn();
 

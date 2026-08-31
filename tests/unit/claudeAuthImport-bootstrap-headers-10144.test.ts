@@ -14,11 +14,8 @@ process.env.APP_LOG_TO_FILE = "false";
 // Import the implementation under test. In particular, do not copy any of
 // these helpers here: the regression must fail if claudeAuthImport.ts loses a
 // required header or stops persisting the device identity.
-const {
-  createConnectionFromAuthFile,
-  enrichWithBootstrap,
-  parseAndValidateClaudeAuth,
-} = await import("../../src/lib/oauth/utils/claudeAuthImport.ts");
+const { createConnectionFromAuthFile, enrichWithBootstrap, parseAndValidateClaudeAuth } =
+  await import("../../src/lib/oauth/utils/claudeAuthImport.ts");
 import { getClaudeCodeUserAgent } from "../../src/shared/constants/claudeCodeClient.ts";
 
 const originalFetch = globalThis.fetch;
@@ -28,7 +25,7 @@ test.afterEach(() => {
 });
 
 test.after(() => {
-  fs.rmSync(testDataDir, { recursive: true, force: true });
+  fs.rmSync(testDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("real enrichWithBootstrap sends the required CLI headers", async () => {

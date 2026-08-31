@@ -1,10 +1,8 @@
 // Re-export from open-sse with local logger
 import * as log from "../utils/logger";
-import {
-  updateProviderConnection,
-  resolveProxyForConnection,
-  resolveProxyForProvider,
-} from "@/lib/localDb";
+import { updateProviderConnection } from "@/lib/db/providers";
+import { resolveProxyForConnection } from "@/lib/db/settings";
+import { resolveProxyForProvider } from "@/lib/db/proxies";
 import {
   TOKEN_EXPIRY_BUFFER_MS as BUFFER_MS,
   getRefreshLeadMs as _getRefreshLeadMs,

@@ -16,6 +16,13 @@ export function extractUsageFromResponse(responseBody, provider) {
     typeof responseBody.usage === "object" &&
     responseBody.usage.prompt_tokens !== undefined
   ) {
+    const cacheCreationTokens =
+      responseBody.usage.cache_creation_input_tokens ??
+      responseBody.usage.prompt_tokens_details?.cache_creation_tokens ??
+      responseBody.usage.input_tokens_details?.cache_creation_tokens ??
+      responseBody.usage.prompt_tokens_details?.cache_write_tokens ??
+      responseBody.usage.input_tokens_details?.cache_write_tokens ??
+      responseBody.usage.cache_write_tokens;
     return {
       prompt_tokens: responseBody.usage.prompt_tokens || 0,
       completion_tokens: responseBody.usage.completion_tokens || 0,
@@ -28,6 +35,17 @@ export function extractUsageFromResponse(responseBody, provider) {
         responseBody.usage.prompt_cache_hit_tokens ??
         responseBody.usage.cached_tokens ??
         responseBody.usage.cache_read_input_tokens,
+      // Cache WRITE tokens. Anthropic models reached through an OpenAI-compatible
+      // endpoint carry the count nested in prompt/input token details (see
+      // translator/response/claude-to-openai.ts, #2215) or under the
+      // `cache_write_tokens` alias used by OpenRouter/Devin/codex-chatgpt-web.
+      // Reading only the flat Anthropic key made the dashboard show "Cache Write:
+      // N/A" for the very same model that reports a real count natively.
+      // Only emit the key when a provider actually reported one, so a provider
+      // with no cache-write concept (plain gpt/codex) stays N/A instead of 0.
+      ...(cacheCreationTokens !== undefined
+        ? { cache_creation_input_tokens: cacheCreationTokens }
+        : {}),
       reasoning_tokens:
         responseBody.usage.completion_tokens_details?.reasoning_tokens ??
         responseBody.usage.output_tokens_details?.reasoning_tokens ??

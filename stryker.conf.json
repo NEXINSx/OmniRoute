@@ -39,9 +39,7 @@
   "incremental": true,
   "incrementalFile": "reports/mutation/stryker-incremental.json",
   "testRunner": "tap",
-  "plugins": [
-    "@stryker-mutator/tap-runner"
-  ],
+  "plugins": ["@stryker-mutator/tap-runner"],
   "tap": {
     "testFiles": [
       "tests/unit/10085-compatible-generic-vs-uuid-credential.test.ts",
@@ -100,6 +98,7 @@
       "tests/unit/authz/route-guard-version-get-exemption.test.ts",
       "tests/unit/authz/route-guard-vnc-session-local-only.test.ts",
       "tests/unit/authz/routeGuard.test.ts",
+      "tests/unit/auto-combo-candidates-locked-model-visible.test.ts",
       "tests/unit/auto-combo-context-advertising.test.ts",
       "tests/unit/auto-combo-engine.test.ts",
       "tests/unit/auto-combo-scoring-clamp.test.ts",
@@ -183,6 +182,7 @@
       "tests/unit/combo-lockout-quota-reset-6863.test.ts",
       "tests/unit/combo-max-depth-config.test.ts",
       "tests/unit/combo-model-lockout-honors-reset-1308.test.ts",
+      "tests/unit/combo-model-scoped-400-advance.test.ts",
       "tests/unit/combo-omnimodel-tag-stripping.test.ts",
       "tests/unit/combo-param-validation-fallback-4519.test.ts",
       "tests/unit/combo-prescreen.test.ts",
@@ -247,8 +247,10 @@
       "tests/unit/format-provider-error-cause.test.ts",
       "tests/unit/forwarded-header-budget.test.ts",
       "tests/unit/fusion-vision-panel-3378.test.ts",
+      "tests/unit/gemini-deprecated-model-lockout.test.ts",
       "tests/unit/gemini-web-capabilities-9356.test.ts",
       "tests/unit/gemini-web-missing-browser-3516.test.ts",
+      "tests/unit/github-model-not-supported-lockout.test.ts",
       "tests/unit/grok-cli-oauth.test.ts",
       "tests/unit/guardrails-api-3496.test.ts",
       "tests/unit/guardrails/visionBridge-responses-9597.test.ts",
@@ -262,6 +264,7 @@
       "tests/unit/issue-7071-ollama-session-quota.test.ts",
       "tests/unit/kimi-quota-reset-recovery.test.ts",
       "tests/unit/least-used-rotation-10945.test.ts",
+      "tests/unit/lkgp-stale-pin-exhaustion-11911.test.ts",
       "tests/unit/livews-forward-backoff-4604.test.ts",
       "tests/unit/management-auth-hardening.test.ts",
       "tests/unit/mark-account-unavailable-numeric-epoch-guard.test.ts",
@@ -297,6 +300,7 @@
       "tests/unit/openrouter-free-model-credits-exhausted.test.ts",
       "tests/unit/openrouter-passthrough-models.test.ts",
       "tests/unit/openrouter-quota-6842.test.ts",
+      "tests/unit/permanent-failure-hammering-other-providers.test.ts",
       "tests/unit/persist-429-cooldown-account-fallback.test.ts",
       "tests/unit/plan3-p0.test.ts",
       "tests/unit/plugin-sandbox-permissions.test.ts",
@@ -389,6 +393,7 @@
       "tests/unit/usage-service-hardening.test.ts",
       "tests/unit/validate-response-quality.test.ts",
       "tests/unit/vertex-passthrough-model-lockout.test.ts",
+      "tests/unit/video-bridge-drilldown-consumer-route.test.ts",
       "tests/unit/video-bridge-drilldown-route.test.ts",
       "tests/unit/video-bridge-route-security.test.ts",
       "tests/unit/xai-agent-tools-passthrough.test.ts",
@@ -506,11 +511,7 @@
     ".worktrees",
     ".stryker-tmp"
   ],
-  "reporters": [
-    "progress",
-    "html",
-    "json"
-  ],
+  "reporters": ["progress", "html", "json"],
   "htmlReporter": {
     "fileName": "reports/mutation/mutation.html"
   },

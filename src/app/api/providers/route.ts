@@ -503,7 +503,10 @@ export async function DELETE(request: Request) {
   try {
     const requestedIds = new Set(body.ids);
     const deletedConnections = (
-      await getProviderConnections({}, undefined, undefined, ["id", "provider"])
+      (await getProviderConnections({}, undefined, undefined, ["id", "provider"])) as Array<{
+        id: string;
+        provider: string;
+      }>
     ).filter((connection) => requestedIds.has(connection.id));
     const deleted = await deleteProviderConnections(body.ids);
 

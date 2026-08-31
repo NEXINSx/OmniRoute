@@ -14,6 +14,7 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 process.env.API_KEY_SECRET = process.env.API_KEY_SECRET || "catalog-11947-secret";
 
 const core = await import("../../src/lib/db/core.ts");
+const combosDb = await import("../../src/lib/db/combos.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
 const modelsDb = await import("../../src/lib/db/models.ts");
 const settingsDb = await import("../../src/lib/db/settings.ts");
@@ -174,7 +175,21 @@ test.after(() => {
   }
 });
 
-test("#11947 vision auto combos advertise unanimous effective-pool modalities", async () => {
+test("#11947 auto/* entries include capabilities object (baseline)", async () => {
+  const rows = await fetchAutoRows();
+  assert.ok(rows.size > 0, "sanity: at least one auto/* entry listed");
+
+  for (const [id, row] of rows) {
+    assert.ok(
+      row.capabilities && typeof row.capabilities === "object",
+      `${id} must have a capabilities object`
+    );
+    assert.equal(row.capabilities.tool_calling, true, `${id} tool_calling`);
+    assert.equal(row.capabilities.reasoning, true, `${id} reasoning`);
+  }
+});
+
+test("#11947 auto/* vision entries carry capabilities.vision when pool is vision-capable", async () => {
   await seedOpenAiModels([
     {
       id: "gpt-4o",
@@ -298,4 +313,42 @@ test("#11947 non-vision ids never infer vision from their name", async () => {
   assert.equal("vision" in (row.capabilities ?? {}), false);
   assert.deepEqual(row.input_modalities, ["text"]);
   assert.deepEqual(row.output_modalities, ["text"]);
+});
+
+test("#11947 user-defined combo with vision targets includes modalities in catalog", async () => {
+  await providersDb.createProviderConnection({
+    provider: "openai",
+    authType: "apikey",
+    name: "openai-11947-user-combo-vision-test",
+    apiKey: "test-key-11947",
+    isActive: true,
+    testStatus: "active",
+    providerSpecificData: {},
+  });
+  modelsDevSync.saveModelsDevCapabilities({
+    openai: {
+      "gpt-4o": capabilityEntry({
+        attachment: true,
+        modalities_input: JSON.stringify(["text", "image"]),
+        modalities_output: JSON.stringify(["text"]),
+      }),
+    },
+  });
+  await combosDb.createCombo({
+    name: "test-vision-combo-11947",
+    strategy: "priority",
+    models: ["openai/gpt-4o"],
+  });
+
+  const response = await v1ModelsCatalog.getUnifiedModelsResponse(
+    new Request("http://localhost/api/v1/models")
+  );
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as { data: CatalogRow[] };
+  const combo = body.data.find((row) => row.id === "test-vision-combo-11947");
+
+  assert.ok(combo, "the user-defined vision combo must be listed");
+  assert.equal(combo.capabilities?.vision, true);
+  assert.ok(combo.input_modalities?.includes("image"));
+  assert.ok(combo.output_modalities?.includes("text"));
 });

@@ -168,7 +168,7 @@ test.after(() => {
   try {
     clearReasoningCacheAll();
   } catch {}
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("non-streaming: a replay provider (xiaomi-mimo) populates the reasoning cache", async () => {

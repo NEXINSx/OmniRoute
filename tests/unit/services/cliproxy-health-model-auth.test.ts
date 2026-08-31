@@ -91,7 +91,7 @@ after(async () => {
   unregisterSupervisor("cliproxy");
   await new Promise<void>((resolve) => fakeCliproxy.close(() => resolve()));
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("embedded CLIProxyAPI uses public health and dedicated model credentials", async () => {
