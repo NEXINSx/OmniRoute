@@ -8,7 +8,7 @@ import {
   countMemoryReindexPending,
   markMemoryNeedsReindex,
 } from "@/lib/localDb";
-import { resolveEmbeddingSource, embed } from "./embedding";
+import { resolveEmbeddingSource, embed, withMeasuredDimensions } from "./embedding";
 import { getVectorStore } from "./vectorStore";
 import { getMemorySettings } from "./settings";
 import { logger } from "../../../open-sse/utils/logger.ts";
@@ -23,9 +23,7 @@ const log = logger("MEMORY_REINDEX");
  *
  * @returns { processed: number; errors: number }
  */
-export async function runReindexBatch(
-  limit = 100
-): Promise<{ processed: number; errors: number }> {
+export async function runReindexBatch(limit = 100): Promise<{ processed: number; errors: number }> {
   const queue = getMemoryReindexQueue(limit);
 
   if (queue.length === 0) {
@@ -50,12 +48,28 @@ export async function runReindexBatch(
     return { processed: 0, errors: 0 };
   }
 
+  // Nothing but a returned embedding can supply the vector width for a source
+  // the registry does not describe, so waiting for the "lazy probe" here was a
+  // deadlock: this batch refused to embed until the width was known, and the
+  // width could only come from embedding. Spend one embed to measure it, and
+  // reuse that vector below rather than paying for it twice (#12154).
+  let effective = resolution;
+  const probeItem = resolution.dimensions === null ? queue[0] : undefined;
+  const probed = new Map<string, Float32Array>();
+  if (probeItem) {
+    const probe = await embed(probeItem.content, settings);
+    if ("vector" in probe) {
+      effective = withMeasuredDimensions(resolution, probe.vector.length);
+      probed.set(probeItem.id, probe.vector);
+    }
+  }
+
   // Ensure the vector table is ready before processing. ensureReady() returns
   // `{ ready: false }` (without throwing) when dimensions are still unknown —
   // abort the batch in that case so we don't burn embed credits upserting into
   // a missing `vec_memories` table (#8074).
   try {
-    const ready = await vec.ensureReady(resolution);
+    const ready = await vec.ensureReady(effective);
     if (!ready.ready) {
       log.warn("memory.reindex.ensure_ready.skipped", {
         reason: ready.reason,
@@ -77,7 +91,8 @@ export async function runReindexBatch(
 
   for (const item of queue) {
     try {
-      const embeddingResult = await embed(item.content, settings);
+      const reusable = probed.get(item.id);
+      const embeddingResult = reusable ? { vector: reusable } : await embed(item.content, settings);
 
       if (!("vector" in embeddingResult)) {
         log.warn("memory.reindex.embed.fail", {

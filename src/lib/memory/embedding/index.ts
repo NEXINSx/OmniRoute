@@ -52,6 +52,39 @@ function resolveRemoteDimensions(model: string): number | null {
   return typeof dim === "number" ? dim : null;
 }
 
+/**
+ * Fill in the vector width the lazy probe was waiting for.
+ *
+ * `dimensions` is null for every source the hard-coded registry does not
+ * describe — a self-hosted endpoint by definition — and the only thing that can
+ * answer it is an embedding that has actually come back. Callers that hold one
+ * pass its length here; the signature is rebuilt the same way the resolution
+ * built it, so reindex detection still sees a model change as a change. (#12154)
+ */
+export function withMeasuredDimensions(
+  resolution: EmbeddingResolution,
+  dimensions: number
+): EmbeddingResolution {
+  if (
+    resolution.dimensions !== null ||
+    !resolution.source ||
+    !Number.isInteger(dimensions) ||
+    dimensions <= 0
+  ) {
+    return resolution;
+  }
+  return {
+    ...resolution,
+    dimensions,
+    signature: makeSignature(
+      resolution.source,
+      resolution.identity ?? resolution.model,
+      dimensions
+    ),
+    reason: `${resolution.reason} [dim=${dimensions} measured]`,
+  };
+}
+
 /** Build the remote EmbeddingResolution used by both explicit + auto paths. */
 function remoteResolution(model: string, reasonPrefix: string): EmbeddingResolution {
   const dimensions = resolveRemoteDimensions(model);
