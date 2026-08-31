@@ -57,7 +57,7 @@ export const COLLECTORS = [
   // abaixo). Subdir novo: adicione aqui E nos scripts (o drift-check + o gate de
   // órfãos forçam a manutenção em sincronia).
   {
-    glob: "tests/unit/{api,auth,authz,build,cli,cli-helper,combo,compression,correctness,cors,db,db-adapters,docs,gamification,guardrails,lib,mcp,memory,runtime,security,services,settings,shared,ui,usage}/**/*.test.ts",
+    glob: "tests/unit/{api,auth,authz,build,cli,cli-helper,combo,compression,correctness,cors,db,db-adapters,docs,gamification,guardrails,lib,mcp,memory,runtime,security,services,settings,shared,translator,ui,usage}/**/*.test.ts",
     sources: ["package.json"],
   },
   // Node native runner — tests/unit/dashboard/** roda numa invocação separada com o hook
@@ -113,6 +113,7 @@ export const COLLECTORS = [
     sources: ["vitest.mcp.config.ts"],
   },
   { glob: "tests/unit/autoCombo/**/*.test.ts", sources: ["vitest.mcp.config.ts"] },
+  { glob: "tests/unit/api/**/*.spec.ts", sources: ["vitest.mcp.config.ts"] },
   { glob: "src/lib/memory/__tests__/generic-backend.test.ts", sources: ["vitest.mcp.config.ts"] },
   { glob: "tests/unit/encryption.spec.ts", sources: ["vitest.mcp.config.ts"] },
   { glob: "src/shared/components/**/*.test.tsx", sources: ["vitest.mcp.config.ts"] },

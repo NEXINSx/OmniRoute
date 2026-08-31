@@ -426,8 +426,8 @@ Split into focused subdirectories:
 - `contracts/` — public API contracts shipped to npm.
 - `types/` — shared TS types.
 - `utils/` — `circuitBreaker.ts`, `apiAuth.ts`, `apiKey.ts`, `apiKeyPolicy.ts`,
-  `apiResponse.ts`, `api.ts`, `classify429.ts`, `cliCompat.ts`, `clipboard.ts`,
-  `cloud.ts`, `cn.ts`, `cors.ts`, `costEstimator.ts`, `featureFlags.ts`,
+  `api.ts`, `classify429.ts`, `cliCompat.ts`, `clipboard.ts`, `cloud.ts`, `cn.ts`,
+  `cors.ts`, `featureFlags.ts`,
   `fetchTimeout.ts`, `formatting.ts`, `inputSanitizer.ts`, `logger.ts`,
   `machine.ts`, `machineId.ts`, `maskEmail.ts`, `modelCatalogSearch.ts`,
   `nodeRuntimeSupport.ts`, `parseApiKeys.ts`, `providerHints.ts`,

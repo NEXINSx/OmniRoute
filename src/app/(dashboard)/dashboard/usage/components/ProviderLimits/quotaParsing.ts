@@ -289,7 +289,7 @@ function parseDeepseek(data: any) {
 // #10078 follow-up: AgentRouter's `quotas.balance` entry (open-sse/services/usage/agentrouter.ts)
 // carries a real USD amount in `remaining` + `currency: "USD"`. The generic path
 // (normalizeQuotaEntry via parseGeneric) drops `currency` entirely and never sets
-// `isCredits`/`creditCount`, so QuotaCardBody/QuotaCardExpanded's dollar-formatted
+// `isCredits`/`creditCount`, so QuotaCardExpanded's dollar-formatted
 // renderer (which only activates on `q.isCredits`) never triggers — the balance was
 // rendered as a bare "100%/0% left" percentage instead of "$X.XX". Route it through
 // buildCreditsQuota() (same shape DeepSeek/Claude-extra-usage credits rows use) so the

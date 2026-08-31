@@ -61,8 +61,8 @@ const KNOWN_HOOKS = new Set([
   "onDeactivate",
   "onUninstall",
   // Real callbacks wired in code that docs reference (verified present in src/):
-  // onChunk/onFirstChunk — streaming callbacks (src/shared/utils/streamTracker.ts,
-  //   playground ChatTab.tsx); onServerStatus/onPortChanged/onUpdateStatus — Electron
+  // onChunk/onFirstChunk — streaming callbacks (playground useStreamMetrics.ts and
+  //   ChatTab.tsx); onServerStatus/onPortChanged/onUpdateStatus — Electron
   //   IPC callbacks (src/shared/hooks/useElectron.ts, HomePageClient.tsx);
   //   onEmpty — model-metadata registry callback (src/lib/modelMetadataRegistry.ts).
   "onChunk",
@@ -500,6 +500,7 @@ export function buildCodebaseIndex(root = ROOT) {
   // LOCAL_ONLY_API_PREFIXES, HALF_OPEN) is NOT a fabricated env var.
   const envVars = new Set();
   const codeIdentifiers = new Set();
+  const errorCodes = new Set();
   function walkForEnv(dir) {
     const abs = path.join(root, dir);
     if (!fs.existsSync(abs)) return;
@@ -535,6 +536,14 @@ export function buildCodebaseIndex(root = ROOT) {
           // Object-literal / enum members on their own line: `HALF_OPEN: "HALF_OPEN"`.
           for (const m of content.matchAll(/^[ \t]*([A-Z][A-Z0-9_]{2,})[ \t]*[:=]/gm))
             codeIdentifiers.add(m[1]);
+          // Runtime error-code values such as `{ code: "SECURITY_001" }` are
+          // documented protocol identifiers, not environment variables. Keep this
+          // deliberately scoped to code/errorCode properties rather than accepting
+          // arbitrary ALL_CAPS string literals, which could hide a fabricated env var.
+          for (const m of content.matchAll(
+            /\b(?:code|errorCode)\s*:\s*["'`]([A-Z][A-Z0-9_]{2,})["'`]/g
+          ))
+            errorCodes.add(m[1]);
         } catch {
           /* ignore */
         }
@@ -603,7 +612,7 @@ export function buildCodebaseIndex(root = ROOT) {
   }
   walkCli("bin");
 
-  return { apiRoutes, apiPrefixes, apiMethods, envVars, codeIdentifiers, cliCommands };
+  return { apiRoutes, apiPrefixes, apiMethods, envVars, codeIdentifiers, errorCodes, cliCommands };
 }
 
 // ── Doc scanning ───────────────────────────────────────────────────────────
@@ -698,6 +707,7 @@ export function scanDocFile(absPath, index, root = ROOT) {
     // object-literal key) is a code symbol, not a fabricated env var.
     // E.g. LOCAL_ONLY_API_PREFIXES, HALF_OPEN, A2A_SKILL_HANDLERS, MCP_SCOPE_PRESETS.
     if (index.codeIdentifiers.has(name)) continue;
+    if (index.errorCodes.has(name)) continue;
     if (/^X-[A-Z]/.test(name)) continue;
     if (ENV_VAR_DENYLIST.has(name)) continue;
     const ln = lineOf(text, m.index);
