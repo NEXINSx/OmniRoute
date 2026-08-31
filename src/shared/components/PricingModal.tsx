@@ -11,31 +11,29 @@ export default function PricingModal({ isOpen, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      loadPricing();
-    }
-  }, [isOpen]);
-
-  const loadPricing = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/pricing");
-      if (response.ok) {
-        const data = await response.json();
-        setPricingData(data);
-      } else {
-        // Fallback to defaults
+    if (!isOpen) return;
+    const loadPricing = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch("/api/pricing");
+        if (response.ok) {
+          const data = await response.json();
+          setPricingData(data);
+        } else {
+          // Fallback to defaults
+          const defaults = getDefaultPricing();
+          setPricingData(defaults);
+        }
+      } catch (error) {
+        console.error("Failed to load pricing:", error);
         const defaults = getDefaultPricing();
         setPricingData(defaults);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to load pricing:", error);
-      const defaults = getDefaultPricing();
-      setPricingData(defaults);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    loadPricing();
+  }, [isOpen]);
 
   const handlePricingChange = (provider, model, field, value) => {
     const numValue = parseFloat(value);
