@@ -331,6 +331,10 @@ function runCompression(
       ...options,
       config: { ...options.config, memoizeCompressionResults: false },
     });
+    // memoStore clones internally, so the cache entry stays isolated from the caller's
+    // live object. Return the caller's own `result` (upstream #11727 semantics): handing
+    // back the stored clone would let the caller's later mutations corrupt the cache —
+    // the exact bug the result-memo mutation-isolation test guards.
     memoStore(key, result);
     return result;
   }
@@ -519,28 +523,6 @@ async function runCompressionAsync(
     cachingContext?: CachingDetectionContext;
   }
 ): Promise<CompressionResult> {
-  const workerOptions = options
-    ? {
-        model: options.model,
-        supportsVision: options.supportsVision,
-        providerTransport: options.providerTransport,
-        provider: options.provider,
-        imageTransportFidelity: options.imageTransportFidelity,
-        sourceFormat: options.sourceFormat,
-        targetFormat: options.targetFormat,
-        compressionStage: options.compressionStage,
-        config: options.config,
-      }
-    : undefined;
-  const { isCompressionWorkerEligible } = await import("./compressionWorkerProtocol.ts");
-  if (isCompressionWorkerEligible(body, mode, workerOptions)) {
-    try {
-      const { runCompressionInWorker } = await import("./compressionWorkerPool.ts");
-      return await runCompressionInWorker(body, mode, workerOptions, options?.onEngineStep);
-    } catch {
-      return { body, compressed: false, stats: null };
-    }
-  }
   if (
     options?.config?.memoizeCompressionResults === true &&
     // Only memoize for an explicit principal — a missing principalId would collapse
@@ -564,6 +546,8 @@ async function runCompressionAsync(
       ...options,
       config: { ...options.config, memoizeCompressionResults: false },
     });
+    // Same contract as the sync path: store the internal clone; return the caller's own
+    // object so later caller mutations cannot corrupt the cache (#11727 semantics).
     memoStore(key, result);
     return result;
   }
