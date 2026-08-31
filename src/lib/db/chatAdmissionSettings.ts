@@ -23,41 +23,40 @@ export const DEFAULT_CHAT_ADMISSION_SETTINGS: ChatAdmissionSettings = {
   chatAdmissionHealthyHeadroom: 1,
 };
 
+function parseEnvNumber(
+  raw: string | undefined,
+  fallback: number,
+  parse: (raw: string) => number,
+  validate: (n: number) => boolean
+): number {
+  if (raw === undefined) return fallback;
+  const parsed = parse(raw);
+  return validate(parsed) ? parsed : fallback;
+}
+
 export function readChatAdmissionSettingsFromEnv(): ChatAdmissionSettings {
   const env = process.env;
 
-  const chatMaxHeavyInFlightRaw = env.OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT;
-  const chatMaxHeavyInFlight =
-    chatMaxHeavyInFlightRaw !== undefined
-      ? (() => {
-          const parsed = Number.parseInt(chatMaxHeavyInFlightRaw, 10);
-          return Number.isSafeInteger(parsed) && parsed >= 1
-            ? parsed
-            : DEFAULT_CHAT_ADMISSION_SETTINGS.chatMaxHeavyInFlight;
-        })()
-      : DEFAULT_CHAT_ADMISSION_SETTINGS.chatMaxHeavyInFlight;
+  const chatMaxHeavyInFlight = parseEnvNumber(
+    env.OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT,
+    DEFAULT_CHAT_ADMISSION_SETTINGS.chatMaxHeavyInFlight,
+    (raw) => Number.parseInt(raw, 10),
+    (n) => Number.isSafeInteger(n) && n >= 1
+  );
 
-  const chatAdmissionHeapShedRatioRaw = env.OMNIROUTE_CHAT_ADMISSION_HEAP_SHED_RATIO;
-  const chatAdmissionHeapShedRatio =
-    chatAdmissionHeapShedRatioRaw !== undefined
-      ? (() => {
-          const parsed = Number.parseFloat(chatAdmissionHeapShedRatioRaw);
-          return Number.isFinite(parsed) && parsed > 0 && parsed <= 1
-            ? parsed
-            : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHeapShedRatio;
-        })()
-      : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHeapShedRatio;
+  const chatAdmissionHeapShedRatio = parseEnvNumber(
+    env.OMNIROUTE_CHAT_ADMISSION_HEAP_SHED_RATIO,
+    DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHeapShedRatio,
+    (raw) => Number.parseFloat(raw),
+    (n) => Number.isFinite(n) && n > 0 && n <= 1
+  );
 
-  const chatAdmissionHealthyHeadroomRaw = env.OMNIROUTE_CHAT_ADMISSION_HEALTHY_HEADROOM;
-  const chatAdmissionHealthyHeadroom =
-    chatAdmissionHealthyHeadroomRaw !== undefined
-      ? (() => {
-          const parsed = Number.parseInt(chatAdmissionHealthyHeadroomRaw, 10);
-          return Number.isSafeInteger(parsed) && parsed >= 0
-            ? parsed
-            : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHealthyHeadroom;
-        })()
-      : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHealthyHeadroom;
+  const chatAdmissionHealthyHeadroom = parseEnvNumber(
+    env.OMNIROUTE_CHAT_ADMISSION_HEALTHY_HEADROOM,
+    DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHealthyHeadroom,
+    (raw) => Number.parseInt(raw, 10),
+    (n) => Number.isSafeInteger(n) && n >= 0
+  );
 
   return {
     chatMaxHeavyInFlight,
@@ -68,6 +67,7 @@ export function readChatAdmissionSettingsFromEnv(): ChatAdmissionSettings {
 
 export function readChatAdmissionSettingsFromDb(): ChatAdmissionSettings {
   const db = getDbInstance();
+
   const row = db
     .prepare("SELECT value FROM key_value WHERE namespace = ? AND key = ?")
     .get(NAMESPACE, "chatAdmissionSettings") as { value?: string } | undefined;
@@ -75,35 +75,23 @@ export function readChatAdmissionSettingsFromDb(): ChatAdmissionSettings {
   if (!row?.value) return DEFAULT_CHAT_ADMISSION_SETTINGS;
 
   try {
-    const parsed = JSON.parse(row.value) as Partial<ChatAdmissionSettings> | null;
-    if (!parsed || typeof parsed !== "object") return DEFAULT_CHAT_ADMISSION_SETTINGS;
-
-    const chatMaxHeavyInFlight =
-      typeof parsed.chatMaxHeavyInFlight === "number" &&
-      Number.isSafeInteger(parsed.chatMaxHeavyInFlight) &&
-      parsed.chatMaxHeavyInFlight >= 1
-        ? parsed.chatMaxHeavyInFlight
-        : DEFAULT_CHAT_ADMISSION_SETTINGS.chatMaxHeavyInFlight;
-
-    const chatAdmissionHeapShedRatio =
-      typeof parsed.chatAdmissionHeapShedRatio === "number" &&
-      Number.isFinite(parsed.chatAdmissionHeapShedRatio) &&
-      parsed.chatAdmissionHeapShedRatio > 0 &&
-      parsed.chatAdmissionHeapShedRatio <= 1
-        ? parsed.chatAdmissionHeapShedRatio
-        : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHeapShedRatio;
-
-    const chatAdmissionHealthyHeadroom =
-      typeof parsed.chatAdmissionHealthyHeadroom === "number" &&
-      Number.isSafeInteger(parsed.chatAdmissionHealthyHeadroom) &&
-      parsed.chatAdmissionHealthyHeadroom >= 0
-        ? parsed.chatAdmissionHealthyHeadroom
-        : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHealthyHeadroom;
-
+    const parsed = JSON.parse(row.value) as Partial<ChatAdmissionSettings>;
     return {
-      chatMaxHeavyInFlight,
-      chatAdmissionHeapShedRatio,
-      chatAdmissionHealthyHeadroom,
+      chatMaxHeavyInFlight:
+        typeof parsed.chatMaxHeavyInFlight === "number" && parsed.chatMaxHeavyInFlight >= 1
+          ? parsed.chatMaxHeavyInFlight
+          : DEFAULT_CHAT_ADMISSION_SETTINGS.chatMaxHeavyInFlight,
+      chatAdmissionHeapShedRatio:
+        typeof parsed.chatAdmissionHeapShedRatio === "number" &&
+        parsed.chatAdmissionHeapShedRatio > 0 &&
+        parsed.chatAdmissionHeapShedRatio <= 1
+          ? parsed.chatAdmissionHeapShedRatio
+          : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHeapShedRatio,
+      chatAdmissionHealthyHeadroom:
+        typeof parsed.chatAdmissionHealthyHeadroom === "number" &&
+        parsed.chatAdmissionHealthyHeadroom >= 0
+          ? parsed.chatAdmissionHealthyHeadroom
+          : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHealthyHeadroom,
     };
   } catch {
     return DEFAULT_CHAT_ADMISSION_SETTINGS;
@@ -111,44 +99,46 @@ export function readChatAdmissionSettingsFromDb(): ChatAdmissionSettings {
 }
 
 export function getEffectiveChatAdmissionSettings(): ChatAdmissionSettings {
-  const envSettings = readChatAdmissionSettingsFromEnv();
-  const dbSettings = readChatAdmissionSettingsFromDb();
+  const env = readChatAdmissionSettingsFromEnv();
 
-  const chatMaxHeavyInFlight =
-    envSettings.chatMaxHeavyInFlight !== DEFAULT_CHAT_ADMISSION_SETTINGS.chatMaxHeavyInFlight
-      ? envSettings.chatMaxHeavyInFlight
-      : dbSettings.chatMaxHeavyInFlight;
+  const allFromEnv = Object.values(env).every(
+    (v, i) => v === Object.values(DEFAULT_CHAT_ADMISSION_SETTINGS)[i]
+  );
 
-  const chatAdmissionHeapShedRatio =
-    envSettings.chatAdmissionHeapShedRatio !==
-    DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHeapShedRatio
-      ? envSettings.chatAdmissionHeapShedRatio
-      : dbSettings.chatAdmissionHeapShedRatio;
+  if (!allFromEnv) return env;
 
-  const chatAdmissionHealthyHeadroom =
-    envSettings.chatAdmissionHealthyHeadroom !==
-    DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHealthyHeadroom
-      ? envSettings.chatAdmissionHealthyHeadroom
-      : dbSettings.chatAdmissionHealthyHeadroom;
-
-  return {
-    chatMaxHeavyInFlight,
-    chatAdmissionHeapShedRatio,
-    chatAdmissionHealthyHeadroom,
-  };
+  return readChatAdmissionSettingsFromDb();
 }
 
 export function getChatAdmissionSettingsSource(): Record<string, "env" | "db" | "default"> {
-  const env = process.env;
+  const env = readChatAdmissionSettingsFromEnv();
+  const envKeys = Object.keys(env) as (keyof ChatAdmissionSettings)[];
+
   const source: Record<string, "env" | "db" | "default"> = {};
+  for (const key of envKeys) {
+    const envVal = env[key];
+    const defaultVal = DEFAULT_CHAT_ADMISSION_SETTINGS[key];
+    if (envVal !== defaultVal) {
+      source[key] = "env";
+    }
+  }
 
-  source.chatMaxHeavyInFlight = env.OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT !== undefined ? "env" : "db";
+  if (Object.keys(source).length > 0) return source;
 
-  source.chatAdmissionHeapShedRatio =
-    env.OMNIROUTE_CHAT_ADMISSION_HEAP_SHED_RATIO !== undefined ? "env" : "db";
+  const dbVal = readChatAdmissionSettingsFromDb();
+  for (const key of envKeys) {
+    const dbSetting = dbVal[key];
+    const defaultVal = DEFAULT_CHAT_ADMISSION_SETTINGS[key];
+    if (dbSetting !== defaultVal) {
+      source[key] = "db";
+    }
+  }
 
-  source.chatAdmissionHealthyHeadroom =
-    env.OMNIROUTE_CHAT_ADMISSION_HEALTHY_HEADROOM !== undefined ? "env" : "db";
+  for (const key of envKeys) {
+    if (!source[key]) {
+      source[key] = "default";
+    }
+  }
 
   return source;
 }
@@ -157,42 +147,21 @@ export async function updateChatAdmissionSettings(
   next: ChatAdmissionSettings
 ): Promise<ChatAdmissionSettings> {
   const db = getDbInstance();
-  const payload = {
-    chatMaxHeavyInFlight: Math.max(
-      1,
-      Number.isSafeInteger(next.chatMaxHeavyInFlight)
-        ? next.chatMaxHeavyInFlight
-        : DEFAULT_CHAT_ADMISSION_SETTINGS.chatMaxHeavyInFlight
-    ),
-    chatAdmissionHeapShedRatio: Math.max(
-      0,
-      Math.min(
-        1,
-        Number.isFinite(next.chatAdmissionHeapShedRatio)
-          ? next.chatAdmissionHeapShedRatio
-          : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHeapShedRatio
-      )
-    ),
-    chatAdmissionHealthyHeadroom: Math.max(
-      0,
-      Number.isSafeInteger(next.chatAdmissionHealthyHeadroom)
-        ? next.chatAdmissionHealthyHeadroom
-        : DEFAULT_CHAT_ADMISSION_SETTINGS.chatAdmissionHealthyHeadroom
-    ),
-  };
+  const now = new Date().toISOString();
 
-  db.prepare("INSERT OR REPLACE INTO key_value (namespace, key, value) VALUES (?, ?, ?)").run(
-    NAMESPACE,
-    "chatAdmissionSettings",
-    JSON.stringify(payload)
-  );
+  db.prepare(
+    `INSERT INTO key_value (namespace, key, value, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(namespace, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+  ).run(NAMESPACE, "chatAdmissionSettings", JSON.stringify(next), now);
 
   invalidateDbCache("settings");
-  return payload;
+  return getEffectiveChatAdmissionSettings();
 }
 
 export async function resetChatAdmissionSettings(): Promise<ChatAdmissionSettings> {
   const db = getDbInstance();
+
   db.prepare("DELETE FROM key_value WHERE namespace = ? AND key = ?").run(
     NAMESPACE,
     "chatAdmissionSettings"
