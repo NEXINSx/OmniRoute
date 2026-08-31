@@ -18,6 +18,7 @@ import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { FieldLabelWithHelp, WeightTotalBar } from "./parts";
 import { ComboTargetOptions } from "./ComboQuotaOnlyFallbackToggle";
 import { applyQuotaOnlyFallbackConfig, setQuotaOnlyFallback } from "./comboQuotaOnlyFallback";
+import { buildAgentFeaturePatch } from "./comboAgentFeatures";
 import { useComboProxyAssignments } from "./useComboProxyAssignments";
 import { ResponseValidationEditor, type ResponseValidationValue } from "./ResponseValidationEditor";
 import ReasoningTokenBufferToggle from "./ReasoningTokenBufferToggle";
@@ -2865,13 +2866,20 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
       saveData.config = configToSave;
     }
 
-    // Agent features (#399 / #401 / #454)
-    if (agentSystemMessage.trim()) saveData.system_message = agentSystemMessage.trim();
-    else delete saveData.system_message;
-    if (agentToolFilter.trim()) saveData.tool_filter_regex = agentToolFilter.trim();
-    else delete saveData.tool_filter_regex;
-    if (agentContextCache) saveData.context_cache_protection = true;
-    else delete saveData.context_cache_protection;
+    // Agent features (#399 / #401 / #454). A cleared field is sent as null on edit
+    // rather than omitted, because PUT merges over the stored record (#12158).
+    delete saveData.system_message;
+    delete saveData.tool_filter_regex;
+    delete saveData.context_cache_protection;
+    Object.assign(
+      saveData,
+      buildAgentFeaturePatch({
+        systemMessage: agentSystemMessage,
+        toolFilter: agentToolFilter,
+        contextCache: agentContextCache,
+        isEdit,
+      })
+    );
 
     // Validate and save context_length
     if (contextLength !== undefined && contextLength !== null) {
