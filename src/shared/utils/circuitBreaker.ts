@@ -642,3 +642,37 @@ export function resetAllCircuitBreakers() {
     // Non-critical
   }
 }
+
+let recoveryProberTimer: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Background recovery prober — checks registered circuit breakers in OPEN state.
+ * When a breaker's reset timeout has elapsed, auto-refreshes its state to HALF_OPEN
+ * so it is ready for probe traffic without waiting for an incoming user request.
+ */
+export function startCircuitBreakerRecoveryProber(intervalMs = 10000): void {
+  if (recoveryProberTimer) return;
+  recoveryProberTimer = setInterval(() => {
+    for (const breaker of registry.values()) {
+      if (breaker.state === STATE.OPEN && breaker._shouldAttemptReset()) {
+        breaker._refreshOpenState();
+      }
+    }
+  }, intervalMs);
+
+  if (recoveryProberTimer.unref) {
+    recoveryProberTimer.unref();
+  }
+}
+
+export function stopCircuitBreakerRecoveryProber(): void {
+  if (recoveryProberTimer) {
+    clearInterval(recoveryProberTimer);
+    recoveryProberTimer = null;
+  }
+}
+
+// Auto-start active recovery prober in production/server runtime
+if (typeof process !== "undefined" && process.env?.NODE_ENV !== "test") {
+  startCircuitBreakerRecoveryProber(10000);
+}
