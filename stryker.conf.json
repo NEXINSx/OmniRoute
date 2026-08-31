@@ -354,6 +354,7 @@
       "tests/unit/router-strategies.test.ts",
       "tests/unit/routing-adaptive-e2e.test.ts",
       "tests/unit/rule12-error-sanitization-sweep.test.ts",
+      "tests/unit/search-432-plan-limit-cooldown.test.ts",
       "tests/unit/serial/combo-health-autopilot.test.ts",
       "tests/unit/serial/combo-quota-share-cooldown-wait-timing.test.ts",
       "tests/unit/serial/combo-strategy-fallbacks-half-open-timing.test.ts",
