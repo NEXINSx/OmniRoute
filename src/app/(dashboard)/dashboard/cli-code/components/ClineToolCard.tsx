@@ -9,6 +9,10 @@ import { DEFAULT_DISPLAY_BASE_URL } from "@/shared/hooks";
 
 const CLOUD_URL = process.env.NEXT_PUBLIC_CLOUD_URL;
 
+// (#523) Default to the first available key while the user hasn't picked one.
+const defaultKeyId = (selectedId, apiKeys) =>
+  selectedId || (apiKeys?.length > 0 ? apiKeys[0].id : "");
+
 export default function ClineToolCard({
   tool,
   isExpanded = false,
@@ -56,10 +60,10 @@ export default function ClineToolCard({
   const effectiveConfigStatus = configStatus || batchStatus?.configStatus || null;
 
   // (#523) Store the key *id* (not the masked string) so the backend can
-  // resolve the real secret from DB before writing to config files. Default to
-  // the first available key while the user hasn't picked one — derived during
-  // render instead of synced through an effect (react-hooks/set-state-in-effect).
-  const effectiveApiKeyId = selectedApiKeyId || (apiKeys?.length > 0 ? apiKeys[0].id : "");
+  // resolve the real secret from DB before writing to config files. Derived
+  // during render instead of synced through an effect
+  // (react-hooks/set-state-in-effect).
+  const effectiveApiKeyId = defaultKeyId(selectedApiKeyId, apiKeys);
 
   const fetchModelAliases = useCallback(async () => {
     try {

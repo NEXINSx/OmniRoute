@@ -8,6 +8,35 @@ import { useTranslations } from "next-intl";
 
 const CLOUD_URL = process.env.NEXT_PUBLIC_CLOUD_URL;
 
+// (#523) Default to the first available key while the user hasn't picked one.
+const defaultKeyId = (selectedId, apiKeys) =>
+  selectedId || (apiKeys?.length > 0 ? apiKeys[0].id : "");
+
+/**
+ * One-time form initialization from ~/.openclaw/openclaw.json, applied right
+ * after a status fetch resolves: mirror the primary model into the form and
+ * re-select the API key whose masked value matches the stored one.
+ */
+function initOpenclawFormFromSettings(data, apiKeys, onSelectModel, onSelectKeyId) {
+  const provider = data.settings?.models?.providers?.["omniroute"];
+  if (!provider) return;
+
+  const primaryModel = data.settings?.agents?.defaults?.model?.primary;
+  if (primaryModel) onSelectModel(primaryModel.replace("omniroute/", ""));
+
+  // (#523) Keys from /api/keys are masked (first 8 + "****" + last 4).
+  // Match by prefix/suffix instead of exact comparison.
+  // apiKey may be a structured secret reference (object) rather than a
+  // plaintext string, e.g. OpenClaw SecretRefs. Only match on strings.
+  if (typeof provider.apiKey !== "string" || !provider.apiKey) return;
+  const fileKeyPrefix = provider.apiKey.slice(0, 8);
+  const fileKeySuffix = provider.apiKey.slice(-4);
+  const matchedKey = apiKeys?.find(
+    (k) => k.key && k.key.startsWith(fileKeyPrefix) && k.key.endsWith(fileKeySuffix)
+  );
+  if (matchedKey) onSelectKeyId(matchedKey.id);
+}
+
 export default function OpenClawToolCard({
   tool,
   isExpanded = false,
@@ -57,10 +86,10 @@ export default function OpenClawToolCard({
   const effectiveConfigStatus = configStatus || batchStatus?.configStatus || null;
 
   // (#523) Store the key *id* (not the masked string) so the backend can
-  // resolve the real secret from DB before writing to config files. Default to
-  // the first available key while the user hasn't picked one — derived during
-  // render instead of synced through an effect (react-hooks/set-state-in-effect).
-  const effectiveApiKeyId = selectedApiKeyId || (apiKeys?.length > 0 ? apiKeys[0].id : "");
+  // resolve the real secret from DB before writing to config files. Derived
+  // during render instead of synced through an effect
+  // (react-hooks/set-state-in-effect).
+  const effectiveApiKeyId = defaultKeyId(selectedApiKeyId, apiKeys);
 
   const fetchModelAliases = useCallback(async () => {
     try {
@@ -94,26 +123,7 @@ export default function OpenClawToolCard({
       // no setState runs synchronously inside an effect body).
       if (data?.installed && !hasInitializedModel.current) {
         hasInitializedModel.current = true;
-        const provider = data.settings?.models?.providers?.["omniroute"];
-        if (provider) {
-          const primaryModel = data.settings?.agents?.defaults?.model?.primary;
-          if (primaryModel) {
-            const modelId = primaryModel.replace("omniroute/", "");
-            setSelectedModel(modelId);
-          }
-          // (#523) Keys from /api/keys are masked (first 8 + "****" + last 4).
-          // Match by prefix/suffix instead of exact comparison.
-          // apiKey may be a structured secret reference (object) rather than a
-          // plaintext string, e.g. OpenClaw SecretRefs. Only match on strings.
-          if (typeof provider.apiKey === "string" && provider.apiKey) {
-            const fileKeyPrefix = provider.apiKey.slice(0, 8);
-            const fileKeySuffix = provider.apiKey.slice(-4);
-            const matchedKey = apiKeys?.find(
-              (k) => k.key && k.key.startsWith(fileKeyPrefix) && k.key.endsWith(fileKeySuffix)
-            );
-            if (matchedKey) setSelectedApiKeyId(matchedKey.id);
-          }
-        }
+        initOpenclawFormFromSettings(data, apiKeys, setSelectedModel, setSelectedApiKeyId);
       }
     } catch (error) {
       setOpenclawStatus({ installed: false, error: error.message });

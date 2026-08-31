@@ -15,6 +15,41 @@ import {
 
 const CLOUD_URL = process.env.NEXT_PUBLIC_CLOUD_URL;
 
+// (#523) Default to the first available key while the user hasn't picked one.
+const defaultKeyId = (selectedId, apiKeys) =>
+  selectedId || (apiKeys?.length > 0 ? apiKeys[0].id : "");
+
+/**
+ * One-time form initialization from ~/.claude/settings.json, applied right
+ * after a status fetch resolves: mirror the env model mappings into the form
+ * and re-select the API key whose masked value matches the stored token.
+ */
+function initClaudeFormFromSettings(
+  data,
+  apiKeys,
+  defaultModels,
+  onModelMappingChange,
+  onSelectKey
+) {
+  const env = data.settings?.env || {};
+
+  defaultModels.forEach((model) => {
+    if (!model.envKey) return;
+    const value = env[model.envKey] || model.defaultValue || "";
+    // Only sync initial values from file once
+    if (value) onModelMappingChange(model.alias, value);
+  });
+
+  // Restore selected key from file: match token stored in file against known keys
+  const tokenFromFile = getStoredClaudeAuthValue(env);
+  if (!tokenFromFile) return;
+  // (#523) Keys from /api/keys are masked (first 8 + "****" + last 4).
+  // Mask the token from file to compare against the masked list.
+  const maskedToken = tokenFromFile.slice(0, 8) + "****" + tokenFromFile.slice(-4);
+  const matchedKey = apiKeys?.find((k) => k.key === maskedToken);
+  if (matchedKey) onSelectKey(matchedKey.id);
+}
+
 export default function ClaudeToolCard({
   tool,
   isExpanded = false,
@@ -65,10 +100,10 @@ export default function ClaudeToolCard({
   const effectiveConfigStatus = configStatus || batchStatus?.configStatus || null;
 
   // (#523) Store the key *id* (not the masked string) so the backend can
-  // resolve the real secret from DB before writing to settings.json. Default to
-  // the first available key while the user hasn't picked one — derived during
-  // render instead of synced through an effect (react-hooks/set-state-in-effect).
-  const effectiveApiKey = selectedApiKey || (apiKeys?.length > 0 ? apiKeys[0].id : "");
+  // resolve the real secret from DB before writing to settings.json. Derived
+  // during render instead of synced through an effect
+  // (react-hooks/set-state-in-effect).
+  const effectiveApiKey = defaultKeyId(selectedApiKey, apiKeys);
 
   const fetchModelAliases = useCallback(async () => {
     try {
@@ -102,26 +137,13 @@ export default function ClaudeToolCard({
       // setState runs synchronously inside an effect body).
       if (data?.installed && !hasInitializedModels.current) {
         hasInitializedModels.current = true;
-        const env = data.settings?.env || {};
-
-        tool.defaultModels.forEach((model) => {
-          if (model.envKey) {
-            const value = env[model.envKey] || model.defaultValue || "";
-            // Only sync initial values from file once
-            if (value) {
-              onModelMappingChange(model.alias, value);
-            }
-          }
-        });
-        // Restore selected key from file: match token stored in file against known keys
-        const tokenFromFile = getStoredClaudeAuthValue(env);
-        if (tokenFromFile) {
-          // (#523) Keys from /api/keys are masked (first 8 + "****" + last 4).
-          // Mask the token from file to compare against the masked list.
-          const maskedToken = tokenFromFile.slice(0, 8) + "****" + tokenFromFile.slice(-4);
-          const matchedKey = apiKeys?.find((k) => k.key === maskedToken);
-          if (matchedKey) setSelectedApiKey(matchedKey.id);
-        }
+        initClaudeFormFromSettings(
+          data,
+          apiKeys,
+          tool.defaultModels,
+          onModelMappingChange,
+          setSelectedApiKey
+        );
       }
     } catch (error) {
       setClaudeStatus({ installed: false, error: error.message });
