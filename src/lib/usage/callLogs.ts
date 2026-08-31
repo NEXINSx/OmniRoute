@@ -80,6 +80,7 @@ type CallLogSummaryRow = {
   account: string | null;
   connection_id: string | null;
   duration: number | null;
+  ttft_ms: number | null;
   tokens_in: number | null;
   tokens_out: number | null;
   tokens_cache_read: number | null;
@@ -260,6 +261,11 @@ function buildArtifact(
   };
 }
 
+export function normalizeTtftMs(v: unknown): number | null {
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) return null;
+  return Math.round(v);
+}
+
 // #6187: extract the assistant message from a chat-completion-shaped response
 // body so we can inspect its reasoning_content / <think> content.
 function extractAssistantMessage(responseBody: unknown): unknown {
@@ -376,6 +382,7 @@ function mapSummaryRow(row: CallLogSummaryRow) {
     account: row.resolved_account || row.account,
     connectionId: row.connection_id,
     duration: toNumber(row.duration),
+    timeToFirstTokenMs: row.ttft_ms != null ? toNumber(row.ttft_ms) : null,
     tokens: {
       in: toNumber(row.tokens_in),
       out: toNumber(row.tokens_out),
@@ -479,6 +486,7 @@ async function saveCallLogOperation(entry: any): Promise<void> {
       account,
       connectionId: entry.connectionId || null,
       duration: entry.duration || 0,
+      ttftMs: normalizeTtftMs(entry.timeToFirstTokenMs ?? entry.ttftMs ?? entry.ttft),
       tokensIn: toNumber(getLoggedInputTokens(entry.tokens)),
       tokensOut: toNumber(getLoggedOutputTokens(entry.tokens)),
       tokensCacheRead: getPromptCacheReadTokensOrNull(entry.tokens),
@@ -546,7 +554,7 @@ async function saveCallLogOperation(entry: any): Promise<void> {
       `
       INSERT INTO call_logs (
         id, timestamp, method, path, status, model, requested_model, provider,
-        account, connection_id, duration, tokens_in, tokens_out,
+        account, connection_id, duration, ttft_ms, tokens_in, tokens_out,
         tokens_cache_read, tokens_cache_creation, tokens_reasoning, tokens_compressed,
         reasoning_source, reasoning_chars,
         cache_source, request_type, source_format, target_format, api_key_id, api_key_name,
@@ -557,7 +565,7 @@ async function saveCallLogOperation(entry: any): Promise<void> {
       )
       VALUES (
         @id, @timestamp, @method, @path, @status, @model, @requestedModel, @provider,
-        @account, @connectionId, @duration, @tokensIn, @tokensOut,
+        @account, @connectionId, @duration, @ttftMs, @tokensIn, @tokensOut,
         @tokensCacheRead, @tokensCacheCreation, @tokensReasoning, @tokensCompressed,
         @reasoningSource, @reasoningChars,
         @cacheSource, @requestType, @sourceFormat, @targetFormat, @apiKeyId, @apiKeyName,
@@ -717,17 +725,47 @@ export async function getCallLogs(filter: any = {}) {
     params.until = filter.until instanceof Date ? filter.until.toISOString() : String(filter.until);
   }
   if (filter.search) {
-    conditions.push(`(
-      cl.model LIKE @searchQ OR cl.path LIKE @searchQ OR cl.account LIKE @searchQ OR
-      ${RESOLVED_ACCOUNT_SQL} LIKE @searchQ OR
-      cl.requested_model LIKE @searchQ OR cl.provider LIKE @searchQ OR
-      cl.api_key_name LIKE @searchQ OR cl.api_key_id LIKE @searchQ OR
-      cl.combo_name LIKE @searchQ OR CAST(cl.status AS TEXT) LIKE @searchQ
-      OR cl.combo_step_id LIKE @searchQ OR cl.combo_execution_key LIKE @searchQ
-      OR cl.error_summary LIKE @searchQ
-      OR cl.correlation_id LIKE @searchQ
-    )`);
-    params.searchQ = `%${filter.search}%`;
+    const tokens = filter.search
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((t: string) => t.trim());
+
+    const positiveTokens = tokens.filter((t: string) => !t.startsWith("-"));
+    const negativeTokens = tokens
+      .filter((t: string) => t.startsWith("-") && t.length > 1)
+      .map((t: string) => t.substring(1));
+
+    let searchIdx = 0;
+
+    for (const token of positiveTokens) {
+      const pKey = `searchPosQ${searchIdx++}`;
+      conditions.push(`(
+        cl.model LIKE @${pKey} OR cl.path LIKE @${pKey} OR cl.account LIKE @${pKey} OR
+        ${RESOLVED_ACCOUNT_SQL} LIKE @${pKey} OR
+        cl.requested_model LIKE @${pKey} OR cl.provider LIKE @${pKey} OR
+        cl.api_key_name LIKE @${pKey} OR cl.api_key_id LIKE @${pKey} OR
+        cl.combo_name LIKE @${pKey} OR CAST(cl.status AS TEXT) LIKE @${pKey}
+        OR cl.combo_step_id LIKE @${pKey} OR cl.combo_execution_key LIKE @${pKey}
+        OR cl.error_summary LIKE @${pKey}
+        OR cl.correlation_id LIKE @${pKey}
+      )`);
+      params[pKey] = `%${token}%`;
+    }
+
+    for (const token of negativeTokens) {
+      const pKey = `searchNegQ${searchIdx++}`;
+      conditions.push(`(
+        IFNULL(cl.model, '') NOT LIKE @${pKey} AND IFNULL(cl.path, '') NOT LIKE @${pKey} AND IFNULL(cl.account, '') NOT LIKE @${pKey} AND
+        IFNULL(${RESOLVED_ACCOUNT_SQL}, '') NOT LIKE @${pKey} AND
+        IFNULL(cl.requested_model, '') NOT LIKE @${pKey} AND IFNULL(cl.provider, '') NOT LIKE @${pKey} AND
+        IFNULL(cl.api_key_name, '') NOT LIKE @${pKey} AND IFNULL(cl.api_key_id, '') NOT LIKE @${pKey} AND
+        IFNULL(cl.combo_name, '') NOT LIKE @${pKey} AND IFNULL(CAST(cl.status AS TEXT), '') NOT LIKE @${pKey}
+        AND IFNULL(cl.combo_step_id, '') NOT LIKE @${pKey} AND IFNULL(cl.combo_execution_key, '') NOT LIKE @${pKey}
+        AND IFNULL(cl.error_summary, '') NOT LIKE @${pKey}
+        AND IFNULL(cl.correlation_id, '') NOT LIKE @${pKey}
+      )`);
+      params[pKey] = `%${token}%`;
+    }
   }
 
   if (conditions.length > 0) {

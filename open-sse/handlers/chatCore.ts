@@ -5718,6 +5718,7 @@ export async function handleChatCore({
       claudeCacheMeta: claudePromptCacheLogMeta,
       claudeCacheUsageMeta: cacheUsageLogMeta,
       cacheSource: "upstream",
+      ttft: typeof ttft === "number" && Number.isFinite(ttft) && ttft > 0 ? ttft : undefined,
     });
 
     recordStreamingCost({
