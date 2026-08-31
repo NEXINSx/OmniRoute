@@ -101,6 +101,16 @@ test("runs the ChatGPT browser headed so Cloudflare sees the verified browser sh
   assert.equal(CHATGPT_WEB_CODEX_RUNTIME_HEADED, true);
 });
 
+test("runs the Docker browser headed inside a private Xvfb display", () => {
+  const dockerfile = readFileSync(
+    join(process.cwd(), "docker/chatgpt-web-codex-browser/Dockerfile"),
+    "utf8"
+  );
+  assert.match(dockerfile, /xvfb-run/);
+  assert.doesNotMatch(dockerfile, /--headless(?:=|\s)/);
+  assert.match(dockerfile, /-nolisten tcp/);
+});
+
 test("preserves browser-verified ChatGPT auth cookies across runtime rotation", () => {
   const cookie = (name: string, value: string) => ({
     name,
@@ -634,6 +644,29 @@ test("rejects unresolved Responses file_id references instead of fabricating fil
   );
 });
 
+test("rejects unresolved and remote Responses image references before browser dispatch", () => {
+  const requestWith = (image: Record<string, unknown>) => ({
+    model: "gpt-5.6-sol",
+    stream: true,
+    input: [
+      {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_image", ...image }],
+      },
+    ],
+  });
+
+  assert.throws(
+    () => parseRequest(requestWith({ file_id: "file-unavailable" })),
+    /cannot resolve input_image file_id/i
+  );
+  assert.throws(
+    () => parseRequest(requestWith({ image_url: "https:\/\/example.com\/remote.png" })),
+    /supports inline data URLs only/i
+  );
+});
+
 test("accepts inline input_file data URLs and rejects remote file URLs", () => {
   const parsed = parseRequest({
     model: "gpt-5.6-sol",
@@ -745,6 +778,126 @@ test("forced previous_response_id state flushes immediately and reloads after an
     assert.equal((expanded as { input: unknown[] }).input.length, 3);
     const foreign = expandPreviousResponseInput(continuation, "other-turn");
     assert.equal(foreign, continuation);
+  } finally {
+    resetResponseStateForTests();
+    if (previousHome === undefined) delete process.env.CODEX_CHATGPT_WEB_HOME;
+    else process.env.CODEX_CHATGPT_WEB_HOME = previousHome;
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("concurrent response-state writers merge their snapshots instead of overwriting", async () => {
+  const home = mkdtempSync(join(tmpdir(), "chatgpt-web-codex-state-merge-"));
+  const previousHome = process.env.CODEX_CHATGPT_WEB_HOME;
+  process.env.CODEX_CHATGPT_WEB_HOME = home;
+  const nonce = `${process.pid}-${Date.now()}`;
+  const writerA = await import(
+    `../../open-sse/vendor/codex-chatgpt-web/responses/state.ts?writer-a=${nonce}`
+  );
+  const writerB = await import(
+    `../../open-sse/vendor/codex-chatgpt-web/responses/state.ts?writer-b=${nonce}`
+  );
+  try {
+    assert.notEqual(writerA, writerB);
+    writerA.resetResponseStateForTests();
+    writerB.resetResponseStateForTests();
+    writerA.rememberResponseState(
+      { store: false, input: "request-a" },
+      { id: "resp_writer_a", status: "completed", output: [{ type: "output_text", text: "a" }] },
+      { force: true, namespace: "namespace-a" }
+    );
+    writerB.rememberResponseState(
+      { store: false, input: "request-b" },
+      { id: "resp_writer_b", status: "completed", output: [{ type: "output_text", text: "b" }] },
+      { force: true, namespace: "namespace-b" }
+    );
+
+    writerA.resetResponseStateForTests();
+    writerB.resetResponseStateForTests();
+    const continuationA = { previous_response_id: "resp_writer_a", input: "continue-a" };
+    const continuationB = { previous_response_id: "resp_writer_b", input: "continue-b" };
+    assert.notEqual(
+      writerA.expandPreviousResponseInput(continuationA, "namespace-a"),
+      continuationA
+    );
+    assert.notEqual(
+      writerB.expandPreviousResponseInput(continuationB, "namespace-b"),
+      continuationB
+    );
+  } finally {
+    writerA.resetResponseStateForTests();
+    writerB.resetResponseStateForTests();
+    if (previousHome === undefined) delete process.env.CODEX_CHATGPT_WEB_HOME;
+    else process.env.CODEX_CHATGPT_WEB_HOME = previousHome;
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("large attachment response state survives a separate isolate", async () => {
+  const home = mkdtempSync(join(tmpdir(), "chatgpt-web-codex-state-large-"));
+  const previousHome = process.env.CODEX_CHATGPT_WEB_HOME;
+  process.env.CODEX_CHATGPT_WEB_HOME = home;
+  const nonce = `${process.pid}-${Date.now()}`;
+  const writer = await import(
+    `../../open-sse/vendor/codex-chatgpt-web/responses/state.ts?large-writer=${nonce}`
+  );
+  const reader = await import(
+    `../../open-sse/vendor/codex-chatgpt-web/responses/state.ts?large-reader=${nonce}`
+  );
+  try {
+    assert.notEqual(writer, reader);
+    writer.resetResponseStateForTests();
+    reader.resetResponseStateForTests();
+    const fileData = "a".repeat(2_200_000);
+    writer.rememberResponseState(
+      {
+        store: false,
+        input: [
+          {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_file", filename: "large.txt", file_data: fileData }],
+          },
+        ],
+      },
+      {
+        id: "resp_large_attachment",
+        status: "completed",
+        output: [{ type: "output_text", text: "received" }],
+      },
+      { force: true, namespace: "namespace-large" }
+    );
+    assert.equal(existsSync(join(home, "responses-state-large")), true);
+
+    const continuation = {
+      previous_response_id: "resp_large_attachment",
+      input: "continue-large",
+    };
+    const expanded = reader.expandPreviousResponseInput(continuation, "namespace-large");
+    assert.notEqual(expanded, continuation);
+    assert.equal((expanded as { input: unknown[] }).input.length, 3);
+  } finally {
+    writer.resetResponseStateForTests();
+    reader.resetResponseStateForTests();
+    if (previousHome === undefined) delete process.env.CODEX_CHATGPT_WEB_HOME;
+    else process.env.CODEX_CHATGPT_WEB_HOME = previousHome;
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("namespaced continuations reject legacy state without a namespace", () => {
+  const home = mkdtempSync(join(tmpdir(), "chatgpt-web-codex-state-namespace-"));
+  const previousHome = process.env.CODEX_CHATGPT_WEB_HOME;
+  process.env.CODEX_CHATGPT_WEB_HOME = home;
+  try {
+    resetResponseStateForTests();
+    rememberResponseState(
+      { store: false, input: "private-history" },
+      { id: "resp_legacy_namespace", status: "completed", output: [] },
+      { force: true }
+    );
+    const continuation = { previous_response_id: "resp_legacy_namespace", input: "foreign" };
+    assert.equal(expandPreviousResponseInput(continuation, "different-namespace"), continuation);
   } finally {
     resetResponseStateForTests();
     if (previousHome === undefined) delete process.env.CODEX_CHATGPT_WEB_HOME;

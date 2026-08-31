@@ -1,5 +1,16 @@
 /* Adapted from miuuyy/codex-chatgpt-web commit 09877fa21ffdbf20979623ef501046fc02a750d7 (MIT). */
-import { chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  chmodSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { atomicWriteFile, getConfigDir } from "../config";
 
@@ -10,10 +21,16 @@ const SNAPSHOT_DEBOUNCE_MS = 2_000;
  * store the full expanded input each turn — ~quadratic bytes per chain —
  * so a count cap alone cannot bound memory. Oldest-first eviction applies past this mark. */
 const MAX_STORED_RESPONSE_BYTES = 64 * 1024 * 1024;
-/** Entries whose serialized size exceeds this are kept in memory but skipped on disk: inputs can
- * carry base64 `input_image` data URLs, and one screenshot-heavy thread must not balloon the file. */
+/** Keep the shared snapshot compact. Larger attachment-bearing entries use per-response files. */
 const SNAPSHOT_ENTRY_MAX_BYTES = 2 * 1024 * 1024;
 const SNAPSHOT_TOTAL_MAX_BYTES = 24 * 1024 * 1024;
+/** Large inline attachments are stored per response so one image does not force every writer to
+ * rewrite a monolithic snapshot. 80 MiB covers the browser's 50 MB raw aggregate after base64. */
+const LARGE_STATE_ENTRY_MAX_BYTES = 80 * 1024 * 1024;
+const LARGE_STATE_TOTAL_MAX_BYTES = 512 * 1024 * 1024;
+const SNAPSHOT_LOCK_WAIT_MS = 2_000;
+const SNAPSHOT_LOCK_STALE_MS = 30_000;
+const SNAPSHOT_LOCK_RETRY_MS = 20;
 
 interface StoredResponseState {
   createdAt: number;
@@ -27,6 +44,7 @@ interface StoredResponseState {
 export type ResponseStateOptions = { force?: boolean; namespace?: string };
 
 const states = new Map<string, StoredResponseState>();
+const dirtyStateIds = new Set<string>();
 let storedResponseBytes = 0;
 
 /** The ONLY size computation: approximate entry weight from its items payload. */
@@ -55,6 +73,7 @@ function deleteEntry(id: string): void {
   storedResponseBytes -= existing.sizeBytes ?? 0;
   if (storedResponseBytes < 0) storedResponseBytes = 0;
   states.delete(id);
+  dirtyStateIds.delete(id);
 }
 // Expansion provenance must stay proxy-private: a WeakMap distinguishes replayed history from the
 // newly appended input suffix without adding an unknown field that native passthrough could send
@@ -64,6 +83,7 @@ const replayedInputPrefixLengths = new WeakMap<object, number>();
 let loaded = false;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingPersistPath: string | null = null;
+const lockWaitCell = new Int32Array(new SharedArrayBuffer(4));
 
 function now(): number {
   return Date.now();
@@ -71,6 +91,174 @@ function now(): number {
 
 function snapshotPath(): string {
   return join(getConfigDir(), "responses-state.json");
+}
+
+function largeStateDir(path: string): string {
+  return join(dirname(path), "responses-state-large");
+}
+
+function largeStatePath(path: string, id: string): string {
+  const key = createHash("sha256").update(id).digest("hex");
+  return join(largeStateDir(path), `${key}.json`);
+}
+
+function persistableState(value: unknown): Omit<StoredResponseState, "sizeBytes"> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const rec = value as StoredResponseState;
+  if (typeof rec.createdAt !== "number" || !Array.isArray(rec.items)) return undefined;
+  return {
+    createdAt: rec.createdAt,
+    items: rec.items,
+    ...(typeof rec.namespace === "string" && rec.namespace.trim()
+      ? { namespace: rec.namespace.trim() }
+      : {}),
+  };
+}
+
+function readSnapshot(path: string): Map<string, Omit<StoredResponseState, "sizeBytes">> {
+  const entries = new Map<string, Omit<StoredResponseState, "sizeBytes">>();
+  try {
+    if (!existsSync(path)) return entries;
+    const raw = JSON.parse(readFileSync(path, "utf-8")) as { version?: unknown; states?: unknown };
+    if (raw.version !== 1 || !Array.isArray(raw.states)) return entries;
+    for (const entry of raw.states) {
+      if (!Array.isArray(entry) || entry.length !== 2) continue;
+      const [id, value] = entry as [unknown, unknown];
+      if (typeof id !== "string") continue;
+      const state = persistableState(value);
+      if (state) entries.set(id, state);
+    }
+  } catch {
+    /* missing/corrupt snapshot: start empty */
+  }
+  return entries;
+}
+
+function waitForSnapshotLock(): void {
+  try {
+    Atomics.wait(lockWaitCell, 0, 0, SNAPSHOT_LOCK_RETRY_MS);
+  } catch {
+    const until = Date.now() + SNAPSHOT_LOCK_RETRY_MS;
+    while (Date.now() < until) {
+      /* Atomics.wait may be unavailable in restricted runtimes. */
+    }
+  }
+}
+
+function withSnapshotLock<T>(path: string, action: () => T): T {
+  const directory = dirname(path);
+  const lockPath = `${path}.lock`;
+  const deadline = Date.now() + SNAPSHOT_LOCK_WAIT_MS;
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  try {
+    chmodSync(directory, 0o700);
+  } catch {
+    /* Windows ACLs are managed outside this cache. */
+  }
+
+  for (;;) {
+    let acquired = false;
+    try {
+      const fd = openSync(lockPath, "wx", 0o600);
+      closeSync(fd);
+      acquired = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+    if (acquired) {
+      try {
+        return action();
+      } finally {
+        rmSync(lockPath, { force: true });
+      }
+    }
+
+    try {
+      if (Date.now() - statSync(lockPath).mtimeMs > SNAPSHOT_LOCK_STALE_MS) {
+        rmSync(lockPath, { force: true });
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    if (Date.now() >= deadline) throw new Error("Timed out waiting for response-state lock");
+    waitForSnapshotLock();
+  }
+}
+
+function pruneLargeStateFiles(path: string): void {
+  const directory = largeStateDir(path);
+  if (!existsSync(directory)) return;
+  const at = now();
+  const live: { path: string; mtimeMs: number; size: number }[] = [];
+  let total = 0;
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (!entry.isFile() || !/^[a-f0-9]{64}\.json$/.test(entry.name)) continue;
+    const filePath = join(directory, entry.name);
+    try {
+      const stat = statSync(filePath);
+      if (at - stat.mtimeMs > RESPONSE_TTL_MS) {
+        rmSync(filePath, { force: true });
+        continue;
+      }
+      total += stat.size;
+      live.push({ path: filePath, mtimeMs: stat.mtimeMs, size: stat.size });
+    } catch {
+      /* raced another writer/cleanup */
+    }
+  }
+  live.sort((a, b) => a.mtimeMs - b.mtimeMs);
+  while (total > LARGE_STATE_TOTAL_MAX_BYTES || live.length > MAX_STORED_RESPONSES) {
+    const oldest = live.shift();
+    if (!oldest) break;
+    rmSync(oldest.path, { force: true });
+    total -= oldest.size;
+  }
+}
+
+function writeLargeState(
+  path: string,
+  id: string,
+  state: Omit<StoredResponseState, "sizeBytes">
+): boolean {
+  try {
+    const serialized = JSON.stringify({ version: 1, id, state });
+    if (Buffer.byteLength(serialized, "utf8") > LARGE_STATE_ENTRY_MAX_BYTES) return false;
+    atomicWriteFile(largeStatePath(path, id), serialized);
+    pruneLargeStateFiles(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readLargeState(
+  path: string,
+  id: string
+): Omit<StoredResponseState, "sizeBytes"> | undefined {
+  const filePath = largeStatePath(path, id);
+  try {
+    if (!existsSync(filePath)) return undefined;
+    const stat = statSync(filePath);
+    if (stat.size > LARGE_STATE_ENTRY_MAX_BYTES || now() - stat.mtimeMs > RESPONSE_TTL_MS) {
+      rmSync(filePath, { force: true });
+      return undefined;
+    }
+    const raw = JSON.parse(readFileSync(filePath, "utf8")) as {
+      version?: unknown;
+      id?: unknown;
+      state?: unknown;
+    };
+    if (raw.version !== 1 || raw.id !== id) return undefined;
+    const state = persistableState(raw.state);
+    if (!state || now() - state.createdAt > RESPONSE_TTL_MS) {
+      rmSync(filePath, { force: true });
+      return undefined;
+    }
+    return state;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -83,30 +271,12 @@ function snapshotPath(): string {
 function ensureLoaded(): void {
   if (loaded) return;
   loaded = true;
-  try {
-    const path = snapshotPath();
-    if (!existsSync(path)) return;
-    const raw = JSON.parse(readFileSync(path, "utf-8")) as { version?: unknown; states?: unknown };
-    if (raw.version !== 1 || !Array.isArray(raw.states)) return;
-    for (const entry of raw.states) {
-      if (!Array.isArray(entry) || entry.length !== 2) continue;
-      const [id, state] = entry as [unknown, unknown];
-      if (typeof id !== "string" || !state || typeof state !== "object") continue;
-      const rec = state as StoredResponseState;
-      if (typeof rec.createdAt !== "number" || !Array.isArray(rec.items)) continue;
-      // Recompute sizes locally while loading; persisted sizeBytes is never trusted.
-      setEntry(id, {
-        createdAt: rec.createdAt,
-        items: rec.items,
-        ...(typeof rec.namespace === "string" && rec.namespace.trim()
-          ? { namespace: rec.namespace.trim() }
-          : {}),
-      });
-    }
-    pruneResponses();
-  } catch {
-    /* missing/corrupt snapshot: start empty */
+  for (const [id, state] of readSnapshot(snapshotPath())) {
+    const existing = states.get(id);
+    // A reload must not replace a newer state produced in this isolate with an older disk copy.
+    if (!existing || state.createdAt > existing.createdAt) setEntry(id, state);
   }
+  pruneResponses();
 }
 
 function persistNow(path: string): void {
@@ -116,30 +286,55 @@ function persistNow(path: string): void {
   }
   pendingPersistPath = null;
   try {
-    const entries: [string, StoredResponseState][] = [];
-    let total = 0;
-    // Newest-first so the most recent chains survive both caps.
-    for (const entry of [...states].reverse()) {
-      // sizeBytes is in-memory accounting only; keep it out of the disk snapshot.
-      const [id, state] = entry;
-      const { sizeBytes: _sizeBytes, ...persistable } = state;
-      const persistEntry: [string, StoredResponseState] = [id, persistable];
-      const size = JSON.stringify(persistEntry).length;
-      if (size > SNAPSHOT_ENTRY_MAX_BYTES) continue;
-      if (total + size > SNAPSHOT_TOTAL_MAX_BYTES) break;
-      total += size;
-      entries.push(persistEntry);
+    const smallStates = new Map<string, Omit<StoredResponseState, "sizeBytes">>();
+    const persistedLargeStates = new Map<string, Omit<StoredResponseState, "sizeBytes">>();
+    for (const [id, state] of states) {
+      const { sizeBytes = 0, ...persistable } = state;
+      // Avoid constructing another multi-megabyte JSON string merely to choose the storage tier.
+      // Near the boundary, serialize once for an exact UTF-8 byte count.
+      const clearlyLarge = sizeBytes > SNAPSHOT_ENTRY_MAX_BYTES - 1_024;
+      const size = clearlyLarge
+        ? SNAPSHOT_ENTRY_MAX_BYTES + 1
+        : Buffer.byteLength(JSON.stringify([id, persistable]), "utf8");
+      if (size > SNAPSHOT_ENTRY_MAX_BYTES) {
+        const alreadyPersisted = !dirtyStateIds.has(id) && existsSync(largeStatePath(path, id));
+        if (alreadyPersisted || writeLargeState(path, id, persistable)) {
+          persistedLargeStates.set(id, persistable);
+        }
+      } else {
+        smallStates.set(id, persistable);
+        rmSync(largeStatePath(path, id), { force: true });
+      }
     }
-    entries.reverse();
-    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    // mkdirSync's mode only applies on creation — re-harden an existing config dir so the
-    // conversation-content snapshot never lands in a group/world-readable directory.
-    try {
-      chmodSync(dirname(path), 0o700);
-    } catch {
-      /* best-effort (e.g. Windows) */
-    }
-    atomicWriteFile(path, JSON.stringify({ version: 1, states: entries }));
+
+    withSnapshotLock(path, () => {
+      const merged = readSnapshot(path);
+      for (const [id, state] of persistedLargeStates) {
+        const existing = merged.get(id);
+        if (!existing || state.createdAt >= existing.createdAt) merged.delete(id);
+      }
+      for (const [id, state] of smallStates) {
+        const existing = merged.get(id);
+        if (!existing || state.createdAt >= existing.createdAt) merged.set(id, state);
+      }
+
+      const entries: [string, Omit<StoredResponseState, "sizeBytes">][] = [];
+      let total = 0;
+      // Newest-first so concurrent writers retain the most recent valid chains within both caps.
+      for (const entry of [...merged].sort((a, b) => b[1].createdAt - a[1].createdAt)) {
+        if (now() - entry[1].createdAt > RESPONSE_TTL_MS) continue;
+        const size = Buffer.byteLength(JSON.stringify(entry), "utf8");
+        if (size > SNAPSHOT_ENTRY_MAX_BYTES) continue;
+        if (entries.length >= MAX_STORED_RESPONSES || total + size > SNAPSHOT_TOTAL_MAX_BYTES)
+          break;
+        total += size;
+        entries.push(entry);
+      }
+      entries.reverse();
+      atomicWriteFile(path, JSON.stringify({ version: 1, states: entries }));
+    });
+    for (const id of smallStates.keys()) dirtyStateIds.delete(id);
+    for (const id of persistedLargeStates.keys()) dirtyStateIds.delete(id);
   } catch {
     /* best-effort: disk trouble must never affect request handling */
   }
@@ -188,8 +383,8 @@ function pruneResponses(at = now()): void {
 
 function namespaceMatches(state: StoredResponseState | undefined, namespace?: string): boolean {
   if (!state) return false;
-  if (!namespace || !state.namespace) return true;
-  return state.namespace === namespace;
+  const expected = namespace?.trim() || undefined;
+  return state.namespace === expected;
 }
 
 function lookupStoredResponse(id: string, namespace?: string): StoredResponseState | undefined {
@@ -201,7 +396,12 @@ function lookupStoredResponse(id: string, namespace?: string): StoredResponseSta
   ensureLoaded();
   pruneResponses();
   const reloaded = states.get(id);
-  return namespaceMatches(reloaded, namespace) ? reloaded : undefined;
+  if (reloaded) return namespaceMatches(reloaded, namespace) ? reloaded : undefined;
+  const large = readLargeState(snapshotPath(), id);
+  if (!namespaceMatches(large, namespace) || !large) return undefined;
+  setEntry(id, large);
+  pruneResponses();
+  return states.get(id);
 }
 
 export function expandPreviousResponseInput(body: unknown, namespace?: string): unknown {
@@ -261,6 +461,7 @@ export function rememberResponseState(
     items: [...inputItems(request.input), ...response.output],
     ...(namespace ? { namespace } : {}),
   });
+  dirtyStateIds.add(response.id);
   pruneResponses();
   // Forced ChatGPT Web Codex continuations chain on the next HTTP request within
   // milliseconds. Debouncing that write left other Next.js isolates (and the next
@@ -278,4 +479,5 @@ export function resetResponseStateForTests(): void {
   }
   pendingPersistPath = null;
   loaded = true;
+  dirtyStateIds.clear();
 }

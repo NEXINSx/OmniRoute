@@ -9,7 +9,8 @@ lastUpdated: 2026-08-31
 `chatgpt-web-codex` (alias `cgpt-codex`) bridges Codex Responses turns through an
 authenticated ChatGPT browser session. It is independent from the retired common
 `chatgpt-web` provider and uses the MIT-noticed implementation under
-`open-sse/vendor/codex-chatgpt-web/`, refreshed from upstream v4.0.6.
+`open-sse/vendor/codex-chatgpt-web/`, refreshed through upstream commit
+`09877fa21ffdbf20979623ef501046fc02a750d7` (one commit after v4.0.6).
 
 ## Common provider retirement
 
@@ -26,7 +27,8 @@ its connections are not matched by this retirement.
 ## Prerequisites
 
 - a full Cookie header from a signed-in ChatGPT session;
-- Chrome or Chromium for npm, systemd, and PM2 installs;
+- Chrome or Chromium plus a graphical session or Xvfb display for npm, systemd, and PM2
+  installs;
 - with the Docker `web` profile, the internal Chromium service from
   `docker-compose.yml`;
 - OpenAI `tunnel-client` v0.0.13 and a ChatGPT custom connector for local Codex tools.
@@ -41,7 +43,7 @@ same turn-bound local tool capability when the tunnel and connector are configur
    name. New tool-capable setups must use a newly created connector named exactly
    `Codex Native2`, with Authentication set to None and Permissions set to Allow all
    actions.
-3. Run the connection check. OmniRoute opens a headless Temporary Chat and detects
+3. Run the connection check. OmniRoute opens a browser-backed Temporary Chat and detects
    whether Sol and Pro are available for the account.
 4. Save the connection. OmniRoute replaces the pasted cookie with the verified
    Playwright storage state and stores it with the runtime key through the encrypted
@@ -97,26 +99,30 @@ a new `Codex Native2` connector.
 - Cookies, runtime keys, storage state, and capability tokens do not appear in provider
   responses or request logs.
 
-## Headless VPS and Docker
+## Displayless VPS and Docker
 
 For npm, systemd, and PM2 installs, OmniRoute detects common Chrome and Chromium paths.
-Alternatively, set `CHATGPT_WEB_CODEX_CHROME_PATH`.
+Alternatively, set `CHATGPT_WEB_CODEX_CHROME_PATH`. Runtime turns deliberately use headed
+Chrome because ChatGPT rejects the true-headless browser shape. A displayless host must therefore
+run OmniRoute with a private Xvfb display; setting the Chrome path alone does not provide one.
 
 The Docker `web` profile starts `chatgpt-web-codex-browser` on the internal Compose
-network. Its CDP port is not published on the host. The protected browser profile volume
-is separate from the OmniRoute data volume, and the browser receives enough shared
-memory. The internal CDP proxy listens only on port `9223` inside the Compose network;
-Chrome remains bound to loopback in the sidecar.
+network. The sidecar runs headed Chrome inside Xvfb, so no physical display is required. Its CDP
+port is not published on the host. The protected browser profile volume is separate from the
+OmniRoute data volume, and the browser receives enough shared memory. The internal CDP proxy
+listens only on port `9223` inside the Compose network; Chrome remains bound to loopback in the
+sidecar.
 
 A supervisor lease under `DATA_DIR` prevents multiple OmniRoute processes from owning
 the same tunnel and broker state. A conflict is reported by the doctor.
 
 ## Interactive recovery
 
-The normal path is headless. When ChatGPT requires an interactive sign-in or challenge,
-the existing VNC browser infrastructure can be used for recovery. Browser UI and CDP
-must remain reachable only over loopback, an authenticated management connection, or an
-SSH tunnel; noVNC stays disabled during normal operation.
+The automated Docker path has no host-visible window, but Chrome itself is headed inside the
+private Xvfb display. When ChatGPT requires an interactive sign-in or challenge, the existing VNC
+browser infrastructure can be used for recovery. Browser UI and CDP must remain reachable only
+over loopback, an authenticated management connection, or an SSH tunnel; noVNC stays disabled
+during normal operation.
 
 ## WebSocket fallback
 

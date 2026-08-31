@@ -4,7 +4,7 @@
 
 Parts of `open-sse/vendor/codex-chatgpt-web/` are adapted from
 [`miuuyy/codex-chatgpt-web`](https://github.com/miuuyy/codex-chatgpt-web), commit
-`09877fa21ffdbf20979623ef501046fc02a750d7` (v4.0.6).
+`09877fa21ffdbf20979623ef501046fc02a750d7` (one commit after v4.0.6).
 
 MIT License
 

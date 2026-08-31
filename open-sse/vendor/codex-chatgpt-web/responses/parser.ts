@@ -69,6 +69,11 @@ function inputContentParts(blocks: unknown[] | string | undefined): string | Cod
     } else if (block.type === "input_image") {
       const b = block as { image_url?: string; file_id?: string; detail?: string };
       if (b.image_url) {
+        if (!b.image_url.startsWith("data:")) {
+          throw new Error(
+            "ChatGPT Web input_image supports inline data URLs only; remote image_url values are not supported"
+          );
+        }
         // Preserve the image as a structured part — adapters send it as a native image block.
         // NEVER inline the (often base64 data-URL) image_url as text: that explodes the token count.
         parts.push({
@@ -76,8 +81,12 @@ function inputContentParts(blocks: unknown[] | string | undefined): string | Cod
           imageUrl: b.image_url,
           ...(b.detail ? { detail: normalizeImageDetail(b.detail) } : {}),
         });
+      } else if (b.file_id) {
+        throw new Error(
+          "ChatGPT Web cannot resolve input_image file_id references; provide an inline image_url data URL instead"
+        );
       } else {
-        parts.push({ type: "text", text: `[image: ${b.file_id ?? "?"}]` }); // file_id ref → no inline data
+        throw new Error("ChatGPT Web input_image requires a non-empty inline image_url data URL");
       }
     } else if (block.type === "input_file") {
       const file = inlineInputFile(block);
