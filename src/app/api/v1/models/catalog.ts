@@ -891,11 +891,45 @@ async function buildUnifiedModelsResponseCore(
           connectionId: m.connectionId,
           ...(m.allowedConnectionIds ? { allowedConnectionIds: m.allowedConnectionIds } : {}),
         }));
-        const autoTargetMetadata = autoTargets.map((t) => getComboTargetCatalogMetadata(t));
-        const knownAutoMeta = autoTargetMetadata.filter(
-          (m): m is ComboTargetCatalogMetadata => m !== null
-        );
-        const autoInputModalities =
+        // The explicit return type keeps the inferred element type assignable to
+        // `ComboTargetCatalogMetadata`: writing `inputModalities`/`outputModalities`
+        // as explicit `undefined` below would otherwise make those optional
+        // properties REQUIRED in the inferred shape, so the
+        // `m is ComboTargetCatalogMetadata` predicate on the `.filter` at the end
+        // of this block would no longer be assignable to its parameter (TS2677).
+        // The keys must stay explicit — a conditional spread would let the
+        // helper's synthesized `["text","image"]` survive when this scope's raw
+        // `synced` lookup misses, which is exactly the bypass this fix prevents.
+        const autoTargetMetadata = autoTargets.map((target): ComboTargetCatalogMetadata | null => {
+          const metadata = getComboTargetCatalogMetadata(target);
+          const targetModel = getComboTargetModelId(target);
+          if (!metadata || !targetModel) return null;
+
+          const synced = getSyncedCapability(
+            targetModel.providerId,
+            targetModel.modelId,
+            capabilityResolutionSnapshot.synced
+          );
+          // Report the target's RAW synced modality evidence (rather than the
+          // shared helper's synthesized `["text","image"]`, #12046) so an auto
+          // row can only advertise image input a target actually declares.
+          // The vision VERDICT stays canonical: `resolveVisionCapability`
+          // applies the operator's supportsVision override (#9195) and the
+          // documented text-only denylist (#4071) before it ever reads
+          // `attachment`, and deliberately promotes `attachment:false`
+          // alongside image modalities (#8250). Overwriting it with the raw
+          // flag here would bypass all three.
+          return {
+            ...metadata,
+            inputModalities: synced ? parseJsonStringArray(synced.modalities_input) : undefined,
+            outputModalities: synced ? parseJsonStringArray(synced.modalities_output) : undefined,
+          };
+        });
+        const hasUnknownAutoTarget = autoTargetMetadata.some((m) => m === null);
+        const knownAutoMeta = hasUnknownAutoTarget
+          ? []
+          : autoTargetMetadata.filter((m): m is ComboTargetCatalogMetadata => m !== null);
+        let autoInputModalities =
           knownAutoMeta.length > 0 &&
           knownAutoMeta.every(
             (m) => Array.isArray(m.inputModalities) && m.inputModalities.length > 0
@@ -917,7 +951,12 @@ async function buildUnifiedModelsResponseCore(
         };
         if (knownAutoMeta.length > 0) {
           const allVision = knownAutoMeta.every((m) => m.capabilities.vision === true);
-          if (allVision) autoCapabilities.vision = true;
+          if (autoInputModalities.includes("image") && !allVision) {
+            autoInputModalities = [];
+          }
+          if (allVision && autoInputModalities.includes("image")) {
+            autoCapabilities.vision = true;
+          }
         }
 
         models.push({
@@ -925,12 +964,8 @@ async function buildUnifiedModelsResponseCore(
           context_length: contextLength,
           max_input_tokens: contextLength,
           max_output_tokens: maxOutputTokens,
-          ...(autoInputModalities.length > 0
-            ? { input_modalities: autoInputModalities }
-            : {}),
-          ...(autoOutputModalities.length > 0
-            ? { output_modalities: autoOutputModalities }
-            : {}),
+          ...(autoInputModalities.length > 0 ? { input_modalities: autoInputModalities } : {}),
+          ...(autoOutputModalities.length > 0 ? { output_modalities: autoOutputModalities } : {}),
           capabilities: autoCapabilities,
         });
       } catch (err) {
