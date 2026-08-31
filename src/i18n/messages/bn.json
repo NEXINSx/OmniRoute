@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "বাজেট শেষ হয়ে যাওয়া অনুরোধগুলো জরুরি ফ্রি ফলব্যাক প্রোভাইডার/মডেলে রুট করুন।",
   "featureFlagArenaEloSyncEnabledDescription": "মডেল ইন্টেলিজেন্স র‍্যাঙ্কিংয়ের জন্য পর্যায়ক্রমিক Arena AI লিডারবোর্ড ELO সিঙ্ক সক্ষম করুন।",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models এ claude/&lt;provider&gt;/&lt;model&gt; মিরর আইডি বিজ্ঞাপন দিন যাতে Claude Code গেটওয়ে মডেল আবিষ্কার non-Claude মডেল তালিকাভুক্ত করে। সতর্কতা: এটি গ্লোবালি সক্ষম হলে সমস্ত ক্লায়েন্টের জন্য ক্যাটালগ এন্ট্রি দ্বিগুণ করে।",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "প্রোভাইডার ডিসপ্যাচের জন্য প্রতি-টেন্যান্ট অ্যাডাপ্টিভ ভার্চুয়াল অ্যাডমিশন লেন সক্ষম করুন (#9654): এক টেন্যান্টের বিস্ফোরণ আর অন্য টেন্যান্টে 503 ফেরায় না। OMNIROUTE_CHAT_VIRTUAL_LANES এনভায়রনমেন্ট ভেরিয়েবল এই ড্যাশবোর্ড সেটিংয়ের উপরে প্রাধান্য পায়; পরিবর্তনগুলি সার্ভার পুনরায় চালু হলে কার্যকর হয়।",
   "sidebar": {
     "home": "Home",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "অনুরোধগুলোর মধ্যে ন্যূনতম সময় (ms)। ডিফল্ট রেট লিমিটারের বিলম্ব ওভাররাইড করে।",
     "rateLimitOverridesMinTimeLabel": "ন্যূনতম ব্যবধান (ms)",
+    "rateLimitOverridesRpdHint": "এই সংযোগের জন্য প্রতিদিন সর্বাধিক অনুরোধ। প্রদানকারীর ডিফল্ট ওভাররাইড করে।",
+    "rateLimitOverridesRpdLabel": "RPD (অনুরোধ/দিন)",
     "rateLimitOverridesRpmHint": "এই সংযোগের জন্য প্রতি মিনিটে সর্বোচ্চ অনুরোধ। প্রদানকারীর ডিফল্ট ওভাররাইড করে।",
     "rateLimitOverridesRpmLabel": "RPM (অনুরোধ/মিনিট)",
     "rateLimitOverridesTpdHint": "এই সংযোগের জন্য প্রতিদিন সর্বোচ্চ টোকেন। প্রদানকারীর ডিফল্ট ওভাররাইড করে।",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

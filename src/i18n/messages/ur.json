@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models پر claude/&lt;provider&gt;/&lt;model&gt; آئینہ شناختوں کا اشتہار دیں تاکہ Claude Code گیٹ وے ماڈل کی دریافت غیر-Claude ماڈلز کی فہرست بنائے۔ انتباہ: جب عالمی طور پر فعال ہو تو تمام کلائنٹس کے لیے کیٹلاگ کی اندراجات دوگنا کرتا ہے۔",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "پرووائیڈر بھیجنے کے لیے فی ٹیننٹ انکولی ورچوئل ایڈمیشن لین فعال کریں (#9654): ایک ٹیننٹ کا اچانک بوجھ اب دوسرے ٹیننٹ کو 503 نہیں دیتا۔ OMNIROUTE_CHAT_VIRTUAL_LANES ماحولیاتی متغیر اس ڈیش بورڈ سیٹنگ پر فوقیت رکھتا ہے؛ تبدیلیاں سرور دوبارہ شروع ہونے پر اثر انداز ہوتی ہیں۔",
   "sidebar": {
     "home": "Home",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "درخواستوں کے درمیان کم از کم وقت (ms)۔ پہلے سے طے شدہ ریٹ لمیٹر تاخیر کو اوور رائیڈ کرتا ہے۔",
     "rateLimitOverridesMinTimeLabel": "کم از کم وقفہ (ms)",
+    "rateLimitOverridesRpdHint": "اس کنکشن کے لیے یومیہ زیادہ سے زیادہ درخواستیں۔ فراہم کنندہ کے ڈیفالٹ کو اوور رائڈ کرتا ہے۔",
+    "rateLimitOverridesRpdLabel": "RPD (درخواستیں/دن)",
     "rateLimitOverridesRpmHint": "اس کنکشن کے لیے فی منٹ زیادہ سے زیادہ درخواستیں۔ فراہم کنندہ کے پہلے سے طے شدہ کو اوور رائیڈ کرتا ہے۔",
     "rateLimitOverridesRpmLabel": "RPM (درخواستیں/منٹ)",
     "rateLimitOverridesTpdHint": "اس کنکشن کے لیے فی دن زیادہ سے زیادہ ٹوکنز۔ فراہم کنندہ کے پہلے سے طے شدہ کو اوور رائیڈ کرتا ہے۔",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

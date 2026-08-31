@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models वर claude/&lt;provider&gt;/&lt;model&gt; मिरर आयडीज जाहिरात करा जेणेकरून Claude Code गेटवे मॉडेल शोध सूचीमध्ये नॉन-Claude मॉडेल्स समाविष्ट होतील. चेतावणी: जागतिक स्तरावर सक्षम केल्यास सर्व क्लायंटसाठी कॅटलॉग नोंदी दुहेरी होतात.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "प्रदाता डिस्पॅचसाठी प्रति-टेनंट अनुकूली व्हर्च्युअल अॅडमिशन लेन सक्षम करा (#9654): एका टेनंटचा बर्स्ट यापुढे दुसऱ्या टेनंटला 503 देत नाही. OMNIROUTE_CHAT_VIRTUAL_LANES पर्यावरण चल या डॅशबोर्ड सेटिंगपेक्षा वरचढ आहे; बदल सर्व्हर रीस्टार्ट केल्यावर प्रभावी होतात.",
   "sidebar": {
     "home": "Home",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "विनंत्यांमधील किमान वेळ (ms). डीफॉल्ट रेट लिमिटर विलंब ओव्हरराइड करते.",
     "rateLimitOverridesMinTimeLabel": "किमान मध्यांतर (ms)",
+    "rateLimitOverridesRpdHint": "या कनेक्शनसाठी दररोज कमाल विनंत्या. प्रदाता डीफॉल्ट ओव्हरराइड करते.",
+    "rateLimitOverridesRpdLabel": "RPD (विनंत्या/दिवस)",
     "rateLimitOverridesRpmHint": "या कनेक्शनसाठी प्रति मिनिट कमाल विनंत्या. प्रदाता डीफॉल्ट ओव्हरराइड करते.",
     "rateLimitOverridesRpmLabel": "RPM (विनंत्या/मिनिट)",
     "rateLimitOverridesTpdHint": "या कनेक्शनसाठी प्रति दिवस कमाल टोकन्स. प्रदाता डीफॉल्ट ओव्हरराइड करते.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

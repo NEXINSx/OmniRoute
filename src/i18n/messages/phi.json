@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "I-route ang mga request na naubusan ng budget sa emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "I-enable ang pana-panahong Arena AI leaderboard ELO sync para sa mga ranking ng intelligence ng modelo.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "I-anunsyo ang claude/&lt;provider&gt;/&lt;model&gt; mirror ids sa /v1/models upang ang Claude Code gateway model discovery ay maglista ng mga non-Claude models. Babala: nagdodoble ng catalog entries para sa lahat ng kliyente kapag pinagana nang globally.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Paganahin ang adaptive virtual admission lanes para sa bawat tenant sa pagpapadala ng provider (#9654): ang pag-akyat ng trapiko ng isang tenant ay hindi na nagbibigay ng 503 sa iba. Ang environment variable na OMNIROUTE_CHAT_VIRTUAL_LANES ay mas nangingibabaw sa setting na ito sa dashboard; magkakabisa ang mga pagbabago sa pag-restart ng server.",
   "sidebar": {
     "home": "Bahay",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimum na oras (ms) sa pagitan ng mga request. Ino-override ang default na delay ng rate limiter.",
     "rateLimitOverridesMinTimeLabel": "Min Interval (ms)",
+    "rateLimitOverridesRpdHint": "Pinakamataas na kahilingan bawat araw para sa koneksyong ito. Ino-override ang default ng provider.",
+    "rateLimitOverridesRpdLabel": "RPD (Kahilingan/araw)",
     "rateLimitOverridesRpmHint": "Max na request bawat minuto para sa koneksyong ito. Ino-override ang default ng provider.",
     "rateLimitOverridesRpmLabel": "RPM (Mga Request/min)",
     "rateLimitOverridesTpdHint": "Max na token bawat araw para sa koneksyong ito. Ino-override ang default ng provider.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

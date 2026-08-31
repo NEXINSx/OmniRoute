@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "பட்ஜெட் தீர்ந்த கோரிக்கைகளை அவசரகால இலவச ஃபால்பேக் வழங்குநர்/மாடலுக்கு வழிசெலுத்துங்கள்.",
   "featureFlagArenaEloSyncEnabledDescription": "மாடல் நுண்ணறிவு தரவரிசைகளுக்காக அவ்வப்போதான Arena AI லீடர்போர்டு ELO ஒத்திசைவை இயக்குங்கள்.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models இல் Claude Code gateway மாதிரி கண்டுபிடிப்பு பட்டியலில் non-Claude மாதிரிகளை காட்ட Claude/&lt;provider&gt;/&lt;model&gt; மின்னூல் அடையாளங்களை விளம்பரம் செய்யவும். எச்சரிக்கை: உலகளாவியமாக செயல்படுத்தப்பட்டால் அனைத்து கிளையன்டுகளுக்கும் பட்டியல் பதிவுகளை இரட்டைப்படுத்துகிறது.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "வழங்குநர் அனுப்பீட்டிற்கு ஒவ்வொரு குத்தகைதாரருக்கும் (tenant) தகவமைப்பு மெய்நிகர் சேர்க்கைப் பாதைகளை இயக்கு (#9654): ஒரு குத்தகைதாரரின் அதிகரிப்பு இனி மற்றொருவருக்கு 503 ஐ அளிக்காது. OMNIROUTE_CHAT_VIRTUAL_LANES சூழல் மாறி இந்த டாஷ்போர்டு அமைப்பை விட முன்னுரிமை பெறுகிறது; மாற்றங்கள் சேவையகம் மறுதொடக்கத்தில் நடைமுறைக்கு வரும்.",
   "sidebar": {
     "home": "Home",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "கோரிக்கைகளுக்கு இடையிலான குறைந்தபட்ச நேரம் (மில்லிசெகண்ட்). இயல்புநிலை விகித வரம்பியின் தாமதத்தை மேலெழுதுகிறது.",
     "rateLimitOverridesMinTimeLabel": "குறைந்தபட்ச இடைவெளி (ms)",
+    "rateLimitOverridesRpdHint": "இந்த இணைப்பிற்கான ஒரு நாளைக்கு அதிகபட்ச கோரிக்கைகள். வழங்குநர் இயல்புநிலையை மேலெழுதுகிறது.",
+    "rateLimitOverridesRpdLabel": "RPD (கோரிக்கைகள்/நாள்)",
     "rateLimitOverridesRpmHint": "இந்த இணைப்பிற்கான நிமிடத்திற்கு அதிகபட்ச கோரிக்கைகள். வழங்குநரின் இயல்புநிலையை மேலெழுதுகிறது.",
     "rateLimitOverridesRpmLabel": "RPM (கோரிக்கைகள்/நிமிடம்)",
     "rateLimitOverridesTpdHint": "இந்த இணைப்பிற்கான ஒரு நாளைக்கு அதிகபட்ச டோக்கன்கள். வழங்குநரின் இயல்புநிலையை மேலெழுதுகிறது.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Маршрутизиране на заявки с изчерпан бюджет към аварийния безплатен резервен доставчик/модел.",
   "featureFlagArenaEloSyncEnabledDescription": "Активиране на периодична синхронизация на ELO от класацията на Arena AI за класиране на интелигентността на моделите.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Рекламирайте claude/&lt;provider&gt;/&lt;model&gt; mirror идентификатори на /v1/models, така че списъкът с модели на Claude Code gateway да включва неклаудови модели. Внимание: удвоява записите в каталога за всички клиенти, когато е активирано глобално.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Активирайте адаптивни виртуални ленти за допускане за всеки наемател (tenant) при изпращане към доставчици (#9654): скокът в натоварването на един наемател вече не връща 503 на друг. Променливата на средата OMNIROUTE_CHAT_VIRTUAL_LANES има предимство пред тази настройка в таблото; промените влизат в сила след рестартиране на сървъра.",
   "sidebar": {
     "home": "Начало",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Минимално време (ms) между заявките. Предефинира закъснението по подразбиране на ограничителя на скоростта.",
     "rateLimitOverridesMinTimeLabel": "Мин. интервал (ms)",
+    "rateLimitOverridesRpdHint": "Максимален брой заявки на ден за тази връзка. Замества настройката по подразбиране на доставчика.",
+    "rateLimitOverridesRpdLabel": "RPD (Заявки/ден)",
     "rateLimitOverridesRpmHint": "Максимален брой заявки в минута за тази връзка. Предефинира стойността по подразбиране на доставчика.",
     "rateLimitOverridesRpmLabel": "RPM (Заявки/мин)",
     "rateLimitOverridesTpdHint": "Максимален брой токени на ден за тази връзка. Предефинира стойността по подразбиране на доставчика.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

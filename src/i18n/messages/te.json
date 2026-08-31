@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "బడ్జెట్ ముగిసిపోయిన అభ్యర్థనలను అత్యవసర ఉచిత ఫాల్‌బ్యాక్ ప్రొవైడర్/మోడల్‌కు రూట్ చేయండి.",
   "featureFlagArenaEloSyncEnabledDescription": "మోడల్ ఇంటెలిజెన్స్ ర్యాంకింగ్‌ల కోసం క్రమానుగత Arena AI లీడర్‌బోర్డ్ ELO సమకాలీకరణను ప్రారంభించండి.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "/v1/models లో claude/&lt;provider&gt;/&lt;model&gt; మిర్రర్ ఐడీలను ప్రచారం చేయండి కాబట్టి Claude Code గేట్వే మోడల్ డిస్కవరీ non-Claude మోడళ్లను జాబితా చేస్తుంది. హెచ్చరిక: ఇది ప్రపంచవ్యాప్తంగా ప్రారంభించినప్పుడు అన్ని క్లయింట్ల కోసం కాటలాగ్ ఎంట్రీలను డబుల్ చేస్తుంది.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "ప్రొవైడర్ డిస్పాచ్ కోసం ప్రతి-టెనెంట్ అడాప్టివ్ వర్చువల్ అడ్మిషన్ లేన్లను ప్రారంభించండి (#9654): ఒక టెనెంట్ బర్స్ట్ ఇకపై మరొక టెనెంట్కు 503 ఇవ్వదు. OMNIROUTE_CHAT_VIRTUAL_LANES ఎన్విరాన్మెంట్ వేరియబుల్ ఈ డాష్బోర్డ్ సెట్టింగ్ కంటే ప్రాధాన్యత పొందుతుంది; మార్పులు సర్వర్ పునఃప్రారంభంలో ప్రభావం చూపుతాయి.",
   "sidebar": {
     "home": "Home",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "అభ్యర్థనల మధ్య కనీస సమయం (ms). డిఫాల్ట్ రేట్ లిమిటర్ ఆలస్యాన్ని ఓవర్‌రైడ్ చేస్తుంది.",
     "rateLimitOverridesMinTimeLabel": "కనీస విరామం (ms)",
+    "rateLimitOverridesRpdHint": "ఈ కనెక్షన్ కోసం రోజుకు గరిష్ట అభ్యర్థనలు. ప్రొవైడర్ డిఫాల్ట్‌ను భర్తీ చేస్తుంది.",
+    "rateLimitOverridesRpdLabel": "RPD (అభ్యర్థనలు/రోజు)",
     "rateLimitOverridesRpmHint": "ఈ కనెక్షన్ కోసం నిమిషానికి గరిష్ట అభ్యర్థనలు. ప్రొవైడర్ డిఫాల్ట్‌ను ఓవర్‌రైడ్ చేస్తుంది.",
     "rateLimitOverridesRpmLabel": "RPM (అభ్యర్థనలు/నిమిషం)",
     "rateLimitOverridesTpdHint": "ఈ కనెక్షన్ కోసం రోజుకు గరిష్ట టోకెన్‌లు. ప్రొవైడర్ డిఫాల్ట్‌ను ఓవర్‌రైడ్ చేస్తుంది.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "กำหนดเส้นทางคำขอที่งบประมาณหมดไปยังผู้ให้บริการ/โมเดลสำรองฟรีในกรณีฉุกเฉิน",
   "featureFlagArenaEloSyncEnabledDescription": "เปิดใช้งานการซิงค์ ELO ของลีดเดอร์บอร์ด Arena AI เป็นระยะสำหรับการจัดอันดับความฉลาดของโมเดล",
   "featureFlagExposeCcDiscoveryAliasesDescription": "โฆษณา claude/&lt;provider&gt;/&lt;model&gt; mirror ids บน /v1/models เพื่อให้รายการการค้นหาโมเดลของ Claude Code แสดงโมเดลที่ไม่ใช่ Claude เตือน: จะทำให้มีรายการในแคตตาล็อกซ้ำสำหรับลูกค้าทุกคนเมื่อเปิดใช้งานทั่วโลก.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "เปิดใช้เลนรับเข้าเสมือนแบบปรับตัวต่อเทนแนนต์สำหรับการส่งไปยังผู้ให้บริการ (#9654): การพุ่งสูงของเทนแนนต์หนึ่งจะไม่ทำให้อีกเทนแนนต์ได้รับ 503 อีกต่อไป ตัวแปรสภาพแวดล้อม OMNIROUTE_CHAT_VIRTUAL_LANES มีผลเหนือการตั้งค่าแดชบอร์ดนี้ การเปลี่ยนแปลงมีผลเมื่อรีสตาร์ทเซิร์ฟเวอร์",
   "sidebar": {
     "home": "บ้าน",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "เวลาขั้นต่ำ (มิลลิวินาที) ระหว่างคำขอ ซึ่งจะเขียนทับการหน่วงเวลาของตัวจำกัดอัตราเริ่มต้น",
     "rateLimitOverridesMinTimeLabel": "ช่วงเวลาขั้นต่ำ (มิลลิวินาที)",
+    "rateLimitOverridesRpdHint": "จำนวนคำขอสูงสุดต่อวันสำหรับการเชื่อมต่อนี้ แทนที่ค่าเริ่มต้นของผู้ให้บริการ",
+    "rateLimitOverridesRpdLabel": "RPD (คำขอ/วัน)",
     "rateLimitOverridesRpmHint": "จำนวนคำขอสูงสุดต่อนาทีสำหรับการเชื่อมต่อนี้ ซึ่งจะเขียนทับค่าเริ่มต้นของผู้ให้บริการ",
     "rateLimitOverridesRpmLabel": "RPM (คำขอ/นาที)",
     "rateLimitOverridesTpdHint": "จำนวนโทเค็นสูงสุดต่อวันสำหรับการเชื่อมต่อนี้ ซึ่งจะเขียนทับค่าเริ่มต้นของผู้ให้บริการ",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

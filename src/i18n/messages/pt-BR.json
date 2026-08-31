@@ -986,8 +986,10 @@
   },
   "disabled": "Desabilitado",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Roteie solicitações com orçamento esgotado para o provedor/modelo de fallback gratuito de emergência.",
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Desative a geração de variantes de nível de pensamento (por exemplo, -low, -medium, -high) no catálogo /v1/models.",
   "featureFlagArenaEloSyncEnabledDescription": "Ativar a sincronização periódica do ELO do leaderboard da Arena AI para classificações de inteligência do modelo.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Divulgar ids espelho claude/&lt;provider&gt;/&lt;model&gt; em /v1/models para que a descoberta de modelos do gateway Claude Code liste modelos não-Claude. Atenção: duplica as entradas do catálogo para todos os clientes quando ativado globalmente.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Ative faixas de admissão virtuais adaptativas por tenant para o despacho de provedores (#9654): o pico de um tenant não gera mais 503 para outro. A variável de ambiente OMNIROUTE_CHAT_VIRTUAL_LANES tem precedência sobre esta configuração do painel; as alterações entram em vigor ao reiniciar o servidor.",
   "sidebar": {
     "home": "Início",
@@ -5883,6 +5885,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Tempo mínimo (ms) entre solicitações. Substitui o atraso padrão do limitador de taxa.",
     "rateLimitOverridesMinTimeLabel": "Min Intervalo (ms)",
+    "rateLimitOverridesRpdHint": "Máximo de requisições por dia para esta conexão. Substitui o padrão do provedor.",
+    "rateLimitOverridesRpdLabel": "RPD (Requisições/dia)",
     "rateLimitOverridesRpmHint": "Máximo de requisições por minuto para esta conexão. Substitui o padrão do provedor.",
     "rateLimitOverridesRpmLabel": "RPM (Requisições/min)",
     "rateLimitOverridesTpdHint": "Máximo de tokens por dia para esta conexão. Substitui o padrão do provedor.",
@@ -11246,7 +11250,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",

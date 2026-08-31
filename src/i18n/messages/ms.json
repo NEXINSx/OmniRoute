@@ -987,6 +987,7 @@
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
   "featureFlagArenaEloSyncEnabledDescription": "Enable periodic Arena AI leaderboard ELO sync for model intelligence rankings.",
   "featureFlagExposeCcDiscoveryAliasesDescription": "Iklankan claude/&lt;provider&gt;/&lt;model&gt; mirror ids pada /v1/models supaya senarai penemuan model gerbang Claude Code termasuk model bukan Claude. Amaran: menggandakan entri katalog untuk semua klien apabila diaktifkan secara global.",
+  "featureFlagNoThinkingAliasEnabledDescription": "__MISSING__:Master switch for the no-think/&lt;provider&gt;/&lt;model&gt; gateway aliases. On (default): /v1/models advertises a no-thinking variant for every eligible thinking-capable Claude model, and a no-think/ id sent on a request resolves back to the real model with reasoning suppressed. Off: no variants are advertised and a no-think/ id is treated like any other unknown model id. The per-model ModelSpec.noThinkingAlias opt-in/opt-out still applies while this is on.",
   "featureFlagChatVirtualLanesEnabledDescription": "Aktifkan lorong kemasukan maya adaptif setiap-tenant untuk penghantaran pembekal (#9654): lonjakan satu tenant tidak lagi memberikan 503 kepada tenant lain. Pemboleh ubah persekitaran OMNIROUTE_CHAT_VIRTUAL_LANES mengatasi tetapan papan pemuka ini; perubahan berkuat kuasa apabila pelayan dimulakan semula.",
   "sidebar": {
     "home": "Rumah",
@@ -5883,6 +5884,8 @@
     "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Masa minimum (ms) antara permintaan. Menggantikan kelewatan pengehad kadar lalai.",
     "rateLimitOverridesMinTimeLabel": "Selang Minimum (ms)",
+    "rateLimitOverridesRpdHint": "Permintaan maksimum sehari untuk sambungan ini. Mengatasi lalai penyedia.",
+    "rateLimitOverridesRpdLabel": "RPD (Permintaan/hari)",
     "rateLimitOverridesRpmHint": "Permintaan maksimum seminit untuk sambungan ini. Menggantikan lalai penyedia.",
     "rateLimitOverridesRpmLabel": "RPM (Permintaan/min)",
     "rateLimitOverridesTpdHint": "Token maksimum sehari untuk sambungan ini. Menggantikan lalai penyedia.",
@@ -11250,7 +11253,8 @@
       "tps": "TPS",
       "duration": "Duration",
       "time": "Time",
-      "conversation": "Conversation"
+      "conversation": "Conversation",
+      "ttft": "TTFT"
     },
     "loadingLogs": "Loading logs...",
     "noLogs": "No logs yet. Make some API calls to see them here.",
@@ -13972,5 +13976,6 @@
     "cta": "Get an API Key",
     "partnerLinkNote": "Partner link",
     "dismissAriaLabel": "Dismiss"
-  }
+  },
+  "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }
