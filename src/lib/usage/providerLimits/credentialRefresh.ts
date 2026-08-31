@@ -7,6 +7,15 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
+type CredentialRefreshResult = JsonRecord & {
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  expiresAt?: string;
+  copilotToken?: string;
+  copilotTokenExpiresAt?: string;
+};
+
 export interface ProviderConnectionLike {
   id: string;
   provider: string;
@@ -53,6 +62,39 @@ export function shouldAttemptRotatingRefresh(
   return allowRotatingRefresh === true;
 }
 
+function buildCredentialUpdateData(
+  connection: ProviderConnectionLike,
+  refreshResult: CredentialRefreshResult
+): JsonRecord {
+  const updateData: JsonRecord = {
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (refreshResult.accessToken) {
+    updateData.accessToken = refreshResult.accessToken;
+  }
+  if (refreshResult.refreshToken) {
+    updateData.refreshToken = refreshResult.refreshToken;
+  }
+  if (refreshResult.expiresIn) {
+    const expiresAt = new Date(Date.now() + refreshResult.expiresIn * 1000).toISOString();
+    updateData.expiresAt = expiresAt;
+    updateData.tokenExpiresAt = expiresAt;
+  } else if (refreshResult.expiresAt) {
+    updateData.expiresAt = refreshResult.expiresAt;
+    updateData.tokenExpiresAt = refreshResult.expiresAt;
+  }
+  if (refreshResult.copilotToken || refreshResult.copilotTokenExpiresAt) {
+    updateData.providerSpecificData = {
+      ...(connection.providerSpecificData || {}),
+      copilotToken: refreshResult.copilotToken,
+      copilotTokenExpiresAt: refreshResult.copilotTokenExpiresAt,
+    };
+  }
+
+  return updateData;
+}
+
 /** Refresh and persist credentials using a caller-supplied executor resolver. */
 export async function refreshAndUpdateCredentialsWithResolver(
   connection: ProviderConnectionLike,
@@ -79,16 +121,7 @@ export async function refreshAndUpdateCredentialsWithResolver(
 
   const refreshResult = (await serializeRefresh(connection.provider, () =>
     executor.refreshCredentials(credentials, console)
-  )) as
-    | (JsonRecord & {
-        accessToken?: string;
-        refreshToken?: string;
-        expiresIn?: number;
-        expiresAt?: string;
-        copilotToken?: string;
-        copilotTokenExpiresAt?: string;
-      })
-    | null;
+  )) as CredentialRefreshResult | null;
 
   if (!refreshResult) {
     if (connection.accessToken) {
@@ -100,31 +133,7 @@ export async function refreshAndUpdateCredentialsWithResolver(
     );
   }
 
-  const updateData: JsonRecord = {
-    updatedAt: new Date().toISOString(),
-  };
-
-  if (refreshResult.accessToken) {
-    updateData.accessToken = refreshResult.accessToken;
-  }
-  if (refreshResult.refreshToken) {
-    updateData.refreshToken = refreshResult.refreshToken;
-  }
-  if (refreshResult.expiresIn) {
-    const expiresAt = new Date(Date.now() + refreshResult.expiresIn * 1000).toISOString();
-    updateData.expiresAt = expiresAt;
-    updateData.tokenExpiresAt = expiresAt;
-  } else if (refreshResult.expiresAt) {
-    updateData.expiresAt = refreshResult.expiresAt;
-    updateData.tokenExpiresAt = refreshResult.expiresAt;
-  }
-  if (refreshResult.copilotToken || refreshResult.copilotTokenExpiresAt) {
-    updateData.providerSpecificData = {
-      ...(connection.providerSpecificData || {}),
-      copilotToken: refreshResult.copilotToken,
-      copilotTokenExpiresAt: refreshResult.copilotTokenExpiresAt,
-    };
-  }
+  const updateData = buildCredentialUpdateData(connection, refreshResult);
 
   await updateProviderConnection(connection.id, updateData);
 
