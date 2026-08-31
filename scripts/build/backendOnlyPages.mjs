@@ -37,6 +37,7 @@ export const BACKEND_ONLY_STUB_MARKER =
   "/* omniroute:backend-only-stub (auto-restored after build) */";
 
 const HEADER = `${BACKEND_ONLY_STUB_MARKER}\n`;
+const INSTRUMENTATION_STUB = `${HEADER}export async function register() {}`;
 
 // Leaf page → force-dynamic (never prerendered) server component returning null.
 const PAGE_STUB = `${HEADER}export const dynamic = "force-dynamic";\nexport default function BackendOnlyPageStub() {\n  return null;\n}\n`;
@@ -89,6 +90,31 @@ export function isBackendOnlyBuild(env = process.env) {
 /** True when the build is intended only for contributor feedback, not packaging. */
 export function isContributorBuild(env = process.env) {
   return env.OMNIROUTE_BUILD_PROFILE === "contributor";
+}
+
+/** Replace the build-only instrumentation entrypoint to avoid pulling the startup graph. */
+export function stubContributorInstrumentation(rootDir = process.cwd(), log = console) {
+  const files = [
+    path.join(rootDir, "src", "instrumentation.ts"),
+    path.join(rootDir, "src", "instrumentation-node.ts"),
+  ];
+  const stubbed = [];
+  for (const file of files) {
+    let original;
+    try {
+      original = fs.readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    if (original.includes(BACKEND_ONLY_STUB_MARKER)) continue;
+    try {
+      fs.writeFileSync(file, INSTRUMENTATION_STUB, "utf8");
+      stubbed.push({ file, original });
+    } catch (err) {
+      log.warn?.(`[backend-only] Could not stub ${file}: ${err?.message || err}`);
+    }
+  }
+  return stubbed;
 }
 
 function walkFiles(dir, out = []) {

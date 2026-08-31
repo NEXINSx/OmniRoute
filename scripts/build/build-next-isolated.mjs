@@ -14,6 +14,7 @@ import {
 import {
   isBackendOnlyBuild,
   isContributorBuild,
+  stubContributorInstrumentation,
   stubDashboardPages,
   restoreDashboardPages,
 } from "./backendOnlyPages.mjs";
@@ -295,6 +296,12 @@ export async function main() {
         "[build-next-isolated] OMNIROUTE_BUILD_BACKEND_ONLY set — building API only (dashboard UI stubbed)"
       );
       stubbedPages = stubDashboardPages(projectRoot);
+      if (isContributorBuild()) {
+        stubbedPages.push(...stubContributorInstrumentation(projectRoot));
+        console.log(
+          "[build-next-isolated] Contributor profile: instrumentation entrypoint stubbed for compile-only validation"
+        );
+      }
       process.once("SIGINT", onFatalSignal);
       process.once("SIGTERM", onFatalSignal);
     }
