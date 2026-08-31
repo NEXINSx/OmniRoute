@@ -25,7 +25,10 @@ import {
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { isValidGheUrl } from "@/shared/validation/providerSpecificData";
 import { AWS_REGION_PATTERN } from "@/lib/oauth/constants/oauth";
-import { antigravityDegradedProjectState } from "@/lib/oauth/antigravityProjectGate";
+import {
+  antigravityDegradedProjectState,
+  antigravityPersistStatus,
+} from "@/lib/oauth/antigravityProjectGate";
 import { syncToCloud } from "@/lib/cloudSync";
 import { startLocalServer } from "@/lib/oauth/utils/server";
 import { runWithProxyContextOrDirect } from "@omniroute/open-sse/utils/proxyFetch.ts";
@@ -549,8 +552,7 @@ export async function POST(
           connection = await updateProviderConnection(matchId, {
             ...tokenData,
             expiresAt,
-            testStatus: degradedProject?.testStatus ?? "active",
-            ...(degradedProject ?? {}),
+            ...antigravityPersistStatus(degradedProject),
             isActive: true,
           });
         }
@@ -778,8 +780,7 @@ export async function POST(
             connection = await updateProviderConnection(matchId, {
               ...tokenData,
               expiresAt,
-              testStatus: degradedProject?.testStatus ?? "active",
-              ...(degradedProject ?? {}),
+              ...antigravityPersistStatus(degradedProject),
               isActive: true,
             });
           }

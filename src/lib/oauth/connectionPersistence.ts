@@ -14,6 +14,11 @@ import {
 } from "@/models";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
+import {
+  antigravityDegradedProjectState,
+  antigravityPersistStatus,
+  type AntigravityDegradedProjectState,
+} from "@/lib/oauth/antigravityProjectGate";
 
 /**
  * Constant-time string comparison to prevent timing-oracle attacks (CWE-208).
@@ -97,12 +102,8 @@ export function buildOAuthConnectionCreatePayload(
   provider: string,
   tokenData: Record<string, any>,
   expiresAt: string | null,
-  degradedProject?: {
-    testStatus: "degraded";
-    errorCode: string;
-    lastErrorType: string;
-    lastError: string;
-  } | null
+  // warning is HTTP-response only (oauth route); persistence copies error fields.
+  degradedProject?: AntigravityDegradedProjectState | null
 ) {
   return {
     provider,
@@ -112,15 +113,9 @@ export function buildOAuthConnectionCreatePayload(
     tokenExpiresAt: expiresAt,
     // #11284: degraded when Cloud Code projectId discovery failed at connect
     // time — the row is saved (refresh token stored, request-time bootstrap
-    // can self-heal) but visibly NOT active.
-    testStatus: degradedProject?.testStatus ?? ("active" as const),
-    ...(degradedProject
-      ? {
-          errorCode: degradedProject.errorCode,
-          lastErrorType: degradedProject.lastErrorType,
-          lastError: degradedProject.lastError,
-        }
-      : {}),
+    // can self-heal) but visibly NOT active. Spread AFTER tokenData so stale
+    // error fields in the payload cannot leak through.
+    ...antigravityPersistStatus(degradedProject),
   };
 }
 
@@ -148,6 +143,7 @@ export async function persistOAuthConnection(
   const expiresAt = tokenData.expiresIn
     ? new Date(Date.now() + tokenData.expiresIn * 1000).toISOString()
     : null;
+  const degradedProject = antigravityDegradedProjectState(provider, tokenData);
 
   let connection: any;
   // A connectionId is an explicit "update THIS connection" signal (token refresh
@@ -163,14 +159,14 @@ export async function persistOAuthConnection(
       connection = await updateProviderConnection(matchId, {
         ...tokenData,
         expiresAt,
-        testStatus: "active",
+        ...antigravityPersistStatus(degradedProject),
         isActive: true,
       });
     }
   }
   if (!connection) {
     connection = await createProviderConnection(
-      buildOAuthConnectionCreatePayload(provider, tokenData, expiresAt)
+      buildOAuthConnectionCreatePayload(provider, tokenData, expiresAt, degradedProject)
     );
   }
 
