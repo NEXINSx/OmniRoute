@@ -9216,6 +9216,13 @@
     "grokAutoTopUpMax": "tối đa",
     "grokAutoTopUpMonth": "tháng",
     "grokAdditionalCredits": "Tín dụng bổ sung",
+    "kiloAccountBalance": "Số dư tài khoản",
+    "kiloPassBonus": "Bonus khả dụng",
+    "kiloPassMeterLabel": "Đồng hồ mức sử dụng Kilo Pass",
+    "kiloPassPaid": "Đã thanh toán",
+    "kiloPassRemaining": "Còn lại",
+    "kiloPassRenews": "Gia hạn sau {count} ngày",
+    "kiloPassUsageLabel": "Mức sử dụng tháng này",
     "kimiExtraUsageCredits": "Tín dụng sử dụng bổ sung",
     "kimiExtraUsage": "Sử dụng bổ sung",
     "kimiExtraUsageEnabled": "Đã bật",
@@ -11281,16 +11288,16 @@
     "detail": {
       "collapse": "Thu gọn {title}",
       "expand": "Mở rộng {title}",
-      "collapseAllLevels": "Thu gọn tất cả",
-      "collapseOneLevel": "Thu gọn một cấp",
-      "currentExpandLevel": "Cấp mở rộng hiện tại",
-      "expandOneLevel": "Mở rộng một cấp",
-      "expandAllLevels": "Mở rộng tất cả",
       "copyTitle": "Sao chép {title}",
       "copied": "Đã sao chép!",
       "copy": "Sao chép",
       "autoscrollOn": "Tự động cuộn: bật",
       "autoscrollOff": "Tự động cuộn: tắt",
+      "collapseAllLevels": "Thu gọn tất cả",
+      "collapseOneLevel": "Thu gọn một cấp",
+      "currentExpandLevel": "Cấp mở rộng hiện tại",
+      "expandOneLevel": "Mở rộng một cấp",
+      "expandAllLevels": "Mở rộng tất cả",
       "payload": {
         "clientRawRequest": "Yêu cầu thô của client",
         "clientRequest": "Yêu cầu client",
@@ -12952,6 +12959,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "Sắp xếp theo",
+      "method": {
+        "manual": "Thủ công",
+        "provider": "Nhà cung cấp",
+        "score": "Điểm (mô hình miễn phí)",
+        "name": "Tên"
+      },
+      "scoreHint": "Xếp hạng theo điểm chỉ áp dụng cho nhà cung cấp miễn phí; các nhà cung cấp khác giữ nguyên vị trí."
+    }
+  },
   "comboControl": {
     "title": "Trung tâm điều khiển combo",
     "unavailable": "Trung tâm điều khiển combo không khả dụng",
@@ -13973,17 +13992,5 @@
     "cta": "Lấy khóa API",
     "partnerLinkNote": "Liên kết đối tác",
     "dismissAriaLabel": "Đóng"
-  },
-  "combo": {
-    "sort": {
-      "label": "Sắp xếp theo",
-      "method": {
-        "manual": "Thủ công",
-        "provider": "Nhà cung cấp",
-        "score": "Điểm (mô hình miễn phí)",
-        "name": "Tên"
-      },
-      "scoreHint": "Xếp hạng theo điểm chỉ áp dụng cho nhà cung cấp miễn phí; các nhà cung cấp khác giữ nguyên vị trí."
-    }
   }
 }
