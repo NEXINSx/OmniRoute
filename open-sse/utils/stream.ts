@@ -86,13 +86,6 @@ import { normalizeFinalOpenAIStreamChunk } from "./openAIStreamChunk.ts";
 import { collectClaudeDelta } from "./streamClaudeDelta.ts";
 import { createStreamTiming, type StreamTiming } from "./streamTiming.ts";
 
-// Pre-compiled regex constants for hot-path SSE processing (avoid per-chunk compilation)
-const KEEPALIVE_EVENT_RE = /^event:\s*keepalive\b/i;
-const EVENT_FIELD_RE = /^event:/i;
-const EVENT_STRIP_RE = /^event:\s*/i;
-const ID_RETRY_RE = /^(?::|id:|retry:)/i;
-const ZERO_WIDTH_RE = /[​-‍﻿]/g;
-
 /**
  * Race a response body read against a timeout.
  * Prevents indefinite hangs when the upstream sends headers but stalls on the body.
@@ -184,6 +177,8 @@ type StreamOptions = {
    * codex-compatible `namespace` + `name` fields.
    */
   requestToolIdentityMap?: Map<string, { namespace: string; name: string }> | null;
+  /** High water mark for the TransformStream internal buffer (default: 16384) */
+  highWaterMark?: number;
 };
 
 type TranslateState = ReturnType<typeof initState> & {
@@ -279,7 +274,7 @@ function containsMalformedTextualToolCall(
   allowedToolNames?: Set<string> | null
 ): boolean {
   if (typeof text !== "string") return false;
-  const normalized = text.replace(ZERO_WIDTH_RE, "");
+  const normalized = text.replace(/[\u200B-\u200D\uFEFF]/g, "");
 
   let searchIdx = 0;
   while (true) {
@@ -391,10 +386,6 @@ function buildResponsesFunctionCallEvents(toolCall: ToolCall) {
 }
 
 function formatSSEDataEvents(events: unknown[]) {
-  // Fast-path: single event (common case) - avoid array allocation
-  if (events.length === 1) {
-    return `data: ${JSON.stringify(events[0])}\n\n`;
-  }
   return events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
 }
 
@@ -734,7 +725,7 @@ export function createSSEStream(options: StreamOptions = {}) {
   const shouldEmitDoneTerminator =
     !clientExpectsResponsesStream && !clientExpectsClaudeStream && !clientExpectsAntigravityStream;
 
-  const bufferParts: string[] = [];
+  let buffer = "";
   let usage: UsageLike | null = null;
   /** Passthrough (OpenAI CC shape): saw tool_calls in stream before finish_reason */
   let passthroughHasToolCalls = false;
@@ -1187,6 +1178,8 @@ export function createSSEStream(options: StreamOptions = {}) {
     }
   };
 
+  const highWaterMark = options.highWaterMark ?? 16384;
+
   return new TransformStream(
     {
       start(controller) {
@@ -1236,23 +1229,11 @@ export function createSSEStream(options: StreamOptions = {}) {
         timing.markByte();
         lastChunkTime = now;
         const text = decoder.decode(chunk, { stream: true });
+        buffer += text;
         reqLogger?.appendProviderChunk?.(text);
-        // Only rejoin the accumulated parts when this chunk actually introduces a
-        // line boundary. Chunks without `\n` just append to the parts array, so we
-        // avoid a fresh full-string allocation + residual-slice copy per chunk.
-        if (text.indexOf("\n") === -1) {
-          bufferParts.push(text);
-          return;
-        }
-        bufferParts.push(text);
-        const combined = bufferParts.join("");
-        const nlIdx = combined.lastIndexOf("\n");
-        const lines = nlIdx >= 0 ? combined.slice(0, nlIdx).split("\n") : [];
-        bufferParts.length = 0;
-        if (nlIdx >= 0) {
-          const remainder = combined.slice(nlIdx + 1);
-          if (remainder) bufferParts.push(remainder);
-        }
+        const nlIdx = buffer.lastIndexOf("\n");
+        const lines = nlIdx >= 0 ? buffer.slice(0, nlIdx).split("\n") : [];
+        if (nlIdx >= 0) buffer = buffer.slice(nlIdx + 1);
 
         for (const line of multilineSseDataLineNormalizer.normalize(lines)) {
           const trimmed = line.trim();
@@ -1274,14 +1255,14 @@ export function createSSEStream(options: StreamOptions = {}) {
 
             // Drop whole keepalive event blocks — strict OpenAI-compatible SDKs
             // try to JSON.parse empty keepalive payloads and crash.
-            if (KEEPALIVE_EVENT_RE.test(trimmed)) {
+            if (/^event:\s*keepalive\b/i.test(trimmed)) {
               skipPassthroughEvent = true;
               clearPendingPassthroughEvent();
               continue;
             }
 
-            if (EVENT_FIELD_RE.test(trimmed)) {
-              const eventType = trimmed.replace(EVENT_STRIP_RE, "");
+            if (/^event:/i.test(trimmed)) {
+              const eventType = trimmed.replace(/^event:\s*/i, "");
               if (
                 shouldInjectClaudeEmptyResponseBeforeCurrentEvent(claudeEmptyResponseLifecycle, {
                   type: eventType,
@@ -1295,7 +1276,7 @@ export function createSSEStream(options: StreamOptions = {}) {
               continue;
             }
 
-            if (ID_RETRY_RE.test(trimmed)) {
+            if (/^(?::|id:|retry:)/i.test(trimmed)) {
               passthroughEventPrefix.remember(line);
               continue;
             }
@@ -1664,10 +1645,7 @@ export function createSSEStream(options: StreamOptions = {}) {
                         isResponsesCommentaryMessageItem
                       ).items
                     : passthroughResponsesOutputItems;
-                  const backfilled = backfillResponsesCompletedOutput(
-                    parsed,
-                    backfillCandidates
-                  );
+                  const backfilled = backfillResponsesCompletedOutput(parsed, backfillCandidates);
                   const usageNormalized = normalizeUsage(parsed);
                   if (
                     stripped ||
@@ -2287,18 +2265,12 @@ export function createSSEStream(options: StreamOptions = {}) {
         }
         try {
           const remaining = decoder.decode();
-          if (remaining) bufferParts.push(remaining);
-          // Materialize the residual tail (content after the last newline) once
-          // for the whole flush. Matches the old `buffer` contract: it holds only
-          // the incomplete tail, and is cleared when the multi-line normalizer
-          // consumes it.
-          let tailBuffer = bufferParts.join("");
-          bufferParts.length = 0;
+          if (remaining) buffer += remaining;
           let normalizedTailLines: string[] = [];
           if (multilineSseDataLineNormalizer.hasPending()) {
-            const tailLines = tailBuffer ? [tailBuffer, ""] : [""];
+            const tailLines = buffer ? [buffer, ""] : [""];
             normalizedTailLines = multilineSseDataLineNormalizer.normalize(tailLines);
-            tailBuffer = "";
+            buffer = "";
           }
 
           if (mode === STREAM_MODE.PASSTHROUGH) {
@@ -2375,14 +2347,14 @@ export function createSSEStream(options: StreamOptions = {}) {
                 return;
               }
             }
-            const bufferedLine = tailBuffer.trim();
-            if (skipPassthroughEvent || KEEPALIVE_EVENT_RE.test(bufferedLine)) {
+            const bufferedLine = buffer.trim();
+            if (skipPassthroughEvent || /^event:\s*keepalive\b/i.test(bufferedLine)) {
               skipPassthroughEvent = false;
               clearPendingPassthroughEvent();
-            } else if (tailBuffer) {
-              let output = tailBuffer;
-              if (tailBuffer.startsWith("data:") && !tailBuffer.startsWith("data: ")) {
-                output = "data: " + tailBuffer.slice(5);
+            } else if (buffer) {
+              let output = buffer;
+              if (buffer.startsWith("data:") && !buffer.startsWith("data: ")) {
+                output = "data: " + buffer.slice(5);
               }
               const bufferedPayload = parseSSELine(bufferedLine);
               if (bufferedPayload) {
@@ -2429,7 +2401,7 @@ export function createSSEStream(options: StreamOptions = {}) {
                 }
               }
               if (!bufferedLine) output = passthroughEventPrefix.flush() || output;
-              output = passthroughEventPrefix.prefixData(output, tailBuffer);
+              output = passthroughEventPrefix.prefixData(output, buffer);
               if (output && !output.endsWith("\n\n")) {
                 output = output.endsWith("\n") ? `${output}\n` : `${output}\n\n`;
               }
@@ -2662,8 +2634,8 @@ export function createSSEStream(options: StreamOptions = {}) {
           }
 
           // Translate mode: process remaining buffer
-          if (tailBuffer.trim()) {
-            const parsed = parseSSELine(tailBuffer.trim());
+          if (buffer.trim()) {
+            const parsed = parseSSELine(buffer.trim());
             if (parsed && !parsed.done) {
               providerPayloadCollector.push(parsed);
               // Extract usage from remaining buffer — if the usage-bearing event
@@ -2988,8 +2960,8 @@ export function createSSEStream(options: StreamOptions = {}) {
         clearIdleTimer();
       },
     },
-    { highWaterMark: 16384 },
-    { highWaterMark: 16384 }
+    { highWaterMark },
+    { highWaterMark }
   );
 }
 
@@ -3011,7 +2983,8 @@ export function createSSETransformStreamWithLogger(
   copilotCompatibleReasoning = false,
   suppressThinkClose = false,
   customToolNames: ReadonlySet<string> = new Set(),
-  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null
+  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null,
+  highWaterMark?: number
 ) {
   return createSSEStream({
     mode: STREAM_MODE.TRANSLATE,
@@ -3030,6 +3003,7 @@ export function createSSETransformStreamWithLogger(
     suppressThinkClose,
     customToolNames,
     requestToolIdentityMap,
+    highWaterMark,
   });
 }
 
@@ -3044,7 +3018,8 @@ export function createPassthroughStreamWithLogger(
   apiKeyInfo: unknown = null,
   onFailure: ((payload: StreamFailurePayload) => boolean | void | Promise<void>) | null = null,
   clientResponseFormat: string | null = null,
-  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null
+  requestToolIdentityMap: Map<string, { namespace: string; name: string }> | null = null,
+  highWaterMark?: number
 ) {
   return createSSEStream({
     mode: STREAM_MODE.PASSTHROUGH,
@@ -3059,6 +3034,7 @@ export function createPassthroughStreamWithLogger(
     onFailure,
     clientResponseFormat,
     requestToolIdentityMap,
+    highWaterMark,
   });
 }
 

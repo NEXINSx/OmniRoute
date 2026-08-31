@@ -629,21 +629,18 @@ function resolveSilentCloseOutcome(input: {
   return null;
 }
 
-export function createDisconnectAwareStream(transformStream, streamController) {
+export function createDisconnectAwareStream(
+  transformStream,
+  streamController,
+  options: { highWaterMark?: number } = {}
+) {
   const reader = transformStream.readable.getReader();
   const writer = transformStream.writable.getWriter();
+  const terminalDecoder = new TextDecoder();
+  const contentDecoder = new TextDecoder();
   const contentWatcher = createStreamContentWatcher();
   const completedToolHandoffWatcher = createCompletedResponsesToolHandoffWatcher();
-
-  // Lazy decoders: only instantiate when the corresponding watcher is active
-  let terminalDecoder: TextDecoder | null = null;
-  let contentDecoder: TextDecoder | null = null;
-  let toolHandoffDecoder: TextDecoder | null = null;
-
-  const getTerminalDecoder = () => terminalDecoder ??= new TextDecoder();
-  const getContentDecoder = () => contentDecoder ??= new TextDecoder();
-  const getToolHandoffDecoder = () => toolHandoffDecoder ??= new TextDecoder();
-
+  const toolHandoffDecoder = new TextDecoder();
   let terminalTail = "";
   let clientTerminalSeen = false;
   let bytesWereForwarded = false;
@@ -680,16 +677,16 @@ export function createDisconnectAwareStream(transformStream, streamController) {
     bytesWereForwarded = true;
     // Runs past clientTerminalSeen: the frame that carries the terminal marker
     // can carry the only content too, and #8649 needs the whole stream scanned.
-    contentWatcher.note(getContentDecoder().decode(chunk, { stream: true }));
+    contentWatcher.note(contentDecoder.decode(chunk, { stream: true }));
     if (
       isResponsesClientFormat(streamController.clientResponseFormat) &&
-      completedToolHandoffWatcher.note(getToolHandoffDecoder().decode(chunk, { stream: true }))
+      completedToolHandoffWatcher.note(toolHandoffDecoder.decode(chunk, { stream: true }))
     ) {
       streamController.markCompletedToolHandoffSeen?.();
     }
     if (clientTerminalSeen) return;
 
-    terminalTail += getTerminalDecoder().decode(chunk, { stream: true });
+    terminalTail += terminalDecoder.decode(chunk, { stream: true });
     // Scan before bounding retained state: a compaction terminal frame can
     // exceed the tail budget because encrypted_content is carried inline.
     clientTerminalSeen = hasClientTerminalSseMarker(
@@ -703,6 +700,8 @@ export function createDisconnectAwareStream(transformStream, streamController) {
       streamController.markClientTerminalSeen?.();
     }
   };
+
+  const highWaterMark = options.highWaterMark ?? 16384;
 
   return new ReadableStream(
     {
@@ -825,7 +824,7 @@ export function createDisconnectAwareStream(transformStream, streamController) {
         await Promise.allSettled([reader.cancel(reason), writer.abort(reason)]);
       },
     },
-    { highWaterMark: 16384 }
+    { highWaterMark }
   );
 }
 
@@ -852,7 +851,7 @@ export function pipeWithDisconnect(
   providerResponse: Response,
   transformStream: TransformStream<Uint8Array, Uint8Array>,
   streamController: StreamController,
-  opts: { stallTimeoutMs?: number } = {}
+  opts: { stallTimeoutMs?: number; highWaterMark?: number } = {}
 ) {
   const stallTimeoutMs = opts.stallTimeoutMs ?? DEFAULT_STREAM_STALL_TIMEOUT_MS;
 
@@ -861,7 +860,8 @@ export function pipeWithDisconnect(
     const transformedBody = providerResponse.body.pipeThrough(transformStream);
     return createDisconnectAwareStream(
       { readable: transformedBody, writable: createNoopAbortWritable() },
-      streamController
+      streamController,
+      { highWaterMark: opts.highWaterMark }
     );
   }
 
@@ -963,6 +963,7 @@ export function pipeWithDisconnect(
     .pipeThrough(transformStream);
   return createDisconnectAwareStream(
     { readable: transformedBody, writable: createNoopAbortWritable() },
-    wrappedController
+    wrappedController,
+    { highWaterMark: opts.highWaterMark }
   );
 }
