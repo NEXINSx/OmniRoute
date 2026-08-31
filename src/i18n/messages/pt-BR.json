@@ -9216,6 +9216,13 @@
     "grokAutoTopUpMax": "máximo",
     "grokAutoTopUpMonth": "mês",
     "grokAdditionalCredits": "Créditos adicionais",
+    "kiloAccountBalance": "__MISSING__:Account Balance",
+    "kiloPassBonus": "__MISSING__:Available bonus",
+    "kiloPassMeterLabel": "__MISSING__:Kilo Pass usage meter",
+    "kiloPassPaid": "__MISSING__:Paid",
+    "kiloPassRemaining": "__MISSING__:Remaining",
+    "kiloPassRenews": "__MISSING__:Renews {count} days",
+    "kiloPassUsageLabel": "__MISSING__:This month's usage",
     "kimiExtraUsageCredits": "Créditos de uso extra",
     "kimiExtraUsage": "Uso extra",
     "kimiExtraUsageEnabled": "Ativado",
@@ -12952,6 +12959,18 @@
       }
     }
   },
+  "combo": {
+    "sort": {
+      "label": "Ordenar por",
+      "method": {
+        "manual": "Manual",
+        "provider": "Provedor",
+        "score": "Pontuação (modelos gratuitos)",
+        "name": "Nome"
+      },
+      "scoreHint": "A ordenação por pontuação vale só para provedores gratuitos; os demais ficam onde estão."
+    }
+  },
   "comboControl": {
     "title": "Central de Controle de Combo",
     "unavailable": "Central de Controle de Combo indisponível",
@@ -13973,17 +13992,5 @@
     "cta": "Obter uma chave de API",
     "partnerLinkNote": "Link de parceiro",
     "dismissAriaLabel": "Dispensar"
-  },
-  "combo": {
-    "sort": {
-      "label": "Ordenar por",
-      "method": {
-        "manual": "Manual",
-        "provider": "Provedor",
-        "score": "Pontuação (modelos gratuitos)",
-        "name": "Nome"
-      },
-      "scoreHint": "A ordenação por pontuação vale só para provedores gratuitos; os demais ficam onde estão."
-    }
   }
 }
