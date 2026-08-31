@@ -1,14 +1,14 @@
 %% MCP Server tool inventory by category
 %% Reflects: open-sse/mcp-server/ — TOTAL_MCP_TOOL_COUNT in server.ts (countUniqueMcpTools)
-%% Unique contributions: MCP_TOOLS 42 + memory 3 + skill 4 + githubSkill 3 + pool 6
-%%   + gamification 8 + plugin 8 + notion 6 + obsidian 22 + localCorpus 3 + compression 2 = 107
+%% Unique contributions: MCP_TOOLS 45 + memory 3 + skill 4 + githubSkill 3 + pool 6
+%%   + gamification 8 + plugin 8 + notion 6 + obsidian 22 + localCorpus 3 + compression 2 = 110
 %%   (agentSkillTools fully overlaps the base registry; 11 of the 13 compression
 %%    tools live in the base registry — duplicates counted once)
 %% Regenerate the SVG with: npm run docs:render-diagrams
-%% v3.8.50
+%% v3.8.51
 flowchart LR
-  MCP["MCP Server<br/>107 tools total"]
-  MCP --> Core["Base registry (42)<br/>routing, cache, compression, quota,<br/>proxy, web search/fetch, tool search"]
+  MCP["MCP Server<br/>110 tools total"]
+  MCP --> Core["Base registry (45)<br/>routing, cache, compression, quota,<br/>proxy, web search/fetch, tool search"]
   MCP --> Mem["Memory (3)<br/>memory_search, memory_add,<br/>memory_clear"]
   MCP --> Skl["Skills (4)<br/>skills_list, skills_enable,<br/>skills_execute, skills_executions<br/>+ agent-skill catalog discovery"]
   MCP --> GSkl["GitHub-Skills (3)<br/>search, scan, install"]

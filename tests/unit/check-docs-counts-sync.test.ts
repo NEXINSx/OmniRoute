@@ -325,3 +325,68 @@ test("scoring factor validator flags every stale count the repo carried", () => 
     assert.equal(v(`the ${stale} scoring engine`).ok, false, `expected ${stale} to be flagged`);
   }
 });
+
+// --- v3.8.51 hardening: rewritten-claim evasion + version prose ------------------
+// Regression guards for the 2026-08-31 audit: "56 recurring/keyless free-forever"
+// and "105-tool MCP server" dodged the original patterns, "149 versioned SQL
+// migration files" dodged the migrations pattern, and the README footer shipped
+// "v3.8.50" on a 3.8.51 tree with no gate reading it.
+import { makeVersionClaimValidator } from "../../scripts/check/check-docs-counts-sync.mjs";
+
+const makeVersionValidator = makeVersionClaimValidator as (
+  expected: string | null
+) => (content: string) => { ok: boolean; detail: string };
+
+test("free-forever gate catches the rewritten recurring/keyless form", () => {
+  const v = makeValidator(53, {
+    what: "free-forever providers",
+    pattern: /(\d+)(?:\s+recurring(?:\/|\s+or\s+)keyless)?\s+free[- ]forever/gi,
+  });
+  assert.equal(v("53 free forever").ok, true);
+  assert.equal(v("53 recurring/keyless free-forever providers").ok, true);
+  assert.equal(v("56 recurring or keyless free-forever providers").ok, false);
+  assert.equal(v("55 free-forever").ok, false);
+});
+
+test("migrations gate catches the 'versioned SQL migration files' form", () => {
+  const v = makeValidator(167, {
+    what: "migrations",
+    pattern: /(\d+)\+? (?:versioned )?(?:SQL )?migrations?\b/gi,
+  });
+  assert.equal(v("167 versioned SQL migration files").ok, true);
+  assert.equal(v("167 SQL migrations").ok, true);
+  assert.equal(v("149 versioned SQL migration files").ok, false);
+});
+
+test("MCP-tools gate catches the hyphenated N-tool form and skips phase numbers", () => {
+  const v = makeValidator(110, {
+    what: "MCP tools",
+    pattern: /(\d+)[- ]tools?\b/gi,
+    skipBefore: /(tools?|definitions?)\s*\(\s*$|phase\s+$/i,
+    skipAfter: /^\s*\(\d+ CLI/,
+  });
+  assert.equal(v("a 110-tool MCP server").ok, true);
+  assert.equal(v("a 105-tool MCP server").ok, false);
+  assert.equal(v("Phase 2 tool handlers (8 advanced tools)").ok, true);
+});
+
+test("recurring-pools gate skips the positive-budget subset", () => {
+  const v = makeValidator(38, {
+    what: "recurring pools",
+    pattern: /(\d+) (?:documented )?(?:recurring|free-tier) pool(?:s|(?:\s+keys))?\b/gi,
+    skipAfter: /^\s+with a published positive/i,
+  });
+  assert.equal(v("38 recurring pool keys").ok, true);
+  assert.equal(v("20 recurring pools with a published positive monthly budget").ok, true);
+  assert.equal(v("39 recurring pools").ok, false);
+});
+
+test("version gate compares README-footer and llm.txt prose against package.json", () => {
+  const v = makeVersionValidator("3.8.51");
+  assert.equal(v("OmniRoute v3.8.51 · Node ≥22.22.2").ok, true);
+  assert.equal(v("**Current version:** 3.8.51").ok, true);
+  assert.equal(v("OmniRoute v3.8.50 · Node ≥22.22.2").ok, false);
+  assert.equal(v("**Current version:** 3.8.50").ok, false);
+  assert.equal(v("no version here").ok, true);
+  assert.equal(makeVersionValidator(null)("anything").ok, false);
+});

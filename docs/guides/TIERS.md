@@ -6,7 +6,7 @@ lastUpdated: 2026-06-28
 
 # OmniRoute Tiers — User Guide
 
-OmniRoute organizes the 207+ supported providers into 3 economic tiers. Each
+OmniRoute organizes the 352 supported providers into 3 economic tiers. Each
 request travels through them in order until one returns successfully — you
 get the cheapest viable response without ever writing fallback code.
 

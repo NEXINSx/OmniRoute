@@ -3,11 +3,11 @@
 <rect x="16" y="16" width="868" height="520" rx="13" fill="#161b22" stroke="#30363d"/>
 <text x="868" y="528" fill="#484f58" font-size="10.5" text-anchor="end">OmniRoute · /dashboard/free-tiers · preview mockup</text>
 <text x="32" y="50" fill="#e6edf3" font-size="18" font-weight="700">Monthly free-token budget</text>
-<text x="868" y="50" fill="#7d8590" font-size="13" text-anchor="end">18 free pools · 425 models · one endpoint</text>
+<text x="868" y="50" fill="#7d8590" font-size="13" text-anchor="end">20 free pools · 446 models · one endpoint</text>
 <text x="32" y="84" fill="#7d8590" font-size="11.5">Steady / month</text>
-<text x="32" y="114" fill="#e6edf3" font-size="27" font-weight="800">~1.46B</text>
+<text x="32" y="114" fill="#e6edf3" font-size="27" font-weight="800">~1.51B</text>
 <text x="330" y="84" fill="#7d8590" font-size="11.5">First month (+ signup credits)</text>
-<text x="330" y="114" fill="#3fb950" font-size="27" font-weight="800">~2.09B</text>
+<text x="330" y="114" fill="#3fb950" font-size="27" font-weight="800">~2.13B</text>
 <text x="700" y="84" fill="#7d8590" font-size="11.5">ToS-flagged (you decide)</text>
 <text x="700" y="114" fill="#d29922" font-size="27" font-weight="800">13 providers</text>
 <clipPath id="bar"><rect x="32" y="132" width="836" height="16" rx="8"/></clipPath>

@@ -200,7 +200,7 @@ function readCodeFacts() {
     "const FOREVER=new Set(['recurring-monthly','recurring-daily','recurring-uncapped',",
     "'recurring-credit','keyless']);",
     "const ff=new Set();for(const m of t.perModel)if(FOREVER.has(m.freeType))ff.add(m.provider);",
-    'console.log("@@"+JSON.stringify({freeSteady:t.steadyRecurringTokens,',
+    'console.log("@@"+JSON.stringify({freeSteady:t.steadyRecurringTokens,entries:t.perModel.length,',
     "freeFirst:t.firstMonthRealisticTokens,freePools:t.poolCount,engines:ENGINE_IDS.length,",
     "cliTotal:cli.length,cliCode:by('code'),cliAgent:by('agent'),",
     "mcpTools:countUniqueMcpTools(cols),mcpScopes:sc.size,providers:pids.size,freeForever:ff.size}));",
@@ -261,6 +261,42 @@ export function checkFreeTierHeadline(content, totals) {
     detail:
       `stale headline ${[...new Set(stale.map((c) => c.text))].join(", ")} — live catalog ` +
       `computes ~${steady.toFixed(2)}B steady / ~${first.toFixed(2)}B first month`,
+  };
+}
+
+// PURE: docs prose that names the product version ("OmniRoute v3.8.50 ·",
+// "**Current version:** 3.8.50") must match package.json exactly.
+export function readPackageVersion() {
+  try {
+    return String(JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version);
+  } catch {
+    return null;
+  }
+}
+
+export function makeVersionClaimValidator(expected) {
+  const PATTERNS = [
+    /OmniRoute v(\d+\.\d+\.\d+)/g,
+    /Current version:\*{0,2}\s*\*{0,2}(\d+\.\d+\.\d+)/g,
+  ];
+  return (content) => {
+    if (!expected) return { ok: false, detail: "package.json version could not be read" };
+    const claims = [];
+    for (const pattern of PATTERNS)
+      for (const m of content.matchAll(pattern)) claims.push({ value: m[1], text: m[0].trim() });
+    if (!claims.length) return { ok: true, detail: "no version claim in this file" };
+    const stale = claims.filter((c) => c.value !== expected);
+    if (!stale.length)
+      return {
+        ok: true,
+        detail: `${claims.length} version claim(s) match package.json ${expected}`,
+      };
+    return {
+      ok: false,
+      detail:
+        `stale version: ${[...new Set(stale.map((c) => `"${c.text}"`))].join(", ")} — ` +
+        `package.json is ${expected}`,
+    };
   };
 }
 
@@ -371,6 +407,8 @@ const SVG_DIAGRAM_FILES = [
   "docs/diagrams/comparison-table.svg",
   "docs/diagrams/cli-terminal.svg",
   "docs/diagrams/tier-cascade.svg",
+  "public/images/tier-flow-dark.svg",
+  "public/images/tier-flow-light.svg",
 ];
 
 export function buildChecks() {
@@ -398,8 +436,19 @@ export function buildChecks() {
       files: ["README.md", "AGENTS.md", "llm.txt"],
       validate: makeNumberClaimValidator(countMigrations(), {
         what: "migrations",
-        pattern: /(\d+)\+? migrations?\b/gi,
+        pattern: /(\d+)\+? (?:versioned )?(?:SQL )?migrations?\b/gi,
       }),
+    },
+    {
+      // The README footer and llm.txt each carry the product version as prose; both
+      // shipped stale ("v3.8.50" on a 3.8.51 tree) in the 2026-08-31 audit. Compare
+      // every such claim against package.json, which is authoritative.
+      label: "Package version (docs prose)",
+      actual: readPackageVersion(),
+      docKey: "package version",
+      strict: true,
+      files: ["README.md", "llm.txt"],
+      validate: makeVersionClaimValidator(readPackageVersion()),
     },
     {
       label: "i18n locales count",
@@ -472,23 +521,55 @@ export function buildChecks() {
           f.mcpTools,
           "MCP tools",
           {
-            pattern: /(\d+) tools/gi,
+            pattern: /(\d+)[- ]tools?\b/gi,
             // per-module rows ("Memory tool definitions (3 tools)") and the CLI catalog
             // total ("33 tools (25 CLI Code's …)") are not the MCP aggregate
             // per-module rows read "… tool definitions (N tools" / "… management tools
             // (N tools" — the word tool(s)/definitions sits right before the paren. The
             // aggregate ("MCP Server (109 tools", "all 109 tools") never does.
-            skipBefore: /(tools?|definitions?)\s*\(\s*$/i,
+            // "Phase 2 tool handlers" is a phase number, not a tool count
+            skipBefore: /(tools?|definitions?)\s*\(\s*$|phase\s+$/i,
             skipAfter: /^\s*\(\d+ CLI/,
           },
-          ["README.md", "AGENTS.md", "docs/frameworks/MCP-SERVER.md"]
+          [
+            "README.md",
+            "AGENTS.md",
+            "docs/frameworks/MCP-SERVER.md",
+            "llm.txt",
+            "open-sse/mcp-server/README.md",
+            "skills/omni-mcp/SKILL.md",
+          ]
         ),
-        claim(f.mcpScopes, "MCP scopes", { pattern: /(\d+) scopes/gi }, ["README.md", "AGENTS.md"]),
-        claim(f.cliTotal, "CLI tools", { pattern: /(\d+) tools(?=\s*\(\d+ CLI)/gi }, ["README.md"]),
-        claim(f.freeForever, "free-forever providers", { pattern: /(\d+) free forever/gi }, [
+        claim(f.mcpScopes, "MCP scopes", { pattern: /(\d+) scopes/gi }, [
           "README.md",
-          "docs/diagrams/promise-pillars.svg",
+          "AGENTS.md",
+          "llm.txt",
+          "skills/omni-mcp/SKILL.md",
         ]),
+        claim(f.cliTotal, "CLI tools", { pattern: /(\d+) tools(?=\s*\(\d+ CLI)/gi }, ["README.md"]),
+        claim(
+          f.freeForever,
+          "free-forever providers",
+          { pattern: /(\d+)(?:\s+recurring(?:\/|\s+or\s+)keyless)?\s+free[- ]forever/gi },
+          ["README.md", "docs/diagrams/promise-pillars.svg"]
+        ),
+        claim(
+          f.entries,
+          "free-tier catalog entries",
+          { pattern: /(\d+) (?:cataloged |catalogued )?(?:free-tier |catalog )entries\b/gi },
+          ["README.md", "docs/diagrams/free-tier-budget.svg"]
+        ),
+        claim(
+          f.freePools,
+          "recurring pools",
+          {
+            pattern: /(\d+) (?:documented )?(?:recurring|free-tier) pool(?:s|(?:\s+keys))?\b/gi,
+            // "20 recurring pools with a published positive monthly budget" is the
+            // positive-budget SUBSET, not the recurring-pool total — never gate it.
+            skipAfter: /^\s+with a published positive/i,
+          },
+          ["README.md", "docs/diagrams/free-tier-budget.svg", "docs/reference/FREE_TIERS.md"]
+        ),
       ];
     })(),
     {
@@ -518,6 +599,7 @@ export function buildChecks() {
         "docs/guides/FREE_PROVIDER_RANKINGS.md",
         "docs/diagrams/strategies-grid.svg",
         "docs/diagrams/auto-combo-12factor.mmd",
+        "llm.txt",
         "open-sse/services/autoCombo/routerStrategy.ts",
         "open-sse/services/taskAwareRouter.ts",
         "tests/unit/lkgp-enabled-context-11181.test.ts",
@@ -533,7 +615,7 @@ export function buildChecks() {
       actual: countRoutingStrategies(),
       docKey: "strategies",
       strict: false,
-      files: ["docs/routing/AUTO-COMBO.md", "docs/architecture/RESILIENCE_GUIDE.md"],
+      files: ["docs/routing/AUTO-COMBO.md", "docs/architecture/RESILIENCE_GUIDE.md", "llm.txt"],
     },
     {
       label: "OAuth providers count",

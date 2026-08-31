@@ -1,14 +1,14 @@
 ---
 title: "API Reference"
-version: 3.8.50
-lastUpdated: 2026-08-18
+version: 3.8.51
+lastUpdated: 2026-08-31
 ---
 
 # API Reference
 
 🌐 **Languages:** 🇺🇸 [English](./API_REFERENCE.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/docs/reference/API_REFERENCE.md) | 🇪🇸 [Español](../i18n/es/docs/reference/API_REFERENCE.md) | 🇫🇷 [Français](../i18n/fr/docs/reference/API_REFERENCE.md) | 🇮🇹 [Italiano](../i18n/it/docs/reference/API_REFERENCE.md) | 🇷🇺 [Русский](../i18n/ru/docs/reference/API_REFERENCE.md) | 🇨🇳 [中文 (简体)](../i18n/zh-CN/docs/reference/API_REFERENCE.md) | 🇩🇪 [Deutsch](../i18n/de/docs/reference/API_REFERENCE.md) | 🇮🇳 [हिन्दी](../i18n/in/docs/reference/API_REFERENCE.md) | 🇹🇭 [ไทย](../i18n/th/docs/reference/API_REFERENCE.md) | 🇺🇦 [Українська](../i18n/uk-UA/docs/reference/API_REFERENCE.md) | 🇸🇦 [العربية](../i18n/ar/docs/reference/API_REFERENCE.md) | 🇯🇵 [日本語](../i18n/ja/docs/reference/API_REFERENCE.md) | 🇻🇳 [Tiếng Việt](../i18n/vi/docs/reference/API_REFERENCE.md) | 🇧🇬 [Български](../i18n/bg/docs/reference/API_REFERENCE.md) | 🇩🇰 [Dansk](../i18n/da/docs/reference/API_REFERENCE.md) | 🇫🇮 [Suomi](../i18n/fi/docs/reference/API_REFERENCE.md) | 🇮🇱 [עברית](../i18n/he/docs/reference/API_REFERENCE.md) | 🇭🇺 [Magyar](../i18n/hu/docs/reference/API_REFERENCE.md) | 🇮🇩 [Bahasa Indonesia](../i18n/id/docs/reference/API_REFERENCE.md) | 🇰🇷 [한국어](../i18n/ko/docs/reference/API_REFERENCE.md) | 🇲🇾 [Bahasa Melayu](../i18n/ms/docs/reference/API_REFERENCE.md) | 🇳🇱 [Nederlands](../i18n/nl/docs/reference/API_REFERENCE.md) | 🇳🇴 [Norsk](../i18n/no/docs/reference/API_REFERENCE.md) | 🇵🇹 [Português (Portugal)](../i18n/pt/docs/reference/API_REFERENCE.md) | 🇷🇴 [Română](../i18n/ro/docs/reference/API_REFERENCE.md) | 🇵🇱 [Polski](../i18n/pl/docs/reference/API_REFERENCE.md) | 🇸🇰 [Slovenčina](../i18n/sk/docs/reference/API_REFERENCE.md) | 🇸🇪 [Svenska](../i18n/sv/docs/reference/API_REFERENCE.md) | 🇵🇭 [Filipino](../i18n/phi/docs/reference/API_REFERENCE.md) | 🇨🇿 [Čeština](../i18n/cs/docs/reference/API_REFERENCE.md)
 
-Complete reference for all OmniRoute API endpoints.
+Core reference for the OmniRoute API. It covers the public `/v1` surface and the most-used management endpoints; the machine-readable [`docs/openapi.yaml`](../openapi.yaml) and the route tree under `src/app/api/` are the exhaustive sources.
 
 ---
 
@@ -1613,11 +1613,11 @@ devin-cli, etc.). See [Provider Reference](./PROVIDER_REFERENCE.md) for the full
 | Method | Path                                    | Description                                                                                                                                       |
 | ------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/cli-tools/all-statuses`           | Status of all CLI tools (installed, version, last seen)                                                                                           |
-| GET    | `/api/cli-tools/[id]/status`            | Status of a specific CLI tool (id can be: antigravity, chipotle, commandCode, devin-cli, etc.)                                                    |
+| GET    | `/api/cli-tools/status`                 | Status detail for one CLI tool (`?tool=` query)                                                                                                   |
 | POST   | `/api/cli-tools/apply`                  | Write a tool's generated config (`dryRun` previews; `422` + `containerEphemeralTarget` when containerized; `migration` notes a legacy Codex YAML) |
 | GET    | `/api/cli-tools/backups`                | List CLI tool configuration backups                                                                                                               |
 | POST   | `/api/cli-tools/backups`                | Create a backup of all CLI tool configurations                                                                                                    |
-| POST   | `/api/cli-tools/[id]/restore`           | Restore a CLI tool from a backup                                                                                                                  |
+| POST   | `/api/cli-tools/backups`                | Restore: same endpoint with `{tool, backupId}` in the body restores that backup                                                                   |
 | GET    | `/api/cli-tools/antigravity-mitm`       | Antigravity MITM proxy status (the "antigravity-mitm" CLI tool)                                                                                   |
 | POST   | `/api/cli-tools/antigravity-mitm/alias` | Configure antigravity-mitm aliases                                                                                                                |
 
@@ -1664,16 +1664,14 @@ Manage the semantic cache and reasoning cache.
 
 Manage persistent memory (FTS5 + vector embeddings).
 
-| Method | Path                 | Description                                                           |
-| ------ | -------------------- | --------------------------------------------------------------------- |
-| GET    | `/api/memory`        | List memory entries (filter by scope, type, search query)             |
-| POST   | `/api/memory`        | Create a new memory entry — body: `{scope, type, content, metadata?}` |
-| GET    | `/api/memory/[id]`   | Get a specific memory entry                                           |
-| PUT    | `/api/memory/[id]`   | Update a memory entry                                                 |
-| DELETE | `/api/memory/[id]`   | Delete a memory entry                                                 |
-| GET    | `/api/memory/search` | Search memory (FTS5 + vector)                                         |
-| POST   | `/api/memory/clear`  | Clear memory entries (with filters)                                   |
-| GET    | `/api/memory/stats`  | Memory statistics (total entries, embedding coverage, etc.)           |
+| Method | Path               | Description                                                             |
+| ------ | ------------------ | ----------------------------------------------------------------------- |
+| GET    | `/api/memory`      | List memory entries (filter by scope, type, search query)               |
+| POST   | `/api/memory`      | Create a new memory entry — body: `{scope, type, content, metadata?}`   |
+| GET    | `/api/memory/[id]` | Get a specific memory entry                                             |
+| PUT    | `/api/memory/[id]` | Update a memory entry                                                   |
+| DELETE | `/api/memory/[id]` | Delete a memory entry                                                   |
+| GET    | `/api/memory?q=`   | Search memory (FTS5 + vector) — stats are included in the same response |
 
 **Auth:** Requires management session or management-scoped API key.
 
@@ -1690,7 +1688,6 @@ Manage webhook subscriptions for events.
 | GET    | `/api/webhooks/[id]`            | Get a specific webhook subscription                                       |
 | PUT    | `/api/webhooks/[id]`            | Update a webhook subscription                                             |
 | DELETE | `/api/webhooks/[id]`            | Delete a webhook subscription                                             |
-| GET    | `/api/webhooks/events`          | List all available webhook event types                                    |
 | GET    | `/api/webhooks/[id]/deliveries` | List delivery history for a webhook (success/failure log)                 |
 | POST   | `/api/webhooks/[id]/test`       | Send a test event to a webhook                                            |
 
@@ -1723,15 +1720,15 @@ See [Skills Framework](../frameworks/SKILLS.md) for full details.
 
 Manage OmniRoute plugins (third-party extensions).
 
-| Method | Path                             | Description                               |
-| ------ | -------------------------------- | ----------------------------------------- |
-| GET    | `/api/plugins`                   | List installed plugins                    |
-| POST   | `/api/plugins/install`           | Install a plugin from a local path or URL |
-| DELETE | `/api/plugins/[name]`            | Uninstall a plugin                        |
-| POST   | `/api/plugins/[name]/activate`   | Activate a plugin                         |
-| POST   | `/api/plugins/[name]/deactivate` | Deactivate a plugin                       |
-| GET    | `/api/plugins/[name]/config`     | Get plugin configuration                  |
-| PUT    | `/api/plugins/[name]/config`     | Update plugin configuration               |
+| Method | Path                               | Description                           |
+| ------ | ---------------------------------- | ------------------------------------- |
+| GET    | `/api/plugins`                     | List installed plugins                |
+| POST   | `/api/plugins/marketplace/install` | Install a plugin from the marketplace |
+| DELETE | `/api/plugins/[name]`              | Uninstall a plugin                    |
+| POST   | `/api/plugins/[name]/activate`     | Activate a plugin                     |
+| POST   | `/api/plugins/[name]/deactivate`   | Deactivate a plugin                   |
+| GET    | `/api/plugins/[name]/config`       | Get plugin configuration              |
+| PUT    | `/api/plugins/[name]/config`       | Update plugin configuration           |
 
 **Auth:** Requires management session.
 

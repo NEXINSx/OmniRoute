@@ -21,15 +21,15 @@ lastUpdated: 2026-08-26
 | **+ deposit-unlock boost**                  | **+~24M**         | A one-time **$10** OpenRouter top-up raises its free pool from 50 → 1000 req/day. Reported separately so it never inflates the steady number.                                                                                                          |
 | Theoretical ceiling (all rate limits, 24/7) | ~10B              | Sum of every provider rate limit extrapolated to non-stop use. **Not a guarantee** — do not headline this.                                                                                                                                             |
 
-**Honest headline:** _OmniRoute aggregates **~1.51B documented free tokens per month** (up to ~2.13B in your first month with signup credits) across 39 free-tier pools — plus a long tail of permanently-free, no-cap providers — and RTK + Caveman compression (15–95% token savings) stretches that further._
+**Honest headline:** _OmniRoute aggregates **~1.51B documented free tokens per month** (up to ~2.13B in your first month with signup credits) across 38 free-tier pools — plus a long tail of permanently-free, no-cap providers — and RTK + Caveman compression (15–95% token savings) stretches that further._
 
 > **Why this dropped from the previous ~1.94B.** The 2026-06-17 refresh is an honesty correction, not a loss: `gemini` is now pool-deduped (was inflated by counting each Flash variant separately, 462M → 60M), `cloudflare-ai` corrected to its real 10k-Neurons/day (122M → 30M), `doubao` reclassified as a one-time signup credit (not recurring), and shut-down tiers removed (`chutes`/`phind`/`kluster` discontinued). Partly offset by `llm7` (correct 5M/day → 150M) and new free providers (Kilo, OpenCode Zen, Z.AI GLM-Flash).
 >
 > **Further corrected to ~1.37B in v3.8.42:** `longcat` was reclassified from a 150M/mo recurring grant to a one-time 10M signup credit after its free preview ended. Same honesty rule — no provider was dropped by mistake.
 >
-> **Updated on 2026-08-26 after retiring Felo Web:** the source now reports 39 recurring pool keys. Felo Web is excluded while its GPL-derived provenance/licensing remains on HOLD. This is the live, CI-gated number (`check:docs-counts` fails the build if this drifts from `computeFreeModelTotals()`).
+> **Updated on 2026-08-26 after retiring Felo Web:** the source now reports 38 recurring pool keys. Felo Web is excluded while its GPL-derived provenance/licensing remains on HOLD. This is the live, CI-gated number (`check:docs-counts` fails the build if this drifts from `computeFreeModelTotals()`).
 
-Biggest **documented** contributors: `mistral` 1.00B, `llm7` 150M, `groq` 117M, `gemini` 60M, `cerebras` 30M, `cloudflare-ai` 30M, `sambanova` 30M. (`longcat` is excluded — its 10M LongCat-2.0 grant is a one-time, KYC-gated signup credit, not a recurring monthly budget.)
+Biggest **documented** contributors: `mistral` 1.00B, `llm7` 150M, `nara` 150M, `gemini` 60M, `cerebras` 30M, `cloudflare-ai` 30M, `api-airforce` 24M. (`longcat` is excluded — its 10M LongCat-2.0 grant is a one-time, KYC-gated signup credit, not a recurring monthly budget.)
 
 > ⚠️ The theoretical ceiling (~10B) is inflated by rate-limit-only providers with **no published token cap** (`tencent`, `siliconflow`, `nvidia`, `baidu`, `glm-cn`, `sparkdesk`) whose figures would be `RPM/TPM × 24/7 × 30d` — a theoretical maximum no single account will sustain. They are **excluded** from the defensible number (shown in the "permanently free, no cap" row instead). This is the same inflation that makes competitors' multi-billion claims unreliable.
 
@@ -175,9 +175,9 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `mistral`        | recurring     | ~1.00B           | —                  | caution   | 5      |
 | `llm7`           | recurring     | ~150M            | —                  | caution   | 4      |
 | `longcat`        | one-time      | —                | 10M                | caution   | 1      |
-| `gemini`         | recurring     | ~60M             | —                  | caution   | 6      |
+| `gemini`         | recurring     | ~60M             | —                  | caution   | 4      |
 | `cerebras`       | recurring     | ~30M             | —                  | caution   | 2      |
-| `cloudflare-ai`  | recurring     | ~30M             | —                  | caution   | 6      |
+| `cloudflare-ai`  | recurring     | ~30M             | —                  | caution   | 9      |
 | `api-airforce`   | recurring     | ~24M             | —                  | caution   | 7      |
 | `ollama-cloud`   | recurring     | ~20M             | —                  | ambiguous | 8      |
 | `groq`           | recurring     | ~15M             | —                  | caution   | 5      |

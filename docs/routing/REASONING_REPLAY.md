@@ -39,7 +39,7 @@ Turn N+1 (client sends follow-up):
   → upstream sees consistent history → no 400
 ```
 
-Capture happens in `open-sse/handlers/chatCore.ts` (two sites, around lines 4093 and 4380). Replay happens in `open-sse/translator/index.ts` after schema coercion but before dispatch.
+Capture happens in `open-sse/handlers/chatCore.ts` (two sites, at the two `cacheReasoningFromAssistantMessage` call sites). Replay happens in `open-sse/translator/index.ts` after schema coercion but before dispatch.
 
 ## Storage — Hybrid Memory + SQLite
 
@@ -47,7 +47,7 @@ The hot path uses an in-memory `Map` (LRU-by-creation) backed by a SQLite table 
 
 | Layer  | Implementation                                 | Purpose                                |
 | ------ | ---------------------------------------------- | -------------------------------------- |
-| Memory | `Map` in `open-sse/services/reasoningCache.ts` | Fast lookups, evicts oldest at 2000    |
+| Memory | `Map` in `open-sse/services/reasoningCache.ts` | Fast lookups, evicts oldest at 200     |
 | DB     | `reasoning_cache` table (`src/lib/db/`)        | Persists across restarts, drives stats |
 
 Writes go to both. Reads consult memory first, then fall back to DB (DB hits are promoted back into memory). DB failures are non-fatal — the in-memory cache continues to serve the hot path.
@@ -55,7 +55,7 @@ Writes go to both. Reads consult memory first, then fall back to DB (DB hits are
 **Defaults:**
 
 - TTL: `2h` (`TTL_MS = 2 * 60 * 60 * 1000`)
-- Max memory entries: `2000` (`MAX_MEMORY_ENTRIES`)
+- Max memory entries: `200` (`MAX_MEMORY_ENTRIES`)
 - Eviction: oldest `createdAt` first
 
 ## Database Schema

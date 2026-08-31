@@ -25,6 +25,7 @@ lastUpdated: 2026-06-28
 | `auto/offline` | offline | Favors providers with highest quota availability                         |
 | `auto/smart`   | smart   | Quality-first + higher exploration rate (10%) for better model discovery |
 | `auto/lkgp`    | lkgp    | Explicit LKGP (same as default `auto`)                                   |
+| `auto/chaos`   | chaos   | Fault-injection weights for resilience testing (chaos engineering)       |
 
 ### Category × Tier Composition (`auto/<category>:<tier>`)
 
@@ -211,7 +212,7 @@ The Auto-Combo Engine dynamically selects the best provider/model for each reque
 
 ## Mode Packs
 
-Four pre-defined weight profiles in `open-sse/services/autoCombo/modePacks.ts`. Each pack overrides the default weights to bias selection toward a specific goal. Below are the **full weight tables per pack** (each row sums to 1.0).
+Six pre-defined weight profiles in `open-sse/services/autoCombo/modePacks.ts` — `ship-fast`, `cost-saver`, `quality-first`, `offline-friendly`, `reliability-first` and `chaos-mode` (fault-injection). Each pack overrides the default weights to bias selection toward a specific goal; the seed weights below are renormalized to sum 1.0 at runtime together with the session/context factors every pack also sets. The table shows the four original packs — see `modePacks.ts` for `reliability-first` and `chaos-mode`.
 
 | Factor       | ship-fast | cost-saver | quality-first | offline-friendly |
 | :----------- | :-------- | :--------- | :------------ | :--------------- |
@@ -225,7 +226,7 @@ Four pre-defined weight profiles in `open-sse/services/autoCombo/modePacks.ts`. 
 
 Notes:
 
-- `tierAffinity` and `specificityMatch` are not set in mode packs — `calculateScore()` treats them as `?? 0` when absent.
+- `tierAffinity` and `specificityMatch` are explicitly set to `0` in every mode pack.
 - Each pack's emphasis at a glance:
   - **ship-fast** → latencyInv 0.32 + health 0.28 (low-latency, healthy connections)
   - **cost-saver** → costInv 0.37 (cheapest tokens win)
