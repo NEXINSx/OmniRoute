@@ -9,6 +9,7 @@ import {
   joinClaudeCodeCompatibleUrl,
   joinBaseUrlAndPath,
 } from "@omniroute/open-sse/services/claudeCodeCompatible.ts";
+import { getDefaultExecutor } from "@omniroute/open-sse/executors/defaultResolver.ts";
 import {
   addModelsSuffix,
   normalizeAnthropicBaseUrl,
@@ -137,8 +138,7 @@ export async function validateClaudeOAuthInline({
     typeof override === "string" && override ? override : modelId || "claude-haiku-4-5-20251001";
 
   try {
-    const { getExecutor } = await import("@omniroute/open-sse/executors/index.ts");
-    const executed = await (await getExecutor("claude")).execute({
+    const executed = await getDefaultExecutor("claude").execute({
       model: testModelId,
       body: {
         model: testModelId,
