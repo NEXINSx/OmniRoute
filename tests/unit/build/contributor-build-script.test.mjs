@@ -7,6 +7,8 @@ import {
   stubContributorInstrumentation,
 } from "../../../scripts/build/backendOnlyPages.mjs";
 
+const nextConfigSource = fs.readFileSync(path.join(process.cwd(), "next.config.mjs"), "utf8");
+
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")
 );
@@ -42,4 +44,9 @@ test("contributor instrumentation stubs are reversible", async () => {
   for (const entry of stubbed) await fs.writeFile(entry.file, entry.original);
   for (const [target, source] of originals) assert.equal(await fs.readFile(target, "utf8"), source);
   await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+test("contributor profile disables standalone output while default keeps it", () => {
+  assert.match(nextConfigSource, /isContributorBuild/);
+  assert.match(nextConfigSource, /\.\.\.\(isContributorBuild \? \{\} : \{ output: "standalone" \}\)/);
 });

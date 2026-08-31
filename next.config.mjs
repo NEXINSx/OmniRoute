@@ -80,6 +80,8 @@ function isNextIntlExtractorDynamicImportWarning(warning) {
 // The resulting artifact is intended to be published as `omniroute-secure`
 // for security-sensitive environments. See docs/security/SOCKET_DEV_FINDINGS.md.
 const isMinimalBuild = process.env.OMNIROUTE_BUILD_PROFILE === "minimal";
+// Contributor builds validate compilation only and do not need a shippable standalone bundle.
+const isContributorBuild = process.env.OMNIROUTE_BUILD_PROFILE === "contributor";
 
 // #10273: `null` unless the operator opts in with DASHBOARD_ALLOW_EMBED=vscode. Read at build
 // time like every other knob in this file (OMNIROUTE_BASE_PATH, OMNIROUTE_BUILD_PROFILE, …),
@@ -191,7 +193,7 @@ const nextConfig = {
       },
     ],
   },
-  output: "standalone",
+  ...(isContributorBuild ? {} : { output: "standalone" }),
   compress: true,
   productionBrowserSourceMaps: false,
   // OmniRoute is a proxy for AI APIs — request bodies routinely include
