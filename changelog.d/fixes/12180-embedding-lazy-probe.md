@@ -2,4 +2,4 @@
   measured from the first embedding that comes back instead of being read from a registry
   that cannot describe them, so `vec_memories` is created and memories stop piling up
   unvectorized behind a green health check
-  ([#12178](https://github.com/diegosouzapw/OmniRoute/pull/12178)) — thanks @kanade-hoshino
+  ([#12180](https://github.com/diegosouzapw/OmniRoute/pull/12180)) — thanks @kanade-hoshino
