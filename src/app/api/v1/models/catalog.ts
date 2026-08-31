@@ -891,7 +891,16 @@ async function buildUnifiedModelsResponseCore(
           connectionId: m.connectionId,
           ...(m.allowedConnectionIds ? { allowedConnectionIds: m.allowedConnectionIds } : {}),
         }));
-        const autoTargetMetadata = autoTargets.map((target) => {
+        // The explicit return type keeps the inferred element type assignable to
+        // `ComboTargetCatalogMetadata`: writing `inputModalities`/`outputModalities`
+        // as explicit `undefined` below would otherwise make those optional
+        // properties REQUIRED in the inferred shape, so the
+        // `m is ComboTargetCatalogMetadata` predicate on the `.filter` at the end
+        // of this block would no longer be assignable to its parameter (TS2677).
+        // The keys must stay explicit — a conditional spread would let the
+        // helper's synthesized `["text","image"]` survive when this scope's raw
+        // `synced` lookup misses, which is exactly the bypass this fix prevents.
+        const autoTargetMetadata = autoTargets.map((target): ComboTargetCatalogMetadata | null => {
           const metadata = getComboTargetCatalogMetadata(target);
           const targetModel = getComboTargetModelId(target);
           if (!metadata || !targetModel) return null;
