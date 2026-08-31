@@ -155,9 +155,13 @@ export function ConversationContextSection({ log, detail }) {
   });
   const turnsBoxRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Adjust state when the `detail` prop changes (render-time adjustment per
+  // react.dev "You Might Not Need an Effect" — replaces the old mirror effect).
+  const [prevDetail, setPrevDetail] = useState(detail);
+  if (detail !== prevDetail) {
+    setPrevDetail(detail);
     setLiveDetail(detail);
-  }, [detail]);
+  }
 
   // Same live-poll pattern as the SSE Events section (StreamSection below),
   // but gated on liveRefresh too: an active request keeps generating either

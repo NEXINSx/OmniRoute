@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
@@ -59,11 +66,10 @@ type SidebarProps = {
 
 type HoveredItem = { id: string; label: string; x: number; y: number } | null;
 
-function loadFromStorage<T>(key: string, fallback: T): T {
+function parseStoredArray<T>(raw: string | null, fallback: T): T {
   try {
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      const parsed = JSON.parse(stored);
+    if (raw) {
+      const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed as T;
     }
   } catch {}
@@ -74,6 +80,29 @@ function saveToStorage(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
+}
+
+// useSyncExternalStore plumbing for the one-shot localStorage hydration reads:
+// nothing to subscribe to (the values are only read once, before
+// sidebarExpansionLoaded flips), and the server snapshot is always null so the
+// SSR/hydration render matches the server output.
+const noopSubscribe = () => () => {};
+const getServerSnapshotNull = () => null;
+const getHydratedSnapshot = () => true;
+const getServerHydratedSnapshot = () => false;
+function readStoredExpandedRaw() {
+  try {
+    return localStorage.getItem(EXPANDED_SECTIONS_KEY);
+  } catch {
+    return null;
+  }
+}
+function readStoredPinnedRaw() {
+  try {
+    return localStorage.getItem(PINNED_SECTIONS_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export default function Sidebar({
@@ -115,35 +144,47 @@ export default function Sidebar({
   );
   const [pinnedSections, setPinnedSections] = useState<Set<SidebarSectionId>>(new Set());
   const [sidebarExpansionLoaded, setSidebarExpansionLoaded] = useState(false);
-  const skipInitialActiveExpansion = useRef(false);
+  const [skipInitialActiveExpansion, setSkipInitialActiveExpansion] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<HoveredItem>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Load persisted state on mount. A stored [] intentionally means "all sections collapsed".
-  useEffect(() => {
-    const storedExpanded = loadFromStorage<SidebarSectionId[]>(EXPANDED_SECTIONS_KEY, [
+  // Load persisted state once the client has hydrated. A stored [] intentionally
+  // means "all sections collapsed". localStorage is read through
+  // useSyncExternalStore snapshots (server snapshot: null) and the states are
+  // adjusted during render (react.dev "You Might Not Need an Effect") so the
+  // stored expansion applies before paint without a synchronous effect setState.
+  const hydrated = useSyncExternalStore(
+    noopSubscribe,
+    getHydratedSnapshot,
+    getServerHydratedSnapshot
+  );
+  const storedExpandedRaw = useSyncExternalStore(
+    noopSubscribe,
+    readStoredExpandedRaw,
+    getServerSnapshotNull
+  );
+  const storedPinnedRaw = useSyncExternalStore(
+    noopSubscribe,
+    readStoredPinnedRaw,
+    getServerSnapshotNull
+  );
+  if (hydrated && !sidebarExpansionLoaded) {
+    const storedExpanded = parseStoredArray<SidebarSectionId[]>(storedExpandedRaw, [
       DEFAULT_EXPANDED,
     ]);
-    const pinnedRaw = (() => {
-      try {
-        return localStorage.getItem(PINNED_SECTIONS_KEY);
-      } catch {
-        return null;
-      }
-    })();
     const storedPinned: SidebarSectionId[] =
-      pinnedRaw !== null
-        ? (JSON.parse(pinnedRaw) as SidebarSectionId[])
+      storedPinnedRaw !== null
+        ? parseStoredArray<SidebarSectionId[]>(storedPinnedRaw, [])
         : (SIDEBAR_SECTIONS.filter((s) => s.defaultPinned).map((s) => s.id) as SidebarSectionId[]);
 
     const initialPinned = new Set<SidebarSectionId>(storedPinned);
     const initialExpanded = hydrateExpandedSections(storedExpanded, initialPinned);
 
-    skipInitialActiveExpansion.current = storedExpanded.length === 0;
+    setSkipInitialActiveExpansion(storedExpanded.length === 0);
     setExpandedSections(initialExpanded);
     setPinnedSections(initialPinned);
     setSidebarExpansionLoaded(true);
-  }, []);
+  }
 
   useEffect(() => {
     const applySettings = (data) => {
@@ -292,38 +333,51 @@ export default function Sidebar({
     ? filterSidebarSectionsByQuery(visibleSections, searchQuery)
     : visibleSections;
 
-  // Keep the active page visible while preserving accordion semantics for unpinned sections.
-  useEffect(() => {
-    if (collapsed || !sidebarExpansionLoaded) return;
-    if (skipInitialActiveExpansion.current) {
-      skipInitialActiveExpansion.current = false;
-      return;
-    }
-    for (const section of visibleSections) {
-      const sectionItems = section.children.flatMap((child: any) =>
-        child.type === "group" ? child.items : [child]
-      );
-      if (sectionItems.some((item: any) => !item.external && item.href === activeHref)) {
-        setExpandedSections((prev) => {
-          const next = expandActiveSection(pinnedSections, section.id as SidebarSectionId);
-          if ([...next].every((id) => prev.has(id)) && next.size === prev.size) return prev;
-          saveToStorage(EXPANDED_SECTIONS_KEY, [...next]);
-          return next;
-        });
-        break;
+  // Keep the active page visible while preserving accordion semantics for
+  // unpinned sections. Render-time adjustment (react.dev "You Might Not Need
+  // an Effect"): the composite key mirrors the old effect's
+  // [activeHref, collapsed, pinnedSections, sidebarExpansionLoaded] deps.
+  const activeExpansionKey = `${collapsed}|${sidebarExpansionLoaded}|${activeHref ?? ""}|${[
+    ...pinnedSections,
+  ]
+    .sort()
+    .join(",")}`;
+  const [prevActiveExpansionKey, setPrevActiveExpansionKey] = useState<string | null>(null);
+  if (activeExpansionKey !== prevActiveExpansionKey) {
+    setPrevActiveExpansionKey(activeExpansionKey);
+    if (!collapsed && sidebarExpansionLoaded) {
+      if (skipInitialActiveExpansion) {
+        setSkipInitialActiveExpansion(false);
+      } else {
+        for (const section of visibleSections) {
+          const sectionItems = section.children.flatMap((child: any) =>
+            child.type === "group" ? child.items : [child]
+          );
+          if (sectionItems.some((item: any) => !item.external && item.href === activeHref)) {
+            setExpandedSections((prev) => {
+              const next = expandActiveSection(pinnedSections, section.id as SidebarSectionId);
+              if ([...next].every((id) => prev.has(id)) && next.size === prev.size) return prev;
+              return next;
+            });
+            break;
+          }
+        }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeHref, collapsed, pinnedSections, sidebarExpansionLoaded]);
+  }
+
+  // Persist the expanded-section set whenever it changes after hydration —
+  // single writer replacing the saveToStorage calls that used to run inside
+  // setState updaters (side effects belong outside updaters).
+  useEffect(() => {
+    if (!sidebarExpansionLoaded) return;
+    saveToStorage(EXPANDED_SECTIONS_KEY, [...expandedSections]);
+  }, [expandedSections, sidebarExpansionLoaded]);
 
   // Accordion toggle: opening a section closes all non-pinned sections
   const toggleSection = useCallback(
     (sectionId: SidebarSectionId) => {
-      setExpandedSections((prev) => {
-        const next = toggleExpandedSection(prev, pinnedSections, sectionId);
-        saveToStorage(EXPANDED_SECTIONS_KEY, [...next]);
-        return next;
-      });
+      setExpandedSections((prev) => toggleExpandedSection(prev, pinnedSections, sectionId));
     },
     [pinnedSections]
   );
@@ -340,7 +394,6 @@ export default function Sidebar({
           if (prevExp.has(sectionId)) return prevExp;
           const nextExp = new Set(prevExp);
           nextExp.add(sectionId);
-          saveToStorage(EXPANDED_SECTIONS_KEY, [...nextExp]);
           return nextExp;
         });
       }
