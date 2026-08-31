@@ -172,6 +172,19 @@ function Stepper({ currentStep }: { currentStep: 1 | 2 | 3 }) {
 // Main component
 // ────────────────────────────────────────────────────────────────────────────
 
+// Pure predicate hoisted out of the component to keep its cognitive budget flat
+// (check:cognitive-complexity new-code mode): snap the group <select> to a real,
+// selectable option in create mode once groups load.
+function poolWizardNeedsGroupSnap(
+  open: boolean,
+  isEditing: boolean,
+  groups: Array<{ id: string }>,
+  groupId: string
+): boolean {
+  if (!open || isEditing || groups.length === 0) return false;
+  return groupId === "all" || !groups.some((g) => g.id === groupId);
+}
+
 export default function PoolWizard({
   open,
   onClose,
@@ -326,12 +339,7 @@ export default function PoolWizard({
   // filter was "all" (or an unknown id), snap to the first real group once groups
   // load. Prevents persisting groupId="all" (which renders under no group → B1).
   // Self-extinguishing state adjustment during render (react-hooks/set-state-in-effect).
-  if (
-    open &&
-    !editPool &&
-    groups.length > 0 &&
-    (groupId === "all" || !groups.some((g) => g.id === groupId))
-  ) {
+  if (poolWizardNeedsGroupSnap(open, Boolean(editPool), groups, groupId)) {
     setGroupId(groups[0].id);
   }
 

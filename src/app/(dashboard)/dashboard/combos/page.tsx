@@ -386,6 +386,17 @@ const STRATEGY_RECOMMENDATIONS_FALLBACK = {
 };
 
 const COMBO_USAGE_GUIDE_STORAGE_KEY = "omniroute:combos:hide-usage-guide";
+
+// Pure predicate hoisted out of the page component to keep its cyclomatic budget flat
+// (check:complexity new-code mode).
+function isStaleIntelligentSelection(
+  intelligentCombos: Array<{ id: string }>,
+  selectedId: string | null
+): boolean {
+  if (selectedId === null) return false;
+  if (intelligentCombos.length === 0) return true;
+  return !intelligentCombos.some((combo) => combo.id === selectedId);
+}
 const COMBO_FORM_STAGE_META = [
   {
     id: "basics",
@@ -791,11 +802,7 @@ export default function CombosPage() {
 
   // Drop a stale selection when the list no longer contains it — state adjustment
   // during render (react-hooks/set-state-in-effect).
-  if (
-    selectedIntelligentComboId !== null &&
-    (intelligentCombos.length === 0 ||
-      !intelligentCombos.some((combo) => combo.id === selectedIntelligentComboId))
-  ) {
+  if (isStaleIntelligentSelection(intelligentCombos, selectedIntelligentComboId)) {
     setSelectedIntelligentComboId(null);
   }
 
