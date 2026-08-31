@@ -194,6 +194,9 @@ const nextConfig = {
   output: "standalone",
   compress: true,
   productionBrowserSourceMaps: false,
+  // Issue #67: enable React Compiler — automates memoization, removes manual useCallback/useMemo debt.
+  // See: https://next.dev/blog/react-compiler
+  reactCompiler: true,
   // OmniRoute is a proxy for AI APIs — request bodies routinely include
   // multi-MB payloads (vision models, image edits, base64-encoded files,
   // long chat histories with embedded images). Next.js's Server Action
