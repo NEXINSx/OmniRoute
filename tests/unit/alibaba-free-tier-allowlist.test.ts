@@ -114,3 +114,21 @@ test("isAlibabaFreeTierAllowlistPackValid compares against the instant it is giv
     true
   );
 });
+
+test("date-only allowlist expiry remains valid through the listed UTC day", () => {
+  const pack = {
+    asOf: "2026-07-28",
+    validUntil: "2026-08-27",
+    capable: ["qwen3.6-plus"],
+    noFreeTier: [],
+  };
+
+  assert.equal(
+    isAlibabaFreeTierAllowlistPackValid(pack, Date.parse("2026-08-27T23:59:59.999Z")),
+    true
+  );
+  assert.equal(
+    isAlibabaFreeTierAllowlistPackValid(pack, Date.parse("2026-08-28T00:00:00.000Z")),
+    false
+  );
+});
