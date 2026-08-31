@@ -239,7 +239,7 @@ export const EMBEDDING_PROVIDERS: Record<string, EmbeddingProvider> = {
       {
         id: "google/gemini-embedding-001",
         name: "Gemini Embedding 001 (OpenRouter)",
-        dimensions: 768,
+        dimensions: 3072,
       },
       {
         id: "google/gemini-embedding-2",
