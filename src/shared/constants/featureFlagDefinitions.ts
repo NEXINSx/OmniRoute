@@ -309,7 +309,19 @@ export const FEATURE_FLAG_DEFINITIONS: FeatureFlagDefinition[] = [
     warningLevel: "info",
   },
 
-  // ──────────────── Runtime (16) ────────────────
+  // ──────────────── Runtime (17) ────────────────
+  {
+    key: "UNIVERSAL_CONTEXT_HANDOFF_ENABLED",
+    label: "Universal Context Handoff",
+    description:
+      "Generate and inject conversation summaries when combo routing switches models. Disable to treat model switches independently and prevent background handoff requests for all existing and future combos.",
+    descriptionI18nKey: "featureFlagUniversalContextHandoffEnabledDescription",
+    category: "runtime",
+    defaultValue: "true",
+    type: "boolean",
+    requiresRestart: false,
+    warningLevel: "info",
+  },
   {
     key: "RESPONSES_PASSTHROUGH_DROP_COMMENTARY",
     label: "Drop Responses Commentary",
