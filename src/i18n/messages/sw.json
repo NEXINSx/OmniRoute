@@ -12309,7 +12309,7 @@
       },
       "omni-mcp": {
         "name": "Seva ya MCP",
-        "description": "Unganisha kwenye seva ya OmniRoute MCP (zana 37, usafirishaji 3: SSE/stdio/HTTP). Inajumuisha uelekezaji, kache, mgandamizo, kumbukumbu, ujuzi, watoa huduma, na zana za ukaguzi kwenye mawanda 16 ya ruhusa."
+        "description": "Unganisha kwenye seva ya OmniRoute MCP (zana 110, usafirishaji 3: SSE/stdio/HTTP). Inajumuisha uelekezaji, kache, mgandamizo, kumbukumbu, ujuzi, watoa huduma, na zana za ukaguzi kwenye mawanda 33 ya ruhusa."
       },
       "omni-agents-a2a": {
         "name": "Ejenti na Itifaki ya A2A",

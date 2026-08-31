@@ -301,7 +301,7 @@ src/                        # TypeScript (.ts / .tsx)
 open-sse/                   # @omniroute/open-sse workspace
 ├── executors/              # 89 executor implementation modules
 ├── handlers/               # 11 request handlers (chat, responses, embeddings, images, etc.)
-├── mcp-server/             # MCP server (107 unique tools, 3 transports, 32 scopes)
+├── mcp-server/             # MCP server (110 unique tools, 3 transports, 33 scopes)
 ├── services/               # 178 top-level services (combo, autoCombo, rateLimitManager, etc.)
 ├── translator/             # Format translators (OpenAI ↔ Claude ↔ Gemini ↔ Responses ↔ Ollama)
 ├── transformer/            # Responses API transformer

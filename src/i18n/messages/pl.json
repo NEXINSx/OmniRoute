@@ -12309,7 +12309,7 @@
       },
       "omni-mcp": {
         "name": "Serwer MCP",
-        "description": "Połącz się z serwerem MCP OmniRoute (37 narzędzi, 3 transporty: SSE/stdio/HTTP). Obejmuje routing, pamięć podręczną, kompresję, pamięć, umiejętności, dostawców i narzędzia audytowe w ramach 16 zakresów uprawnień."
+        "description": "Połącz się z serwerem MCP OmniRoute (110 narzędzi, 3 transporty: SSE/stdio/HTTP). Obejmuje routing, pamięć podręczną, kompresję, pamięć, umiejętności, dostawców i narzędzia audytowe w ramach 33 zakresów uprawnień."
       },
       "omni-agents-a2a": {
         "name": "Agenci i protokół A2A",

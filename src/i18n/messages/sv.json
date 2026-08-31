@@ -12309,7 +12309,7 @@
       },
       "omni-mcp": {
         "name": "MCP-server",
-        "description": "Anslut till OmniRoute MCP-servern (37 verktyg, 3 transporter: SSE/stdio/HTTP). Omfattar dirigering, cache, komprimering, minne, färdigheter, leverantörer och granskningsverktyg över 16 behörighetsomfång."
+        "description": "Anslut till OmniRoute MCP-servern (110 verktyg, 3 transporter: SSE/stdio/HTTP). Omfattar dirigering, cache, komprimering, minne, färdigheter, leverantörer och granskningsverktyg över 33 behörighetsomfång."
       },
       "omni-agents-a2a": {
         "name": "Agenter & A2A-protokoll",

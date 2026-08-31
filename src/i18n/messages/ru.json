@@ -12309,7 +12309,7 @@
       },
       "omni-mcp": {
         "name": "MCP-сервер",
-        "description": "Connect to the OmniRoute MCP server (37 tools, 3 transports: SSE/stdio/HTTP). Covers routing, cache, compression, memory, skills, providers, and audit tools across 16 permission scopes."
+        "description": "Connect to the OmniRoute MCP server (110 tools, 3 transports: SSE/stdio/HTTP). Covers routing, cache, compression, memory, skills, providers, and audit tools across 33 permission scopes."
       },
       "omni-agents-a2a": {
         "name": "Агенты и протокол A2A",
