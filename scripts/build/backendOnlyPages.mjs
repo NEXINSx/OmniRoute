@@ -2,7 +2,7 @@
 /**
  * Backend-only build helper.
  *
- * When `OMNIROUTE_BUILD_BACKEND_ONLY=1` (or `OMNIROUTE_BUILD_PROFILE=backend`) is set,
+ * When `OMNIROUTE_BUILD_BACKEND_ONLY=1` (or `OMNIROUTE_BUILD_PROFILE=backend|contributor`) is set,
  * `build-next-isolated.mjs` calls `stubDashboardPages()` BEFORE `next build` and
  * `restoreDashboardPages()` in a `finally` afterward.
  *
@@ -83,7 +83,11 @@ function stripLeadingUseServer(src) {
 
 /** True when the current build should skip the dashboard frontend. */
 export function isBackendOnlyBuild(env = process.env) {
-  return env.OMNIROUTE_BUILD_BACKEND_ONLY === "1" || env.OMNIROUTE_BUILD_PROFILE === "backend";
+  return (
+    env.OMNIROUTE_BUILD_BACKEND_ONLY === "1" ||
+    env.OMNIROUTE_BUILD_PROFILE === "backend" ||
+    env.OMNIROUTE_BUILD_PROFILE === "contributor"
+  );
 }
 
 function walkFiles(dir, out = []) {

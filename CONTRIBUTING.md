@@ -73,6 +73,9 @@ npm run dev
 npm run build    # next build → .build/next/ then assembleStandalone → dist/
 npm run start
 
+# Fast backend/API-only build for contributor changes
+npm run build:contributor
+
 # Release build (clean rebuild + HEAD sentinel — required for deploy)
 npm run build:release   # rm -rf .build dist && build + writes dist/BUILD_SHA
 
@@ -99,6 +102,11 @@ npm run build
 
 `npm run build:release` additionally cleans both directories first and writes
 `dist/BUILD_SHA` (= `git rev-parse --short HEAD`) as a deploy integrity sentinel.
+
+`npm run build:contributor` uses the backend-only build profile. It temporarily stubs
+dashboard UI files while building, keeps API route handlers, and restores the original files
+after the build. Use `npm run build` for changes that affect the dashboard UI or for full
+release validation; the contributor profile is not a replacement for the release build.
 
 > **VPS deploy note:** the remote image directory `/usr/lib/node_modules/omniroute/app/`
 > is unchanged. The deploy skills rsync the contents of `dist/` into it.
