@@ -186,9 +186,9 @@ See [#7992](https://github.com/diegosouzapw/OmniRoute/issues/7992) and [#7111](h
 
 The Auto-Combo Engine dynamically selects the best provider/model for each request using a **15-factor scoring function** (defined in `open-sse/services/autoCombo/scoring.ts` → `DEFAULT_WEIGHTS`). The default weights sum to `1.0`; custom weights are renormalized by `normalizeScoringWeights()`. Two of the fifteen — `cacheAffinity` and `resetWindowAffinity` — carry a default weight of `0`: they are still computed for every candidate, and `cacheAffinity` gates prompt-cache deduplication outside the score, so they are declared factors that simply do not vote by default.
 
-![Auto-Combo 15-factor scoring](../diagrams/exported/auto-combo-12factor.svg)
+![Auto-Combo 15-factor scoring](../diagrams/exported/auto-combo-scoring.svg)
 
-> Source: [diagrams/auto-combo-12factor.mmd](../diagrams/auto-combo-12factor.mmd) (regenerate via `npm run docs:render-diagrams`). The filename is historical; the source and rendered diagram show all 15 factors declared in `DEFAULT_WEIGHTS`.
+> Source: [diagrams/auto-combo-scoring.mmd](../diagrams/auto-combo-scoring.mmd) (regenerate via `npm run docs:render-diagrams`). The filename is historical; the source and rendered diagram show all 15 factors declared in `DEFAULT_WEIGHTS`.
 
 | Factor                | Default Weight | Description                                                                                                                                                                                 |
 | :-------------------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

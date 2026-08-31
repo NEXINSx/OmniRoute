@@ -104,9 +104,9 @@ handleComboChat（与持久化 Combo 相同的引擎）
 
 Auto-Combo 引擎使用**13 因子评分函数**（定义在 `open-sse/services/autoCombo/scoring.ts` → `DEFAULT_WEIGHTS`）为每次请求动态选择最佳服务商/模型。所有权重之和为 **1.0**。
 
-![Auto-Combo 13-factor scoring](../diagrams/exported/auto-combo-12factor.svg)
+![Auto-Combo 13-factor scoring](../diagrams/exported/auto-combo-scoring.svg)
 
-> 来源：[diagrams/auto-combo-12factor.mmd](../diagrams/auto-combo-12factor.mmd)（通过 `npm run docs:render-diagrams` 重新生成）。文件名为历史名称；当前图表包含全部 13 个因子。
+> 来源：[diagrams/auto-combo-scoring.mmd](../diagrams/auto-combo-scoring.mmd)（通过 `npm run docs:render-diagrams` 重新生成）。文件名为历史名称；当前图表包含全部 13 个因子。
 
 | 因子                    | 默认权重 | 描述                                                                                           |
 | :---------------------- | :------- | :--------------------------------------------------------------------------------------------- |

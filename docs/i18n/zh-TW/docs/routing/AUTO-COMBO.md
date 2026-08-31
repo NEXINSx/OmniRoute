@@ -116,9 +116,9 @@ handleComboChat（與持久化組合使用相同引擎）
 
 自動組合引擎使用**13 因子評分函數**（定義於 `open-sse/services/autoCombo/scoring.ts` → `DEFAULT_WEIGHTS`）為每個請求動態選擇最佳的提供者/模型。所有權重合計為 **1.0**。
 
-![自動組合 13 因子評分](../diagrams/exported/auto-combo-12factor.svg)
+![自動組合 13 因子評分](../diagrams/exported/auto-combo-scoring.svg)
 
-> 來源：[diagrams/auto-combo-12factor.mmd](../diagrams/auto-combo-12factor.mmd)（可透過 `npm run docs:render-diagrams` 重新生成）。檔名是歷史名稱；目前圖表包含全部 13 個因子。
+> 來源：[diagrams/auto-combo-scoring.mmd](../diagrams/auto-combo-scoring.mmd)（可透過 `npm run docs:render-diagrams` 重新生成）。檔名是歷史名稱；目前圖表包含全部 13 個因子。
 
 | 因子                                    | 預設權重 | 說明                                                                         |
 | :-------------------------------------- | :------- | :--------------------------------------------------------------------------- |

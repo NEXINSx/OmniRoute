@@ -598,7 +598,7 @@ export function buildChecks() {
         "docs/guides/FEATURES.md",
         "docs/guides/FREE_PROVIDER_RANKINGS.md",
         "docs/diagrams/strategies-grid.svg",
-        "docs/diagrams/auto-combo-12factor.mmd",
+        "docs/diagrams/auto-combo-scoring.mmd",
         "llm.txt",
         "open-sse/services/autoCombo/routerStrategy.ts",
         "open-sse/services/taskAwareRouter.ts",

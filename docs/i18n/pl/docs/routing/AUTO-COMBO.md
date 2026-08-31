@@ -163,9 +163,9 @@ Helper detekcji żyje w `src/lib/combos/modelNameCollision.ts`.
 
 Silnik Auto-Combo dynamicznie wybiera najlepszego providera/model dla każdego żądania przy użyciu **13-czynnikowej funkcji scoringu** (zdefiniowanej w `open-sse/services/autoCombo/scoring.ts` → `DEFAULT_WEIGHTS`). Wszystkie wagi sumują się do **1.0**.
 
-![Auto-Combo 13-factor scoring](../diagrams/exported/auto-combo-12factor.svg)
+![Auto-Combo 13-factor scoring](../diagrams/exported/auto-combo-scoring.svg)
 
-> Źródło: [diagrams/auto-combo-12factor.mmd](../diagrams/auto-combo-12factor.mmd) (regeneruj przez `npm run docs:render-diagrams`). Historyczna nazwa pliku pochodzi sprzed dodania kolejnych czynników; bieżący diagram pokazuje wszystkie 13.
+> Źródło: [diagrams/auto-combo-scoring.mmd](../diagrams/auto-combo-scoring.mmd) (regeneruj przez `npm run docs:render-diagrams`). Historyczna nazwa pliku pochodzi sprzed dodania kolejnych czynników; bieżący diagram pokazuje wszystkie 13.
 
 | Czynnik               | Domyślna waga | Opis                                                                                                     |
 | :-------------------- | :------------ | :------------------------------------------------------------------------------------------------------- |
