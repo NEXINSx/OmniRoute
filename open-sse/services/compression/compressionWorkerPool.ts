@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, join, resolve } from "node:path";
 import { Worker } from "node:worker_threads";
 import type { CompressionResult } from "./types.ts";
 import type { StackedCompressionStep } from "./strategySelector.ts";
@@ -14,14 +13,70 @@ function positiveInteger(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
-function workerUrl(): URL {
-  const dir = dirname(fileURLToPath(import.meta.url));
-  for (const name of ["compressionWorker.js", "compressionWorker.ts"]) {
-    const candidate = join(dir, name);
-    if (existsSync(candidate)) return pathToFileURL(candidate);
+
+/** Relative path (from an install root) to the compression worker. */
+const WORKER_JS_REL = join("open-sse", "services", "compression", "compressionWorker.js");
+const WORKER_TS_REL = join("open-sse", "services", "compression", "compressionWorker.ts");
+
+const MAX_WALK_UP = 8;
+
+/**
+ * Walk up from each anchor directory (≤ MAX_WALK_UP levels) and return the first
+ * ancestor that actually contains `relPath`, or null. Pure + exported for tests.
+ *
+ * This deliberately avoids `import.meta.url`/`__dirname` (both dead in the standalone
+ * bundle) — see the LLMLingua worker comments in llmlingua/worker.ts.
+ */
+function firstAncestorWith(anchors: string[], relPath: string): string | null {
+  for (const anchor of anchors) {
+    if (!anchor) continue;
+    let dir = resolve(anchor);
+    for (let i = 0; i <= MAX_WALK_UP; i++) {
+      if (existsSync(join(dir, relPath))) return dir;
+      const parent = dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
   }
-  return pathToFileURL(join(dir, "compressionWorker.js"));
+  return null;
 }
+
+/**
+ * Runtime install-root anchors that SURVIVE the standalone bundle:
+ *  - `process.cwd()` — `dist/server.js` runs `process.chdir(__dirname)` → the dist root.
+ *  - `dirname(process.argv[1])` — the entry script (server.js / bin), walked up.
+ */
+function runtimeAnchors(): string[] {
+  const anchors = [process.cwd()];
+  const argv1 = process.argv[1];
+  if (typeof argv1 === "string" && argv1) anchors.push(dirname(argv1));
+  return anchors;
+}
+
+/**
+ * Resolve the worker entry file across dev and prod WITHOUT `import.meta.url`.
+ *
+ * Prod: the worker is likely a .js file under the install root
+ * Dev: the same relative path resolves to the `.ts` source under the project
+ * root (cwd) and runs via the default Node.js loader.
+ *
+ * First existing candidate wins.
+ */
+function resolveWorkerFile(): string {
+  const anchors = runtimeAnchors();
+
+  // Prod first: the .js under the install root.
+  const jsRoot = firstAncestorWith(anchors, WORKER_JS_REL);
+  if (jsRoot) return join(jsRoot, WORKER_JS_REL);
+
+  // Dev: the .ts source.
+  const tsRoot = firstAncestorWith(anchors, WORKER_TS_REL);
+  if (tsRoot) return join(tsRoot, WORKER_TS_REL);
+
+  // Nothing found — return a cwd-relative .js path; the spawn will fail-open.
+  return join(process.cwd(), WORKER_JS_REL);
+}
+
 function unchanged(body: Record<string, unknown>): CompressionResult {
   return { body, compressed: false, stats: null };
 }
@@ -80,7 +135,7 @@ export class CompressionWorkerPool {
   }
   private spawn(): PoolWorker {
     const slot: PoolWorker = {
-      worker: new Worker(workerUrl()),
+      worker: new Worker(resolveWorkerFile()),
       job: null,
       timeout: null,
       idle: null,

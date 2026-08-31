@@ -42,7 +42,7 @@ RUN --mount=type=cache,id=s/92ca8a61-c1ba-421f-a389-d48ac7258c2d-apt-cache,targe
 # perturb the versions the rest of npm's flat tree resolves.
 RUN set -eux; \
   npm install -g npm@latest; \
-  npm install --prefix /tmp/npm-cve-patch --no-audit --no-fund --ignore-scripts \
+  npm install --prefix /tmp/npm-cve-patch --no-audit --no-fund  \
     --install-strategy=nested \
     brace-expansion@5.0.9 ip-address@10.5.0 tar@7.5.22 undici@6.28.0; \
   for pkg in brace-expansion ip-address tar undici; do \
@@ -83,8 +83,11 @@ COPY open-sse/package.json ./open-sse/package.json
 COPY scripts/build/postinstall.mjs ./scripts/build/postinstall.mjs
 COPY scripts/build/postinstallSupport.mjs ./scripts/build/postinstallSupport.mjs
 COPY scripts/build/native-binary-compat.mjs ./scripts/build/native-binary-compat.mjs
+COPY scripts/build/colocateOptionals.mjs ./scripts/build/colocateOptionals.mjs
+COPY scripts/build/fixTlsClientNodeBinary.mjs ./scripts/build/fixTlsClientNodeBinary.mjs
+COPY scripts/build/fixPlaywrightAndroid.mjs ./scripts/build/fixPlaywrightAndroid.mjs
 ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
-# --ignore-scripts blocks broad dependency install/postinstall hooks, closing
+#  blocks broad dependency install/postinstall hooks, closing
 # the supply-chain attack surface where a transitive dep can run arbitrary code
 # at install time. better-sqlite3 still needs a native binding for the target
 # platform, so rebuild and smoke-test only that known runtime dependency below.
@@ -94,7 +97,7 @@ ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
 RUN test -f package-lock.json \
   || (echo "package-lock.json is required for reproducible Docker builds" >&2 && exit 1)
 # `npm rebuild <pkg>` re-runs the package's own install script, so under npm 11 +
-# `--ignore-scripts` on the parent `npm ci` it depends on npm's script-allowlist
+# `` on the parent `npm ci` it depends on npm's script-allowlist
 # machinery correctly re-enabling that one package's script. Some self-hosted build
 # environments (e.g. Dokploy) hit a broken/incomplete better-sqlite3 native binding
 # from that indirection. Invoking `node-gyp rebuild` directly inside the package
@@ -105,7 +108,7 @@ RUN test -f package-lock.json \
 # on-demand and run its lifecycle scripts (Sonar docker:S6505).
 #
 # tls-client-node (chatgpt-web/claude-web/grok-web/lmarena/perplexity-web TLS
-# impersonation) hits the same --ignore-scripts wall: its own postinstall.js
+# impersonation) hits the same  wall: its own postinstall.js
 # fetches a platform .so/.dylib/.dll from the bogdanfinn/tls-client GitHub
 # Releases API and is never invoked when npm ci skips lifecycle scripts. Unlike
 # better-sqlite3 above, that script never throws on failure — it only
@@ -113,12 +116,11 @@ RUN test -f package-lock.json \
 # otherwise succeed silently with an empty bin/ and only fail at first request
 # in production (TlsClientUnavailableError, #7802). Run it explicitly here so
 # a broken/rate-limited fetch fails the BUILD loudly instead of shipping a
-# broken image.
 RUN --mount=type=cache,id=s/92ca8a61-c1ba-421f-a389-d48ac7258c2d-npm-cache,target=/root/.npm \
-  npm ci --include=optional --no-audit --no-fund --legacy-peer-deps --ignore-scripts \
+  npm config set allow-scripts true && npm install --no-audit --no-fund --legacy-peer-deps && npm approve-scripts better-sqlite3 \
   && (cd node_modules/better-sqlite3 \
       && node /usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js rebuild) \
-  && node -e "require('better-sqlite3')(':memory:').close()" \
+  && node -e "require('better-sqlite3')(':memory: ').close()" \
   && node node_modules/tls-client-node/scripts/postinstall.js \
   && (test -n "$(find node_modules/tls-client-node/bin -mindepth 1 -print -quit 2>/dev/null)" \
       || (echo "tls-client-node native binary missing after postinstall — GitHub API fetch likely rate-limited or failed (#7802)" >&2 && exit 1))
