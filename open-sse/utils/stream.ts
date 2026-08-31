@@ -86,6 +86,13 @@ import { normalizeFinalOpenAIStreamChunk } from "./openAIStreamChunk.ts";
 import { collectClaudeDelta } from "./streamClaudeDelta.ts";
 import { createStreamTiming, type StreamTiming } from "./streamTiming.ts";
 
+// Pre-compiled regex constants for hot-path SSE processing (avoid per-chunk compilation)
+const KEEPALIVE_EVENT_RE = /^event:\s*keepalive\b/i;
+const EVENT_FIELD_RE = /^event:/i;
+const EVENT_STRIP_RE = /^event:\s*/i;
+const ID_RETRY_RE = /^(?::|id:|retry:)/i;
+const ZERO_WIDTH_RE = /[​-‍﻿]/g;
+
 /**
  * Race a response body read against a timeout.
  * Prevents indefinite hangs when the upstream sends headers but stalls on the body.
@@ -272,7 +279,7 @@ function containsMalformedTextualToolCall(
   allowedToolNames?: Set<string> | null
 ): boolean {
   if (typeof text !== "string") return false;
-  const normalized = text.replace(/[\u200B-\u200D\uFEFF]/g, "");
+  const normalized = text.replace(ZERO_WIDTH_RE, "");
 
   let searchIdx = 0;
   while (true) {
@@ -1251,14 +1258,14 @@ export function createSSEStream(options: StreamOptions = {}) {
 
             // Drop whole keepalive event blocks — strict OpenAI-compatible SDKs
             // try to JSON.parse empty keepalive payloads and crash.
-            if (/^event:\s*keepalive\b/i.test(trimmed)) {
+            if (KEEPALIVE_EVENT_RE.test(trimmed)) {
               skipPassthroughEvent = true;
               clearPendingPassthroughEvent();
               continue;
             }
 
-            if (/^event:/i.test(trimmed)) {
-              const eventType = trimmed.replace(/^event:\s*/i, "");
+            if (EVENT_FIELD_RE.test(trimmed)) {
+              const eventType = trimmed.replace(EVENT_STRIP_RE, "");
               if (
                 shouldInjectClaudeEmptyResponseBeforeCurrentEvent(claudeEmptyResponseLifecycle, {
                   type: eventType,
@@ -1272,7 +1279,7 @@ export function createSSEStream(options: StreamOptions = {}) {
               continue;
             }
 
-            if (/^(?::|id:|retry:)/i.test(trimmed)) {
+            if (ID_RETRY_RE.test(trimmed)) {
               passthroughEventPrefix.remember(line);
               continue;
             }
@@ -2347,7 +2354,7 @@ export function createSSEStream(options: StreamOptions = {}) {
               }
             }
             const bufferedLine = buffer.trim();
-            if (skipPassthroughEvent || /^event:\s*keepalive\b/i.test(bufferedLine)) {
+            if (skipPassthroughEvent || KEEPALIVE_EVENT_RE.test(bufferedLine)) {
               skipPassthroughEvent = false;
               clearPendingPassthroughEvent();
             } else if (buffer) {

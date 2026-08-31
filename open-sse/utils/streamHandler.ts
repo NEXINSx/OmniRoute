@@ -632,11 +632,18 @@ function resolveSilentCloseOutcome(input: {
 export function createDisconnectAwareStream(transformStream, streamController) {
   const reader = transformStream.readable.getReader();
   const writer = transformStream.writable.getWriter();
-  const terminalDecoder = new TextDecoder();
-  const contentDecoder = new TextDecoder();
   const contentWatcher = createStreamContentWatcher();
   const completedToolHandoffWatcher = createCompletedResponsesToolHandoffWatcher();
-  const toolHandoffDecoder = new TextDecoder();
+
+  // Lazy decoders: only instantiate when the corresponding watcher is active
+  let terminalDecoder: TextDecoder | null = null;
+  let contentDecoder: TextDecoder | null = null;
+  let toolHandoffDecoder: TextDecoder | null = null;
+
+  const getTerminalDecoder = () => terminalDecoder ??= new TextDecoder();
+  const getContentDecoder = () => contentDecoder ??= new TextDecoder();
+  const getToolHandoffDecoder = () => toolHandoffDecoder ??= new TextDecoder();
+
   let terminalTail = "";
   let clientTerminalSeen = false;
   let bytesWereForwarded = false;
@@ -673,16 +680,16 @@ export function createDisconnectAwareStream(transformStream, streamController) {
     bytesWereForwarded = true;
     // Runs past clientTerminalSeen: the frame that carries the terminal marker
     // can carry the only content too, and #8649 needs the whole stream scanned.
-    contentWatcher.note(contentDecoder.decode(chunk, { stream: true }));
+    contentWatcher.note(getContentDecoder().decode(chunk, { stream: true }));
     if (
       isResponsesClientFormat(streamController.clientResponseFormat) &&
-      completedToolHandoffWatcher.note(toolHandoffDecoder.decode(chunk, { stream: true }))
+      completedToolHandoffWatcher.note(getToolHandoffDecoder().decode(chunk, { stream: true }))
     ) {
       streamController.markCompletedToolHandoffSeen?.();
     }
     if (clientTerminalSeen) return;
 
-    terminalTail += terminalDecoder.decode(chunk, { stream: true });
+    terminalTail += getTerminalDecoder().decode(chunk, { stream: true });
     // Scan before bounding retained state: a compaction terminal frame can
     // exceed the tail budget because encrypted_content is carried inline.
     clientTerminalSeen = hasClientTerminalSseMarker(

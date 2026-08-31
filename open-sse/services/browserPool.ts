@@ -81,10 +81,15 @@ function createBrowserPoolMetrics(): BrowserPoolMetrics {
   };
 }
 
+interface PendingContextEntry {
+  promise: Promise<PooledContext>;
+  createdAt: number;
+}
+
 interface PoolState {
   browser: Browser | null;
   contexts: Map<string, PooledContext>;
-  pendingContexts: Map<string, Promise<PooledContext>>;
+  pendingContexts: Map<string, PendingContextEntry>;
   launching: Promise<Browser> | null;
   lastActivity: number;
   idleTimer: NodeJS.Timeout | null;
@@ -103,7 +108,7 @@ const DEFAULT_USER_AGENT =
 const state: PoolState = {
   browser: null,
   contexts: new Map(),
-  pendingContexts: new Map(),
+  pendingContexts: new Map<string, { promise: Promise<PooledContext>; createdAt: number }>(),
   launching: null,
   lastActivity: 0,
   idleTimer: null,
@@ -159,6 +164,14 @@ function evictStaleContexts(): void {
       state.contexts.delete(key);
       state.metrics.contextsEvicted++;
       pooled.context.close().catch(() => {});
+    }
+  }
+  // Also clean up stale pendingContexts (entries that never resolved)
+  const PENDING_TTL_MS = 5 * 60 * 1000; // 5 minutes for pending
+  for (const [key, pending] of state.pendingContexts) {
+    if (now - pending.createdAt > PENDING_TTL_MS) {
+      state.pendingContexts.delete(key);
+      state.metrics.contextsEvicted++;
     }
   }
   if (state.contexts.size === 0 && !state.launching) {
@@ -368,7 +381,7 @@ export async function acquireBrowserContext(
 
   // Dedup concurrent creations for the same key
   const pending = state.pendingContexts.get(key);
-  if (pending) return pending;
+  if (pending) return pending.promise;
 
   const createPromise = (async (): Promise<PooledContext> => {
     const [browser, proxy] = await Promise.all([
@@ -435,7 +448,7 @@ export async function acquireBrowserContext(
     return pooled;
   })();
 
-  state.pendingContexts.set(key, createPromise);
+  state.pendingContexts.set(key, { promise: createPromise, createdAt: Date.now() });
   createPromise
     .then(() => settlePendingContext(key, false))
     .catch(() => settlePendingContext(key, true));
